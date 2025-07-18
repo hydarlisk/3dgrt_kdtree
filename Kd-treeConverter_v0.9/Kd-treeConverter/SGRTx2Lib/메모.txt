@@ -1,0 +1,103 @@
+
+[ 2008.12.15 ]
+
+* shading 을 위해서 cuda 에 삼각형 (p0, p1, p2) 는 굳이 안올려도 됨. tHit 로 position 은 구할 수 있으므로.
+* ray tracing 시에 하나의 intersection point 로 부터 생성되는 ray 는 최대2개 ( reflection, refraction ).
+
+
+[ 2008.12.16 ]
+
+* texture 를 여러개 올려서 처리할 수 없으므로, 2d texture 안에 여러개의 texture 를 넣고
+  interpolation 을 수행해도 에러가 없도록 texture 자신의 외곽 테두리를 복사해서 다시 넣는다.
+
+[ 2008.12.17 ]
+  
+* 중요 !!!!!!!!!!!!
+
+같은 구조체인데 float2, 3, 4 처럼 cuda type 을 사용하는 경우
+CUDA 로 컴파일한 구조체와 Visual C++ 로 컴파일한 구조체의 sizeof 가 다를수 있다 !!!!!!!!!
+아마도 내부적으로 뭔가 type 이 다른거 같다 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 붹
+
+
+[grid 방법의장점]
+
+ray 가 존재하는곳의 photon 만 묶으면 된다.
+coherent 가 좋다.
+
+[ 2008.12.17 ]
+
+TODO: atomic 연산을 통해서 intersection point 중에서 불필요한 데이터 없애기.
+
+[ 2008. 12. 18 ]
+
+TODO: WALD 인자로 삼각형의 앞,뒷면을 맞추었는지를 알아내는 방법이 없는가?
+	  나중에 생각하기로 하고 일단은 CROSS PRODUCT 을 넘겨주자. 속도에 저하가 있을지 모르니
+	  나중에 꼭 확인하자.
+
+[ 2008. 12. 20 ]
+
+MPI 실행 : mpiexec -localroot -hosts 2 163.239.24.95 163.239.24.102 z:\jedi\Render914.exe -logon
+TODO:
+	texture loading.
+	global ambient.
+	
+	
+	/** 이거 cuda compiler 버그인가 ? */
+	
+	typedef struct _cu_scene_info {
+	
+		float4 globalAmbient;
+		int2 iResolution;
+		int2 iSuperSampling;
+	
+	} cuScene;
+
+	위 처럼 float4 globalAmbient 의 경우는 인자로 
+	
+	cuScene cuSceneInfo;
+	
+	test( cuSceneInfo );
+	
+	이렇게 넘기면 정상적으로 넘어가는데,
+	
+	float3 globalAmbient; 일때는
+	
+	iResolution 값이 깨진다.;;
+	
+	
+	
+	위의 이유를 알았다. !!!!!!!!!!!!!
+	
+	결론은 이것이다.
+	
+ *	절대 float3, float2 를 한 구조체내에서 혼합해서 사용하지 마라 !! 
+ *	float3 는 align 규칙이 적용되지 않으나 float2 는 8bytes align 규칙이 사용되기 때문에
+ *	NVCC 컴파이러에서는 뜻하지 않는 padding 이 일어날 수 있다. cuda 내부 코드에 float2,4 선언이
+ *	그렇게 되어 있음.
+ *
+ *	이렇게 컴파일된 것과 Visual C++ 등 시스템 컴파일러에서 컴파일된 구조체의 형태가
+ *	틀리므로 뻑이 날 수 있다. !!!!!
+ *
+ *	따라서 반드시 float3 는 float 하고만 쓰고 float4 는 float2 하고만 쓰라.
+ *	절대 float3, float2 이나 float4, float3 를 혼용해서 쓰지 마라.
+ *	CUDA 내에서만 사용하는 구조체는 상관이 없으나 시스템 컴파일러로 컴파일한 소스와
+ *	같이 혼용해서 구조체를 공유하는 경우는 반드시 지켜야 한다. !!!!
+ *  이는 int 나 uint 등 다른 type 도 같다. 만약 어쩔수 없이 bytes 를 맞추어야 하는 경우는
+ *	그냥 float 배열을 쓰라. float[2], float[3] 이거는 align 옵션이 없으므로 두 컴파일러가
+ *	같은 형식으로 구조체를 만든다.
+	
+	
+[ 계획 ]
+
+2008. 12. 15 - Texture, Global ambient 처리. 모듈 정리.
+2008. 12. 16 - Photon mapping primary. gathering.
+2008. 12. 17 - secondary bound.
+2008. 12. 18 - gathering. 누적.
+2008. 12. 19 - mpi version.
+2008. 12. 20 - mpi version.
+2008. 12. 21 - test 및 정리.
+
+
+[[[]]]
+
+

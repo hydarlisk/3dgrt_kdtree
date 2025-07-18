@@ -24,9 +24,9 @@
 #include "OpenGLStuffs.h"
 #include "MyMathUtility.h"
 
-//#include "sgrt_interface.h"
-//#include "cudaRayTracingKernel.cu"
-//#include "SGRTx2Lib/GGPURayTracer.h"
+#include "sgrt_interface.h"
+#include "cudaRayTracingKernel.cu"
+#include "SGRTx2Lib/GGPURayTracer.h"
 
 UIParameters uip;
 Camera camera;
@@ -700,83 +700,83 @@ void main_menu_action(int selection) {
 			glutPostRedisplay();
 			break;
 		}
-		//case 600: {
-		//	GScene* scene = new GScene();
-		//	scene->initalize(); // scene 내부 변수 초기화
+		case 600: {
+			GScene* scene = new GScene();
+			scene->initalize(); // scene 내부 변수 초기화
 
-		//	scene->setResolution( 800, 600 );
-		//	scene->setSuperSampling( 1, 1 );
-		//	scene->setGPUBlockSize( 8, 8 );
-		//	scene->setEnableShadow(false);
-		//	scene->setUseTexture(false);
-		//	scene->setEnableLocalShading(false);
-		//	scene->setMaxReflectionDepth(1);
-		//	scene->setBloomingFilter(false);
-		//	scene->setUseAntialiasingFilter(false);
-		//	scene->setUseEdgeDetectionFilter(false);
-		//	scene->setUseBlurFilter(false);
-		//	scene->setUseGrayScaleFilter(false);
+			scene->setResolution( 800, 600 );
+			scene->setSuperSampling( 1, 1 );
+			scene->setGPUBlockSize( 8, 8 );
+			scene->setEnableShadow(false);
+			scene->setUseTexture(false);
+			scene->setEnableLocalShading(false);
+			scene->setMaxReflectionDepth(1);
+			scene->setBloomingFilter(false);
+			scene->setUseAntialiasingFilter(false);
+			scene->setUseEdgeDetectionFilter(false);
+			scene->setUseBlurFilter(false);
+			scene->setUseGrayScaleFilter(false);
 
-		//	//scene->setCompositeObject(&uip.poly_model);
-		//	//scene->setKDTreePointer(uip.poly_model.kd_tree);  // 또는 별도 래퍼 GAccel 등 필요
+			//scene->setCompositeObject(&uip.poly_model);
+			//scene->setKDTreePointer(uip.poly_model.kd_tree);  // 또는 별도 래퍼 GAccel 등 필요
 
-		////}
-		////case 700: {
-		//	//CUDA rendering
-		//	fprintf(stdout, "CUDA ray tracing Render with kd-tree\n");
-		//	if (&uip.poly_model == NULL) {
-		//		fprintf(stdout, "Dosen't exist kd-tree\n");
-		//		break;
-		//	}
-		//	//TODO: CUDA rendering*****************************************
-		//	// [1] 카메라 설정
-		//	cuCamera camera;
-		//	camera.eye = make_float3(0, 0, -5);
-		//	camera.u = make_float3(1, 0, 0);
-		//	camera.v = make_float3(0, 1, 0);
-		//	camera.n = make_float3(0, 0, 1);
-		//	camera.fnear = 1.0f;
-		//	camera.startPoint = make_float3(-1, 1, 0);
-		//	camera.stepX = 2.0f / 800;
-		//	camera.stepY = 2.0f / 600;
-
-		//	// [2] 장면 정보
-		//	SceneInfo info = {};
-		//	info.iResolutionX = 800;
-		//	info.iResolutionY = 600;
-		//	info.iBlockSizeX = 8;
-		//	info.iBlockSizeY = 8;
-		//	info.iSuperSamplingX = 1;
-		//	info.iSuperSamplingY = 1;
-
-		//	//// [3] CompositeObject → CUDA에 업로드
-		//	//CompositeObject* d_obj;
-		//	//cudaMalloc(&d_obj, sizeof(CompositeObject));
-		//	//upload_composite_object_to_cuda(&uip.poly_model, d_obj);
-		//	// [3] CompositeObject → CUDA에 깊은 복사로 업로드
-		//	CompositeObject* d_obj = nullptr;
-		//	deep_copy_composite_object_to_cuda(&uip.poly_model, &d_obj);  // 새로 구현한 함수 사용
-
-		//	// [4] 프레임버퍼 준비
-		//	float* d_framebuffer;
-		//	cudaMalloc(&d_framebuffer, sizeof(float) * 800 * 600 * 3);
-		//	cudaMemset(d_framebuffer, 0, sizeof(float) * 800 * 600 * 3);
-
-		//	// [5] CUDA 커널 호출
-		//	dim3 block(8, 8);
-		//	dim3 grid((800 + 7) / 8, (600 + 7) / 8);
-		//	singlePassRayTracingKernel <<< grid, block >>> (
-		//		d_framebuffer, 1, 0, 0, false,
-		//		camera, info, d_obj
-		//		);
-		//	cudaDeviceSynchronize();
-
-		//	// [6] 결과 복사
-		//	float* h_framebuffer = new float[800 * 600 * 3];
-		//	cudaMemcpy(h_framebuffer, d_framebuffer, sizeof(float) * 800 * 600 * 3, cudaMemcpyDeviceToHost);
-		//	//save_as_ppm(h_framebuffer, 800, 600, "output_kdtree.ppm");
-		//	//*************************************************************
 		//}
+		//case 700: {
+			//CUDA rendering
+			fprintf(stdout, "CUDA ray tracing Render with kd-tree\n");
+			if (&uip.poly_model == NULL) {
+				fprintf(stdout, "Dosen't exist kd-tree\n");
+				break;
+			}
+			//TODO: CUDA rendering*****************************************
+			// [1] 카메라 설정
+			cuCamera camera;
+			camera.eye = make_float3(0, 0, -5);
+			camera.u = make_float3(1, 0, 0);
+			camera.v = make_float3(0, 1, 0);
+			camera.n = make_float3(0, 0, 1);
+			camera.fnear = 1.0f;
+			camera.startPoint = make_float3(-1, 1, 0);
+			camera.stepX = 2.0f / 800;
+			camera.stepY = 2.0f / 600;
+
+			// [2] 장면 정보
+			SceneInfo info = {};
+			info.iResolutionX = 800;
+			info.iResolutionY = 600;
+			info.iBlockSizeX = 8;
+			info.iBlockSizeY = 8;
+			info.iSuperSamplingX = 1;
+			info.iSuperSamplingY = 1;
+
+			//// [3] CompositeObject → CUDA에 업로드
+			//CompositeObject* d_obj;
+			//cudaMalloc(&d_obj, sizeof(CompositeObject));
+			//upload_composite_object_to_cuda(&uip.poly_model, d_obj);
+			// [3] CompositeObject → CUDA에 깊은 복사로 업로드
+			CompositeObject* d_obj = nullptr;
+			deep_copy_composite_object_to_cuda(&uip.poly_model, &d_obj);  // 새로 구현한 함수 사용
+
+			// [4] 프레임버퍼 준비
+			float* d_framebuffer;
+			cudaMalloc(&d_framebuffer, sizeof(float) * 800 * 600 * 3);
+			cudaMemset(d_framebuffer, 0, sizeof(float) * 800 * 600 * 3);
+
+			// [5] CUDA 커널 호출
+			dim3 block(8, 8);
+			dim3 grid((800 + 7) / 8, (600 + 7) / 8);
+			singlePassRayTracingKernel <<< grid, block >>> (
+				d_framebuffer, 1, 0, 0, false,
+				camera, info, d_obj
+				);
+			cudaDeviceSynchronize();
+
+			// [6] 결과 복사
+			float* h_framebuffer = new float[800 * 600 * 3];
+			cudaMemcpy(h_framebuffer, d_framebuffer, sizeof(float) * 800 * 600 * 3, cudaMemcpyDeviceToHost);
+			//save_as_ppm(h_framebuffer, 800, 600, "output_kdtree.ppm");
+			//*************************************************************
+		}
 		case 999:
 			exit(0);
 			clean_up_system();

@@ -1,0 +1,63 @@
+2009.12.03
+1. GScene 클래스는 다음의 세 변수를 갖는다. (기존에는 m_pKDTree 만 가지고 있었음)
+// Empty KD Tree 와 Object 의 KD Tree 를 모두 포함하는 전체 렌더링용 KD Tree
+GKDTreeStructure *m_pKDTree;
+// Empty Space 만 나눈 KD Tree. Object 는 본격적으로 나눠지지 않은 상태.
+GKDTreeStructure *m_pEmptyKDTree;
+// Visibility 정보를 가지고 있는 그리드 클래스. GVisibilityGridStructure 는 아직 아무것도 구현되어 있지 않은 상태임.
+GVisibilityGridStructure *m_pVisibilityGrid;
+
+2. GVisibilityGridStructure.cpp/GVisibilityGridStructure.h 가 추가 되었음
+KD-Tree 와 동일하게 클래스 GSpatialStructure 를 상속 받는다.
+
+3. GKDTreeStructure 와 GVisibilityGridStructure 모두 다음의 함수를 작성해야한다.
+bool loadStructureFromFile( const char *filename );
+bool saveStructureToFile( const char *filename );
+
+4. construction 은 여러단계로 나누어서 수행될 수 있어야 하는데, 기본적인 함수는 다음과 같다.
+// 전체 construction 을 한번에 수행한다.
+GError convertRenderScene();
+// empty kd tree 만 생성한다.
+GError buildEmptyKdTree();
+// empty kd tree 가 존재할 경우 empty kd tree 를 토대로 트리를 구성하고,
+// 그렇지 않을 경우 전체 scene 에 대해서 보통의 kd tree 를 만든다.
+// (주의 : object kd tree = m_pKDTree)
+GError buildObjectKdTree();
+// visibility grid 를 생성한다.
+// 필요하다면 buildObjectKdTree() 를 호출 할 수 있다.
+GError buildVisibilityGrid();
+
+5. GlobalOption.h 파일이 추가 되었으며, 이 파일은 전체 세팅에 중요한 역할을 한다.
+여러가지 테스트 코드들에 대해서는 svn 을 거치지 않는 여러 버전을 만들지 말고 #if/#elif 를 통해서 관리하는 것이 좋을 것 같음.
+(파일 내에 주설 설명 되어있음.)
+-> 앞으로 모든 코드는 SVN 안에서 저장되고 관리 되는 것을 목표로함.
+
+6. parameter/method 설정의 위의 방법과 같은 define 을 사용하거나
+실시간용 파라미터 함수를 사용함.
+
+// 함수 원형
+void setGlobalParameterFloat( const char *parameter_name, float value );
+void setGlobalParameterInteger( const char *parameter_name, int value );
+
+float getGlobalParameterFloat( const char *parameter_name );
+int getGlobalParameterInteger( const char *parameter_name );
+
+// 사용 예
+// 설정 파일 로드시
+setGlobalParameterFloat( "IntersectionCost", 20.0f );
+// KD Tree 빌드시
+m_IntersectionCost = getGlobalParameterFloat( "IntersectionCost" );
+
+지나치게 자주 호출만되지 않으면 그다지 느리지 않고 관리 하기 편함.
+단, 스펠링이 틀리지 않도록 주의해야함.
+
+7. 그 외에 바뀐 것들 (중요하지 않음.)
+(1) GRenderer 에 RenderSetting 을 추가함.
+(2) 기존의 OpenGL Pipeline 도 별도의 Renderer 로 만들었음. (기존에는 Renderer 가 NULL 일 경우 OpenGL Pipeline 이었음.)
+(3) ViewerModeRenderer 가 추가 되었으며, 여기서 KD Tree/Visibility 정보를 어떻게 보여줄지 무엇을 보여줄지 등이 결정됨.
+(4) ViewerModeRenderer 용 Dialog 가 만들어 지고 있음. (형태는 만들어졌음)
+
+2009.01.06
+
+- Scene Data 파일 Format 정리하기. 지금은 자체 포맷인데, obj file format 도입고려.
+- 
