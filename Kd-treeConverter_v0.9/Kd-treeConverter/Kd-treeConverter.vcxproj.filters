@@ -16,6 +16,30 @@
     <Filter Include="CUDA">
       <UniqueIdentifier>{0557f044-b07e-4ca6-9017-c32d2efa69a4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="SGRTx2Lib">
+      <UniqueIdentifier>{afcf9d2b-72a0-4b41-aae6-af08c13692ce}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SGRTx2Lib\Renderer">
+      <UniqueIdentifier>{ae3bfe33-2325-4ba8-b5db-00988c71a731}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SGRTx2Lib\Renderer\GPURayTracer">
+      <UniqueIdentifier>{9aa084e1-7a43-4869-8203-d2b5f7e30a26}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SGRTx2Lib\Renderer\CPUWhittedRT">
+      <UniqueIdentifier>{f0187ff4-7a06-468d-bd8c-3a5edbbac5b4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SGRTx2Lib\Renderer\BVH">
+      <UniqueIdentifier>{5ca06c24-c292-45c5-a73b-1fbb894de835}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SGRTx2Lib\Renderer\GRID">
+      <UniqueIdentifier>{a2539891-1cf1-45ff-b396-fca9fcf1de99}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SGRTx2Lib\Renderer\CudaPhotonMapping">
+      <UniqueIdentifier>{8c6f2bbc-9f5f-492a-94dd-7d2f87935e40}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SGRTx2Lib\Renderer\Profiler">
+      <UniqueIdentifier>{17e0e19e-131e-4ccc-bcf0-fddca1fc86ec}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Kd-treeConverter.cpp">

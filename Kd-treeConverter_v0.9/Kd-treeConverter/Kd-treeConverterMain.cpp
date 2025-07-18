@@ -701,34 +701,52 @@ void main_menu_action(int selection) {
 			break;
 		}
 		case 600: {
-			GScene* scene = new GScene();
-			scene->initalize(); // scene 내부 변수 초기화
-
-			scene->setResolution( 800, 600 );
-			scene->setSuperSampling( 1, 1 );
-			scene->setGPUBlockSize( 8, 8 );
-			scene->setEnableShadow(false);
-			scene->setUseTexture(false);
-			scene->setEnableLocalShading(false);
-			scene->setMaxReflectionDepth(1);
-			scene->setBloomingFilter(false);
-			scene->setUseAntialiasingFilter(false);
-			scene->setUseEdgeDetectionFilter(false);
-			scene->setUseBlurFilter(false);
-			scene->setUseGrayScaleFilter(false);
-
-			//scene->setCompositeObject(&uip.poly_model);
-			//scene->setKDTreePointer(uip.poly_model.kd_tree);  // 또는 별도 래퍼 GAccel 등 필요
-
-		//}
-		//case 700: {
 			//CUDA rendering
 			fprintf(stdout, "CUDA ray tracing Render with kd-tree\n");
 			if (&uip.poly_model == NULL) {
 				fprintf(stdout, "Dosen't exist kd-tree\n");
 				break;
 			}
+
 			//TODO: CUDA rendering*****************************************
+			GScene* scene = convertCompositeObjectToGScene(&uip.poly_model);
+
+			// [2] GGPUExperimentalRayTracer 초기화 및 렌더링
+			GGPUExperimentalRayTracer raytracer;
+			GError err = raytracer.rendering(scene, false);
+
+			if (err != errorNo) {
+				printf("Rendering failed with error %d\n", err);
+			}
+			else {
+				printf("Rendering done. Check framebuffer or saved file.\n");
+			}
+
+			delete scene;  // 적절한 해제 필요
+			break;
+
+			/*GKdTreeAccel* kdAccel = new GKdTreeAccel();
+			kdAccel->setFromCompositeObject(&obj_model);
+			
+			GScene* scene = new GScene();
+			scene->initalize(); // scene 내부 변수 초기화
+
+			scene->setResolution(800, 600);
+			scene->setSuperSampling(1, 1);
+			scene->setGPUBlockSize(8, 8);
+			scene->setAccelStructure(kdAccel);
+			scene->setMaxReflectionDepth(1);
+			scene->setEnableShadow(false);
+			scene->setEnableLocalShading(false);
+			scene->setUseTexture(false);
+
+			GGPUExperimentalRayTracer* renderer = new GGPUExperimentalRayTracer();
+			GError err = renderer->rendering(scene, false);
+			if (err != errorNo) {
+				printf("CUDA rendering failed: %s\n", GErrorManager::getGErrorString(err));
+			}
+			break;
+
 			// [1] 카메라 설정
 			cuCamera camera;
 			camera.eye = make_float3(0, 0, -5);
@@ -774,7 +792,7 @@ void main_menu_action(int selection) {
 			// [6] 결과 복사
 			float* h_framebuffer = new float[800 * 600 * 3];
 			cudaMemcpy(h_framebuffer, d_framebuffer, sizeof(float) * 800 * 600 * 3, cudaMemcpyDeviceToHost);
-			//save_as_ppm(h_framebuffer, 800, 600, "output_kdtree.ppm");
+			//save_as_ppm(h_framebuffer, 800, 600, "output_kdtree.ppm");*/
 			//*************************************************************
 		}
 		case 999:
