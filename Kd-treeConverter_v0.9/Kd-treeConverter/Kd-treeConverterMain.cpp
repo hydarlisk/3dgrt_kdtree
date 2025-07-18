@@ -24,10 +24,17 @@
 #include "OpenGLStuffs.h"
 #include "MyMathUtility.h"
 
+//shyun
 #include "sgrt_interface.h"
 #include "cudaRayTracingKernel.cu"
 #include "SGRTx2Lib/GGPURayTracer.h"
+#include "SGRTx2Lib/GGPUExperimentalRayTracer.h"
 
+float* g_render_framebuffer = nullptr;
+int g_render_width = 0;
+int g_render_height = 0;
+int g_cuda_rendering_done = 0;
+//shyun end
 UIParameters uip;
 Camera camera;
 KdTree kd_tree;
@@ -50,6 +57,21 @@ void load_poly_model_into_OpenGL(void) {
 }
  
 void display(void) {
+	if (g_cuda_rendering_done && g_render_framebuffer != nullptr) {
+		glDisable(GL_LIGHTING);
+		glDisable(GL_DEPTH_TEST);
+
+		glMatrixMode(GL_MODELVIEW);
+		glLoadIdentity();
+
+		glRasterPos2f(-1.0f, -1.0f); // 좌하단 기준
+		glDrawPixels(g_render_width, g_render_height, GL_RGB, GL_FLOAT, g_render_framebuffer);
+
+		glEnable(GL_DEPTH_TEST);
+		glutSwapBuffers();
+		return;
+	}
+
 	int i;
 	ExtendedVertex *ptr_ev;
  
@@ -702,27 +724,35 @@ void main_menu_action(int selection) {
 		}
 		case 600: {
 			//CUDA rendering
-			fprintf(stdout, "CUDA ray tracing Render with kd-tree\n");
+			fprintf(stdout, "CUDA ray tracing Render using SGRT with kd-tree\n");
+			if (!uip.composite_object_read) {
+				fprintf(stderr, "CompositeObject not loaded.\n");
+				break;
+			}
 			if (&uip.poly_model == NULL) {
 				fprintf(stdout, "Dosen't exist kd-tree\n");
 				break;
 			}
 
 			//TODO: CUDA rendering*****************************************
+			
 			GScene* scene = convertCompositeObjectToGScene(&uip.poly_model);
-
-			// [2] GGPUExperimentalRayTracer 초기화 및 렌더링
 			GGPUExperimentalRayTracer raytracer;
 			GError err = raytracer.rendering(scene, false);
 
 			if (err != errorNo) {
-				printf("Rendering failed with error %d\n", err);
-			}
-			else {
-				printf("Rendering done. Check framebuffer or saved file.\n");
+				printf("CUDA rendering failed with error %d\n", err);
+				break;
 			}
 
-			delete scene;  // 적절한 해제 필요
+			// 결과 프레임버퍼 가져오기
+			g_render_framebuffer = raytracer.getFrameBufferPointer();
+			g_render_width = raytracer.getFrameBufferWidth();
+			g_render_height = raytracer.getFrameBufferHeight();
+			g_cuda_rendering_done = 1;
+
+			printf("Rendering done. Displaying on screen...\n");
+			glutPostRedisplay();
 			break;
 
 			/*GKdTreeAccel* kdAccel = new GKdTreeAccel();

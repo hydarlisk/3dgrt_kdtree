@@ -1,10 +1,86 @@
-//#include "sgrt_interface.h"
-//#include "SGRTx2Lib/cudaRenderCommon.cuh"
-//#include "SGRTx2Lib/cuda_math.h"
-//#include "Kd-treeConverter.h"
-//
-//#include <cuda.h>
-//#include <cuda_runtime.h>
+#include "sgrt_interface.h"
+#include "sgrtx2lib/cudarendercommon.cuh"
+#include "sgrtx2lib/cuda_math.h"
+#include "kd-treeconverter.h"
+
+#include <cuda.h>
+#include <cuda_runtime.h>
+
+#include "SGRTx2Lib/cudaRenderCommon.cuh"
+#include <cuda_runtime.h>
+#include <cstdio>
+#include <math.h>
+#include "SGRTx2Lib/GScene.h"
+#include "SGRTx2Lib/GGPUExperimentalRayTracer.h"
+
+// 임시: CompositeObject를 SGRTx2Lib의 GScene으로 변환
+GScene* convertCompositeObjectToGScene(const CompositeObject* compObj) {
+    if (!compObj || !compObj->kd_tree || !compObj->extended_vertices)
+        return nullptr;
+
+    GScene* scene = new GScene();
+    scene->setResolution(800, 600);
+    scene->setSuperSampling(1, 1);
+    scene->setMaxReflectionDepth(1);
+    scene->setFrontFace(faceCCW);
+    scene->setEnableShadow(false);
+    scene->setEnableLocalShading(false);
+    scene->setUseTexture(false);
+
+    // [1] GMeshObject 생성
+    GMeshObject* mesh = new GMeshObject();
+    for (int i = 0; i < compObj->n_triangles; ++i) {
+        const ExtendedVertex* v0 = &compObj->extended_vertices[i * 3 + 0];
+        const ExtendedVertex* v1 = &compObj->extended_vertices[i * 3 + 1];
+        const ExtendedVertex* v2 = &compObj->extended_vertices[i * 3 + 2];
+
+        mesh->addTriangle(
+            make_float3(v0->vertex[0], v0->vertex[1], v0->vertex[2]),
+            make_float3(v1->vertex[0], v1->vertex[1], v1->vertex[2]),
+            make_float3(v2->vertex[0], v2->vertex[1], v2->vertex[2])
+        );
+    }
+
+    scene->addObject(mesh);
+
+    // [2] GKdTreeForCuda에 KdTree 정보 세팅
+    GKdTreeForCuda* gKd = new GKdTreeForCuda();
+    gKd->setFromRawKDTree(compObj->kd_tree, compObj->n_triangles);
+    scene->setKDTreeStructure(gKd);
+
+    // [3] 추가 정보
+    float3 amb = make_float3(0.1f, 0.1f, 0.1f);
+    scene->setGlobalAmbient(amb);
+    scene->createImageBuffer();  // 내부에서 resolution 기준으로 할당됨
+    scene->setSceneNumber(1);
+    scene->setGeometryChangeTimestamp(1);
+
+    return scene;
+}
+
+
+// 이후 SGRT 렌더링 예시
+extern "C" void launchSGRTRenderFromCompositeObject(const CompositeObject * compObj) {
+    GScene* scene = convertCompositeObjectToGScene(compObj);
+    if (!scene) {
+        printf("[SGRT] Failed to convert CompositeObject to GScene\n");
+        return;
+    }
+
+    GGPUExperimentalRayTracer raytracer;
+    GError err = raytracer.rendering(scene, false);
+
+    if (err != errorNo) {
+        printf("[SGRT] Rendering failed.\n");
+    }
+    else {
+        printf("[SGRT] Rendering succeeded.\n");
+    }
+
+    delete scene;
+}
+
+
 //
 //struct IntersectionResult {
 //    bool hit;              // 교차 여부

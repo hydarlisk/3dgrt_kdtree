@@ -11,8 +11,13 @@
 
 #include <cuda_runtime.h>
 #include <cstdio>
+#include <math.h>
 #include <cstdlib>
 #include <cmath>
+#include "SGRTx2Lib/cudaRenderCommon.cuh"
+#include "SGRTx2Lib/GScene.h"
+#include "SGRTx2Lib/GGPUExperimentalRayTracer.h"
+
 
 //void SGRT_RenderFromCompositeObject(const CompositeObject* obj) {
 //    const int width = 1280, height = 720;
@@ -93,6 +98,49 @@
 //
 //    printf("[SGRT] Scene ready.\n");
 //}
+
+
+// 임시: CompositeObject를 SGRTx2Lib의 GScene으로 변환
+GScene* convertCompositeObjectToGScene(const CompositeObject* compObj) {
+    if (!compObj) return nullptr;
+
+    GScene* scene = new GScene();
+
+    // 해상도, 샘플링, 쉐이딩 등 설정
+    scene->setResolution(800, 600);
+    scene->setSuperSampling(1, 1);
+    scene->setEnableLocalShading(false);
+    scene->setEnableShadow(false);
+    scene->setUseTexture(false);
+    scene->setMaxReflectionDepth(1);
+    scene->setFrontFace(faceCCW);
+
+    // geometry 추가
+    int nTris = compObj->n_triangles;
+    for (int i = 0; i < nTris; ++i) {
+        ExtendedVertex v0 = compObj->extended_vertices[i * 3 + 0];
+        ExtendedVertex v1 = compObj->extended_vertices[i * 3 + 1];
+        ExtendedVertex v2 = compObj->extended_vertices[i * 3 + 2];
+
+        GVertex gv0(v0.vertex[0], v0.vertex[1], v0.vertex[2]);
+        GVertex gv1(v1.vertex[0], v1.vertex[1], v1.vertex[2]);
+        GVertex gv2(v2.vertex[0], v2.vertex[1], v2.vertex[2]);
+
+        GTriangle tri(gv0, gv1, gv2);
+        scene->addTriangle(tri);
+    }
+
+    // KD-Tree 설정
+    GKdTreeAccel* kdAccel = new GKdTreeAccel();
+    kdAccel->setFromCompositeObject(compObj); // 이 함수가 SGRTx2Lib에 존재해야 함
+    scene->setKDTreeStructure(kdAccel);
+
+    // 기타 정보
+    scene->setSceneNumber(1);
+    scene->setGeometryChangeTimestamp(1);
+
+    return scene;
+}
 
 void upload_composite_object_to_cuda(CompositeObject* h_obj, CompositeObject* d_obj_out) {
     // ExtendedVertex

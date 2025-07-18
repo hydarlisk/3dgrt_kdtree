@@ -25,20 +25,47 @@
     <Filter Include="SGRTx2Lib\Renderer\GPURayTracer">
       <UniqueIdentifier>{9aa084e1-7a43-4869-8203-d2b5f7e30a26}</UniqueIdentifier>
     </Filter>
-    <Filter Include="SGRTx2Lib\Renderer\CPUWhittedRT">
-      <UniqueIdentifier>{f0187ff4-7a06-468d-bd8c-3a5edbbac5b4}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="SGRTx2Lib\Renderer\BVH">
-      <UniqueIdentifier>{5ca06c24-c292-45c5-a73b-1fbb894de835}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="SGRTx2Lib\Renderer\GRID">
-      <UniqueIdentifier>{a2539891-1cf1-45ff-b396-fca9fcf1de99}</UniqueIdentifier>
-    </Filter>
     <Filter Include="SGRTx2Lib\Renderer\CudaPhotonMapping">
       <UniqueIdentifier>{8c6f2bbc-9f5f-492a-94dd-7d2f87935e40}</UniqueIdentifier>
     </Filter>
     <Filter Include="SGRTx2Lib\Renderer\Profiler">
       <UniqueIdentifier>{17e0e19e-131e-4ccc-bcf0-fddca1fc86ec}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SGRTx2Lib\Pipeline">
+      <UniqueIdentifier>{6bbe59dc-9c38-47ac-be05-616a65b9a2b1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SGRTx2Lib\common">
+      <UniqueIdentifier>{21d74a14-acf3-4862-a58a-11601c2cfc0c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SGRTx2Lib\Pipeline\cudaRenderPipeline">
+      <UniqueIdentifier>{9440e752-a5a7-4323-835f-ca66c7f96058}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SGRTx2Lib\Pipeline\KDTreeViewer">
+      <UniqueIdentifier>{77640f7e-3e7c-4b04-b2c0-7ee6a673ab5c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SGRTx2Lib\Pipeline\OpenGLPipeline">
+      <UniqueIdentifier>{1b257913-a527-489c-9f6e-24f6e71c342f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SGRTx2Lib\Thread">
+      <UniqueIdentifier>{6ac927b4-cc6e-4694-876b-b0987ea6284d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SGRTx2Lib\Scene">
+      <UniqueIdentifier>{98400076-b74b-45b6-98b4-5f4d8bff5631}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SGRTx2Lib\Scene\SpatialStructure">
+      <UniqueIdentifier>{422c1919-f873-4ec2-be04-de00c650bd89}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SGRTx2Lib\Scene\SpatialStructure\BVH">
+      <UniqueIdentifier>{09308d3b-7b32-4b1b-b8d9-dd3d955e4187}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SGRTx2Lib\Scene\SpatialStructure\GRID">
+      <UniqueIdentifier>{7d019cdf-467e-4c60-ab0f-c96bafe7a507}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SGRTx2Lib\Scene\SpatialStructure\KDTree">
+      <UniqueIdentifier>{c8f0eb8f-beeb-45f4-b747-42108377bc04}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SGRTx2Lib\Renderer\ViewerModeRenderer">
+      <UniqueIdentifier>{5f67e759-0766-45bb-915d-765399348f86}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -66,6 +93,159 @@
     <ClCompile Include="sgrt_interface.cpp">
       <Filter>CUDA</Filter>
     </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GOpenGLPipelineRenderer.cpp">
+      <Filter>SGRTx2Lib\Pipeline\OpenGLPipeline</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GRayProfilerOption.cpp">
+      <Filter>SGRTx2Lib\Pipeline\KDTreeViewer</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GRayProfilerPipeline.cpp">
+      <Filter>SGRTx2Lib\Pipeline\KDTreeViewer</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GGPUExperimentalRayTracer.cpp">
+      <Filter>SGRTx2Lib\Renderer\GPURayTracer</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GGPURayTracer.cpp">
+      <Filter>SGRTx2Lib\Renderer\GPURayTracer</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GGPURayTracerForPaper.cpp">
+      <Filter>SGRTx2Lib\Renderer\GPURayTracer</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GRayTracerProfiler.cpp">
+      <Filter>SGRTx2Lib\Renderer\Profiler</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GRayProfiler.cpp">
+      <Filter>SGRTx2Lib\Renderer\Profiler</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GKDTreeOption.cpp">
+      <Filter>SGRTx2Lib\Scene\SpatialStructure\KDTree</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GKDTreeStructure.cpp">
+      <Filter>SGRTx2Lib\Scene\SpatialStructure\KDTree</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GBoundingBox.cpp">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GCamera.cpp">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GColor.cpp">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GDimension.cpp">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GErrorManager.cpp">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GGLUtil.cpp">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GLogManager.cpp">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GMaterial.cpp">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GMatrix4.cpp">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GObject.cpp">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GObjectNumberGenerator.cpp">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GOBJFileLoader.cpp">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GOpenGLContext.cpp">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GPoint.cpp">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GPolygonGeometry.cpp">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GPolygonObject.cpp">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GScene.cpp">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GSceneManager.cpp">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GTexture.cpp">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GTextureManager.cpp">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GTimer.cpp">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GTriangleWrapper.cpp">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GTriangleWrapperList.cpp">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GUtil.cpp">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GBaseThread.cpp">
+      <Filter>SGRTx2Lib\Thread</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GCriticalSection.cpp">
+      <Filter>SGRTx2Lib\Thread</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GEvent.cpp">
+      <Filter>SGRTx2Lib\Thread</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GThread.cpp">
+      <Filter>SGRTx2Lib\Thread</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GThreadContext.cpp">
+      <Filter>SGRTx2Lib\Thread</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GThreadManager.cpp">
+      <Filter>SGRTx2Lib\Thread</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GThreadWork.cpp">
+      <Filter>SGRTx2Lib\Thread</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GViewerModeRenderer.cpp">
+      <Filter>SGRTx2Lib\Renderer\ViewerModeRenderer</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GPhotonMappingOption.cpp">
+      <Filter>SGRTx2Lib\Renderer\CudaPhotonMapping</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GPhotonMapRayTracer.cpp">
+      <Filter>SGRTx2Lib\Renderer\CudaPhotonMapping</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GDistributedPhotonRayTracer.cpp">
+      <Filter>SGRTx2Lib\Renderer\CudaPhotonMapping</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GImageBuffer.cpp">
+      <Filter>SGRTx2Lib\common</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GIntersectionPointMap.cpp">
+      <Filter>SGRTx2Lib\common</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GRenderCommon.cpp">
+      <Filter>SGRTx2Lib\common</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GRenderer.cpp">
+      <Filter>SGRTx2Lib\common</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GRenderOption.cpp">
+      <Filter>SGRTx2Lib\common</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GRenderSystem.cpp">
+      <Filter>SGRTx2Lib\common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Kd-treeConverter.h">
@@ -92,10 +272,234 @@
     <ClInclude Include="sgrt_interface.h">
       <Filter>CUDA</Filter>
     </ClInclude>
+    <ClInclude Include="SGRTx2Lib\cuda_math.h">
+      <Filter>SGRTx2Lib\Pipeline\cudaRenderPipeline</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\cudaPhotonMapping.cuh">
+      <Filter>SGRTx2Lib\Pipeline\cudaRenderPipeline</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\cudaPhotonMapping.h">
+      <Filter>SGRTx2Lib\Pipeline\cudaRenderPipeline</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\cudaRenderCommon.cuh">
+      <Filter>SGRTx2Lib\Pipeline\cudaRenderPipeline</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\cudaRenderPipeline.cuh">
+      <Filter>SGRTx2Lib\Pipeline\cudaRenderPipeline</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\cudaRenderPipeline.h">
+      <Filter>SGRTx2Lib\Pipeline\cudaRenderPipeline</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GOpenGLPipelineRenderer.h">
+      <Filter>SGRTx2Lib\Pipeline\OpenGLPipeline</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GRayProfilerOption.h">
+      <Filter>SGRTx2Lib\Pipeline\KDTreeViewer</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GRayProfilerPipeline.h">
+      <Filter>SGRTx2Lib\Pipeline\KDTreeViewer</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GGPURayTracerForPaper.h">
+      <Filter>SGRTx2Lib\Renderer\GPURayTracer</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GGPUExperimentalRayTracer.h">
+      <Filter>SGRTx2Lib\Renderer\GPURayTracer</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GGPURayTracer.h">
+      <Filter>SGRTx2Lib\Renderer\GPURayTracer</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GRayTracerProfiler.h">
+      <Filter>SGRTx2Lib\Renderer\Profiler</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GRayProfiler.h">
+      <Filter>SGRTx2Lib\Renderer\Profiler</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GKDTreeNode.h">
+      <Filter>SGRTx2Lib\Scene\SpatialStructure\KDTree</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GKDTreeOption.h">
+      <Filter>SGRTx2Lib\Scene\SpatialStructure\KDTree</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GKDTreeStructure.h">
+      <Filter>SGRTx2Lib\Scene\SpatialStructure\KDTree</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GUtil.h">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GBase.h">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GBoundingBox.h">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GCamera.h">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GClassMacro.h">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GColor.h">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GDimension.h">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GError.h">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GErrorManager.h">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GGLUtil.h">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GLogListener.h">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GLogManager.h">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GMaterial.h">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GMatrix4.h">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GObject.h">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GObjectNumberGenerator.h">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GOBJFileLoader.h">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GOpenGLContext.h">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GPoint.h">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GPolygonGeometry.h">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GPolygonObject.h">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GRAY.h">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GScene.h">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GSceneManager.h">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GTexture.h">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GTextureManager.h">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GTimer.h">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GTriangleWrapper.h">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GTriangleWrapperList.h">
+      <Filter>SGRTx2Lib\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GThreadWork.h">
+      <Filter>SGRTx2Lib\Thread</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GBaseThread.h">
+      <Filter>SGRTx2Lib\Thread</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GCriticalSection.h">
+      <Filter>SGRTx2Lib\Thread</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GEvent.h">
+      <Filter>SGRTx2Lib\Thread</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GThread.h">
+      <Filter>SGRTx2Lib\Thread</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GThreadContext.h">
+      <Filter>SGRTx2Lib\Thread</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GThreadingOption.h">
+      <Filter>SGRTx2Lib\Thread</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GThreadManager.h">
+      <Filter>SGRTx2Lib\Thread</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GViewerModeRenderer.h">
+      <Filter>SGRTx2Lib\Renderer\ViewerModeRenderer</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GPhotonMappingOption.h">
+      <Filter>SGRTx2Lib\Renderer\CudaPhotonMapping</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GPhotonMapRayTracer.h">
+      <Filter>SGRTx2Lib\Renderer\CudaPhotonMapping</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GGridBox.h">
+      <Filter>SGRTx2Lib\Renderer\CudaPhotonMapping</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GDistributedPhotonRayTracer.h">
+      <Filter>SGRTx2Lib\Renderer\CudaPhotonMapping</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GSpatialStructure.h">
+      <Filter>SGRTx2Lib\common</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GImageBuffer.h">
+      <Filter>SGRTx2Lib\common</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GIntersectionPointMap.h">
+      <Filter>SGRTx2Lib\common</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GRenderCommon.h">
+      <Filter>SGRTx2Lib\common</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GRenderer.h">
+      <Filter>SGRTx2Lib\common</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GRenderOption.h">
+      <Filter>SGRTx2Lib\common</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GRenderSystem.h">
+      <Filter>SGRTx2Lib\common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cudaRayTracingKernel.cu">
       <Filter>CUDA</Filter>
     </CudaCompile>
+    <CudaCompile Include="SGRTx2Lib\cudaRenderPipelineKernel.cu">
+      <Filter>SGRTx2Lib\Pipeline\cudaRenderPipeline</Filter>
+    </CudaCompile>
+    <CudaCompile Include="SGRTx2Lib\cudaPhotonMapping.cu">
+      <Filter>SGRTx2Lib\Pipeline\cudaRenderPipeline</Filter>
+    </CudaCompile>
+    <CudaCompile Include="SGRTx2Lib\cudaPhotonMappingKernel.cu">
+      <Filter>SGRTx2Lib\Pipeline\cudaRenderPipeline</Filter>
+    </CudaCompile>
+    <CudaCompile Include="SGRTx2Lib\cudaRenderPipeline.cu">
+      <Filter>SGRTx2Lib\Pipeline\cudaRenderPipeline</Filter>
+    </CudaCompile>
+    <CudaCompile Include="SGRTx2Lib\cudaRenderPipelineCommonKernel.cu">
+      <Filter>SGRTx2Lib\Pipeline\cudaRenderPipeline</Filter>
+    </CudaCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="SGRTx2Lib\TODO.txt">
+      <Filter>SGRTx2Lib</Filter>
+    </Text>
+    <Text Include="SGRTx2Lib\메모.txt">
+      <Filter>SGRTx2Lib</Filter>
+    </Text>
+    <Text Include="SGRTx2Lib\ReadMe.txt">
+      <Filter>SGRTx2Lib</Filter>
+    </Text>
   </ItemGroup>
 </Project>
