@@ -1,0 +1,16 @@
+!SL_CONFIG_1.1
+$INPUT_DIRECTORY  ../../Data_In
+$OUTPUT_DIRECTORY ../../Data_Out
+$N_MESH_FILES 11
+1_LightGuide_Reflector.mesh 		12	
+2_LightGuide_Optic_Part.mesh   		15
+2_LightGuide_No_Optic_Part.mesh 	27 
+3_LightGuide_Bracket.mesh 		34
+4_LightGuide_Innerlens.mesh 		21
+5_BlackBezelReflector.mesh		9
+6_OuterLens.mesh			14
+7_Housing.mesh 				12
+8_HighBeam_Reflector.mesh		32
+9_TurnSignal_InnerLens.mesh		12
+10_TurnSignal_Reflector.mesh		15
+$END

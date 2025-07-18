@@ -1,0 +1,36 @@
+!SL_KDT_CONFIG_1.0
+# The first line must contain the file type indicator '!SL_KDT_CONFIG_1.0'.
+# A comment line begins with '#'.
+# $INPUT_DIRECTORY must hold the (corrected) input mesh files.
+$INPUT_DIRECTORY  ../../Data/YP_FNC_mesh
+# The produced kd-tree and i-geometry will be stored in $OUTPUT_DIRECTORY.
+$OUTPUT_DIRECTORY ../../Data/YP_LDA_geometry
+# Define the filenames of kd-tree and i-geometry.
+$KD_TREE_FILENAME YP_ALL.kdtree
+$I_GEOMETRY_FILENAME YP_ALL.igeometry
+# The kd-tree dump format must be either BINARY or ASCII.
+$KD_TREE_DUMP_FORMAT BINARY
+# Adjust the kd-tree construction parameters.
+$KD_TREE_TRAVL_COST     1.0
+$KD_TREE_ISECT_COST     1.5
+$KD_TREE_MAX_LEVEL      50
+$KD_TREE_MIN_TRIANGLE   5
+$KD_TREE_EMTPY_BONUS    0.9
+# Now, input mesh filenames follows.
+$MESH_FILE_LIST
+# Each line must contain one mesh file name.
+# The file name must start with no space in front.
+# The file name extension must be '.mesh'.
+#1_LightGuide_Reflector_FNC.mesh      100
+2_LightGuide_Optic_Part_FNC.mesh     400
+2_LightGuide_No_Optic_Part_FNC.mesh  300 
+#3_LightGuide_Bracket_FNC.mesh        101
+4_LightGuide_Innerlens_FNC.mesh      301
+#5_BlackBezelReflector_FNC.mesh       102
+#6_OuterLens_FNC.mesh                 302
+#7_Housing_FNC.mesh   	             104
+#8_HighBeam_Reflector_FNC.mesh        103
+#9_TurnSignal_InnerLens_FNC.mesh      303
+#10_TurnSignal_Reflector_FNC.mesh     100
+$END
+

@@ -1,0 +1,40 @@
+!SL_KDT_CONFIG_1.0
+# The first line must contain the file type indicator '!SL_KDT_CONFIG_1.0'.
+# A comment line begins with '#'.
+$INPUT_DIRECTORY  ../Data_In/AN_mesh
+# $INPUT_DIRECTORY must hold the (corrected) input mesh files.
+$OUTPUT_DIRECTORY ../Data_Out/AN_kdtree
+# The produced kd-tree will be stored in $OUTPUT_DIRECTORY.
+$OUTPUT_FILE_NAME AN.kdtree
+$KDTREE_DUMP_FORMAT BINARY
+# The kd-tree dump format must be either BINARY or ASCII.
+$MESH_FILE_LIST
+# Each line must contain one mesh file name.
+# The file name must start with no space in front.
+# The file name extension must be '.mesh'.
+# The corrected mesh will be stored with the same file name extended with '_FNC.mesh'.
+1-Outer Lens___pc ls2 clear.mesh
+2-Bezel___pbt black.mesh
+3-Turn Signal Inner Lens___pc ht apec2097 clear.mesh
+4-1-LightGuide.mesh
+4-2-LightGuide Back Plate.mesh
+4-3-LightGuide Mounting Bracket Bezel.mesh
+4-4-LightGuide Led Reflector.mesh
+4-5-LightGuide Led Base AL Plate.mesh
+4-6-LightGuide Led Heat Sink Plate.mesh
+5-Housing.mesh
+A-Turn Signal Reflector.mesh
+B-High Beam Reflector.mesh
+C-Low Beam Reflector.mesh
+D-Low Ring Clear Bezel___pc ih830c clear.mesh
+E-Low Cover Bezel___pbt 전방외측 al coating.mesh
+F-Aspheric Lens.mesh
+G-Side Bezel.mesh
+H-바닥베젤.mesh
+I-Low Bezel___pbt al coating.mesh
+J-Side Marker Lens__RR Lens.mesh
+K-Hood Strip 고무재질 --- Light Absorption.mesh
+L-Seating Rim.mesh
+M-Shield Holder.mesh
+$END
+

@@ -1,0 +1,9 @@
+!SL_CONFIG_1.1
+$INPUT_DIRECTORY  ../../Data_In
+$OUTPUT_DIRECTORY ../../Data_Out
+$KD_TREE_DUMP_FORMAT BINARY
+$KD_TREE_FILENAME    test.kd
+$N_MESH_FILES 2
+9_TurnSignal_InnerLens.mesh		12
+3_LightGuide_Bracket.mesh 		34
+$END

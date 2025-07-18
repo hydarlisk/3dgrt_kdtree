@@ -1,0 +1,23 @@
+!SL_KDT_CONFIG_1.0
+# The first line must contain the file type indicator '!SL_KDT_CONFIG_1.0'.
+# A comment line begins with '#'.
+$INPUT_DIRECTORY  ../../Data/YP_FNC_mesh
+# $INPUT_DIRECTORY must hold the (corrected) input mesh files.
+$OUTPUT_DIRECTORY ../../Data/YP_kd_tree
+# The produced kd-tree will be stored in $OUTPUT_DIRECTORY.
+$KD_TREE_FILENAME YP14.kdtree
+$KD_TREE_DUMP_FORMAT BINARY
+$I_GEOMETRY_FILENAME YP.igeometry
+# The kd-tree dump format must be either BINARY or ASCII.
+$MESH_FILE_LIST
+# Each line must contain one mesh file name.
+# The file name must start with no space in front.
+# The file name extension must be '.mesh'.
+# The corrected mesh will be stored with the same file name extended with '_FNC.mesh'.
+1_LightGuide_Reflector_FNC.mesh 100
+2_LightGuide_Optic_Part_FNC.mesh  400	
+2_LightGuide_No_Optic_Part_FNC.mesh  300
+3_LightGuide_Bracket_FNC.mesh  101  
+4_LightGuide_Innerlens_FNC.mesh  301
+$END
+
