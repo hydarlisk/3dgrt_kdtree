@@ -4,7 +4,7 @@
 #include <time.h>
 #include <string.h>
 #include <cuda.h>
-#include <cutil.h>
+//#include <cutil.h>
 
 #include "GLogManager.h"
 
@@ -426,8 +426,8 @@ GError cudaPhotonMapping::photonGathering( cuPMIntersectionPoint *pPMIsectPoint,
 		return errorCudaError;
 	}
 
-	CUT_SAFE_CALL( cutCreateTimer( &timer ) );
-	CUT_SAFE_CALL( cutStartTimer( timer ) );
+	//CUDA_SAFE_CALL( cutCreateTimer( &timer ) );
+	//CUDA_SAFE_CALL( cutStartTimer( timer ) );
 
 	/**
 	 *	photon info를 texture 로 올리기
@@ -531,11 +531,11 @@ GError cudaPhotonMapping::photonGathering( cuPMIntersectionPoint *pPMIsectPoint,
 			
 	}
 
-	GLogManager::logging( 
-		LOG_DEBUG, "ray-photon processing time : %f sec.", cutGetTimerValue( timer ) / 1000.0f );
+	//GLogManager::logging( 
+	//	LOG_DEBUG, "ray-photon processing time : %f sec.", cutGetTimerValue( timer ) / 1000.0f );
 
-	CUT_SAFE_CALL( cutStopTimer( timer ) );
-	CUT_SAFE_CALL( cutDeleteTimer( timer ) );
+	//CUT_SAFE_CALL( cutStopTimer( timer ) );
+	//CUT_SAFE_CALL( cutDeleteTimer( timer ) );
 
 	/**
 	 *	Data Free

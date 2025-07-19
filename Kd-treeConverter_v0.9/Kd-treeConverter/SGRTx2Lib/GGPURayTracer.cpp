@@ -26,7 +26,7 @@ void GGPURayTracer::uninitialize()
 }
 
 /**
- *	scene Á¤º¸¸¦ Àç±¸¼ºÇØ¾ßÇÒ¶§ ÃÊ±âÈ­ÇÑ´Ù.
+ *	scene ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ç±¸ï¿½ï¿½ï¿½Ø¾ï¿½ï¿½Ò¶ï¿½ ï¿½Ê±ï¿½È­ï¿½Ñ´ï¿½.
  */
 GError GGPURayTracer::initialize( GScene *pScene )
 {
@@ -63,7 +63,7 @@ GError GGPURayTracer::initialize( GScene *pScene )
 			return error; 
 
 		/**
-		 *	Light Á¤º¸ ¼¼ÆÃ. ¼¼ÆÃÈÄ ÇÊ¿ä¾øÀ¸¹Ç·Î »èÁ¦.
+		 *	Light ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ê¿ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ ï¿½ï¿½ï¿½ï¿½.
 		 */
 		int lightCount = 0;
 		cuLight* pLight = GRenderCommon::makeCudaLightInfo( pScene, &lightCount, m_pCudaRenderPipeline );
@@ -74,13 +74,13 @@ GError GGPURayTracer::initialize( GScene *pScene )
 			return error;
 
 		/** 
-		 *	Á» ¾î»öÇÏÁö¸¸, kdtree Á¤º¸¸¦ ÀÌ·¸°Ô ÇØ¼­ cuda ·Î ³Ñ±è. 
+		 *	ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½, kdtree ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ì·ï¿½ï¿½ï¿½ ï¿½Ø¼ï¿½ cuda ï¿½ï¿½ ï¿½Ñ±ï¿½. 
 		 */ 
 		error = pScene->getKDTreeStructure()->makeCudaRenderStructureInfo( m_pCudaRenderPipeline );
 		if ( error != errorNo )
 			return error;
 
-		/** blooming È¿°ú¸¦ Àû¿ëÇÏ±â¸¦ ¿øÇÑ´Ù¸é ÃÊ±âÈ­ ÇØµÒ.*/
+		/** blooming È¿ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï±â¸¦ ï¿½ï¿½ï¿½Ñ´Ù¸ï¿½ ï¿½Ê±ï¿½È­ ï¿½Øµï¿½.*/
 		error = m_pCudaRenderPipeline->initBloomingFilter( m_pScene->getBloomingRadius(),
 														   m_pScene->getBloomingWeight() );
 		if ( error != errorNo )
@@ -90,7 +90,7 @@ GError GGPURayTracer::initialize( GScene *pScene )
 	}
 
 	/**
-	 *	ÇöÀç Renderer °¡ Ã³¸®ÇÑ Scene À» ±â¾ïÇÑ´Ù.
+	 *	ï¿½ï¿½ï¿½ï¿½ Renderer ï¿½ï¿½ Ã³ï¿½ï¿½ï¿½ï¿½ Scene ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½.
 	 */
 	m_iOldSceneNumber = pScene->getSceneNumber();
 	m_iSceneTimestamp = pScene->getGeometryChangeTimestamp();
@@ -104,8 +104,8 @@ GError GGPURayTracer::initialize( GScene *pScene )
 //	GError error;
 //
 //	/** 
-//	 *	Scene ÀÌ ÀÌÀü geometry »óÅÂ¿¡¼­ º¯ÇÑ°Ô ÀÖ´ÂÁö Ã¼Å©ÇØ¼­ ÀÖ´Ù¸é
-//	 *	SpatialStructure ¸¦ Àç±¸¼ºÇÑ´Ù.
+//	 *	Scene ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ geometry ï¿½ï¿½ï¿½Â¿ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ñ°ï¿½ ï¿½Ö´ï¿½ï¿½ï¿½ Ã¼Å©ï¿½Ø¼ï¿½ ï¿½Ö´Ù¸ï¿½
+//	 *	SpatialStructure ï¿½ï¿½ ï¿½ç±¸ï¿½ï¿½ï¿½Ñ´ï¿½.
 //	 */
 //	error = initialize( pScene );
 //	if ( error != errorNo ) {
@@ -113,7 +113,7 @@ GError GGPURayTracer::initialize( GScene *pScene )
 //		return error;
 //	}
 //
-//	/** rendering option ¼¼ÆÃ */
+//	/** rendering option ï¿½ï¿½ï¿½ï¿½ */
 //	m_pCudaRenderPipeline->renderingOption( m_bEnableShadow, pScene->isUseTexture() );
 //
 //	GImageBuffer *pImageBuffer = pScene->getImageBuffer();
@@ -126,7 +126,7 @@ GError GGPURayTracer::initialize( GScene *pScene )
 //	timer1.start();
 //
 //	/**
-//	 *	cuda ¾ÈÀÇ intersection point ¸¦ µðÆúÆ® °ªÀ¸·Î ÃÊ±âÈ­ ÇÑ´Ù.
+//	 *	cuda ï¿½ï¿½ï¿½ï¿½ intersection point ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Æ® ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ê±ï¿½È­ ï¿½Ñ´ï¿½.
 //	 */
 //	error = m_pCudaRenderPipeline->clearIntersectionResult();
 //	if ( error != errorNo ) {
@@ -147,8 +147,8 @@ GError GGPURayTracer::initialize( GScene *pScene )
 //	}
 //
 //	/**
-//	 *	reflection ÀÌ³ª refraction ÀÌ ÀÖÀ¸¸é ÃÖ´ë max depth ±îÁö
-//	 *	ÃßÀûÇÑ´Ù.
+//	 *	reflection ï¿½Ì³ï¿½ refraction ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ö´ï¿½ max depth ï¿½ï¿½ï¿½ï¿½
+//	 *	ï¿½ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½.
 //	 */
 //	do {
 //		error = m_pCudaRenderPipeline->doRayCasting( 0, generatedRayCount, 
@@ -171,7 +171,7 @@ GError GGPURayTracer::initialize( GScene *pScene )
 //		return errorNo;
 //	}
 //
-//	/** blooming È¿°ú¸¦ Àû¿ëÇÏ±â¸¦ ¿øÇÑ´Ù¸é */
+//	/** blooming È¿ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï±â¸¦ ï¿½ï¿½ï¿½Ñ´Ù¸ï¿½ */
 //	GTimer bloomingtimer;
 //	bloomingtimer.start();
 //
@@ -201,8 +201,8 @@ GError GGPURayTracer::rendering( GScene *pScene, bool isDebug )
 	GError error;
 
 	/** 
-	 *	Scene ÀÌ ÀÌÀü geometry »óÅÂ¿¡¼­ º¯ÇÑ°Ô ÀÖ´ÂÁö Ã¼Å©ÇØ¼­ ÀÖ´Ù¸é
-	 *	SpatialStructure ¸¦ Àç±¸¼ºÇÑ´Ù.
+	 *	Scene ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ geometry ï¿½ï¿½ï¿½Â¿ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ñ°ï¿½ ï¿½Ö´ï¿½ï¿½ï¿½ Ã¼Å©ï¿½Ø¼ï¿½ ï¿½Ö´Ù¸ï¿½
+	 *	SpatialStructure ï¿½ï¿½ ï¿½ç±¸ï¿½ï¿½ï¿½Ñ´ï¿½.
 	 */
 	error = initialize( pScene );
 	if ( error != errorNo ) {
@@ -210,7 +210,7 @@ GError GGPURayTracer::rendering( GScene *pScene, bool isDebug )
 		return error;
 	}
 
-	/** rendering option ¼¼ÆÃ */
+	/** rendering option ï¿½ï¿½ï¿½ï¿½ */
 	cuScene cuSceneInfo;
 	cuSceneInfo.globalAmbient = make_float3( pScene->getGlobalAmbient().r, 
 											 pScene->getGlobalAmbient().g,
@@ -235,7 +235,7 @@ GError GGPURayTracer::rendering( GScene *pScene, bool isDebug )
 	int atLeastOneRay = 0;
 
 	/**
-	 *	cuda ¾ÈÀÇ intersection point ¸¦ µðÆúÆ® °ªÀ¸·Î ÃÊ±âÈ­ ÇÑ´Ù.
+	 *	cuda ï¿½ï¿½ï¿½ï¿½ intersection point ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Æ® ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ê±ï¿½È­ ï¿½Ñ´ï¿½.
 	 */
 	error = m_pCudaRenderPipeline->clearIntersectionResult();
 	if ( error != errorNo ) {
@@ -263,8 +263,8 @@ GError GGPURayTracer::rendering( GScene *pScene, bool isDebug )
 			}
 
 			/**
-			 *	reflection ÀÌ³ª refraction ÀÌ ÀÖÀ¸¸é ÃÖ´ë max depth ±îÁö
-			 *	ÃßÀûÇÑ´Ù.
+			 *	reflection ï¿½Ì³ï¿½ refraction ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ö´ï¿½ max depth ï¿½ï¿½ï¿½ï¿½
+			 *	ï¿½ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½.
 			 */
 			depth = 0;
 			atLeastOneRay = 0;
@@ -293,7 +293,7 @@ GError GGPURayTracer::rendering( GScene *pScene, bool isDebug )
 		return errorNo;
 	}
 
-	/** blooming È¿°ú¸¦ Àû¿ëÇÏ±â¸¦ ¿øÇÑ´Ù¸é */
+	/** blooming È¿ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï±â¸¦ ï¿½ï¿½ï¿½Ñ´Ù¸ï¿½ */
 	GTimer bloomingtimer;
 	bloomingtimer.start();
 
@@ -359,7 +359,7 @@ cuCamera GGPURayTracer::calCameraInfo( GScene *pScene )
 }
 
 /**
- *	CUDA ¿¡¼­ Primary ray ¸¦ »ý¼º½ÃÅ²´Ù.
+ *	CUDA ï¿½ï¿½ï¿½ï¿½ Primary ray ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å²ï¿½ï¿½.
  */
 GError GGPURayTracer::makePrimaryRaySet( GScene *pScene, int *generatedCount, int currentSampleX, int currentSampleY )
 {
@@ -391,7 +391,7 @@ GError GGPURayTracer::makePrimaryRaySet( GScene *pScene, int *generatedCount, in
 
 
 /**
- *	CUDA ¿¡¼­ Primary ray ¸¦ »ý¼º½ÃÅ²´Ù.
+ *	CUDA ï¿½ï¿½ï¿½ï¿½ Primary ray ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å²ï¿½ï¿½.
  */
 GError GGPURayTracer::makePrimaryRaySet_BlockGrouping( GScene *pScene, int *generatedCount, int currentSampleX, int currentSampleY )
 {
@@ -423,16 +423,16 @@ GError GGPURayTracer::makePrimaryRaySet_BlockGrouping( GScene *pScene, int *gene
 }
 
 /**
- *	ÇöÀç scene Á¤º¸¸¦ ±â¹ÝÀ¸·Î ray index ¿¡ ÇØ´çÇÏ´Â ray °¡
- *	image »óÀÇ ¸î pixel ¿¡ ÇØ´çÇÒÁö¸¦ °è»êÇÑ´Ù.
+ *	ï¿½ï¿½ï¿½ï¿½ scene ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ray index ï¿½ï¿½ ï¿½Ø´ï¿½ï¿½Ï´ï¿½ ray ï¿½ï¿½
+ *	image ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ pixel ï¿½ï¿½ ï¿½Ø´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½.
  */
 int GGPURayTracer::toImageIndex( GScene *pScene, int rayIndex, int *x, int *y )
 {
-	/** ray index ¸¦ x,y ÁÂÇ¥·Î º¯È¯ */
+	/** ray index ï¿½ï¿½ x,y ï¿½ï¿½Ç¥ï¿½ï¿½ ï¿½ï¿½È¯ */
 	(*x) = rayIndex % ( pScene->getResolution().x );
 	(*y) = rayIndex / ( pScene->getResolution().x );
 	
-	/** ´Ù½Ã image index ·Î º¯È¯ */
+	/** ï¿½Ù½ï¿½ image index ï¿½ï¿½ ï¿½ï¿½È¯ */
 	return (*y) * pScene->getResolution().x + (*x);
 }
 

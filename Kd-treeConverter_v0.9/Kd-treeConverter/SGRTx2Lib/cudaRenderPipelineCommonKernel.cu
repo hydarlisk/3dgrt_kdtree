@@ -1,7 +1,7 @@
 #define M_PI 3.14159f
 
 /** 
- *	ray check ³Ê¹« ¾Õ¿¡¼­ ¸¸³ª¸é ¹«½ÃÇÏ±â À§ÇÑ epsilon 
+ *	ray check ï¿½Ê¹ï¿½ ï¿½Õ¿ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï±ï¿½ ï¿½ï¿½ï¿½ï¿½ epsilon 
  */
 #define RAY_START_EPSILON		EPSILON3
 #define BARYCENTRY_EPSILON		EPSILON7
@@ -19,23 +19,23 @@
 #define INTERSECTION_THREAD_DIM				128
 
 #define ADAPTIVE_THREADS					256
-#define SUBPIXEL_CAPABILITY					64			// ÁÖÀÇ ¹Ýµå½Ã ADAPTIVE_THREADS / 4°³¸¦ ½á¾ßÇÑ´Ù.!!!
+#define SUBPIXEL_CAPABILITY					64			// ï¿½ï¿½ï¿½ï¿½ ï¿½Ýµï¿½ï¿½ ADAPTIVE_THREADS / 4ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½.!!!
 
-#define USE_CONTRAST_COMPARE							// contrast ·Î ºñ±³ÇÒÁö, luminance ·Î ºñ±³ÇÒÁö
+#define USE_CONTRAST_COMPARE							// contrast ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½, luminance ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
 #define COLOR_WEIGHT_THREADHOLD				0.01f
 #define EDGE_THRESHOLD						0.3f
 #define DETECTOR_NORMAL_THREADHOLD			0.4f
 
 /**
- *	contrast ÀÇ µðÆúÆ® threshold. Mitchell ÀÌ ¾ð±ÞÇÑ 0.4, 0.3, 0.6 À» ±âº»
- *	threshold ·Î ÇÑ´Ù. ÀÌ default ºñÀ²À» ±â¹ÝÀ¸·Î ÇÁ·Î±×·¥³»¿¡¼­´Â scale factor
- *	ÇÏ³ª·Î ÀÌ ÀüÃ¼ threshold ¸¦ ³»·È´Ù, ¿Ã·È´ÙÇÑ´Ù.
+ *	contrast ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Æ® threshold. Mitchell ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ 0.4, 0.3, 0.6 ï¿½ï¿½ ï¿½âº»
+ *	threshold ï¿½ï¿½ ï¿½Ñ´ï¿½. ï¿½ï¿½ default ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Î±×·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ scale factor
+ *	ï¿½Ï³ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½Ã¼ threshold ï¿½ï¿½ ï¿½ï¿½ï¿½È´ï¿½, ï¿½Ã·È´ï¿½ï¿½Ñ´ï¿½.
  *
- *	scalefactor °¡ 1.0 ÀÏ¶§ 3threshold °¡ ¸ðµÎ 1 ÀÌ ³Ñ°ÔÇÏ±âÀ§ÇØ¼­.
- *	0.4 0.3 0.6 threshold ¿¡ 0.34 ¸¦ °öÇØ¼­ 1.36, 1.2, 2.04 °¡ µÇ°Ô ÇÑ´Ù.
+ *	scalefactor ï¿½ï¿½ 1.0 ï¿½Ï¶ï¿½ 3threshold ï¿½ï¿½ ï¿½ï¿½ï¿½ 1 ï¿½ï¿½ ï¿½Ñ°ï¿½ï¿½Ï±ï¿½ï¿½ï¿½ï¿½Ø¼ï¿½.
+ *	0.4 0.3 0.6 threshold ï¿½ï¿½ 0.34 ï¿½ï¿½ ï¿½ï¿½ï¿½Ø¼ï¿½ 1.36, 1.2, 2.04 ï¿½ï¿½ ï¿½Ç°ï¿½ ï¿½Ñ´ï¿½.
  *
- *	scalefactor °¡ 0.3 ÀÌ µÇ¸é 0.4 0.3 0.6 ÀÌ µÈ´Ù.
+ *	scalefactor ï¿½ï¿½ 0.3 ï¿½ï¿½ ï¿½Ç¸ï¿½ 0.4 0.3 0.6 ï¿½ï¿½ ï¿½È´ï¿½.
  */
 #define CONTRAST_RED_DEFAULT_THRESHOLD		1.36f
 #define CONTRAST_GREEN_DEFAULT_THRESHOLD	1.02f
@@ -44,11 +44,20 @@
 
 #define FLOAT_TO_ARRAY( X )	( (float*)(&(X)) )
 
+#include <cuda_runtime.h>
+#include <texture_types.h>
+#include <texture_fetch_functions.h>
+#include "cuda_math.h"
+
+#include "GKDTreeNode.h"
+#include "cudaRenderCommon.cuh"
+
+
 /**----------------------------------------------------------------------------------------------
- *	»ç¿ëÇÒ µ¥ÀÌÅÍ ¹× ±¸Á¶Ã¼
+ *	ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ã¼
  **---------------------------------------------------------------------------------------------*/
 /**
- *	Texture µ¥ÀÌÅÍ
+ *	Texture ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
  */
 texture<kdtreeNode, 1, cudaReadModeElementType> inKdTreeNodeTex;
 texture<float4, 1, cudaReadModeElementType> inWaldTriangleTex;
@@ -60,12 +69,12 @@ texture<float4, 1, cudaReadModeElementType> inTriangleGeometryTex;
 texture<float4, 1, cudaReadModeElementType> inObjectMaterialTex;
 
 /**
- *	Light °¡ ray set À¸·Î ÁÖ¾îÁø °æ¿ì »ç¿ëÇÒ Texture µ¥ÀÌÅÍ.
+ *	Light ï¿½ï¿½ ray set ï¿½ï¿½ï¿½ï¿½ ï¿½Ö¾ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ Texture ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½.
  */
 texture<float4, 1, cudaReadModeElementType> inLightRaySetTexture;
 
 /**
- *	Light ¸¦ sphere polygon À¸·Î ÃßÁ¤ÇÒ¶§ »ç¿ëÇÒ texture µ¥ÀÌÅÍ.
+ *	Light ï¿½ï¿½ sphere polygon ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ò¶ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ texture ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½.
  */
 texture<float4, 1, cudaReadModeElementType> inLightSphereTexture;
 
@@ -75,7 +84,7 @@ texture<float4, 1, cudaReadModeElementType> inLightSphereTexture;
 texture<float, 1, cudaReadModeElementType> inBloomingFilterTexture;
 
 /**
- *	frame buffer ¸¦ texture ·Î Á¢±ÙÇÒ¶§ »ç¿ë. read ÇÒ¶§¸¸.
+ *	frame buffer ï¿½ï¿½ texture ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ò¶ï¿½ ï¿½ï¿½ï¿½. read ï¿½Ò¶ï¿½ï¿½ï¿½.
  */
 texture<float4, 1, cudaReadModeElementType> inSamplingMapTexture;
 texture<float, 1, cudaReadModeElementType> inFrameBufferTexture;
@@ -83,7 +92,7 @@ texture<float, 1, cudaReadModeElementType> inFrameBuffer2Texture;
 texture<int, 1, cudaReadModeElementType> inASBufferTexture;
 
 /**
- *	Constant ·Î °ü¸®ÇÏ´Â µ¥ÀÌÅÍ.
+ *	Constant ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½.
  */
 __constant__ cuScene g_SceneInfo;
 __constant__ cuThreshold g_ThresholdInfo;
@@ -93,32 +102,32 @@ __constant__ unsigned shortStackDepth;
 __constant__ cuBoundingBox g_SceneBBox;
 
 /**
- *	setting µÈ texture Á¤º¸¸¦ À§ÇÑ constant.
+ *	setting ï¿½ï¿½ texture ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ constant.
  */
 __constant__ cuTextureRef g_TextureRefInfo[ CUDA_MAX_TEXTURE ];
 __constant__ int g_TextureRefCount;
 
 /**
- *	Light Á¤º¸. ÃÖ´ë 20°³±îÁö µî·Ï°¡´ÉÇÏ°Ô.
+ *	Light ï¿½ï¿½ï¿½ï¿½. ï¿½Ö´ï¿½ 20ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ï°ï¿½ï¿½ï¿½ï¿½Ï°ï¿½.
  */
 __constant__ cuLight constantLightInfo[ CUDA_MAX_LIGHT ];
 __constant__ int constantLightCount;
 
 /**
- *	adaptive sampling ¿¡¼­ subpixel ÀÌ »ç¿ëÇÒ index table
+ *	adaptive sampling ï¿½ï¿½ï¿½ï¿½ subpixel ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ index table
  */
 __constant__ int constantIndexTablePattern[ 24 ];
 __constant__ float constantPixelWeight[12];
 
 /**
- *	Texture ÃÖ´ë CUDA_MAX_TEXTURE ±îÁö µî·Ï°¡´ÉÇÏ°Ô.
- *	µ¿ÀûÀ¸·Î Texture ¸Þ¸ð¸®¸¦ ÇÒ´çÇÒ ¹æ¹ýÀº ¾ø´Âµí ÇÏ´Ï
- *	ÇÏ³ªÀÇ texture ¾È¿¡ ¿©·¯°³ texture ¸¦ ´Ù ¿Ã·Á¼­ ³»ºÎÀûÀ¸·Î
- *	Ã³¸®ÇÑ´Ù.
+ *	Texture ï¿½Ö´ï¿½ CUDA_MAX_TEXTURE ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ï°ï¿½ï¿½ï¿½ï¿½Ï°ï¿½.
+ *	ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Texture ï¿½Þ¸ð¸®¸ï¿½ ï¿½Ò´ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Âµï¿½ ï¿½Ï´ï¿½
+ *	ï¿½Ï³ï¿½ï¿½ï¿½ texture ï¿½È¿ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ texture ï¿½ï¿½ ï¿½ï¿½ ï¿½Ã·ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ *	Ã³ï¿½ï¿½ï¿½Ñ´ï¿½.
  */
 texture<uchar4, 2, cudaReadModeNormalizedFloat> inObjectTexture;
 
-// stackÀÇ element Çü½Ä.
+// stackï¿½ï¿½ element ï¿½ï¿½ï¿½ï¿½.
 typedef struct 
 {
 	unsigned nodeID; 
@@ -127,16 +136,16 @@ typedef struct
 }cu_traceState;
 
 /**
- *	shared memory ·Î intersection point ¿¡¼­ ÇÊ¿äÇÑ
- *	Á¤º¸¸¦ access ÇÏ±â À§ÇÑ ±¸Á¶Ã¼. Ç×»ó bytes ¼ö´Â 14bytes ·Î
- *	°íÁ¤ÇØ¾ß ÇÑ´Ù.
+ *	shared memory ï¿½ï¿½ intersection point ï¿½ï¿½ï¿½ï¿½ ï¿½Ê¿ï¿½ï¿½ï¿½
+ *	ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ access ï¿½Ï±ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ã¼. ï¿½×»ï¿½ bytes ï¿½ï¿½ï¿½ï¿½ 14bytes ï¿½ï¿½
+ *	ï¿½ï¿½ï¿½ï¿½ï¿½Ø¾ï¿½ ï¿½Ñ´ï¿½.
  */
 typedef struct
 {
-	float3 pos, dir, normal;		//	intersection point Á¤º¸.
-	float u, v;						//	texture ÁÂÇ¥.
+	float3 pos, dir, normal;		//	intersection point ï¿½ï¿½ï¿½ï¿½.
+	float u, v;						//	texture ï¿½ï¿½Ç¥.
 	unsigned int objectIndex;		//	object index
-	unsigned int bTexture;			//	texture À¯¹«.
+	unsigned int bTexture;			//	texture ï¿½ï¿½ï¿½ï¿½.
 	float pad;
 } sharedIntersectPoint;
 
@@ -155,7 +164,7 @@ struct smemIntersect {
 	}
 */
 
-// traceStackÀº lmemÀ» ¾²´Â stackÀÌ´Ù. ÀÏ¹ÝÀûÀÎ ½ºÅÃÀÇ ¿ªÇÒÀ» ¼öÇàÇÑ´Ù.
+// traceStackï¿½ï¿½ lmemï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ stackï¿½Ì´ï¿½. ï¿½Ï¹ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½.
 struct traceStack {
 	cu_traceState lmemStack[50];
     int _top;
@@ -177,11 +186,11 @@ struct traceStack {
     __device__ inline void pop() { --_top; }
 };
 
-//Çª½¬ÇÒ ¶§ ¿À¹öÇìµå°¡ ÀÖ´Â ´ÜÁ¡ÀÌ ÀÖ´Þ±î.
+//Çªï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½å°¡ ï¿½Ö´ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ö´Þ±ï¿½.
 struct cached_lmemStack {
 	traceStack lmemStack;
 	unsigned _top, cacheQuant, baseOffset;
-	cached_lmemStack() : _top(shortStackDepth-1), cacheQuant(0) {}
+	__host__ __device__ cached_lmemStack() : _top(shortStackDepth-1), cacheQuant(0) {}
 	__device__ inline void init(const unsigned smem_baseOffset) 
 	{ baseOffset = smem_baseOffset*shortStackDepth; }
 	__device__ inline cu_traceState top() const { 
@@ -202,7 +211,7 @@ struct cached_lmemStack {
 		smemBuffer[baseOffset + _top].tMax = t_max;
 	}
 	__device__ inline int empty() const {	return cacheQuant == 0 && lmemStack.empty(); }
-	__device__ inline void pop() {//ÁÖÀÇ!! ´Ù ¾´´ÙÀ½¿¡ pop()ÇÒ°Í
+	__device__ inline void pop() {//ï¿½ï¿½ï¿½ï¿½!! ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ pop()ï¿½Ò°ï¿½
 		if(cacheQuant == 0) {
 			lmemStack.pop();
 			return;
@@ -214,10 +223,10 @@ struct cached_lmemStack {
 };
 
 
-//½ÉÇÃ ¹öÀü. bank conflict °í·Á ¾ÈÇÔ.
+//ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½. bank conflict ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½.
 struct shortStack {
 	unsigned _top, quant, baseOffset;
-	shortStack() : _top(shortStackDepth-1), quant(0) {}
+	__host__ __device__ shortStack() : _top(shortStackDepth-1), quant(0) {}
 	__device__ inline void init(const unsigned smem_baseOffset) 
 	{ baseOffset = smem_baseOffset*(shortStackDepth); }
 	__device__ inline cu_traceState top() { return smemBuffer[baseOffset + _top];}
@@ -243,13 +252,13 @@ struct shortStack {
 
 
 /**----------------------------------------------------------------------------------------------
- *	»ç¿ëÇÒ µ¥ÀÌÅÍ ¹× ±¸Á¶Ã¼
+ *	ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ã¼
  **---------------------------------------------------------------------------------------------*/
 
 
 
 /**----------------------------------------------------------------------------------------------
- *	ÇÔ¼öµé
+ *	ï¿½Ô¼ï¿½ï¿½ï¿½
  **---------------------------------------------------------------------------------------------*/
 
 inline cudaError_t checkError( const char* title )
@@ -269,7 +278,7 @@ inline cudaError_t checkError( const char* title )
 __device__ float3 reflection( float3 ray, float3 normal )
 {
 	/**
-	 *	¹°Ã¼ÀÇ µÞ¸é¿¡ ¸ÂÀº°æ¿ì normal À» µÚÁý´Â´Ù.
+	 *	ï¿½ï¿½Ã¼ï¿½ï¿½ ï¿½Þ¸é¿¡ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ normal ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Â´ï¿½.
 	 */
 	float rdotn = dot( ray, normal );
 	return normalize( 2.0f * rdotn * normal - ray );
@@ -328,7 +337,7 @@ __device__ float3 refraction( float3 dir, float3 normal, float refractionIndex )
 }
 
 /**
- *	Object Material À» °¡Á®¿Â´Ù.
+ *	Object Material ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Â´ï¿½.
  */
 /*
 __device__ void getObjectMaterial( int objIndex, cuObjectMaterial &material )
@@ -357,8 +366,8 @@ __device__ void getObjectMaterial( int objIndex, cuObjectMaterial &material )
 __device__ void getObjectMaterial( int objIndex, cuObjectMaterial &material )
 {
 	/** 
-	 *	object material texture ¿¡¼­ µ¥ÀÌÅÍ¸¦ ·ÎµåÇØ ¿Â´Ù. 
-	 *	float4 ÇüÅÂÀÇ texture ÀÌ¹Ç·Î °¡Á®¿Í¼­ ÀçÁ¶ÇÕÇÑ´Ù.
+	 *	object material texture ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Í¸ï¿½ ï¿½Îµï¿½ï¿½ï¿½ ï¿½Â´ï¿½. 
+	 *	float4 ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ texture ï¿½Ì¹Ç·ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Í¼ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½.
 	 */
 	float4 temp = tex1Dfetch( inObjectMaterialTex, 4 * objIndex + 0 );
 	material.ambient_emission.x = temp.x; material.ambient_emission.y = temp.y;
@@ -378,11 +387,11 @@ __device__ void getObjectMaterial( int objIndex, cuObjectMaterial &material )
 }
 
 /**
- *	Texture Collection Data ¿¡¼­ textureNumber ÀÇ u, v ¿¡ ÇØ´çÇÏ´Â 
- *	µ¥ÀÌÅÍ¸¦ °¡Á®¿Â´Ù. u, v °ªÀº( 0, 1.0 ) ·Î wrapping ÇÑ´ÙÀ½¿¡
- *	texutre ¸¦ Á¢±ÙÇÏ±â À§ÇØ¼­´Â ½ÇÁ¦ ÀÌ¹ÌÁö ÁÂÇ¥·Î º¯È¯ÇÑ´Ù.
- *	( ÇÑ texture ¾È¿¡ ¿©·¯ texture °¡ ÀÖ±â ¶§¹® )
- *	return °ªÀº texture °ªÀ» °¡Á®¿Ô´ÂÁö ¿©ºÎ.
+ *	Texture Collection Data ï¿½ï¿½ï¿½ï¿½ textureNumber ï¿½ï¿½ u, v ï¿½ï¿½ ï¿½Ø´ï¿½ï¿½Ï´ï¿½ 
+ *	ï¿½ï¿½ï¿½ï¿½ï¿½Í¸ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Â´ï¿½. u, v ï¿½ï¿½ï¿½ï¿½( 0, 1.0 ) ï¿½ï¿½ wrapping ï¿½Ñ´ï¿½ï¿½ï¿½ï¿½ï¿½
+ *	texutre ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï±ï¿½ ï¿½ï¿½ï¿½Ø¼ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ì¹ï¿½ï¿½ï¿½ ï¿½ï¿½Ç¥ï¿½ï¿½ ï¿½ï¿½È¯ï¿½Ñ´ï¿½.
+ *	( ï¿½ï¿½ texture ï¿½È¿ï¿½ ï¿½ï¿½ï¿½ï¿½ texture ï¿½ï¿½ ï¿½Ö±ï¿½ ï¿½ï¿½ï¿½ï¿½ )
+ *	return ï¿½ï¿½ï¿½ï¿½ texture ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ô´ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½.
  */
 __device__ int fetchTexture( int textureNumber, float u, float v, float3 &color )
 {
@@ -456,7 +465,7 @@ BoundsRayIntersect( const cuBoundingBox &box, const cuRay &ray, float &tmin, flo
 }
 
 /**
- *	ÇöÀç thread id ¸¦ ÀÌ¿ëÇØ¼­ Ã³¸®ÇÒ ray id ¸¦ ±¸ÇÑ´Ù.
+ *	ï¿½ï¿½ï¿½ï¿½ thread id ï¿½ï¿½ ï¿½Ì¿ï¿½ï¿½Ø¼ï¿½ Ã³ï¿½ï¿½ï¿½ï¿½ ray id ï¿½ï¿½ ï¿½ï¿½ï¿½Ñ´ï¿½.
  */
 __device__ inline int samplingRayID( int startOffset )
 {
@@ -475,7 +484,7 @@ __device__ int samplingRayID_BlockGrouping( int startOffset )
 }
 
 /**
- *	ÇöÀç thread id ¸¦ ÀÌ¿ëÇØ¼­ Ã³¸®ÇÒ image »óÀÇ index ¸¦ ±¸ÇÑ´Ù.
+ *	ï¿½ï¿½ï¿½ï¿½ thread id ï¿½ï¿½ ï¿½Ì¿ï¿½ï¿½Ø¼ï¿½ Ã³ï¿½ï¿½ï¿½ï¿½ image ï¿½ï¿½ï¿½ï¿½ index ï¿½ï¿½ ï¿½ï¿½ï¿½Ñ´ï¿½.
  */
 __device__ int samplingImageIndex( int startOffset )
 {
@@ -553,15 +562,15 @@ __device__ inline void PlueckerIntersection( const cuRay &ray, const int id,
 }
 
 /**
- *	intersection point µ¥ÀÌÅÍ¸¦ »ý¼ºÇÑ´Ù.
+ *	intersection point ï¿½ï¿½ï¿½ï¿½ï¿½Í¸ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½.
  */
 __device__ void makeIntersectionPoint( cuRay* pRay, cuIntersectionCheck *pHit, 
 									   cuIntersectionPoint *pCurrIsectResult )
 {
 	/**
-	 *	±¸Á¶Ã¼ cuTriangleGeometry ¸¦ texture ·Î
-	 *	·ÎµùÇÑ°Í¿¡¼­ °ªÀ» °¡Á®¿Â´Ù. texture´Â float4 ·Î ¸¸µé¾ú±â
-	 *	¶§¹®¿¡ ±¸Á¶Ã¼ÀÇ °ªÀ» °¡Á®¿À±â À§ÇØ¼­ °è»êÀ» ÀßÇØ¾ß ÇÑ´Ù.
+	 *	ï¿½ï¿½ï¿½ï¿½Ã¼ cuTriangleGeometry ï¿½ï¿½ texture ï¿½ï¿½
+	 *	ï¿½Îµï¿½ï¿½Ñ°Í¿ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Â´ï¿½. textureï¿½ï¿½ float4 ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+	 *	ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ã¼ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ø¼ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ø¾ï¿½ ï¿½Ñ´ï¿½.
 	 */
 	float3 n0, n1, n2;
 	float2 uv0, uv1, uv2;
@@ -577,7 +586,7 @@ __device__ void makeIntersectionPoint( cuRay* pRay, cuIntersectionCheck *pHit,
 	uv1.y = temp.x; uv2.x = temp.y; uv2.y = temp.z;
 	
 	/** 
-	 *	»ï°¢Çü Á¤º¸, ray Á¤º¸ Ã¤¿ò.
+	 *	ï¿½ï°¢ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½, ray ï¿½ï¿½ï¿½ï¿½ Ã¤ï¿½ï¿½.
 	 */
 	pCurrIsectResult->triIndex = pHit->triIndex; 
 	pCurrIsectResult->objectIndex = pHit->objectIndex;
@@ -589,15 +598,15 @@ __device__ void makeIntersectionPoint( cuRay* pRay, cuIntersectionCheck *pHit,
 	temp.w = 1.0f - pHit->beta - pHit->gamma;
 
 	/**
-	 *	boundDepth, rayIndex ¿Í colorWeight Á¤º¸´Â ray ¸¦ »ý¼ºÇÒ¶§
-	 *	±â·ÏÇØ µÎ¾úÀ¸¹Ç·Î	¿©±â¼­ ¾÷µ¥ÀÌÆ® ÇÏ¸é ¾ÈµÈ´Ù.
+	 *	boundDepth, rayIndex ï¿½ï¿½ colorWeight ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ray ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ò¶ï¿½
+	 *	ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Î¾ï¿½ï¿½ï¿½ï¿½Ç·ï¿½	ï¿½ï¿½ï¿½â¼­ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ® ï¿½Ï¸ï¿½ ï¿½ÈµÈ´ï¿½.
 	 */
 	//pCurrIsectResult->boundDepth;
 	//pCurrIsectResult->rayIndex;
 	//pCurrIsectResult->colorWeight;
 	
 	/**
-	 *	position°ú barycentric normal À» °è»êÇÑ´Ù.
+	 *	positionï¿½ï¿½ barycentric normal ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½.
 	 */
 	pCurrIsectResult->pos.x = pRay->pos.x + pHit->tHit * pRay->dir.x;
 	pCurrIsectResult->pos.y = pRay->pos.y + pHit->tHit * pRay->dir.y;
@@ -608,7 +617,7 @@ __device__ void makeIntersectionPoint( cuRay* pRay, cuIntersectionCheck *pHit,
 									n1 * ( pHit->beta ) + n2 * ( pHit->gamma ) );
 	float2 tex = uv0 * ( temp.w ) + uv1 * ( pHit->beta ) + uv2 * ( pHit->gamma );
 
-	/** Áö±ÝÀº ÅØ½ºÃÄ ÁÂÇ¥´Â 2Â÷¿ø °ª¸¸ ¾¸. */
+	/** ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ø½ï¿½ï¿½ï¿½ ï¿½ï¿½Ç¥ï¿½ï¿½ 2ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½. */
 	pCurrIsectResult->u = tex.x;
 	pCurrIsectResult->v = tex.y;
 }
@@ -690,8 +699,8 @@ __device__ inline void MultipassIntersectRoutine( const cuRay &ray, const int id
 	if ( ( hit.tHit <= t ) || ( t < t_near - EPSILON4 ) || ( t > t_far + EPSILON4 ) ) return;
 	
 	/**
-	 *	culling ¿É¼ÇÀÌ ÀÖ°í, object °¡ transparent ÇÏÁö ¾Ê´Ù¸é
-	 *	¾Õ¸éÀÎÁö µÞ¸éÀÎÁö Ã¼Å©. µÞ¸é¿¡ ¸ÂÀº°Å¸é hit Ã³¸® ¾ÈÇÔ.
+	 *	culling ï¿½É¼ï¿½ï¿½ï¿½ ï¿½Ö°ï¿½, object ï¿½ï¿½ transparent ï¿½ï¿½ï¿½ï¿½ ï¿½Ê´Ù¸ï¿½
+	 *	ï¿½Õ¸ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Þ¸ï¿½ï¿½ï¿½ï¿½ï¿½ Ã¼Å©. ï¿½Þ¸é¿¡ ï¿½ï¿½ï¿½ï¿½ï¿½Å¸ï¿½ hit Ã³ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½.
 	 */
 	if ( !tri.isTransparent() && bCulling == 1 ) {
 		float value = p.dir.x + p.dir.y * tri.n_u() + p.dir.z * tri.n_v();
@@ -705,7 +714,7 @@ __device__ inline void MultipassIntersectRoutine( const cuRay &ray, const int id
 	const float beta = hv * tri.b_nu() + hu * tri.b_nv();
 	const float gamma = hu * tri.c_nu() + hv * tri.c_nv();
 	
-	/** »ï°¢ÇüÀÇ edge ¿Í ºÎµúÈú¶§, ¼öÄ¡¿ÀÂ÷°¡ ÀÖÀ¸¹Ç·Î epsilon À» Á» ÁØ´Ù. */
+	/** ï¿½ï°¢ï¿½ï¿½ï¿½ï¿½ edge ï¿½ï¿½ ï¿½Îµï¿½ï¿½ï¿½ï¿½ï¿½, ï¿½ï¿½Ä¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ epsilon ï¿½ï¿½ ï¿½ï¿½ ï¿½Ø´ï¿½. */
 	if ( isnan( beta * gamma ) ) return;
 	if ( ( beta < 0.f - BARYCENTRY_EPSILON ) | ( gamma < 0.f - BARYCENTRY_EPSILON ) | ( ( 1.0f - beta - gamma ) < 0.0f - BARYCENTRY_EPSILON ) ) return;
 
@@ -740,8 +749,8 @@ __device__ inline void IntersectRoutine( const cuRay &ray, const int id, cuInter
 	if ( ( hit.tHit <= t ) || ( t < t_near - EPSILON4 ) || ( t > t_far + EPSILON4 ) ) return;
 	
 	/**
-	 *	culling ¿É¼ÇÀÌ ÀÖ°í, object °¡ transparent ÇÏÁö ¾Ê´Ù¸é
-	 *	¾Õ¸éÀÎÁö µÞ¸éÀÎÁö Ã¼Å©. µÞ¸é¿¡ ¸ÂÀº°Å¸é hit Ã³¸® ¾ÈÇÔ.
+	 *	culling ï¿½É¼ï¿½ï¿½ï¿½ ï¿½Ö°ï¿½, object ï¿½ï¿½ transparent ï¿½ï¿½ï¿½ï¿½ ï¿½Ê´Ù¸ï¿½
+	 *	ï¿½Õ¸ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Þ¸ï¿½ï¿½ï¿½ï¿½ï¿½ Ã¼Å©. ï¿½Þ¸é¿¡ ï¿½ï¿½ï¿½ï¿½ï¿½Å¸ï¿½ hit Ã³ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½.
 	 */
 /*
 #ifdef USE_CULLING_OPTION
@@ -758,7 +767,7 @@ __device__ inline void IntersectRoutine( const cuRay &ray, const int id, cuInter
 	const float beta = hv * tri.b_nu() + hu * tri.b_nv();
 	const float gamma = hu * tri.c_nu() + hv * tri.c_nv();
 	
-	/** »ï°¢ÇüÀÇ edge ¿Í ºÎµúÈú¶§, ¼öÄ¡¿ÀÂ÷°¡ ÀÖÀ¸¹Ç·Î epsilon À» Á» ÁØ´Ù. */
+	/** ï¿½ï°¢ï¿½ï¿½ï¿½ï¿½ edge ï¿½ï¿½ ï¿½Îµï¿½ï¿½ï¿½ï¿½ï¿½, ï¿½ï¿½Ä¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ epsilon ï¿½ï¿½ ï¿½ï¿½ ï¿½Ø´ï¿½. */
 	if ( isnan( beta * gamma ) ) return;
 	if ( ( beta < 0.f - BARYCENTRY_EPSILON ) | ( gamma < 0.f - BARYCENTRY_EPSILON ) | ( ( 1.0f - beta - gamma ) < 0.0f - BARYCENTRY_EPSILON ) ) return;
 
@@ -773,10 +782,10 @@ __device__ inline void IntersectRoutine( const cuRay &ray, const int id, cuInter
 
 
 /** 
- *	shadow ray ÀÇ intersection Ã¼Å© 
- *	transparent ÇÑ ¹°Ã¼¸é Åë°ú. ¹°Ã¼ÀÇ hit ¿©ºÎ¸¸ ¾Ë¸éµÈ´Ù. 
+ *	shadow ray ï¿½ï¿½ intersection Ã¼Å© 
+ *	transparent ï¿½ï¿½ ï¿½ï¿½Ã¼ï¿½ï¿½ ï¿½ï¿½ï¿½. ï¿½ï¿½Ã¼ï¿½ï¿½ hit ï¿½ï¿½ï¿½Î¸ï¿½ ï¿½Ë¸ï¿½È´ï¿½. 
  *
- *	TODO: ³ªÁß¿¡ HIT ¿©ºÎ¸¸ Ã¼Å©ÇÏ´Â ·çÆ¾À¸·Î °íÄ¡ÀÚ.
+ *	TODO: ï¿½ï¿½ï¿½ß¿ï¿½ HIT ï¿½ï¿½ï¿½Î¸ï¿½ Ã¼Å©ï¿½Ï´ï¿½ ï¿½ï¿½Æ¾ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ä¡ï¿½ï¿½.
  */
 __device__ inline void
 IntersectShadowRoutine( const cuRay &ray, const int id, 
@@ -786,7 +795,7 @@ IntersectShadowRoutine( const cuRay &ray, const int id,
 	tri.internal2 = tex1Dfetch( inWaldTriangleTex, 3 * id + 2 );
 
 	/**
-	 *	transparent ÇÏ´Ù¸é hit Ã³¸® ¾ÈÇÔ.
+	 *	transparent ï¿½Ï´Ù¸ï¿½ hit Ã³ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½.
 	 */
 	if ( tri.isTransparent() == 1 )
 		return;
@@ -809,7 +818,7 @@ IntersectShadowRoutine( const cuRay &ray, const int id,
 	const float beta = hv*tri.b_nu() + hu*tri.b_nv();
 	const float gamma = hu*tri.c_nu() + hv*tri.c_nv();
 	
-	/** »ï°¢ÇüÀÇ edge ¿Í ºÎµúÈú¶§, ¼öÄ¡¿ÀÂ÷°¡ ÀÖÀ¸¹Ç·Î epsilon À» Á» ÁØ´Ù. */
+	/** ï¿½ï°¢ï¿½ï¿½ï¿½ï¿½ edge ï¿½ï¿½ ï¿½Îµï¿½ï¿½ï¿½ï¿½ï¿½, ï¿½ï¿½Ä¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ epsilon ï¿½ï¿½ ï¿½ï¿½ ï¿½Ø´ï¿½. */
 	if ( isnan( beta * gamma ) ) return;
 	if ( ( beta < 0.f - BARYCENTRY_EPSILON ) | ( gamma < 0.f - BARYCENTRY_EPSILON ) | ( ( 1.0f - beta - gamma ) < 0.0f - BARYCENTRY_EPSILON ) ) return;
 
@@ -823,7 +832,7 @@ IntersectShadowRoutine( const cuRay &ray, const int id,
 }
 
 /**
- *	intersection point ¸¦ Ã£´Â´Ù.
+ *	intersection point ï¿½ï¿½ Ã£ï¿½Â´ï¿½.
  */
 __device__ void intersect( cuRay &currRay, cuIntersectionCheck &intersectionCheck, bool faceCCW, bool bCulling )
 {
@@ -863,7 +872,7 @@ __device__ void intersect( cuRay &currRay, cuIntersectionCheck &intersectionChec
 			int objectSize = OBJECT_SIZE( node ) + baseOffset;
 			for ( ; baseOffset < objectSize ; baseOffset++ ) {
 				const unsigned objListOffset = tex1Dfetch( inObjectOffsetListTex, baseOffset );
-				/** intersection ¿¡¼­ Á¦¿ÜÇÒ »ï°¢ÇüÀÏ¶§ */
+				/** intersection ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï°¢ï¿½ï¿½ï¿½Ï¶ï¿½ */
 				//if ( currRay.getPrevTriIndex() == objListOffset ) continue;
 
 				#if INTERSECTION_METHOD == 0
@@ -889,7 +898,7 @@ __device__ void intersect( cuRay &currRay, cuIntersectionCheck &intersectionChec
 
 
 /**
- *	intersection point ¸¦ Ã£´Â´Ù.
+ *	intersection point ï¿½ï¿½ Ã£ï¿½Â´ï¿½.
  */
 __device__ void MultipassIntersect( cuRay &currRay, cuIntersectionCheck &intersectionCheck, bool faceCCW, bool bCulling )
 {
@@ -951,7 +960,7 @@ __device__ void MultipassIntersect( cuRay &currRay, cuIntersectionCheck &interse
 
 
 /**
- *	shadow ray ÀÇ intersection Ã¼Å©.
+ *	shadow ray ï¿½ï¿½ intersection Ã¼Å©.
  */
 __device__ void intersectShadow( cuRay &currRay, cuIntersectionCheck &intersectionCheck, float maxt )
 {
@@ -990,7 +999,7 @@ __device__ void intersectShadow( cuRay &currRay, cuIntersectionCheck &intersecti
 			int objectSize = OBJECT_SIZE(node) + baseOffset;
 			for ( ; baseOffset < objectSize ; baseOffset++ ) {
 				const unsigned objListOffset = tex1Dfetch( inObjectOffsetListTex, baseOffset );
-				/** intersection ¿¡¼­ Á¦¿ÜÇÒ »ï°¢ÇüÀÏ¶§ */
+				/** intersection ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï°¢ï¿½ï¿½ï¿½Ï¶ï¿½ */
 				//if ( currRay.getPrevTriIndex() == objListOffset ) continue;
 				
 				#if INTERSECTION_METHOD == 0
@@ -1021,14 +1030,14 @@ __device__ void intersectShadow( cuRay &currRay, cuIntersectionCheck &intersecti
 }
 
 /**
- *	light °¡ º¸ÀÌ´ÂÁö shadow ray ¸¦ ½÷¼­ Ã¼Å©.
- *	ÀÏ´ÜÀº ÃÖÀûÈ­ ¾øÀÌ ±âÁ¸ ray check ±â´ÉÀ» »ç¿ëÇØ¼­ Ã¼Å©.
+ *	light ï¿½ï¿½ ï¿½ï¿½ï¿½Ì´ï¿½ï¿½ï¿½ shadow ray ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ Ã¼Å©.
+ *	ï¿½Ï´ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½È­ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ray check ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ø¼ï¿½ Ã¼Å©.
  */
 __device__ bool checkVisibility( float3 pos, float3 lightPos )
 {
 	cuRay currRay;
 	
-	/** light ±îÁöÀÇ t ¸¦ °è»ê */
+	/** light ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ t ï¿½ï¿½ ï¿½ï¿½ï¿½ */
 	float3 dir = lightPos - pos;
 	float maxt = length( dir );
 
@@ -1048,20 +1057,20 @@ __device__ bool checkVisibility( float3 pos, float3 lightPos )
 	/** shadow ray */
 	intersectShadow( currRay, currIsectCheck, maxt );
 
-	/** hit ¸¦ Çß´Ù´Â°Å´Â light ¸¦ ¸¸³ª±âÀü¿¡ ¹°Ã¼¸¦ ¸¸³­°ÍÀÌ´Ù. */
+	/** hit ï¿½ï¿½ ï¿½ß´Ù´Â°Å´ï¿½ light ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ã¼ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì´ï¿½. */
 	return !currIsectCheck.isHit();		
 }
 
 
 /**
- *	light °¡ º¸ÀÌ´ÂÁö shadow ray ¸¦ ½÷¼­ Ã¼Å©.
- *	ÀÏ´ÜÀº ÃÖÀûÈ­ ¾øÀÌ ±âÁ¸ ray check ±â´ÉÀ» »ç¿ëÇØ¼­ Ã¼Å©.
+ *	light ï¿½ï¿½ ï¿½ï¿½ï¿½Ì´ï¿½ï¿½ï¿½ shadow ray ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ Ã¼Å©.
+ *	ï¿½Ï´ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½È­ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ray check ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ø¼ï¿½ Ã¼Å©.
  */
 __device__ bool checkVisibility_ForSelective( float3 pos, float3 lightPos, bool &bSelected )
 {
 	cuRay currRay;
 	
-	/** light ±îÁöÀÇ t ¸¦ °è»ê */
+	/** light ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ t ï¿½ï¿½ ï¿½ï¿½ï¿½ */
 	float3 dir = lightPos - pos;
 	float maxt = length( dir );
 
@@ -1083,6 +1092,6 @@ __device__ bool checkVisibility_ForSelective( float3 pos, float3 lightPos, bool 
 	
 	bSelected = currIsectCheck.bSelected;
 
-	/** hit ¸¦ Çß´Ù´Â°Å´Â light ¸¦ ¸¸³ª±âÀü¿¡ ¹°Ã¼¸¦ ¸¸³­°ÍÀÌ´Ù. */
+	/** hit ï¿½ï¿½ ï¿½ß´Ù´Â°Å´ï¿½ light ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ã¼ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì´ï¿½. */
 	return !currIsectCheck.isHit();		
 }

@@ -31,6 +31,8 @@
 
 #include "GKDTreeNode.h"
 #include "GError.h"
+#include "cuda_runtime.h"
+#include "device_functions.h"
 
 #define SHORT_STACK_DEPTH	7					
 #define CUDA_MAX_LIGHT		10
@@ -56,10 +58,10 @@ inline unsigned float_as_unsigned(const float a) { return *(unsigned *)&(a); }
 typedef struct _cu_boundingbox_
 {
 	float4 min_max[2];
-	__HOST__ __device__ inline void setMin(const float4 &minbbox)
-	{	min_max[0] = minbbox;	}
-	__HOST__ __device__ inline void setMax(const float4 &maxbbox)
-	{	min_max[1] = maxbbox;	}
+	//__HOST__ __device__ inline void setMin(const float4 &minbbox)
+	//{	min_max[0] = minbbox;	}
+	//__HOST__ __device__ inline void setMax(const float4 &maxbbox)
+	//{	min_max[1] = maxbbox;	}
 	
 } cuBoundingBox;
 

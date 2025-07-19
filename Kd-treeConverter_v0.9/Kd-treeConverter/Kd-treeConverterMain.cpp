@@ -737,12 +737,23 @@ void main_menu_action(int selection) {
 			//TODO: CUDA rendering*****************************************
 			CompositeObject* compObj = &uip.poly_model;
 			GScene* scene = convertCompositeObjectToScene(compObj);
+			if (!scene) {
+				printf("[SGRT] Failed to convert CompositeObject to GScene.\n");
+				return;
+			}
 
 			scene->convertRenderScene();
 
 			GGPUExperimentalRayTracer tracer;
 			//tracer.setScene(scene);//TODO
-			tracer.rendering(scene, false);
+			GError err = tracer.rendering(scene, false);
+
+			if (err != errorNo)
+				printf("[SGRT] Rendering failed: %d\n", err);
+			else
+				printf("[SGRT] Rendering succeeded.\n");
+
+			delete scene;
 
 			/*GScene* scene = convertCompositeObjectToGScene(&uip.poly_model);
 			GGPUExperimentalRayTracer raytracer;

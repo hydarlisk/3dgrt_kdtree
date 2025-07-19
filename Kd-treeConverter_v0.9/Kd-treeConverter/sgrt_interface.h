@@ -22,7 +22,7 @@ extern "C" {
 
 	//void setSGRTScenePointers(ExtendedVertex*, KdTreeNode*, TriAccel*, unsigned int*, int n_triangles, int tree_node_count, int tri_accel_count, int tri_offset_count);
 	//void SGRT_RenderFromCompositeObject(const CompositeObject* obj);
-    GScene* convertCompositeObjectToScene(CompositeObject* compObj)
+    GScene* convertCompositeObjectToScene(CompositeObject* obj);
     //GScene* convertCompositeObjectToGScene(const CompositeObject* compObj);
     void upload_composite_object_to_cuda(CompositeObject* h_obj, CompositeObject* d_obj_out);
     void deep_copy_composite_object_to_cuda(const CompositeObject* h_obj, CompositeObject** d_obj_out);

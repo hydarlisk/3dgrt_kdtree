@@ -1,9 +1,9 @@
 /**
- *	Cuda ·Î Rendering À» ¼öÇàÇÏ±â À§ÇØ¼­
- *	¿©·¯°¡Áö¸¦ °ü¸®ÇÏ´Â class.
+ *	Cuda ï¿½ï¿½ Rendering ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï±ï¿½ ï¿½ï¿½ï¿½Ø¼ï¿½
+ *	ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½ class.
  *
  *	light, texture, shading, ray tracing, photon mapping
- *	µîµî.
+ *	ï¿½ï¿½ï¿½.
  *	
  */
 #include <stdio.h>
@@ -11,7 +11,7 @@
 #include <time.h>
 #include <string.h>
 #include <cuda.h>
-#include <cutil.h>
+//#include <cutil.h>
 #include <cuda_runtime.h>
 
 #include "cudaRenderPipeline.cuh"
@@ -19,15 +19,16 @@
 #include "cudaPhotonMapping.cu"
 
 #pragma comment(lib, "cudart.lib")
-#pragma comment(lib, "cutil32.lib")
+//#pragma comment(lib, "cutil32.lib")
+#include <GL/freeglut.h> 
 
 #define GENERAL_THREAD_COUNT	128
 
 cudaChannelFormatDesc uchar4tex = cudaCreateChannelDesc<uchar4>();
 
 /**
- *	Adaptive Sampling ½Ã 4¸ðÅüÀÌ »ùÇÃ¸µ¿©ºÎ¸¦ Ã¼Å©ÇÒ¶§ »ç¿ëÇÒ ÁÖº¯ ÇÈ¼¿ÀÌ ¹«¾ùÀÎÁö¿¡ ´ëÇÑ index.
- *	(x,y) ½ÖÀ¸·Î °¢3°³¾¿ ÃÑ 24°³
+ *	Adaptive Sampling ï¿½ï¿½ 4ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ã¸ï¿½ï¿½ï¿½ï¿½Î¸ï¿½ Ã¼Å©ï¿½Ò¶ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Öºï¿½ ï¿½È¼ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ index.
+ *	(x,y) ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½3ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ 24ï¿½ï¿½
  */
 static int g_staticPatternData[] = { 
 		-1, 0, -1, -1, 0, -1,			// left-top corner.
@@ -37,9 +38,9 @@ static int g_staticPatternData[] = {
 };
 
 /**
- *	À§ °¢°¢ÀÇ pixel index ¿¡ ÇØ´çµÇ´Â pixel weight. ÇÏ³ªÀÇ sub-pixel ¿¡ Ä¥ÇÒ °ªÀ»
- *	interpolation ÇÒ¶§ »ç¿ëÇÒ °ª. À§ g_staticPatternData °¡ °¡¸®Å°´Â index ¼ø¼­´ë·Î
- *	weight °¡ ±¸¼ºµÇ¾î ÀÖ¾î¾ß ÇÑ´Ù.
+ *	ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ pixel index ï¿½ï¿½ ï¿½Ø´ï¿½Ç´ï¿½ pixel weight. ï¿½Ï³ï¿½ï¿½ï¿½ sub-pixel ï¿½ï¿½ Ä¥ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+ *	interpolation ï¿½Ò¶ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½. ï¿½ï¿½ g_staticPatternData ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Å°ï¿½ï¿½ index ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ *	weight ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ç¾ï¿½ ï¿½Ö¾ï¿½ï¿½ ï¿½Ñ´ï¿½.
  */
 static float g_staticPixelColorWeight[] = {
 		0.1875f, 0.0625f, 0.1875f,
@@ -81,28 +82,32 @@ cudaRenderPipeline::~cudaRenderPipeline()
 }
 
 /**
- *	ÃÊ±âÈ­. GScene À¸·Î ºÎÅÍ sceneInfo ¸¦ ±¸¼ºÇÏ°í
- *	KDTree ·Î ºÎÅÍ data ¸¦ ±¸¼ºÇÑ´Ù.
+ *	ï¿½Ê±ï¿½È­. GScene ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ sceneInfo ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï°ï¿½
+ *	KDTree ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ data ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½.
  */
 GError cudaRenderPipeline::initialize( cuScene pScene, int maxray )
 {
 	GError error;
 	
 	int argc = 1;	char *argv[] ={"init"};
-	CUT_DEVICE_INIT(argc, argv);
+	//CUT_DEVICE_INIT(argc, argv);
+	glutInit(&argc, argv);
+	//glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);
+	//glutInitWindowSize(800, 600);         // ï¿½Ê¿ä¿¡ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+	//glutCreateWindow("SGRTx2 Viewer");
 	
 	if ( ( error = setSceneInfo( pScene ) ) != errorNo )
 		return error;
 
 	/**
-	 *	ray ¿Í intersection point ¸¦ À§ÇÑ °ø°£ ÇÒ´ç.
+	 *	ray ï¿½ï¿½ intersection point ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ò´ï¿½.
 	 */	
 	error = initRayIntersection( maxray );
 	if ( error != errorNo )
 		return error;
 
 	/**
-	 *	Intersection check ¸¦ À§ÇÑ Stack size ¼¼ÆÃ.
+	 *	Intersection check ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ Stack size ï¿½ï¿½ï¿½ï¿½.
 	 */
 	unsigned int depth = SHORT_STACK_DEPTH;
 	CUDA_SAFE_CALL( cudaMemcpyToSymbol( shortStackDepth, &depth, sizeof( unsigned int ) ) );
@@ -117,7 +122,7 @@ GError cudaRenderPipeline::setSceneInfo( cuScene pScene )
 	m_SceneInfo = pScene;
 
 	/**
-	 *	Scene Á¤º¸¸¦ constant ·Î ¿Ã¸².
+	 *	Scene ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ constant ï¿½ï¿½ ï¿½Ã¸ï¿½.
 	 */
 	CUDA_SAFE_CALL( cudaMemcpyToSymbol( g_SceneInfo, &m_SceneInfo, sizeof( cuScene ) ) );
 	if ( checkError( "SceneInfo Upload" ) != cudaSuccess )
@@ -131,7 +136,7 @@ GError cudaRenderPipeline::setThresholdInfo( cuThreshold threshold )
 	m_ThresholdInfo = threshold;
 
 	/**
-	 *	Scene Á¤º¸¸¦ constant ·Î ¿Ã¸².
+	 *	Scene ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ constant ï¿½ï¿½ ï¿½Ã¸ï¿½.
 	 */
 	CUDA_SAFE_CALL( cudaMemcpyToSymbol( g_ThresholdInfo, &m_ThresholdInfo, sizeof( cuThreshold ) ) );
 	if ( checkError( "ThresholdInfo Upload" ) != cudaSuccess )
@@ -147,7 +152,7 @@ void cudaRenderPipeline::swapFrameBuffer()
 	m_pDeviceFrameBuffer = m_pDeviceFrameBuffer2;
 	m_pDeviceFrameBuffer2 = temp;
 
-	/** texture ÀÇ ¸Þ¸ð¸®ÁÖ¼Òµµ ¹Ù²Ù¾î¾ß ÇÑ´Ù. */
+	/** texture ï¿½ï¿½ ï¿½Þ¸ï¿½ï¿½Ö¼Òµï¿½ ï¿½Ù²Ù¾ï¿½ï¿½ ï¿½Ñ´ï¿½. */
 
 	CUDA_SAFE_CALL( cudaUnbindTexture( inFrameBufferTexture ) );
 	CUDA_SAFE_CALL( cudaBindTexture( 0, inFrameBufferTexture, m_pDeviceFrameBuffer ) );
@@ -162,7 +167,7 @@ GError cudaRenderPipeline::renderingOption( bool shadow, bool texture )
 	m_SceneInfo.bEnableTexture = texture;
 	
 	/**
-	 *	Scene Á¤º¸¸¦ constant ·Î ¿Ã¸².
+	 *	Scene ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ constant ï¿½ï¿½ ï¿½Ã¸ï¿½.
 	 */
 	CUDA_SAFE_CALL( cudaMemcpyToSymbol( g_SceneInfo, &m_SceneInfo, sizeof( cuScene ) ) );
 	if ( checkError( "SceneInfo Upload" ) != cudaSuccess )
@@ -172,7 +177,7 @@ GError cudaRenderPipeline::renderingOption( bool shadow, bool texture )
 }
 
 /**
- *	Light RaySet Data ¸¦ Device ¿¡ ¿Ã¸°´Ù.
+ *	Light RaySet Data ï¿½ï¿½ Device ï¿½ï¿½ ï¿½Ã¸ï¿½ï¿½ï¿½.
  */
 GError cudaRenderPipeline::setLightRaySetData( cuLightRaySet *pRaySet, int count )
 {
@@ -206,7 +211,8 @@ GError cudaRenderPipeline::initRayIntersection( int maxray )
 	if ( checkError( "cudaMalloc::m_pDeviceRays" ) != cudaSuccess )
 		return errorCudaError;
 
-	CUDA_SAFE_CALL( cudaBindTexture( 0, inRayListTex,  m_pDeviceRays ) );
+	size_t rayDataSize = sizeof(float4) * maxray * 2;
+	CUDA_SAFE_CALL( cudaBindTexture( 0, inRayListTex,  m_pDeviceRays, rayDataSize) );
 	if ( checkError( "cudaBindTexture::inRayListTex" ) != cudaSuccess )
 		return errorCudaError;
 	
@@ -220,12 +226,12 @@ GError cudaRenderPipeline::initRayIntersection( int maxray )
 					malloc( sizeof( cuIntersectionPoint ) * m_iMaxIntersectionPoint );
 
 	/**
-	 *	int result 4°³¸¦ À§ÇÑ °ø°£.
+	 *	int result 4ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½.
 	 */									
 	CUDA_SAFE_CALL( cudaMalloc( (void**) & m_pDeviceIntResult, sizeof( int ) * 4 ) );
 
 	/**
-	 *	frame buffer. rgb ÀÌ¹Ç·Î float * 3
+	 *	frame buffer. rgb ï¿½Ì¹Ç·ï¿½ float * 3
 	 */
 	CUDA_SAFE_CALL( cudaMalloc( (void**) &m_pDeviceFrameBuffer, 
 								sizeof( float ) * 3 * m_iImagePixelCount ) );
@@ -236,9 +242,9 @@ GError cudaRenderPipeline::initRayIntersection( int maxray )
 	CUDA_SAFE_CALL( cudaBindTexture( 0, inFrameBuffer2Texture, m_pDeviceFrameBuffer2 ) );
 
 	/**
-	 *	Adaptive Sampling À» À§ÇÑ AS-Buffer. ÇÑ pixel ´ç ÃÖ´ë 4°³ÀÇ sub-pixel ÀÌ »ý±æ¼ö ÀÖ°í
-	 *	ÇØ´ç Á¤º¸´Â float ÇÏ³ª¸¦ »ç¿ëÇÑ´Ù. ±×¸®°í padding subpixel µéÀÌ »ý±æ ¼ö ÀÖÀ¸¹Ç·Î
-	 *	ÇÏ¹Ç·Î ÀÌ¹ÌÁöÇØ»óµµÀÇ * 5 ¹èsize ¸¦ Àâ´Â´Ù.
+	 *	Adaptive Sampling ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ AS-Buffer. ï¿½ï¿½ pixel ï¿½ï¿½ ï¿½Ö´ï¿½ 4ï¿½ï¿½ï¿½ï¿½ sub-pixel ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ö°ï¿½
+	 *	ï¿½Ø´ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ float ï¿½Ï³ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½. ï¿½×¸ï¿½ï¿½ï¿½ padding subpixel ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½
+	 *	ï¿½Ï¹Ç·ï¿½ ï¿½Ì¹ï¿½ï¿½ï¿½ï¿½Ø»ï¿½ï¿½ï¿½ * 5 ï¿½ï¿½size ï¿½ï¿½ ï¿½ï¿½Â´ï¿½.
 	 */
 	CUDA_SAFE_CALL( cudaMalloc( (void**) &m_pDeviceASBuffer, sizeof( int ) * 5 * m_iImagePixelCount ) );
 	if ( checkError( "cudaRenderPipeline::initRayIntersection" ) != cudaSuccess )
@@ -246,7 +252,7 @@ GError cudaRenderPipeline::initRayIntersection( int maxray )
 	CUDA_SAFE_CALL( cudaBindTexture( 0, inASBufferTexture, m_pDeviceASBuffer ) );
 
 	/**
-	 *	Pattern Data¸¦ constant ·Î ¾÷·Îµå.
+	 *	Pattern Dataï¿½ï¿½ constant ï¿½ï¿½ ï¿½ï¿½ï¿½Îµï¿½.
 	 */
 	CUDA_SAFE_CALL( cudaMemcpyToSymbol( constantIndexTablePattern, g_staticPatternData, sizeof( int ) * 24 ) );
 	CUDA_SAFE_CALL( cudaMemcpyToSymbol( constantPixelWeight, g_staticPixelColorWeight, sizeof( float ) * 12 ) );
@@ -265,7 +271,7 @@ GError cudaRenderPipeline::initRayIntersection( int maxray )
 }
 
 /**
- *	blooming À» À§ÇÑ ±â´ÉÀ» ÃÊ±âÈ­ ÇÑ´Ù.
+ *	blooming ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ê±ï¿½È­ ï¿½Ñ´ï¿½.
  */
 GError cudaRenderPipeline::initBloomingFilter( float radius, float weight )
 {
@@ -423,9 +429,9 @@ cuIntersectionPoint* cudaRenderPipeline::getDeviceIntersectionBuffer()
 }
 
 /**
- *	¿©·¯ Texture ¸¦ cuda ¿¡¼­ µ¿ÀûÀ¸·Î °ü¸®°¡ ºÒ°¡´É ÇÏ¹Ç·Î.
- *	texture ÇÏ³ª¿¡ ¸ðµç texture ¸¦ ´Ù ¹­¾î¼­ ¿Ã¸°µÚ ³»ºÎÀûÀ¸·Î Ã³¸®ÇÑ´Ù.
- *	ÀÎÀÚ·Î ÁÖ¾ð texture µéÀÇ width ¿¡´Â padding ÀÌ ¾ø´Ù´Â °¡Á¤.
+ *	ï¿½ï¿½ï¿½ï¿½ Texture ï¿½ï¿½ cuda ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ò°ï¿½ï¿½ï¿½ ï¿½Ï¹Ç·ï¿½.
+ *	texture ï¿½Ï³ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ texture ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½î¼­ ï¿½Ã¸ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Ã³ï¿½ï¿½ï¿½Ñ´ï¿½.
+ *	ï¿½ï¿½ï¿½Ú·ï¿½ ï¿½Ö¾ï¿½ texture ï¿½ï¿½ï¿½ï¿½ width ï¿½ï¿½ï¿½ï¿½ padding ï¿½ï¿½ ï¿½ï¿½ï¿½Ù´ï¿½ ï¿½ï¿½ï¿½ï¿½.
  */
 GError cudaRenderPipeline::setTextureData( cuTexture* pTextureData, int count )
 {
@@ -441,8 +447,8 @@ GError cudaRenderPipeline::setTextureData( cuTexture* pTextureData, int count )
 	cuTextureRef *pTextureRef = new cuTextureRef[ count ];
 	unsigned char *pTempTexture = NULL;
 	
-	/** TODO: È¿À²ÀûÀ¸·Î texture size ¸¸µé±â. ÀÏ´ÜÀº ¹«½ÄÇÏ°Ô */
-	/** ÀüÃ¼ texture Áß¿¡¼­ width °¡ °¡Àå Å«°ÍÀ» Ã£´Â´Ù. height ´Â ÀüÃ¼ÇÕ. */
+	/** TODO: È¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ texture size ï¿½ï¿½ï¿½ï¿½ï¿½. ï¿½Ï´ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï°ï¿½ */
+	/** ï¿½ï¿½Ã¼ texture ï¿½ß¿ï¿½ï¿½ï¿½ width ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ Å«ï¿½ï¿½ï¿½ï¿½ Ã£ï¿½Â´ï¿½. height ï¿½ï¿½ ï¿½ï¿½Ã¼ï¿½ï¿½. */
 	for ( int i = 0; i < count; ++i ) {
 		totalWidth = max( totalWidth, pTextureData[ i ].width );
 		totalHeight += pTextureData[ i ].height;
@@ -453,11 +459,11 @@ GError cudaRenderPipeline::setTextureData( cuTexture* pTextureData, int count )
 	
 	pTempTexture = (unsigned char*) malloc( sizeof( unsigned char ) * 4 * totalWidth * totalHeight );
 	
-	/** pTempTexture ¾È¿¡ texture µéÀ» ¹èÄ¡ÇÑ´Ù. */
+	/** pTempTexture ï¿½È¿ï¿½ texture ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ä¡ï¿½Ñ´ï¿½. */
 	/** 
-	 *	ÀÏ´ÜÀº ¹«½ÄÇÏ°Ô row ¼øÀ¸·Î. 
-	 *	¶ÇÇÑ totalTexture ¿Í ±× ¾È¿¡ Â¤¾î³ÖÀ¸·Á´Â texture ´Â ÇØ»óµµ°¡ Æ²¸®¹Ç·Î
-	 *	°¢ texture ¸¦ º¹»çÇÒ¶§´Â ÇÑÁÙÇÑÁÙ º¹»çÇØ¾ß ÇÑ´Ù. 
+	 *	ï¿½Ï´ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï°ï¿½ row ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½. 
+	 *	ï¿½ï¿½ï¿½ï¿½ totalTexture ï¿½ï¿½ ï¿½ï¿½ ï¿½È¿ï¿½ Â¤ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ texture ï¿½ï¿½ ï¿½Ø»óµµ°ï¿½ Æ²ï¿½ï¿½ï¿½Ç·ï¿½
+	 *	ï¿½ï¿½ texture ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ò¶ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ø¾ï¿½ ï¿½Ñ´ï¿½. 
 	 */
 	heightOffset = 0;
 	for ( int i = 0; i < count; ++i ) {
@@ -467,7 +473,7 @@ GError cudaRenderPipeline::setTextureData( cuTexture* pTextureData, int count )
 					sizeof( unsigned char ) * 4 * pTextureData[ i ].width );
 		}
 
-		/** texture ref info Á¤º¸ ¼³Á¤ */
+		/** texture ref info ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ */
 		pTextureRef[ i ].x = widthOffset;
 		pTextureRef[ i ].y = heightOffset;
 		pTextureRef[ i ].width = pTextureData[ i ].width;
@@ -480,7 +486,7 @@ GError cudaRenderPipeline::setTextureData( cuTexture* pTextureData, int count )
 		"Texture Collection Size : %d x %d, texture count=%d", totalWidth, totalHeight, count );
 	
 	/**
-	 *	CUDA Texture ·Î ¿Ã¸°´Ù.
+	 *	CUDA Texture ï¿½ï¿½ ï¿½Ã¸ï¿½ï¿½ï¿½.
 	 */
 	CUDA_SAFE_CALL( cudaMallocArray( &m_pDeviceTextureData, &uchar4tex, totalWidth, totalHeight ) );
 						 
@@ -497,7 +503,7 @@ GError cudaRenderPipeline::setTextureData( cuTexture* pTextureData, int count )
 	//inObjectTexture.addressMode[ 1 ] = cudaAddressModeWrap;
 	inObjectTexture.filterMode = cudaFilterModeLinear;
 	
-	/** ½ÇÁ¦ÁÂÇ¥·Î Á¢±Ù½ÃÄÑ¾ß ÇÏ±â ¶§¹®¿¡ normalized = false */
+	/** ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç¥ï¿½ï¿½ ï¿½ï¿½ï¿½Ù½ï¿½ï¿½Ñ¾ï¿½ ï¿½Ï±ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ normalized = false */
 	inObjectTexture.normalized = false;
 
 	CUDA_SAFE_CALL( cudaBindTextureToArray( inObjectTexture, m_pDeviceTextureData ) );
@@ -507,7 +513,7 @@ GError cudaRenderPipeline::setTextureData( cuTexture* pTextureData, int count )
 	}
 	
 	/**
-	 *	Texture info ¸¦ constant º¯¼ö·Î ³Ñ±ä´Ù.
+	 *	Texture info ï¿½ï¿½ constant ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ñ±ï¿½ï¿½.
 	 */
 	CUDA_SAFE_CALL( cudaMemcpyToSymbol( g_TextureRefInfo, pTextureRef, sizeof( cuTextureRef ) * count ) );
 	if ( checkError( "g_TextureRefInfo g_TextureRefCount" ) != cudaSuccess ) {
@@ -534,7 +540,7 @@ end:
 GError cudaRenderPipeline::setCameraInfo( cuCamera *pCamera )
 {
 	/**
-	 *	Camera Á¤º¸¸¦ constant ·Î ³Ñ±ä´Ù.
+	 *	Camera ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ constant ï¿½ï¿½ ï¿½Ñ±ï¿½ï¿½.
 	 */
 	CUDA_SAFE_CALL( cudaMemcpyToSymbol( g_CameraInfo, pCamera, sizeof( cuCamera ) ) );
 	cudaError_t error = checkError( "g_CameraInfo" );	
@@ -549,7 +555,7 @@ GError cudaRenderPipeline::setObjectMaterial( cuObjectMaterial *pObjectMaterial,
 	 m_iObjectMaterialCount = count;
 
 	/**
-	 *	»ï°¢ÇüÀÌ Æ÷ÇÔµÈ object ÀÇ material Á¤º¸.
+	 *	ï¿½ï°¢ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ôµï¿½ object ï¿½ï¿½ material ï¿½ï¿½ï¿½ï¿½.
 	 */
 	CUDA_SAFE_CALL( cudaMalloc( (void**) & m_pDeviceObjectMaterial, 
 						sizeof( cuObjectMaterial ) * count ) );
@@ -582,9 +588,9 @@ GError cudaRenderPipeline::setKDTreeNodeData( kdtreeNode *pKDTreeNodes, int node
 		return errorCudaError;
 
 	/**
-	 *	BBox Á¤º¸¸¦ constant ·Î ³Ñ±ä´Ù.
+	 *	BBox ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ constant ï¿½ï¿½ ï¿½Ñ±ï¿½ï¿½.
 	 */
-	CUDA_SAFE_CALL( cudaMemcpyToSymbol( g_SceneBBox, &sceneBox, sizeof( GBoundingBox ) ) );
+	CUDA_SAFE_CALL( cudaMemcpyToSymbol( g_SceneBBox, &sceneBox, sizeof( cuBoundingBox ) ) );
 	cudaError_t error = checkError( "g_SceneBBox" );	
 	if ( error != cudaSuccess ) {
 		return errorCudaError;
@@ -616,7 +622,7 @@ GError cudaRenderPipeline::setTriangleGeometry( cuTriangleGeometry *pTriangleGeo
 	m_iTriangleCount = triangleCount;
 
 	/**
-	 *	»ï°¢Çü geometry Á¤º¸.
+	 *	ï¿½ï°¢ï¿½ï¿½ geometry ï¿½ï¿½ï¿½ï¿½.
 	 */
 	CUDA_SAFE_CALL( cudaMalloc( (void**) &m_pDeviceTriangleGeometry, 
 								sizeof( cuTriangleGeometry ) * triangleCount ) );
@@ -640,7 +646,7 @@ GError cudaRenderPipeline::setTriangleGeometry( cuTriangleGeometry *pTriangleGeo
 GError cudaRenderPipeline::setPlueckerTriangleInfo( cuPlueckerTriangleInfo *pTriangleInfo, int triangleCount )
 {
 	/**
-	 *	»ï°¢Çü intersection Ã¼Å©¸¦ À§ÇÑ Á¤º¸.
+	 *	ï¿½ï°¢ï¿½ï¿½ intersection Ã¼Å©ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½.
 	 */
 	CUDA_SAFE_CALL( cudaMalloc( (void**) & m_pDevicePlueckerTriangleInfo, 
 								sizeof( cuPlueckerTriangleInfo ) * triangleCount ) );
@@ -656,7 +662,7 @@ GError cudaRenderPipeline::setPlueckerTriangleInfo( cuPlueckerTriangleInfo *pTri
 GError cudaRenderPipeline::setWaldTriangleInfo( cuWaldTriangleInfo *pTriangleInfo, int triangleCount )
 {
 	/**
-	 *	»ï°¢Çü intersection Ã¼Å©¸¦ À§ÇÑ Á¤º¸.
+	 *	ï¿½ï°¢ï¿½ï¿½ intersection Ã¼Å©ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½.
 	 */
 	CUDA_SAFE_CALL( cudaMalloc( (void**) & m_pDeviceWaldTriangleInfo, 
 								sizeof( cuWaldTriangleInfo ) * triangleCount ) );
@@ -670,7 +676,7 @@ GError cudaRenderPipeline::setWaldTriangleInfo( cuWaldTriangleInfo *pTriangleInf
 }
 
 /**
- *	CPU ¿¡¼­ ray Á¤º¸¸¦ ¼¼ÆÃÇÒ¶§ »ç¿ë.
+ *	CPU ï¿½ï¿½ï¿½ï¿½ ray ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ò¶ï¿½ ï¿½ï¿½ï¿½.
  */
 GError cudaRenderPipeline::setRayInfo( cuRay *pRays, int destOffset, int count )
 {
@@ -693,7 +699,7 @@ GError cudaRenderPipeline::setRayInfo( cuRay *pRays, int destOffset, int count )
 }
 
 /**
- *	Intersection °á°ú¸¦ ÀúÀåÇÏ´Â device buffer ¸¦ clear ÇÑ´Ù.
+ *	Intersection ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½ device buffer ï¿½ï¿½ clear ï¿½Ñ´ï¿½.
  */
 GError cudaRenderPipeline::clearIntersectionResult()
 {
@@ -703,7 +709,7 @@ GError cudaRenderPipeline::clearIntersectionResult()
 	}
 		
 	/** 
-	 *	hit ¾ÈÇßÀ½À» ¾Ë¸®´Â objIndex ÀÇ °ªÀÌ -1 ÀÌ¹Ç·Î -1 ·Î ÃÊ±âÈ­ ÇÑ´Ù. 
+	 *	hit ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ë¸ï¿½ï¿½ï¿½ objIndex ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ -1 ï¿½Ì¹Ç·ï¿½ -1 ï¿½ï¿½ ï¿½Ê±ï¿½È­ ï¿½Ñ´ï¿½. 
 	 */
 	CUDA_SAFE_CALL( cudaMemset(  m_pDeviceIntersectionPoint, -1, 
 					sizeof( cuIntersectionPoint ) *  m_iMaxIntersectionPoint ) );
@@ -714,7 +720,7 @@ GError cudaRenderPipeline::clearIntersectionResult()
 }
 
 /**
- *	ÇöÀç ¸Þ¸ð¸®»ó¿¡ ÀÖ´Â intersection point µéÀ» °è»êÇØ¼­ Shading À» ¼öÇà½ÃÅ²´Ù.
+ *	ï¿½ï¿½ï¿½ï¿½ ï¿½Þ¸ð¸®»ï¿½ ï¿½Ö´ï¿½ intersection point ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ø¼ï¿½ Shading ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Å²ï¿½ï¿½.
  */
 GError cudaRenderPipeline::calDirectIllumination( int maxReflectionDepth )
 {
@@ -738,7 +744,7 @@ GError cudaRenderPipeline::calDirectIllumination( int maxReflectionDepth )
 		blocks.y++;
 
 	/**
-	 *	shading ¼öÇà.
+	 *	shading ï¿½ï¿½ï¿½ï¿½.
 	 */
 	shadingKernel<<< blocks, threads, 
 				sizeof( float ) * ( SHORT_STACK_DEPTH * threads.x * threads.y ) * 2 >>>
@@ -778,8 +784,8 @@ void cudaRenderPipeline::setFrameBuffer( float* pBuffer )
 }
 
 /**
- *	primary ray ¸¦ »ý¼º½ÃÅ²´Ù. »ý¼ºµÈ ray Á¤º¸´Â device ¸Þ¸ð¸®¿¡
- *	ÀúÀåµÈ´Ù. Ä«¸Þ¶ó Á¤º¸¸¦ constant ·Î ¿Ã¸°´Ù.
+ *	primary ray ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å²ï¿½ï¿½. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ray ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ device ï¿½Þ¸ð¸®¿ï¿½
+ *	ï¿½ï¿½ï¿½ï¿½È´ï¿½. Ä«ï¿½Þ¶ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ constant ï¿½ï¿½ ï¿½Ã¸ï¿½ï¿½ï¿½.
  */
 GError cudaRenderPipeline::generatePrimaryRay( cuCamera camera, int *pGeneratedCount, 
 											   int currentSampleX, int currentSampleY,
@@ -809,7 +815,7 @@ GError cudaRenderPipeline::generatePrimaryRay( cuCamera camera, int *pGeneratedC
 		blocks.y++;
 
 	/**
-	 *	primary »ý¼º.
+	 *	primary ï¿½ï¿½ï¿½ï¿½.
 	 */
 	generatePrimaryRayKernel<<< blocks, threads >>> ( 
 		startRayIndex, rayNum, m_pDeviceRays,  m_pDeviceIntersectionPoint, 
@@ -822,7 +828,7 @@ GError cudaRenderPipeline::generatePrimaryRay( cuCamera camera, int *pGeneratedC
 	}
 	
 	/** 
-	 *	cuda ¿¡¼­ »ý¼ºÇÑ ray °³¼ö ¼¼ÆÃ 
+	 *	cuda ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ray ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ 
 	 */
 	 (*pGeneratedCount) = rayNum;
 	
@@ -831,11 +837,11 @@ GError cudaRenderPipeline::generatePrimaryRay( cuCamera camera, int *pGeneratedC
 }
 
 /**
- *	intersection point ¸¦ Ã¼Å©ÇØ¼­ secondary reflection ray ¸¦ »ý¼º½ÃÅ²´Ù. 
- *	intersection point ÀÇ ¾îµð¼­ ºÎÅÍ ¾îµð±îÁö¸¦ Ã¼Å©ÇØ¼­ second ray ¸¦ »ý¼ºÇÒÁö´Â
- *	startOffset °ú count.
+ *	intersection point ï¿½ï¿½ Ã¼Å©ï¿½Ø¼ï¿½ secondary reflection ray ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å²ï¿½ï¿½. 
+ *	intersection point ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Ã¼Å©ï¿½Ø¼ï¿½ second ray ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ *	startOffset ï¿½ï¿½ count.
  *
- *	»ý¼ºµÈ ray Á¤º¸´Â device ¸Þ¸ð¸®¿¡ ÀúÀåµÈ´Ù. 
+ *	ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ray ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ device ï¿½Þ¸ð¸®¿ï¿½ ï¿½ï¿½ï¿½ï¿½È´ï¿½. 
  *	
  */
 GError cudaRenderPipeline::generateReflectionRay(  int startOffset, int count, int *atLeastOneRay )
@@ -888,8 +894,8 @@ GError cudaRenderPipeline::generateReflectionRay(  int startOffset, int count, i
 }
 
 /**
- *	Anti-aliasing À» À§ÇÑ filter. pixel ´ç 3x3 filter ¸¦ ¾²¹Ç·Î °¡±ÞÀû
- *	block size ´Â 12 x .. ÇüÅÂ·Î ¸ÂÃßÀÚ.
+ *	Anti-aliasing ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ filter. pixel ï¿½ï¿½ 3x3 filter ï¿½ï¿½ ï¿½ï¿½ï¿½Ç·ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ *	block size ï¿½ï¿½ 12 x .. ï¿½ï¿½ï¿½Â·ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½.
  */
 GError cudaRenderPipeline::antialiasingFiltering()
 {
@@ -913,8 +919,8 @@ GError cudaRenderPipeline::antialiasingFiltering()
 }
 
 /**
- *	Anti-aliasing À» À§ÇÑ filter. pixel ´ç 3x3 filter ¸¦ ¾²¹Ç·Î °¡±ÞÀû
- *	block size ´Â 12 x .. ÇüÅÂ·Î ¸ÂÃßÀÚ.
+ *	Anti-aliasing ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ filter. pixel ï¿½ï¿½ 3x3 filter ï¿½ï¿½ ï¿½ï¿½ï¿½Ç·ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ *	block size ï¿½ï¿½ 12 x .. ï¿½ï¿½ï¿½Â·ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½.
  */
 GError cudaRenderPipeline::grayScaleFiltering()
 {
@@ -938,8 +944,8 @@ GError cudaRenderPipeline::grayScaleFiltering()
 }
 
 /**
- *	Anti-aliasing À» À§ÇÑ filter. pixel ´ç 3x3 filter ¸¦ ¾²¹Ç·Î °¡±ÞÀû
- *	block size ´Â 12 x .. ÇüÅÂ·Î ¸ÂÃßÀÚ.
+ *	Anti-aliasing ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ filter. pixel ï¿½ï¿½ 3x3 filter ï¿½ï¿½ ï¿½ï¿½ï¿½Ç·ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ *	block size ï¿½ï¿½ 12 x .. ï¿½ï¿½ï¿½Â·ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½.
  */
 GError cudaRenderPipeline::sobelMethodFiltering()
 {
@@ -963,8 +969,8 @@ GError cudaRenderPipeline::sobelMethodFiltering()
 }
 
 /**
- *	Anti-aliasing À» À§ÇÑ filter. pixel ´ç 3x3 filter ¸¦ ¾²¹Ç·Î °¡±ÞÀû
- *	block size ´Â 12 x .. ÇüÅÂ·Î ¸ÂÃßÀÚ.
+ *	Anti-aliasing ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ filter. pixel ï¿½ï¿½ 3x3 filter ï¿½ï¿½ ï¿½ï¿½ï¿½Ç·ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ *	block size ï¿½ï¿½ 12 x .. ï¿½ï¿½ï¿½Â·ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½.
  */
 GError cudaRenderPipeline::blurringFiltering()
 {
@@ -988,8 +994,8 @@ GError cudaRenderPipeline::blurringFiltering()
 }
 
 /**
- *	ÇöÀç frame buffer ¿¡ blooming È¿°ú¸¦ ÁØ´Ù.
- *	ÀÌ¹ÌÁö Å©±â¸¸Å­ cuda thread ¸¦ »ý¼ºÇØ¼­ µ¹¸°´Ù.
+ *	ï¿½ï¿½ï¿½ï¿½ frame buffer ï¿½ï¿½ blooming È¿ï¿½ï¿½ï¿½ï¿½ ï¿½Ø´ï¿½.
+ *	ï¿½Ì¹ï¿½ï¿½ï¿½ Å©ï¿½â¸¸Å­ cuda thread ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ø¼ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½.
  */
 GError cudaRenderPipeline::bloomingFiltering()
 {
@@ -1009,7 +1015,7 @@ GError cudaRenderPipeline::bloomingFiltering()
 		blocks.y++;
 
 	/**
-	 *	¼öÇà.
+	 *	ï¿½ï¿½ï¿½ï¿½.
 	 */
 	bloomingFilteringKernel<<< blocks, threads >>>( 
 							startImageIndex,
@@ -1035,7 +1041,7 @@ GError cudaRenderPipeline::bloomingFiltering()
 }
 
 /**
- *	Intersection Result ÀÇ Debugging Á¤º¸ Ãâ·Â.
+ *	Intersection Result ï¿½ï¿½ Debugging ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½.
  */
 void cudaRenderPipeline::printIntersectionResultDebugInfo( int offset, int count )
 {
@@ -1081,8 +1087,8 @@ GError cudaRenderPipeline::doSinglePassRayCasting( cuCamera camera, int maxRefle
 		blocks.y++;
 
 	/**
-	 *	¹°Ã¼°¡ ¸¹°í, reflection depth °¡ ¸¹Àº °æ¿ì kernel ¾È¿¡¼­ sampling °³¼ö¸¸Å­ ¹Ýº¹ÇÏ¸é
-	 *	Ä¿³Î¿¬»ê·® ÃÊ°ú·Î GPU °¡ Á×´Â°æ¿ì°¡ ÀÖ±â ¶§¹®¿¡ kernel À» sampling °³¼ö¸¸Å­ È£ÃâÇÑ´Ù.
+	 *	ï¿½ï¿½Ã¼ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½, reflection depth ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ kernel ï¿½È¿ï¿½ï¿½ï¿½ sampling ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å­ ï¿½Ýºï¿½ï¿½Ï¸ï¿½
+	 *	Ä¿ï¿½Î¿ï¿½ï¿½ê·® ï¿½Ê°ï¿½ï¿½ï¿½ GPU ï¿½ï¿½ ï¿½×´Â°ï¿½ì°¡ ï¿½Ö±ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ kernel ï¿½ï¿½ sampling ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å­ È£ï¿½ï¿½ï¿½Ñ´ï¿½.
 	 */
 	for ( int i = 0; i < samplingX; ++i ) {
 		for ( int j = 0; j < samplingY; ++j ) {
@@ -1242,8 +1248,8 @@ GError cudaRenderPipeline::doSelectiveAndAdaptiveSamplingRayTracing(
 
 	
 	/**
-	 *	¹°Ã¼°¡ ¸¹°í, reflection depth °¡ ¸¹Àº °æ¿ì kernel ¾È¿¡¼­ sampling °³¼ö¸¸Å­ ¹Ýº¹ÇÏ¸é
-	 *	Ä¿³Î¿¬»ê·® ÃÊ°ú·Î GPU °¡ Á×´Â°æ¿ì°¡ ÀÖ±â ¶§¹®¿¡ kernel À» sampling °³¼ö¸¸Å­ È£ÃâÇÑ´Ù.
+	 *	ï¿½ï¿½Ã¼ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½, reflection depth ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ kernel ï¿½È¿ï¿½ï¿½ï¿½ sampling ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å­ ï¿½Ýºï¿½ï¿½Ï¸ï¿½
+	 *	Ä¿ï¿½Î¿ï¿½ï¿½ê·® ï¿½Ê°ï¿½ï¿½ï¿½ GPU ï¿½ï¿½ ï¿½×´Â°ï¿½ì°¡ ï¿½Ö±ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ kernel ï¿½ï¿½ sampling ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å­ È£ï¿½ï¿½ï¿½Ñ´ï¿½.
 	 */
 	if ( samplingX * samplingY == 1 ) {
 
@@ -1271,7 +1277,7 @@ GError cudaRenderPipeline::doSelectiveAndAdaptiveSamplingRayTracing(
 		}
 		CUDA_SAFE_CALL( cudaThreadSynchronize() );
 
-		/** 2°³ÀÇ °ø°£À» ¾´´Ù. */
+		/** 2ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½. */
 		CUDA_SAFE_CALL( cudaMemset( m_pDeviceIntResult, 0x00, sizeof( int ) * 4 ) );	
 		CUDA_SAFE_CALL( cudaThreadSynchronize() );
 
@@ -1279,7 +1285,7 @@ GError cudaRenderPipeline::doSelectiveAndAdaptiveSamplingRayTracing(
 		detectionTime.start();
 
 		///** 
-		// *	color difference map À» ¸¸µç´Ù. ÀÌ kernel Àº ºÎÇÏ°¡ °ÅÀÇ¾ø±â ¶§¹®¿¡ thread ¸¦ ¸¹ÀÌ½áµµ µÊ 
+		// *	color difference map ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½. ï¿½ï¿½ kernel ï¿½ï¿½ ï¿½ï¿½ï¿½Ï°ï¿½ ï¿½ï¿½ï¿½Ç¾ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ thread ï¿½ï¿½ ï¿½ï¿½ï¿½Ì½áµµ ï¿½ï¿½ 
 		// */
 		//threads.x = 16;
 		//threads.y = 16;
@@ -1295,8 +1301,8 @@ GError cudaRenderPipeline::doSelectiveAndAdaptiveSamplingRayTracing(
 		//CUDA_SAFE_CALL( cudaThreadSynchronize() );
 
 		/** 
-		 *	ÇÑÇÈ¼¿ÀÇ 4sub-pixel À» °¢°¢ÀÇ ¾²·¹µå°¡ Ã³¸®ÇÏ°Ô ÇÏ±â À§ÇØ¼­.
-		 * x, y ´Â 2ÀÇ ¹è¼öÀÌ¾î¾ß ÇÑ´Ù. ±×¸®°í ÃÑ ºí¶ôÀº width*2, height*2 Å©±â¾î¾ß ÇÑ´Ù. 
+		 *	ï¿½ï¿½ï¿½È¼ï¿½ï¿½ï¿½ 4sub-pixel ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½å°¡ Ã³ï¿½ï¿½ï¿½Ï°ï¿½ ï¿½Ï±ï¿½ ï¿½ï¿½ï¿½Ø¼ï¿½.
+		 * x, y ï¿½ï¿½ 2ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ì¾ï¿½ï¿½ ï¿½Ñ´ï¿½. ï¿½×¸ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ width*2, height*2 Å©ï¿½ï¿½ï¿½ï¿½ ï¿½Ñ´ï¿½. 
 		 */
 		threads.x = 8;
 		threads.y = 16;
@@ -1308,7 +1314,7 @@ GError cudaRenderPipeline::doSelectiveAndAdaptiveSamplingRayTracing(
 		if ( ( 2 * m_SceneInfo.iResolutionY ) % threads.y != 0 )
 			blocks.y++;
 
-		/** ¿©±â shared memory »çÀÌÁî´Â stack »çÀÌÁî¿Í »ó°ü¾øÀÌ ¾Æ·¡Ã³·³ Àâ¾Æ¾ßÇÔ */
+		/** ï¿½ï¿½ï¿½ï¿½ shared memory ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ stack ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Æ·ï¿½Ã³ï¿½ï¿½ ï¿½ï¿½Æ¾ï¿½ï¿½ï¿½ */
 		singlePassRayTracingKernel_DetectionStage<<<blocks, threads, 6 * sizeof( float ) * threads.x * threads.y>>>
 			( m_pDeviceFrameBuffer, m_pDeviceASBuffer,
 			  m_pDeviceIntResult, bAdaptiveInfo, compareType );
@@ -1320,9 +1326,9 @@ GError cudaRenderPipeline::doSelectiveAndAdaptiveSamplingRayTracing(
 		detectionTime.end();
 
 		/**
-		 *	µð¹ö±ë Á¤º¸¸¦ À§ÇÑ °Í.
-		 *	Ãß°¡ÀûÀ¸·Î ¸î°³ÀÇ ray ¸¦ sampling ÇØ¾ßÇÏ´ÂÁö¸¦ °è»êÇÑ´Ù. padding µÈ subpixel À» Á¦¿ÜÇÏ°í °è»êÇØ¾ß ÇÏ¹Ç·Î
-		 *	¸Þ¸ð¸®¸¦ Äm¾îº»´Ù.
+		 *	ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½.
+		 *	ï¿½ß°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½î°³ï¿½ï¿½ ray ï¿½ï¿½ sampling ï¿½Ø¾ï¿½ï¿½Ï´ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½. padding ï¿½ï¿½ subpixel ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï°ï¿½ ï¿½ï¿½ï¿½ï¿½Ø¾ï¿½ ï¿½Ï¹Ç·ï¿½
+		 *	ï¿½Þ¸ð¸®¸ï¿½ ï¿½mï¿½îº»ï¿½ï¿½.
 		 */
 		if ( bAdaptiveInfo ) {
 			
@@ -1384,9 +1390,9 @@ GError cudaRenderPipeline::doSelectiveAndAdaptiveSamplingRayTracing(
 		if ( !bAdaptiveInfo ) {
 
 			/**
-			 *	Kernel ¾È¿¡¼­ shared ¸Þ¸ð¸®¸¦ ÀÌ¿ëÇØ¼­ ÇÑ pixel ¿¡ ´ëÇØ¼­ sampling °ªÀ»Æò±Õ³»¼­ ÀúÀåÇÑ´Ù.
-			 *	block ¾ÈÀÇ thread °¹¼ö´Â ¹Ýµå½Ã ÇÑ pixel ÀÇ sampling °¹¼öÀÇ ¹è¼öÀÌ¾î¾ß ÇÑ´Ù.
-			 *	3x3 Àº adaptive sampling ¿¡¼­ Á¦¿ÜÇÑ´Ù.
+			 *	Kernel ï¿½È¿ï¿½ï¿½ï¿½ shared ï¿½Þ¸ð¸®¸ï¿½ ï¿½Ì¿ï¿½ï¿½Ø¼ï¿½ ï¿½ï¿½ pixel ï¿½ï¿½ ï¿½ï¿½ï¿½Ø¼ï¿½ sampling ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ³ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½.
+			 *	block ï¿½ï¿½ï¿½ï¿½ thread ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ýµï¿½ï¿½ ï¿½ï¿½ pixel ï¿½ï¿½ sampling ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ì¾ï¿½ï¿½ ï¿½Ñ´ï¿½.
+			 *	3x3 ï¿½ï¿½ adaptive sampling ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½.
 			 */
 			threads.x = ADAPTIVE_THREADS;
 			threads.y = 1;
@@ -1424,7 +1430,7 @@ GError cudaRenderPipeline::doSelectiveAndAdaptiveSamplingRayTracing(
 
 
 /**
- *	reflection depth=1, ±¤¿ø 1°³ °íÁ¤.
+ *	reflection depth=1, ï¿½ï¿½ï¿½ï¿½ 1ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½.
  */
 GError cudaRenderPipeline::fixedOption_doSelectiveAndAdaptiveSamplingRayTracing( 
 													int maxReflectionDepth, 
@@ -1456,8 +1462,8 @@ GError cudaRenderPipeline::fixedOption_doSelectiveAndAdaptiveSamplingRayTracing(
 
 	
 	/**
-	 *	¹°Ã¼°¡ ¸¹°í, reflection depth °¡ ¸¹Àº °æ¿ì kernel ¾È¿¡¼­ sampling °³¼ö¸¸Å­ ¹Ýº¹ÇÏ¸é
-	 *	Ä¿³Î¿¬»ê·® ÃÊ°ú·Î GPU °¡ Á×´Â°æ¿ì°¡ ÀÖ±â ¶§¹®¿¡ kernel À» sampling °³¼ö¸¸Å­ È£ÃâÇÑ´Ù.
+	 *	ï¿½ï¿½Ã¼ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½, reflection depth ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ kernel ï¿½È¿ï¿½ï¿½ï¿½ sampling ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å­ ï¿½Ýºï¿½ï¿½Ï¸ï¿½
+	 *	Ä¿ï¿½Î¿ï¿½ï¿½ê·® ï¿½Ê°ï¿½ï¿½ï¿½ GPU ï¿½ï¿½ ï¿½×´Â°ï¿½ì°¡ ï¿½Ö±ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ kernel ï¿½ï¿½ sampling ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å­ È£ï¿½ï¿½ï¿½Ñ´ï¿½.
 	 */
 	if ( samplingX * samplingY == 1 ) {
 
@@ -1485,7 +1491,7 @@ GError cudaRenderPipeline::fixedOption_doSelectiveAndAdaptiveSamplingRayTracing(
 		}
 		CUDA_SAFE_CALL( cudaThreadSynchronize() );
 
-		/** 2°³ÀÇ °ø°£À» ¾´´Ù. */
+		/** 2ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½. */
 		CUDA_SAFE_CALL( cudaMemset( m_pDeviceIntResult, 0x00, sizeof( int ) * 4 ) );	
 		CUDA_SAFE_CALL( cudaThreadSynchronize() );
 
@@ -1493,8 +1499,8 @@ GError cudaRenderPipeline::fixedOption_doSelectiveAndAdaptiveSamplingRayTracing(
 		detectionTime.start();
 
 		/** 
-		 *	ÇÑÇÈ¼¿ÀÇ 4sub-pixel À» °¢°¢ÀÇ ¾²·¹µå°¡ Ã³¸®ÇÏ°Ô ÇÏ±â À§ÇØ¼­.
-		 * x, y ´Â 2ÀÇ ¹è¼öÀÌ¾î¾ß ÇÑ´Ù. ±×¸®°í ÃÑ ºí¶ôÀº width*2, height*2 Å©±â¾î¾ß ÇÑ´Ù. 
+		 *	ï¿½ï¿½ï¿½È¼ï¿½ï¿½ï¿½ 4sub-pixel ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½å°¡ Ã³ï¿½ï¿½ï¿½Ï°ï¿½ ï¿½Ï±ï¿½ ï¿½ï¿½ï¿½Ø¼ï¿½.
+		 * x, y ï¿½ï¿½ 2ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ì¾ï¿½ï¿½ ï¿½Ñ´ï¿½. ï¿½×¸ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ width*2, height*2 Å©ï¿½ï¿½ï¿½ï¿½ ï¿½Ñ´ï¿½. 
 		 */
 		threads.x = 8;
 		threads.y = 16;
@@ -1506,7 +1512,7 @@ GError cudaRenderPipeline::fixedOption_doSelectiveAndAdaptiveSamplingRayTracing(
 		if ( ( 2 * m_SceneInfo.iResolutionY ) % threads.y != 0 )
 			blocks.y++;
 
-		/** ¿©±â shared memory »çÀÌÁî´Â stack »çÀÌÁî¿Í »ó°ü¾øÀÌ ¾Æ·¡Ã³·³ Àâ¾Æ¾ßÇÔ */
+		/** ï¿½ï¿½ï¿½ï¿½ shared memory ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ stack ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Æ·ï¿½Ã³ï¿½ï¿½ ï¿½ï¿½Æ¾ï¿½ï¿½ï¿½ */
 		singlePassRayTracingKernel_DetectionStage<<<blocks, threads, 6 * sizeof( float ) * threads.x * threads.y>>>
 			( m_pDeviceFrameBuffer, m_pDeviceASBuffer,
 			  m_pDeviceIntResult, bAdaptiveInfo, compareType );
@@ -1518,9 +1524,9 @@ GError cudaRenderPipeline::fixedOption_doSelectiveAndAdaptiveSamplingRayTracing(
 		detectionTime.end();
 
 		/**
-		 *	µð¹ö±ë Á¤º¸¸¦ À§ÇÑ °Í.
-		 *	Ãß°¡ÀûÀ¸·Î ¸î°³ÀÇ ray ¸¦ sampling ÇØ¾ßÇÏ´ÂÁö¸¦ °è»êÇÑ´Ù. padding µÈ subpixel À» Á¦¿ÜÇÏ°í °è»êÇØ¾ß ÇÏ¹Ç·Î
-		 *	¸Þ¸ð¸®¸¦ Äm¾îº»´Ù.
+		 *	ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½.
+		 *	ï¿½ß°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½î°³ï¿½ï¿½ ray ï¿½ï¿½ sampling ï¿½Ø¾ï¿½ï¿½Ï´ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½. padding ï¿½ï¿½ subpixel ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï°ï¿½ ï¿½ï¿½ï¿½ï¿½Ø¾ï¿½ ï¿½Ï¹Ç·ï¿½
+		 *	ï¿½Þ¸ð¸®¸ï¿½ ï¿½mï¿½îº»ï¿½ï¿½.
 		 */
 		if ( bAdaptiveInfo ) {
 			
@@ -1582,12 +1588,12 @@ GError cudaRenderPipeline::fixedOption_doSelectiveAndAdaptiveSamplingRayTracing(
 		if ( !bAdaptiveInfo ) {
 
 			/**
-			 *	Kernel ¾È¿¡¼­ shared ¸Þ¸ð¸®¸¦ ÀÌ¿ëÇØ¼­ ÇÑ pixel ¿¡ ´ëÇØ¼­ sampling °ªÀ»Æò±Õ³»¼­ ÀúÀåÇÑ´Ù.
-			 *	block ¾ÈÀÇ thread °¹¼ö´Â ¹Ýµå½Ã ÇÑ pixel ÀÇ sampling °¹¼öÀÇ ¹è¼öÀÌ¾î¾ß ÇÑ´Ù.
-			 *	3x3 Àº adaptive sampling ¿¡¼­ Á¦¿ÜÇÑ´Ù.
+			 *	Kernel ï¿½È¿ï¿½ï¿½ï¿½ shared ï¿½Þ¸ð¸®¸ï¿½ ï¿½Ì¿ï¿½ï¿½Ø¼ï¿½ ï¿½ï¿½ pixel ï¿½ï¿½ ï¿½ï¿½ï¿½Ø¼ï¿½ sampling ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ³ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½.
+			 *	block ï¿½ï¿½ï¿½ï¿½ thread ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ýµï¿½ï¿½ ï¿½ï¿½ pixel ï¿½ï¿½ sampling ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ì¾ï¿½ï¿½ ï¿½Ñ´ï¿½.
+			 *	3x3 ï¿½ï¿½ adaptive sampling ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½.
 			 */
 
-			/** ³Ê¹«¸¹Àº block ÀÌ »ý±ä´Ù¸é ¿©·¯¹ø ³ª´©¾î¼­ ÇÑ´Ù. */
+			/** ï¿½Ê¹ï¿½ï¿½ï¿½ï¿½ï¿½ block ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ù¸ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½î¼­ ï¿½Ñ´ï¿½. */
 			int activeSubPixelCount = samplingCount[ 0 ];
 			int oneIterationSubPixel = 1000000;
 			int mincount = 0;
@@ -1633,8 +1639,8 @@ GError cudaRenderPipeline::fixedOption_doSelectiveAndAdaptiveSamplingRayTracing(
 }
 
 /**
- *	Ray Casting À» ¼öÇàÇÑ´Ù.
- *	ÀÌ¹ÌÁö ÀüÃ¼¿¡ ´ëÇØ¼­ ¼öÇàÇÏ´Â°Í.
+ *	Ray Casting ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½.
+ *	ï¿½Ì¹ï¿½ï¿½ï¿½ ï¿½ï¿½Ã¼ï¿½ï¿½ ï¿½ï¿½ï¿½Ø¼ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï´Â°ï¿½.
  */
 GError cudaRenderPipeline::doRayCasting( int rayOffset, int rayCount, bool faceCCW, bool backFaceCulling )
 {
@@ -1671,13 +1677,13 @@ GError cudaRenderPipeline::doRayCasting( int rayOffset, int rayCount, bool faceC
 }
 
 /**
- *	Ray Casting À» ¼öÇàÇÑ´Ù.
- *	¾î¶² ray ¸¦ ÃßÀûÇÒÁö´Â ÀÌ¹Ì device »óÀÇ ray memory ¿¡ ¿Ã¶ó°¡ ÀÖ¾î¾ß ÇÑ´Ù.
- *	generatePrimaryRay ³ª setRay µîÀ» ÀÌ¿ëÇØ¼­ ¹Ì¸® ¼¼ÆÃÇØ¾ß ÇÔ. intersection °á°ú´Â
- *	device ¸Þ¸ð¸® »ó¿¡ ÀúÀå½ÃÄÑ µÐ´Ù.
- *	ÀÎÀÚ´Â global memory ¿¡ ¿Ã¶ó°¡ ÀÖ´Â ray Á¤º¸µéÁß ¾îµð¼­ ¾îµð±îÁö¸¦
- *	intersection check ÇÒÁö¿Í backface ÀÇ °æ¿ì culling ¿É¼ÇÀÌ ÀÖ´Â »ï°¢Çü¿¡ ´ëÇØ¼­
- *	culling ÇÒÁö ¿©ºÎ.
+ *	Ray Casting ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½.
+ *	ï¿½î¶² ray ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ì¹ï¿½ device ï¿½ï¿½ï¿½ï¿½ ray memory ï¿½ï¿½ ï¿½Ã¶ï¿½ ï¿½Ö¾ï¿½ï¿½ ï¿½Ñ´ï¿½.
+ *	generatePrimaryRay ï¿½ï¿½ setRay ï¿½ï¿½ï¿½ï¿½ ï¿½Ì¿ï¿½ï¿½Ø¼ï¿½ ï¿½Ì¸ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ø¾ï¿½ ï¿½ï¿½. intersection ï¿½ï¿½ï¿½ï¿½ï¿½
+ *	device ï¿½Þ¸ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ð´ï¿½.
+ *	ï¿½ï¿½ï¿½Ú´ï¿½ global memory ï¿½ï¿½ ï¿½Ã¶ï¿½ ï¿½Ö´ï¿½ ray ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ *	intersection check ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ backface ï¿½ï¿½ ï¿½ï¿½ï¿½ culling ï¿½É¼ï¿½ï¿½ï¿½ ï¿½Ö´ï¿½ ï¿½ï°¢ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ø¼ï¿½
+ *	culling ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½.
  */
 GError cudaRenderPipeline::doRayCastingSequentialData( int rayOffset, int rayCount, bool faceCCW, bool backFaceCulling )
 {
@@ -1711,13 +1717,13 @@ GError cudaRenderPipeline::doRayCastingSequentialData( int rayOffset, int rayCou
 }
 
 /**
- *	ÇöÀç device »ó¿¡ Á¸ÀçÇÏ´Â Intersection °á°ú¸¦ ¹Þ¾Æ¿Â´Ù. 
- *	count ´Â ¸î°³±îÁö ¹Þ¾Æ¿ÃÁö °áÁ¤ÇÏ´Â °Í.
+ *	ï¿½ï¿½ï¿½ï¿½ device ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½ Intersection ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Þ¾Æ¿Â´ï¿½. 
+ *	count ï¿½ï¿½ ï¿½î°³ï¿½ï¿½ï¿½ï¿½ ï¿½Þ¾Æ¿ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½ ï¿½ï¿½.
  */
 cuIntersectionPoint *cudaRenderPipeline::getIntersectionResult( int count )
 {
 	/** 
-	 *	ÇöÀç Device »óÀÇ °á°ú¸¦ º¹»çÇØ¼­ °¡Á®¿Â´Ù. 
+	 *	ï¿½ï¿½ï¿½ï¿½ Device ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ø¼ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Â´ï¿½. 
 	 */
 	CUDA_SAFE_CALL( cudaMemcpy( m_pHostIntersectionPoint, 
 								m_pDeviceIntersectionPoint, 
@@ -1728,13 +1734,13 @@ cuIntersectionPoint *cudaRenderPipeline::getIntersectionResult( int count )
 }
 
 /**
- *	Memory »óÅÂ¸¦ Ãâ·ÂÇÑ´Ù.
+ *	Memory ï¿½ï¿½ï¿½Â¸ï¿½ ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½.
  */
 void cudaRenderPipeline::printStatusInfo()
 {
 	float fRayBufferSize = ( sizeof( cuRay ) * m_iMaxRay ) / 1048576.0f;
 	float fIntersectionBufferSize = ( sizeof( cuIntersectionPoint ) * m_iMaxIntersectionPoint ) /  1048576.0f;
-	// framebuffer ´Â 2°³.
+	// framebuffer ï¿½ï¿½ 2ï¿½ï¿½.
 	float fFrameBufferSize = ( ( sizeof( float ) * 3 * m_iImagePixelCount ) / 1048576.0f ) * 2;
 	
 	float fKDTreeSize = ( sizeof( kdtreeNode ) * m_iNodeCount ) / 1048576.0f;

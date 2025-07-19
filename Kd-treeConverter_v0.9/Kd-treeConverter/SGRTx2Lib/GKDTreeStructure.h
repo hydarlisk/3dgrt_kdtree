@@ -99,6 +99,22 @@ public:
 	bool loadfromFile_SAH     ( const char *filename );			// load kdtree from file (SAH)
 	bool loadfromFile_EmptySAH( const char *filename );			// load kdtree from file (Empty SAH)
 
+	//shyun
+	unsigned int getKdTreeNodeCount() { return m_iKDTreeNodeCount; }
+	void setKdTreeNodeCount(unsigned int cnt) { m_iKDTreeNodeCount = cnt; }
+	kdtreeNode* getKdTreeNode() { return m_pKDTreeNodes; }
+	void setKdTreeNode(kdtreeNode* kdtree) { m_pKDTreeNodes = kdtree; }
+	unsigned int getTriangleOffset() { return m_iCurrentTriangleOffset; }
+	void setTriangleOffset(unsigned int triangleOffset) { m_iCurrentTriangleOffset = triangleOffset; }
+	unsigned int* getTriangleOffsetList() { return m_pTriangleOffsetList; }
+	void setTriangleOffsetList(unsigned int* triangleOffsetList) { m_pTriangleOffsetList = triangleOffsetList; }
+	void setSceneTriangleCount(int cnt) { m_iSceneTriangleCount = cnt; }
+	void setSceneTriangleList(GTriangleWrapperList* triList) { m_pSceneTriangleList = triList; }
+
+	void setBBoxMin(const GVector& vmin) { m_SceneBBox.setMin(vmin); }
+	void setBBoxMax(const GVector& vmax) { m_SceneBBox.setMax(vmax); }
+	//shyun end
+
 protected:
 	GError uninitialize();
 	void buildKDTree(

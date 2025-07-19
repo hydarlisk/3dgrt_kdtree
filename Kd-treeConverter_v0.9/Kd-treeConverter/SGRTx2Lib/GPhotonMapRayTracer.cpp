@@ -23,7 +23,7 @@ GPhotonMapRayTracer::GPhotonMapRayTracer( GPhotonMappingOption *pOption )
 	m_iRandomSeed = 1;
 
 	/** 
-	 *	¿É¼Ç°áÁ¤ 
+	 *	ï¿½É¼Ç°ï¿½ï¿½ï¿½ 
 	 */
 	m_Option = (*pOption);
 	
@@ -36,7 +36,7 @@ GPhotonMapRayTracer::GPhotonMapRayTracer( GPhotonMappingOption *pOption )
 	m_fOnePhotonPower = m_fSceneLightPowerPerIteration / (float) m_Option.m_iEmitPhotonPerIteration;
 
 	/** 
-	 *	ÇÑ¹øÀÇ iteration ¼öÇà½Ã ÃÖ´ë photon °¹¼ö°è»ê. buffer¸¦ À§ÇØ¼­ 
+	 *	ï¿½Ñ¹ï¿½ï¿½ï¿½ iteration ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ö´ï¿½ photon ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½. bufferï¿½ï¿½ ï¿½ï¿½ï¿½Ø¼ï¿½ 
 	 */
 	m_iMaxPhotonSize = m_Option.m_iMaxBound * m_Option.m_iEmitPhotonPerIteration;
 
@@ -76,7 +76,7 @@ void GPhotonMapRayTracer::uninitialize()
 }
 
 /**
- *	scene Á¤º¸¸¦ Àç±¸¼ºÇØ¾ßÇÒ¶§ ÃÊ±âÈ­ÇÑ´Ù.
+ *	scene ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ç±¸ï¿½ï¿½ï¿½Ø¾ï¿½ï¿½Ò¶ï¿½ ï¿½Ê±ï¿½È­ï¿½Ñ´ï¿½.
  */
 GError GPhotonMapRayTracer::initialize( GScene *pScene )
 {
@@ -84,9 +84,9 @@ GError GPhotonMapRayTracer::initialize( GScene *pScene )
 	m_pScene = pScene;
 
 	/**
-	 *	iteration ÀÌ 1¹øÀÌ ¾Æ´Ï¶ó¸é 
-	 *	ÀÌÀü rendering ½Ã¿¡ »ç¿ëÇÑ photon tracing Á¤º¸¸¦ Àç»ç¿ëÇÒ ¼ö ¾øÀ¸¹Ç·Î
-	 *  ¹«Á¶°Ç tracing À» ¼öÇàÇØ¾ß ÇÑ´Ù.
+	 *	iteration ï¿½ï¿½ 1ï¿½ï¿½ï¿½ï¿½ ï¿½Æ´Ï¶ï¿½ï¿½ 
+	 *	ï¿½ï¿½ï¿½ï¿½ rendering ï¿½Ã¿ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ photon tracing ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½
+	 *  ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ tracing ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ø¾ï¿½ ï¿½Ñ´ï¿½.
 	 */
 	m_bRunTracing = ( m_Option.m_iIteration != 1 );
 
@@ -101,7 +101,7 @@ GError GPhotonMapRayTracer::initialize( GScene *pScene )
 			delete m_pCudaPhotonMapping;
 		}
 
-		/**  photon tracing À» ÇØ¾ßÇÒÁö ¿©ºÎ. */
+		/**  photon tracing ï¿½ï¿½ ï¿½Ø¾ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½. */
 		m_bRunTracing = true;
 
 		cuScene cuSceneInfo;
@@ -115,7 +115,7 @@ GError GPhotonMapRayTracer::initialize( GScene *pScene )
 		cuSceneInfo.bEnableShadow = pScene->isEnableShadow();
 		cuSceneInfo.iShadowRay = 1;
 
-		/** ray tracing ray ¿Í total photon emit °³¼öÁß Å«°É·Î ray °ø°£À» ÇÒ´ç */
+		/** ray tracing ray ï¿½ï¿½ total photon emit ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Å«ï¿½É·ï¿½ ray ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ò´ï¿½ */
 		int maxRay = cuSceneInfo.iResolutionX * cuSceneInfo.iResolutionY * 
 					 cuSceneInfo.iSuperSamplingX * cuSceneInfo.iSuperSamplingY;
 
@@ -129,8 +129,8 @@ GError GPhotonMapRayTracer::initialize( GScene *pScene )
 		GLogManager::logging( LOG_DEBUG, "cuPMIntersectionPointcuPMIntersectionPoint %d", sizeof( cuPMIntersectionPoint ) );
 
 		/**
-		 *	Light Á¤º¸ ¼¼ÆÃ. light intensity ¿¡ µû¶ó¼­ photon À» ¾ó¸¶³ª
-		 *	»Ñ¸±Áö °áÁ¤. ¼¼ÆÃÈÄ ÇÊ¿ä¾øÀ¸¹Ç·Î »èÁ¦.
+		 *	Light ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½. light intensity ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ photon ï¿½ï¿½ ï¿½ó¸¶³ï¿½
+		 *	ï¿½Ñ¸ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ê¿ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ ï¿½ï¿½ï¿½ï¿½.
 		 */
 		int lightCount = 0;
 		cuLight* pLight = GRenderCommon::makeCudaLightInfo( pScene, &lightCount, m_pCudaRenderPipeline );
@@ -146,17 +146,17 @@ GError GPhotonMapRayTracer::initialize( GScene *pScene )
 		}
 
 		/**---------------------------------------------------------------------------------------------
-		 *	photon mapping cuda ¸¦ ÃÊ±âÈ­ÇÑ´Ù.
+		 *	photon mapping cuda ï¿½ï¿½ ï¿½Ê±ï¿½È­ï¿½Ñ´ï¿½.
 		----------------------------------------------------------------------------------------------*/
 		GBoundingBox bbox = pScene->getKDTreeStructure()->getBoundingBox();
 		GVector length = bbox.m_Max - bbox.m_Min;
 
 		/**
-		 *	scene ÀÇ Å©±â¿Í ÀÎÀÚ·Î ÁÖ¾îÁø grid length ¿¡ µû¶ó¼­
-		 *	grid box ÀÇ °³¼ö°¡ ¾öÃ»¸¹¾ÆÁú¼ö ÀÖÀ¸¹Ç·Î
-		 *	ÀÏ´Ü ÃÖ´ë·Î Grid ¹Ú½º¸¦ ±¸¼ºÇÒ¼ö ÀÖ´Â ÃÖ¼ÒÇÑÀÇ gridLength ¸¦ ±¸ÇÏ°í,
-		 *	ÀÎÀÚ·Î ÁÖ¾îÁø gridUnitLength ¹× radius °¡ ÀÌ ÃÖ´ë°ªÀ» ³Ñ´ÂÁö Ã¼Å©ÇØ¼­ 
-		 *	Àû´çÇÑ grid box ¸¦ Á¦¾ÈÇÑ´Ù.
+		 *	scene ï¿½ï¿½ Å©ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ú·ï¿½ ï¿½Ö¾ï¿½ï¿½ï¿½ grid length ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+		 *	grid box ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ã»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½
+		 *	ï¿½Ï´ï¿½ ï¿½Ö´ï¿½ï¿½ Grid ï¿½Ú½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ò¼ï¿½ ï¿½Ö´ï¿½ ï¿½Ö¼ï¿½ï¿½ï¿½ï¿½ï¿½ gridLength ï¿½ï¿½ ï¿½ï¿½ï¿½Ï°ï¿½,
+		 *	ï¿½ï¿½ï¿½Ú·ï¿½ ï¿½Ö¾ï¿½ï¿½ï¿½ gridUnitLength ï¿½ï¿½ radius ï¿½ï¿½ ï¿½ï¿½ ï¿½Ö´ë°ªï¿½ï¿½ ï¿½Ñ´ï¿½ï¿½ï¿½ Ã¼Å©ï¿½Ø¼ï¿½ 
+		 *	ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ grid box ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½.
 		 */
 		float gridLength = max( length.x / (float) MAX_GRID_COUNT, 
 								max( length.y / (float) MAX_GRID_COUNT, length.z / (float) MAX_GRID_COUNT ) );
@@ -187,7 +187,7 @@ GError GPhotonMapRayTracer::initialize( GScene *pScene )
 		}
 
 		/**
-		 *	light Á¤º¸¸¦ ¾÷·ÎµåÇÑ´Ù.
+		 *	light ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Îµï¿½ï¿½Ñ´ï¿½.
 		 */
 		error = m_pCudaRenderPipeline->setLightInfo( pLight, lightCount );
 		free( pLight );
@@ -195,19 +195,19 @@ GError GPhotonMapRayTracer::initialize( GScene *pScene )
 			return error;
 
 		/** 
-		 *	Á» ¾î»öÇÏÁö¸¸, kdtree Á¤º¸¸¦ ÀÌ·¸°Ô ÇØ¼­ cuda ·Î ³Ñ±è. 
+		 *	ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½, kdtree ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ì·ï¿½ï¿½ï¿½ ï¿½Ø¼ï¿½ cuda ï¿½ï¿½ ï¿½Ñ±ï¿½. 
 		 */ 
 		error = pScene->getKDTreeStructure()->makeCudaRenderStructureInfo( m_pCudaRenderPipeline );
 		if ( error != errorNo )
 			return error;
 		
 		/**
-		 *	intersection point map ÃÊ±âÈ­.
+		 *	intersection point map ï¿½Ê±ï¿½È­.
 		 */
 		m_pIntersectionPointMap = new GIntersectionPointMap( 
 			pScene->getResolution(), pScene->getSuperSampling(), pScene->getMaxReflectionDepth() + 1 );
 
-		/** blooming È¿°ú¸¦ Àû¿ëÇÏ±â¸¦ ¿øÇÑ´Ù¸é ÃÊ±âÈ­ ÇØµÒ.*/
+		/** blooming È¿ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï±â¸¦ ï¿½ï¿½ï¿½Ñ´Ù¸ï¿½ ï¿½Ê±ï¿½È­ ï¿½Øµï¿½.*/
 		if ( m_pScene->isBloomingFilter() ) {
 			error = m_pCudaRenderPipeline->initBloomingFilter( m_pScene->getBloomingRadius(),
 															   m_pScene->getBloomingWeight() );
@@ -220,7 +220,7 @@ GError GPhotonMapRayTracer::initialize( GScene *pScene )
 	}
 
 	/**
-	 *	ÇöÀç Renderer °¡ Ã³¸®ÇÑ Scene À» ±â¾ïÇÑ´Ù.
+	 *	ï¿½ï¿½ï¿½ï¿½ Renderer ï¿½ï¿½ Ã³ï¿½ï¿½ï¿½ï¿½ Scene ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½.
 	 */
 	m_iOldSceneNumber = pScene->getSceneNumber();
 	m_iSceneTimestamp = pScene->getGeometryChangeTimestamp();
@@ -236,8 +236,8 @@ GError GPhotonMapRayTracer::constructPhotonEmitLightInfo( cuLight* plightList, i
 	float intensitySum = 0.0f;
 
 	/**
-	 *	ÀüÃ¼ light Áß¿¡¼­ °¢ light ÀÇ intensity °¡ Â÷ÁöÇÏ´Â ºñÀ²¸¸Å­ 
-	 *	°¢ light °¡ »Ñ¸± photon ÀÇ °³¼ö¸¦ ¹èºÐÇÑ´Ù. 
+	 *	ï¿½ï¿½Ã¼ light ï¿½ß¿ï¿½ï¿½ï¿½ ï¿½ï¿½ light ï¿½ï¿½ intensity ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å­ 
+	 *	ï¿½ï¿½ light ï¿½ï¿½ ï¿½Ñ¸ï¿½ photon ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½. 
 	 */
 	for ( int i = 0; i < lightCount; ++i ) {
 		if ( plightList[ i ].bUsePhoton == 0 )
@@ -247,15 +247,15 @@ GError GPhotonMapRayTracer::constructPhotonEmitLightInfo( cuLight* plightList, i
 	}
 
 	/**
-	 *	photon Àº Á¤¼öÇüÀ¸·Î Àß¸®¹Ç·Î °¢ light ÀÇ emitPhoton ÇÕÀÌ ÀÎÀÚ·Î ÁÖ¾îÁø emitPhoton °ú 
-	 *	1 °³Á¤µµ Â÷ÀÌ°¡ »ý±æ¼ö ÀÖ´Ù. µû¶ó¼­ ¸¶Áö¸· light ¿¡´Â ³²Àº photon À» ´Ù ÁØ´Ù.
+	 *	photon ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ß¸ï¿½ï¿½Ç·ï¿½ ï¿½ï¿½ light ï¿½ï¿½ emitPhoton ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ú·ï¿½ ï¿½Ö¾ï¿½ï¿½ï¿½ emitPhoton ï¿½ï¿½ 
+	 *	1 ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ì°ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ö´ï¿½. ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ light ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ photon ï¿½ï¿½ ï¿½ï¿½ ï¿½Ø´ï¿½.
 	 */
 	for ( int i = 0; i < lightCount; ++i ) {
 
 		if ( plightList[ i ].bUsePhoton == 0 )
 			continue;
 
-		/** photon À» emit ½ÃÅ°´Â ¸¶Áö¸· light ÀÏ¶§ */
+		/** photon ï¿½ï¿½ emit ï¿½ï¿½Å°ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ light ï¿½Ï¶ï¿½ */
 		if ( processPhotonLightCount == totalPhotonLightCount - 1 ) {
 			plightList[ i ].iPhotonStartIndex = photonSum;
 			plightList[ i ].iEmitPhoton = m_Option.m_iEmitPhotonPerIteration - photonSum;
@@ -286,8 +286,8 @@ GError GPhotonMapRayTracer::rendering( GScene *pScene, bool isDebug )
 	int atLeastOneRay = 0;
 
 	/** 
-	 *	Scene ÀÌ ÀÌÀü geometry »óÅÂ¿¡¼­ º¯ÇÑ°Ô ÀÖ´ÂÁö Ã¼Å©ÇØ¼­ ÀÖ´Ù¸é
-	 *	SpatialStructure ¸¦ Àç±¸¼ºÇÑ´Ù.
+	 *	Scene ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ geometry ï¿½ï¿½ï¿½Â¿ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ñ°ï¿½ ï¿½Ö´ï¿½ï¿½ï¿½ Ã¼Å©ï¿½Ø¼ï¿½ ï¿½Ö´Ù¸ï¿½
+	 *	SpatialStructure ï¿½ï¿½ ï¿½ç±¸ï¿½ï¿½ï¿½Ñ´ï¿½.
 	 */
 	error = initialize( pScene );
 	if ( error != errorNo ) {
@@ -295,7 +295,7 @@ GError GPhotonMapRayTracer::rendering( GScene *pScene, bool isDebug )
 		return error;
 	}
 
-	/** rendering option ¼¼ÆÃ */
+	/** rendering option ï¿½ï¿½ï¿½ï¿½ */
 	m_pCudaRenderPipeline->renderingOption( isEnableShadow(), pScene->isUseTexture() );
 	cuScene cuSceneInfo;
 	cuSceneInfo.globalAmbient = make_float3( pScene->getGlobalAmbient().r, 
@@ -315,7 +315,7 @@ GError GPhotonMapRayTracer::rendering( GScene *pScene, bool isDebug )
 	m_pCudaRenderPipeline->setSceneInfo( cuSceneInfo );
 
 	/**
-	 *	cuda ¾ÈÀÇ intersection point ¸¦ µðÆúÆ® °ªÀ¸·Î ÃÊ±âÈ­ ÇÑ´Ù.
+	 *	cuda ï¿½ï¿½ï¿½ï¿½ intersection point ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Æ® ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ê±ï¿½È­ ï¿½Ñ´ï¿½.
 	 */
 	error = m_pCudaRenderPipeline->clearIntersectionResult();
 	if ( error != errorNo ) {
@@ -336,8 +336,8 @@ GError GPhotonMapRayTracer::rendering( GScene *pScene, bool isDebug )
 	}
 
 	/**
-	 *	reflection ÀÌ³ª refraction ÀÌ ÀÖÀ¸¸é ÃÖ´ë max depth ±îÁö
-	 *	ÃßÀûÇØ¼­ intersection point ¸¦ m_pIntersectionPointMap ¿¡ ½×¾Æ ³Ö´Â´Ù.
+	 *	reflection ï¿½Ì³ï¿½ refraction ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ö´ï¿½ max depth ï¿½ï¿½ï¿½ï¿½
+	 *	ï¿½ï¿½ï¿½ï¿½ï¿½Ø¼ï¿½ intersection point ï¿½ï¿½ m_pIntersectionPointMap ï¿½ï¿½ ï¿½×¾ï¿½ ï¿½Ö´Â´ï¿½.
 	 */
 	int count = 0;
 
@@ -350,15 +350,15 @@ GError GPhotonMapRayTracer::rendering( GScene *pScene, bool isDebug )
 		if ( error != errorNo )	break;
 
 		/** 
-		 *	intersection Á¤º¸¸¦ °¡Á®¿Í¼­ intersection map ¿¡ º¹»çÇØ µÐ´Ù.
-		 *	ÀÌ°Å ¼Óµµ °³¼± ÇÊ¿ä. ÀÌºÎºÐ¶§¹®¿¡ fps °¡ ¹ÝÀý·Î ÁØ´Ù.
+		 *	intersection ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Í¼ï¿½ intersection map ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ð´ï¿½.
+		 *	ï¿½Ì°ï¿½ ï¿½Óµï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ê¿ï¿½. ï¿½ÌºÎºÐ¶ï¿½ï¿½ï¿½ï¿½ï¿½ fps ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ø´ï¿½.
 		 */
 		error = backupIntersectionResult( generatedRayCount );
 		if ( error != errorNo ) break;
 
 		/**
-		 *	photon map À¸·Î direct illumination À» Ã³¸®ÇÑ´Ù¸é
-		 *	ray tracing À¸·Î direct illum Ã³¸® ¾ÈÇÔ.
+		 *	photon map ï¿½ï¿½ï¿½ï¿½ direct illumination ï¿½ï¿½ Ã³ï¿½ï¿½ï¿½Ñ´Ù¸ï¿½
+		 *	ray tracing ï¿½ï¿½ï¿½ï¿½ direct illum Ã³ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½.
 		 */
 		if ( !m_Option.m_bDirectIllumByPhotonMap ) {
 			error = m_pCudaRenderPipeline->calDirectIllumination( m_iMaxDepth );
@@ -382,18 +382,18 @@ GError GPhotonMapRayTracer::rendering( GScene *pScene, bool isDebug )
 	GLogManager::logging( LOG_DEBUG, "Intersection Point Count = %d", m_pIntersectionPointMap->getSize() );
 
 	/**-----------------------------------------------------------------------------------------------
-	 **	scene ÀÇ direct, indirect, ±×¸®°í ÇÕ»êÇÑ image buffer ¸¦ ±¸¼º.
+	 **	scene ï¿½ï¿½ direct, indirect, ï¿½×¸ï¿½ï¿½ï¿½ ï¿½Õ»ï¿½ï¿½ï¿½ image buffer ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½.
 	 **----------------------------------------------------------------------------------------------*/
 
 	/**
-	 * ray tracing À¸·Î °è»êÇÑ direct illum À» º¹»çÇØ¿Â´Ù.
+	 * ray tracing ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ direct illum ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ø¿Â´ï¿½.
 	 */
 	GImageBuffer *pImageBuffer = m_pScene->getImageBuffer();
 	GImageBuffer *pDirectIllm = m_pScene->getDirectIllumImageBuffer();
 	GImageBuffer *pInDirectIllum = m_pScene->getIndirectIllumImageBuffer();
 
 	/**
-	 *	photon mapping À¸·Î indirect illumination ¸¸ °è»êÇØ¿È.
+	 *	photon mapping ï¿½ï¿½ï¿½ï¿½ indirect illumination ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ø¿ï¿½.
 	 */
 	pInDirectIllum->clear();
 
@@ -407,13 +407,13 @@ GLogManager::logging( LOG_INFO, "start photon" );
 	timer.end();
 
 	/** 
-	 *	direct ¿Í indirect illum À» ÇÕ»êÇØ¼­ ÃÖÁ¾ ÀÌ¹ÌÁö¿¡ ÀúÀåÇÑ´Ù.
+	 *	direct ï¿½ï¿½ indirect illum ï¿½ï¿½ ï¿½Õ»ï¿½ï¿½Ø¼ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ì¹ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½.
 	 */
 	/**
-	 *	photon map À¸·Î direct illumination À» Ã³¸®ÇÑ´Ù¸é
-	 *	ray tracing À¸·Î direct illum ´©Àû¾ÈÇÔ.
-	 *  indirect illum ¿¡ photon map À¸·Î direct ±îÁö °è»êÇÑ °á°ú°¡ ÀÖÀ¸¹Ç·Î
-	 *	±×°Í¸¸ º¹»ç.
+	 *	photon map ï¿½ï¿½ï¿½ï¿½ direct illumination ï¿½ï¿½ Ã³ï¿½ï¿½ï¿½Ñ´Ù¸ï¿½
+	 *	ray tracing ï¿½ï¿½ï¿½ï¿½ direct illum ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½.
+	 *  indirect illum ï¿½ï¿½ photon map ï¿½ï¿½ï¿½ï¿½ direct ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½
+	 *	ï¿½×°Í¸ï¿½ ï¿½ï¿½ï¿½ï¿½.
 	 */
 	if ( !m_Option.m_bDirectIllumByPhotonMap ) {
 		m_pCudaRenderPipeline->getFrameBuffer( pDirectIllm->getBuffer() );
@@ -423,7 +423,7 @@ GLogManager::logging( LOG_INFO, "start photon" );
 		pImageBuffer->copy( pInDirectIllum->getBuffer() );
 	}
 
-	/** blooming È¿°ú¸¦ Àû¿ëÇÏ±â¸¦ ¿øÇÑ´Ù¸é framebuffer ¿¡ ¿Ã·Á¼­ Ã³¸®ÇÏ°í ´Ù½Ã °¡Á®¿Â´Ù. */
+	/** blooming È¿ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï±â¸¦ ï¿½ï¿½ï¿½Ñ´Ù¸ï¿½ framebuffer ï¿½ï¿½ ï¿½Ã·ï¿½ï¿½ï¿½ Ã³ï¿½ï¿½ï¿½Ï°ï¿½ ï¿½Ù½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Â´ï¿½. */
 	if ( m_pScene->isBloomingFilter() ) {
 		m_pCudaRenderPipeline->setFrameBuffer( pImageBuffer->getBuffer() );
 		m_pCudaRenderPipeline->bloomingFiltering();
@@ -439,9 +439,9 @@ GLogManager::logging( LOG_INFO, "start photon" );
 }
 
 /**
- *	°è»êÇÑ °á°ú¸¦ image buffer ¿¡ ´©Àû½ÃÅ²´Ù.
- *	¿ÜºÎ¿¡¼­µµ È£ÃâµÉ ¼ö ÀÖÀ¸¹Ç·Î, Àý´ë ³»ºÎ Å¬·¡½ºº¯¼ö¸¦
- *	ÇÔºÎ·Î ¼öÁ¤ÇÏ´Â ¿¬»êÀÌ µé¾î°¡¸é ¾ÈµÈ´Ù.
+ *	ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ image buffer ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å²ï¿½ï¿½.
+ *	ï¿½ÜºÎ¿ï¿½ï¿½ï¿½ï¿½ï¿½ È£ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½, ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ Å¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ *	ï¿½ÔºÎ·ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½î°¡ï¿½ï¿½ ï¿½ÈµÈ´ï¿½.
  */
 void GPhotonMapRayTracer::accumulateRadiance ( 
 					GImageBuffer *pInDirectIllumImageBuffer,
@@ -480,7 +480,7 @@ GError GPhotonMapRayTracer::backupIntersectionResult( int count )
 		return errorResultError;
 
 	/**
-	*	gpu »ó¿¡¼­ÀÇ intersection °á°úÁß hit µÈ°Í¸¸ point map ¿¡ insert ÇÑ´Ù.
+	*	gpu ï¿½ó¿¡¼ï¿½ï¿½ï¿½ intersection ï¿½ï¿½ï¿½ï¿½ï¿½ hit ï¿½È°Í¸ï¿½ point map ï¿½ï¿½ insert ï¿½Ñ´ï¿½.
 	*/
 	for ( int i = 0; i < count; ++i ) {
 		if ( pIntersectionPoints[ i ].isHit() ) {
@@ -495,7 +495,7 @@ GError GPhotonMapRayTracer::backupIntersectionResult( int count )
 
 
 /**
- *	CUDA ¿¡¼­ Primary ray ¸¦ »ý¼º½ÃÅ²´Ù.
+ *	CUDA ï¿½ï¿½ï¿½ï¿½ Primary ray ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å²ï¿½ï¿½.
  */
 GError GPhotonMapRayTracer::makePrimaryRaySet_BlockGrouping( GScene *pScene, int *generatedCount, int currentSampleX, int currentSampleY )
 {
@@ -527,7 +527,7 @@ GError GPhotonMapRayTracer::makePrimaryRaySet_BlockGrouping( GScene *pScene, int
 }
 
 /**
- *	CUDA ¿¡¼­ Primary ray ¸¦ »ý¼º½ÃÅ²´Ù.
+ *	CUDA ï¿½ï¿½ï¿½ï¿½ Primary ray ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å²ï¿½ï¿½.
  */
 GError GPhotonMapRayTracer::makePrimaryRaySet( GScene *pScene, int *generatedRayCount, int currentSampleX, int currentSampleY )
 {
@@ -559,8 +559,8 @@ GError GPhotonMapRayTracer::makePrimaryRaySet( GScene *pScene, int *generatedRay
 }
 
 /**
- *	CUDA ¸¦ ÀÌ¿ëÇØ¼­ Photon Tracing °ú Gathering Iteration À» ¼öÇàÇÑ´Ù.
- *	°á°ú¸¦ direct illumination °ú ÇÕ»êÇØ¼­ imageBuffer ¿¡±â·ÏÇÑ´Ù.
+ *	CUDA ï¿½ï¿½ ï¿½Ì¿ï¿½ï¿½Ø¼ï¿½ Photon Tracing ï¿½ï¿½ Gathering Iteration ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½.
+ *	ï¿½ï¿½ï¿½ï¿½ï¿½ direct illumination ï¿½ï¿½ ï¿½Õ»ï¿½ï¿½Ø¼ï¿½ imageBuffer ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½.
  */
 GError GPhotonMapRayTracer::photonMapIteration( bool bRunTracing, int iteration, 
 												GImageBuffer *pInDirectIllumImageBuffer )
@@ -571,7 +571,7 @@ GError GPhotonMapRayTracer::photonMapIteration( bool bRunTracing, int iteration,
 	totalTimer.start();
 
 	/**-------------------------------------------------------------------------------------------
-	 **	¸ðµç iteration ¿¡ °ü·ÃµÈ Åë°èÀÚ·á ÃÊ±âÈ­.
+	 **	ï¿½ï¿½ï¿½ iteration ï¿½ï¿½ ï¿½ï¿½ï¿½Ãµï¿½ ï¿½ï¿½ï¿½ï¿½Ú·ï¿½ ï¿½Ê±ï¿½È­.
 	 **------------------------------------------------------------------------------------------*/
 	m_iLogTotalTracedPhoton = 0;
 	m_iLogTotalIsectGridMakingTime = 0.0f;
@@ -584,7 +584,7 @@ GError GPhotonMapRayTracer::photonMapIteration( bool bRunTracing, int iteration,
 	m_iLogTotalPhotonMappingTime = 0.0f;
 
 	/**-------------------------------------------------------------------------------------------
-	 **	intersection point ¸¦ À§ÇÑ grid ±¸¼ºÀ» ÇÏ°í cuda ¿¡ ¾÷·Îµå.
+	 **	intersection point ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ grid ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ï°ï¿½ cuda ï¿½ï¿½ ï¿½ï¿½ï¿½Îµï¿½.
 	 **------------------------------------------------------------------------------------------*/
 	ipointTimer.start();
 
@@ -601,11 +601,11 @@ GError GPhotonMapRayTracer::photonMapIteration( bool bRunTracing, int iteration,
 	ipointTimer.end();
 
 	/**-------------------------------------------------------------------------------------------
-	 **	density ¸¦ ÃßÁ¤ÇÏ±â À§ÇØ¼­ °¢ ipoint °¡ »ç¿ëÇÒ Area ¸¦ ±¸ÇÑ´Ù.
+	 **	density ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï±ï¿½ ï¿½ï¿½ï¿½Ø¼ï¿½ ï¿½ï¿½ ipoint ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ Area ï¿½ï¿½ ï¿½ï¿½ï¿½Ñ´ï¿½.
 	 **------------------------------------------------------------------------------------------*/
 	areaTimer.start();
 
-	/** projected circle ¶Ç´Â area photon »ç¿ë. */
+	/** projected circle ï¿½Ç´ï¿½ area photon ï¿½ï¿½ï¿½. */
 	error = estimateDensityArea( m_pIPointGridBox, m_Option.m_eDensityMethod );
 	if ( error != errorNo )
 		return errorNo;
@@ -613,7 +613,7 @@ GError GPhotonMapRayTracer::photonMapIteration( bool bRunTracing, int iteration,
 	areaTimer.end();
 
 	/**-------------------------------------------------------------------------------------------
-	 **	PHOTON TRACING °ú GATHERING À» ¼öÇàÇÑ´Ù. 
+	 **	PHOTON TRACING ï¿½ï¿½ GATHERING ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½. 
 	 **------------------------------------------------------------------------------------------*/
 	int randomSeed = m_iRandomSeed;
 
@@ -624,7 +624,7 @@ GError GPhotonMapRayTracer::photonMapIteration( bool bRunTracing, int iteration,
 			return error;
 
 		/**
-		 *	´ÙÀ½¹ø photon À» »Ñ¸±¶§ÀÇ random °ªÀ» À§ÇÑ seed °ª
+		 *	ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ photon ï¿½ï¿½ ï¿½Ñ¸ï¿½ï¿½ï¿½ï¿½ï¿½ random ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ seed ï¿½ï¿½
 		 */
 		randomSeed += m_Option.m_iEmitPhotonPerIteration;
 		if ( randomSeed > 1000000000 )
@@ -635,8 +635,8 @@ GError GPhotonMapRayTracer::photonMapIteration( bool bRunTracing, int iteration,
 	totalTimer.end();
 
 	/**-------------------------------------------------------------------------------------------
-	 **	ÀüÃ¼ iteration ÀÌ ³¡³ª°í °è»êµÈ °¢ ipoint ÀÇ radiance ¸¦ indirect image buffer ¿¡
-	 ** ´©Àû½ÃÅ²´Ù.
+	 **	ï¿½ï¿½Ã¼ iteration ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ipoint ï¿½ï¿½ radiance ï¿½ï¿½ indirect image buffer ï¿½ï¿½
+	 ** ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å²ï¿½ï¿½.
 	 **------------------------------------------------------------------------------------------*/
 	accumulateTimer.start();
 
@@ -647,7 +647,7 @@ GError GPhotonMapRayTracer::photonMapIteration( bool bRunTracing, int iteration,
 	m_iLogTotalAccumulateTime = accumulateTimer.getElapsedTime();
 
 	/**-------------------------------------------------------------------------------------------
-	 **	INFO MATION Ãâ·Â. 
+	 **	INFO MATION ï¿½ï¿½ï¿½. 
 	 **------------------------------------------------------------------------------------------*/
 	m_iLogTotalIsectGridMakingTime = ipointTimer.getElapsedTime();
 	m_iLogTotalIsectAreaDensityTime = areaTimer.getElapsedTime();
@@ -684,9 +684,9 @@ GError GPhotonMapRayTracer::photonMapIteration( bool bRunTracing, int iteration,
 }
 
 /**
- *	CUDA ¸¦ ÀÌ¿ëÇØ¼­ Photon Tracing °ú Gathering ÇÑ Iteration À» ¼öÇàÇÑ´Ù.
- *	Scene structure °¡ º¯ÇÏÁö ¾Ê¾Ò´Ù¸é tracing À» ´Ù½Ã ¼öÇàÇÒ ÇÊ¿ä´Â ¾ø±â
- *	¶§¹®¿¡ bRunTracing ÀÎÀÚ·Î Á¶ÀýÇÑ´Ù.
+ *	CUDA ï¿½ï¿½ ï¿½Ì¿ï¿½ï¿½Ø¼ï¿½ Photon Tracing ï¿½ï¿½ Gathering ï¿½ï¿½ Iteration ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½.
+ *	Scene structure ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ê¾Ò´Ù¸ï¿½ tracing ï¿½ï¿½ ï¿½Ù½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ê¿ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+ *	ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ bRunTracing ï¿½ï¿½ï¿½Ú·ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½.
  */
 GError GPhotonMapRayTracer::photonMapOneIteration( int randomSeed,
 					GGridBox<cuIntersectionPoint, cuPMIntersectionPoint> *pIPointGridBox,				
@@ -703,7 +703,7 @@ GError GPhotonMapRayTracer::photonMapOneIteration( int randomSeed,
 
 	//-----------------------------------------------------------------------------------------//
 	/** 
-	 *	debug option ÀÏ¶§ ÀÌÀü rendering ¿¡¼­ Ãß°¡ÇÑ debug photon option À» »èÁ¦ÇÑ´Ù. 
+	 *	debug option ï¿½Ï¶ï¿½ ï¿½ï¿½ï¿½ï¿½ rendering ï¿½ï¿½ï¿½ï¿½ ï¿½ß°ï¿½ï¿½ï¿½ debug photon option ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½. 
 	 */
 	if ( m_bDebug && bRunTracing ) {
 		char name[1024] = { 0x00, };
@@ -712,16 +712,16 @@ GError GPhotonMapRayTracer::photonMapOneIteration( int randomSeed,
 	}
 
 	/**
-	 *	Tracing À» ¼öÇàÇÒ ÇÊ¿ä°¡ ÀÖÀ»¶§¸¸. iteration ÀÌ 1¹øÀÌ°í 
-	 *	scene ±¸Á¶°¡ º¯ÇÏÁö ¾Ê¾Ò´Ù¸é ÀÌÀü¿¡ tracing ÇÑ photon Á¤º¸¸¦
-	 *	»ç¿ëÇÑ´Ù. iteration ÀÌ ¿©·¯¹øÀÌ¶ó¸é ¸Å¹ø map ÀÌ ¹Ù²î¹Ç·Î Àç»ç¿ëÇÒ ¼ö ¾ø´Ù.
+	 *	Tracing ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ê¿ä°¡ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½. iteration ï¿½ï¿½ 1ï¿½ï¿½ï¿½Ì°ï¿½ 
+	 *	scene ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ê¾Ò´Ù¸ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ tracing ï¿½ï¿½ photon ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+	 *	ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½. iteration ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì¶ï¿½ï¿½ ï¿½Å¹ï¿½ map ï¿½ï¿½ ï¿½Ù²ï¿½Ç·ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½.
 	 */
 	if ( bRunTracing ) {
 
 		tracingTimer.start();
 
 		/**
-		*	photon tracing À» ¼öÇàÇÑ´Ù.
+		*	photon tracing ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½.
 		*/
 		int iTracedPhotonSize = 0, iTracedBound = 0;
 		error = m_pCudaPhotonMapping->photonTracing( 
@@ -742,9 +742,9 @@ GError GPhotonMapRayTracer::photonMapOneIteration( int randomSeed,
 		photonGridTimer.start();
 
 		/**
-		*	¹Ì¸® ¾÷·ÎµåÇØ³õÀº intersection point ¿Í tracing µÈ photon À» °¡Áö°í
-		*	intersectionPoint ÁÖº¯ÀÇ photon À» gathering ÇÑ´Ù.
-		*	¸ÕÀú tracing µÈ photon À» grid box ¿¡¼­ Á¤·ÄÇÑ´Ù.
+		*	ï¿½Ì¸ï¿½ ï¿½ï¿½ï¿½Îµï¿½ï¿½Ø³ï¿½ï¿½ï¿½ intersection point ï¿½ï¿½ tracing ï¿½ï¿½ photon ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		*	intersectionPoint ï¿½Öºï¿½ï¿½ï¿½ photon ï¿½ï¿½ gathering ï¿½Ñ´ï¿½.
+		*	ï¿½ï¿½ï¿½ï¿½ tracing ï¿½ï¿½ photon ï¿½ï¿½ grid box ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½.
 		*/
 		if ( m_pGlobalPhotonGridBox ) {
 			delete m_pGlobalPhotonGridBox;
@@ -758,7 +758,7 @@ GError GPhotonMapRayTracer::photonMapOneIteration( int randomSeed,
 
 	}
 
-	/** ipoint ¿Í photon ÀÇ ¿¬°ü°ü°è¸¸µë. */
+	/** ipoint ï¿½ï¿½ photon ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½è¸¸ï¿½ï¿½. */
 	indexGridTimer.start();
 	int photonIndexCount = 0;
 	cuPhotonIndex *pPhotonIndex = makeIPointVsPhotonIndexData( 
@@ -769,7 +769,7 @@ GError GPhotonMapRayTracer::photonMapOneIteration( int randomSeed,
 	gatheringTimer.start();
 
 	/**
-	 *	ipoint ÁÖº¯¿¡ photon ÀÌ ÀÖÀ»¶§¸¸
+	 *	ipoint ï¿½Öºï¿½ï¿½ï¿½ photon ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	 */
 	if ( pPhotonIndex != NULL ) {
 		error = m_pCudaPhotonMapping->photonGathering( pIPointGridBox->m_pData2, pIPointGridBox->m_iTotalCount,
@@ -781,8 +781,8 @@ GError GPhotonMapRayTracer::photonMapOneIteration( int randomSeed,
 	gatheringTimer.end();
 
 	/** 
-	 *	debug option ÀÏ¶§ rendering ¿¡¼­ »ý¼ºÇÑ photon Á¤º¸¸¦ object ¸¸µé¾î¼­ scene ¿¡ Ãß°¡ÇÑ´Ù. 
-	 *	data °¡ ³Ê¹« ¸¹À¸¸é ¾ÈµÇ¹Ç·Î iterationid °¡ 0 ÀÎ°Í¸¸ ¸¸µë.
+	 *	debug option ï¿½Ï¶ï¿½ rendering ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ photon ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ object ï¿½ï¿½ï¿½ï¿½î¼­ scene ï¿½ï¿½ ï¿½ß°ï¿½ï¿½Ñ´ï¿½. 
+	 *	data ï¿½ï¿½ ï¿½Ê¹ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ÈµÇ¹Ç·ï¿½ iterationid ï¿½ï¿½ 0 ï¿½Î°Í¸ï¿½ ï¿½ï¿½ï¿½ï¿½.
 	 */
 	if ( m_bDebug && bRunTracing && iterationId == 0 ) {
 		
@@ -805,8 +805,8 @@ GError GPhotonMapRayTracer::photonMapOneIteration( int randomSeed,
 			vertexArray[ i * 3 + 1 ] = pPhoton->pos.y;
 			vertexArray[ i * 3 + 2 ] = pPhoton->pos.z;
 
-			// debug È­¸é¼¼¼­ photon Á¤º¸¸¦ º¸¿©ÁÙ¶§
-			// photon ÀÇ power °¡ ³Ê¹« ÀÛ±â¶§¹®¿¡ ÆÄ¿ö¸¦ Å°¿î´Ù.
+			// debug È­ï¿½é¼¼ï¿½ï¿½ photon ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½
+			// photon ï¿½ï¿½ power ï¿½ï¿½ ï¿½Ê¹ï¿½ ï¿½Û±â¶§ï¿½ï¿½ï¿½ï¿½ ï¿½Ä¿ï¿½ï¿½ï¿½ Å°ï¿½ï¿½ï¿½.
 			maxpower = max( pPhoton->power.x, max( pPhoton->power.y, pPhoton->power.z ) );
 			if ( maxpower > 0.0f )
 				scale = 1.0 / maxpower;
@@ -867,7 +867,7 @@ GError GPhotonMapRayTracer::photonMapOneIteration( int randomSeed,
 }
 
 /**
- *	ray µ¥ÀÌÅÍ¸¦ ÀÌ¿ëÇØ¼­ Ray Grid Box ¸¦ ¸¸µç´Ù.
+ *	ray ï¿½ï¿½ï¿½ï¿½ï¿½Í¸ï¿½ ï¿½Ì¿ï¿½ï¿½Ø¼ï¿½ Ray Grid Box ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½.
  */
 GGridBox<cuIntersectionPoint, cuPMIntersectionPoint>*
 		GPhotonMapRayTracer::makeIPointGridBox( GIntersectionPointMap *pIntersectionPointMap )
@@ -879,7 +879,7 @@ GGridBox<cuIntersectionPoint, cuPMIntersectionPoint>*
 							( sceneBBox, m_Option.m_fGridUnitLength, m_Option.m_fGridUnitLength, m_Option.m_fGridUnitLength );
 
 	/**
-	 *	°¢ Cell ¿¡ µé¾î°¥ ray counting.
+	 *	ï¿½ï¿½ Cell ï¿½ï¿½ ï¿½ï¿½î°¥ ray counting.
 	 */
 	const cuIntersectionPoint* pPoint = NULL;
 	int pointSize = pIntersectionPointMap->getSize();
@@ -892,7 +892,7 @@ GGridBox<cuIntersectionPoint, cuPMIntersectionPoint>*
 	pIGridBox->allocate();
 
 	/**
-	 *	°¢ Cell ¿¡ ray Á¤º¸¸¦ insert.
+	 *	ï¿½ï¿½ Cell ï¿½ï¿½ ray ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ insert.
 	 */
 	int rayNumber = 0;
 	cuIntersectionPoint iPoint;
@@ -903,7 +903,7 @@ GGridBox<cuIntersectionPoint, cuPMIntersectionPoint>*
 		pPoint = pIntersectionPointMap->getIntersectionPoint( i );
 		memcpy( &iPoint, pPoint, sizeof( cuIntersectionPoint ) );
 
-		// power ´Â 0.0f À¸·Î ´Ù ÃÊ±âÈ­ ÇØ¾ßÇÔ.
+		// power ï¿½ï¿½ 0.0f ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½Ê±ï¿½È­ ï¿½Ø¾ï¿½ï¿½ï¿½.
 		pmiPoint.power[0] = 0.0f; pmiPoint.power[1] = 0.0f; pmiPoint.power[2] = 0.0f;
 		pmiPoint.photonIndexOffset = 0;
 		pmiPoint.photonIndexCount = 0;
@@ -921,7 +921,7 @@ GGridBox<cuIntersectionPoint, cuPMIntersectionPoint>*
 
 
 /**
- *	area photon µ¥ÀÌÅÍ¸¦ ÀÌ¿ëÇØ¼­ Area Photon Grid Box ¸¦ ¸¸µç´Ù.
+ *	area photon ï¿½ï¿½ï¿½ï¿½ï¿½Í¸ï¿½ ï¿½Ì¿ï¿½ï¿½Ø¼ï¿½ Area Photon Grid Box ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½.
  */
 GGridBox<cuPhoton, char> *GPhotonMapRayTracer::makeAreaPhotonGridBox( const vector<cuPhoton*> &list )
 {
@@ -932,7 +932,7 @@ GGridBox<cuPhoton, char> *GPhotonMapRayTracer::makeAreaPhotonGridBox( const vect
 			( m_pScene->getKDTreeStructure()->getBoundingBox(), m_Option.m_fGridUnitLength, m_Option.m_fGridUnitLength, m_Option.m_fGridUnitLength );
 
 	/**
-	 *	°¢ Cell ¿¡ µé¾î°¥ photon counting.
+	 *	ï¿½ï¿½ Cell ï¿½ï¿½ ï¿½ï¿½î°¥ photon counting.
 	 */
 	for ( int i = 0; i < photonCount; ++i ) {
 		pAreaPhotonGridBox->counting( list[ i ]->pos.x, list[ i ]->pos.y,	list[ i ]->pos.z );
@@ -940,14 +940,14 @@ GGridBox<cuPhoton, char> *GPhotonMapRayTracer::makeAreaPhotonGridBox( const vect
 	pAreaPhotonGridBox->allocate();
 
 	/**
-	 *	°¢ Cell ¿¡ photon insert.
+	 *	ï¿½ï¿½ Cell ï¿½ï¿½ photon insert.
 	 */
 	for ( int i = 0; i < photonCount; ++i ) {
 
 		photonInfo.pos = list[ i ]->pos;
 		photonInfo.normal = list[ i ]->normal;
 
-		// area Á¤º¸°¡ µé¾îÀÖÀ½.
+		// area ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½.
 		photonInfo.power = list[ i ]->power;
 
 		pAreaPhotonGridBox->insertData( 
@@ -978,7 +978,7 @@ GError GPhotonMapRayTracer::estimateAreaByAreaPhoton(
 	GTriangleWrapperList *triangleList = m_pScene->getKDTreeStructure()->getTriangleWrapperList();
 
 	/** 
-	 *	»ùÇÃ¸µ°¹¼ö°¡ ¸¹À¸¸é iteration ÇÑ´Ù. 
+	 *	ï¿½ï¿½ï¿½Ã¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ iteration ï¿½Ñ´ï¿½. 
 	 */
 	GAreaDensityEstimate estimate( 500000 );
 	totalSize = triangleList->size();
@@ -1004,13 +1004,13 @@ GError GPhotonMapRayTracer::estimateAreaByAreaPhoton(
 				photons->size(), triangleIndex, timer1.getElapsedTime() );
 
 		/**
-		 *	intersection point ¿Í ¿¬°üµÈ grid ¹Ú½º¸¦ ±¸¼ºÇØ¼­ cuda ·Î ¼öÇà.
+		 *	intersection point ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ grid ï¿½Ú½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ø¼ï¿½ cuda ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½.
 		 */
 		GGridBox<cuPhoton, char> *pPhotonGridBox = makeAreaPhotonGridBox( *photons );
 		cuPhotonIndex *pPhotonIndex = makeIPointVsPhotonIndexData( pIPointGridBox, pPhotonGridBox, &indexCount );
 
 		/**
-		 *	ipoint ÁÖº¯¿¡ photon ÀÌ ÀÖÀ»¶§¸¸
+		 *	ipoint ï¿½Öºï¿½ï¿½ï¿½ photon ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 		 */
 		if ( pPhotonIndex != NULL ) {
 			error = m_pCudaPhotonMapping->calDensityArea( 
@@ -1032,7 +1032,7 @@ GError GPhotonMapRayTracer::estimateAreaByAreaPhoton(
 	timer.end();
 
 	/** 
-	 *	ÃÖÁ¾ÀûÀÎ area ¸¦ ºÁ¼­ area °¡ 0 ÀÌ°Å³ª projected circle area º¸´Ù Å©¸é projected circle area ·Î ¸¸µç´Ù. 
+	 *	ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ area ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ area ï¿½ï¿½ 0 ï¿½Ì°Å³ï¿½ projected circle area ï¿½ï¿½ï¿½ï¿½ Å©ï¿½ï¿½ projected circle area ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½. 
 	 */
 	for ( int i = 0; i < pIPointGridBox->m_iTotalCount; ++i ) {
 		if ( pIPointGridBox->m_pData2[ i ].area <= 0.0f ) {
@@ -1056,20 +1056,20 @@ GError GPhotonMapRayTracer::estimateAreaByAreaPhoton(
 }
 
 /**
- *	ÇöÀç ray texture ¿Í area photon À» ÀÌ¿ëÇØ¼­ 
- *	Photon Gathering ½Ã »ç¿ëÇÒ ¸éÀû °è»êÀ» ¼öÇàÇÑ ´ÙÀ½¿¡
- *	ray texture ¿¡ area Á¤º¸¸¦ °»½ÅÇÏ±â À§ÇØ¼­ texture ¸¦ ´Ù½Ã ¿Ã¸°´Ù.
+ *	ï¿½ï¿½ï¿½ï¿½ ray texture ï¿½ï¿½ area photon ï¿½ï¿½ ï¿½Ì¿ï¿½ï¿½Ø¼ï¿½ 
+ *	Photon Gathering ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ *	ray texture ï¿½ï¿½ area ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï±ï¿½ ï¿½ï¿½ï¿½Ø¼ï¿½ texture ï¿½ï¿½ ï¿½Ù½ï¿½ ï¿½Ã¸ï¿½ï¿½ï¿½.
  */
 GError GPhotonMapRayTracer::estimateDensityArea( 
 							GGridBox<cuIntersectionPoint, cuPMIntersectionPoint> *pIPointGridBox,
 							enumDensityMethod method )
 {
 	/** 
-	 *	area photon À» »ç¿ëÇØ¼­ ÃøÁ¤ÇÑ´Ù. 
-	 *	ÃøÁ¤ÇÑ´ÙÀ½¿¡ area ¸¦ °»½ÅÇÏ°í, cuda ÀÇ ray geometry ¸¦ Àç·Îµù½ÃÄÑ¾ßÇÑ´Ù.
+	 *	area photon ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ø¼ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½. 
+	 *	ï¿½ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½ï¿½ï¿½ï¿½ï¿½ area ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï°ï¿½, cuda ï¿½ï¿½ ray geometry ï¿½ï¿½ ï¿½ï¿½Îµï¿½ï¿½ï¿½ï¿½Ñ¾ï¿½ï¿½Ñ´ï¿½.
 	 */
 	/** 
-	 *	¸¸¾à search ¹Ý°æÀÌ 0.1 º¸´Ù ÀÛ´Ù¸é ±×³É circle ·Î ÇÑ´Ù. 
+	 *	ï¿½ï¿½ï¿½ï¿½ search ï¿½Ý°ï¿½ï¿½ï¿½ 0.1 ï¿½ï¿½ï¿½ï¿½ ï¿½Û´Ù¸ï¿½ ï¿½×³ï¿½ circle ï¿½ï¿½ ï¿½Ñ´ï¿½. 
 	 */
 
 	if ( m_Option.m_fSearchRadius > 0.1f && method == densityAreaPhoton ) {
@@ -1083,7 +1083,7 @@ GError GPhotonMapRayTracer::estimateDensityArea(
 		}
 
 		/**
-		 *	area ¸¦ projected circle ·Î ¸¸µë.
+		 *	area ï¿½ï¿½ projected circle ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½.
 		 */
 		for ( int i = 0; i < pIPointGridBox->m_iTotalCount; ++i ) {
 			pIPointGridBox->m_pData2[ i ].area =
@@ -1100,8 +1100,8 @@ cuPhotonIndex* GPhotonMapRayTracer::makeIPointVsPhotonIndexData(
 						GGridBox<cuPhoton, char> *pPhotonGridBox, int *pIndexCount )
 {
 	/**
-	 *	°¢ Ray Cell ÁÖº¯ÀÇ Photon Cell ¾È¿¡ µé¾îÀÖ´Â Photon Data
-	 *	°³¼ö¸¦ °è»êÇØ¿Â´Ù.
+	 *	ï¿½ï¿½ Ray Cell ï¿½Öºï¿½ï¿½ï¿½ Photon Cell ï¿½È¿ï¿½ ï¿½ï¿½ï¿½ï¿½Ö´ï¿½ Photon Data
+	 *	ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ø¿Â´ï¿½.
 	 */
 	CellInfo *rayCellInfo = NULL;
 	CellInfo *photonCellInfo = NULL;
@@ -1118,12 +1118,12 @@ cuPhotonIndex* GPhotonMapRayTracer::makeIPointVsPhotonIndexData(
 				rayCellInfo = pIPointGridBox->getCellInfo( x, y, z );
 				
 				/**
-				 *	ray °¡ Á¸ÀçÇÏ´Â Cell¸¸.
+				 *	ray ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½ Cellï¿½ï¿½.
 				 */
 				if ( rayCellInfo->dataCount > 0 ) {
 					/** 
-					 *	photon grid ¿¡¼­ ray cell ÁÖº¯ÀÇ 27 neighbor cell ¿¡ µ¥ÀÌÅÍ°¡ ÀÖ´ÂÁö¸¦
-					 *	Ã¼Å©ÇØ¼­ ÇöÀç ray cell ÀÌ Ã£¾Æ¾ßÇÒ ÁÖº¯ cell ÀÌ ¸î°³ÀÎÁö¸¦ °è»êÇÑ´Ù.
+					 *	photon grid ï¿½ï¿½ï¿½ï¿½ ray cell ï¿½Öºï¿½ï¿½ï¿½ 27 neighbor cell ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Í°ï¿½ ï¿½Ö´ï¿½ï¿½ï¿½ï¿½ï¿½
+					 *	Ã¼Å©ï¿½Ø¼ï¿½ ï¿½ï¿½ï¿½ï¿½ ray cell ï¿½ï¿½ Ã£ï¿½Æ¾ï¿½ï¿½ï¿½ ï¿½Öºï¿½ cell ï¿½ï¿½ ï¿½î°³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½.
 					 */
 					neighborPhotonCellCount = 0;
 					for ( int k = z - 1; k <= z + 1; ++k ) {
@@ -1138,8 +1138,8 @@ cuPhotonIndex* GPhotonMapRayTracer::makeIPointVsPhotonIndexData(
 					}
 
 					/** 
-					 *	ÇöÀç ray cell ¾È¿¡ Á¸ÀçÇÏ´Â ¸ðµç ray µ¥ÀÌÅÍ¿¡ ÀÌ¿ô photon cell ÀÇ index ¸¦
-					 *	ÀúÀåÇÒ memory ÀÇ offset °ú index °³¼ö¸¦ ±â·ÏÇÑ´Ù.
+					 *	ï¿½ï¿½ï¿½ï¿½ ray cell ï¿½È¿ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½ ï¿½ï¿½ï¿½ ray ï¿½ï¿½ï¿½ï¿½ï¿½Í¿ï¿½ ï¿½Ì¿ï¿½ photon cell ï¿½ï¿½ index ï¿½ï¿½
+					 *	ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ memory ï¿½ï¿½ offset ï¿½ï¿½ index ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½.
 					 */
 					cuPMIntersectionPoint *pPMPoint = pIPointGridBox->getData2( rayCellInfo );
 					for ( int k = 0; k < rayCellInfo->dataCount; ++k ) {
@@ -1159,7 +1159,7 @@ cuPhotonIndex* GPhotonMapRayTracer::makeIPointVsPhotonIndexData(
 		totalNeighborPhotonCellCount, validRayCellCount );
 
 	/**
-	 *	Memory ÇÒ´ç.
+	 *	Memory ï¿½Ò´ï¿½.
 	 */
 	(*pIndexCount) = totalNeighborPhotonCellCount;
 	if ( (*pIndexCount) == 0 ) {
@@ -1170,7 +1170,7 @@ cuPhotonIndex* GPhotonMapRayTracer::makeIPointVsPhotonIndexData(
 	memset( pPhotonIndex, 0x00, sizeof( cuPhotonIndex ) * (*pIndexCount) );
 
 	/**
-	 *	´Ù½Ã µ¹¸é¼­ ½ÇÁ¦·Î ÇöÀç ray cell °ú ¿¬°üµÈ ÁÖº¯ photon cell Á¤º¸¸¦ ±â·ÏÇÑ´Ù.
+	 *	ï¿½Ù½ï¿½ ï¿½ï¿½ï¿½é¼­ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ray cell ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Öºï¿½ photon cell ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½.
 	 */
 	for ( int z = 0; z < pIPointGridBox->m_iCellZCount; ++z ) {
 		for ( int y = 0; y < pIPointGridBox->m_iCellYCount; ++y ) {
@@ -1179,17 +1179,17 @@ cuPhotonIndex* GPhotonMapRayTracer::makeIPointVsPhotonIndexData(
 				rayCellInfo = pIPointGridBox->getCellInfo( x, y, z );
 				
 				/**
-				 *	ray °¡ Á¸ÀçÇÏ´Â Cell¸¸. cell ¾ÈÀÇ Ã¹¹øÂ° ray Á¤º¸¸¦ °¡Á®¿Í¼­
-				 *	ÀÌ cell °ú ¿¬°üµÈ neighbor photon À» À§ÇÑ index ¸¦ ¾îµð¿¡ ÀúÀåÇÒÁö¸¦ °áÁ¤ÇÑ´Ù.
+				 *	ray ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½ Cellï¿½ï¿½. cell ï¿½ï¿½ï¿½ï¿½ Ã¹ï¿½ï¿½Â° ray ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Í¼ï¿½
+				 *	ï¿½ï¿½ cell ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ neighbor photon ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ index ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½.
 				 */
 				if ( rayCellInfo->dataCount > 0 ) {
 					
 					cuPMIntersectionPoint *pPMPoint = pIPointGridBox->getData2( rayCellInfo );
 
 					/** 
-					 *	photon grid ¿¡¼­ ray cell ÁÖº¯ÀÇ 27 neighbor cell ¿¡ µ¥ÀÌÅÍ°¡ ÀÖ´ÂÁö¸¦
-					 *	Ã¼Å©ÇØ¼­ ÇöÀç ray cell ÀÌ Ã£¾Æ¾ßÇÒ ÁÖº¯ cell ÀÇ photon ¿¡ ´ëÇÑ offset °ú count ¸¦
-					 *	index Á¤º¸·Î ÀúÀåÇÑ´Ù.
+					 *	photon grid ï¿½ï¿½ï¿½ï¿½ ray cell ï¿½Öºï¿½ï¿½ï¿½ 27 neighbor cell ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Í°ï¿½ ï¿½Ö´ï¿½ï¿½ï¿½ï¿½ï¿½
+					 *	Ã¼Å©ï¿½Ø¼ï¿½ ï¿½ï¿½ï¿½ï¿½ ray cell ï¿½ï¿½ Ã£ï¿½Æ¾ï¿½ï¿½ï¿½ ï¿½Öºï¿½ cell ï¿½ï¿½ photon ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ offset ï¿½ï¿½ count ï¿½ï¿½
+					 *	index ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½.
 					 */
 					index = 0;
 
@@ -1217,8 +1217,8 @@ cuPhotonIndex* GPhotonMapRayTracer::makeIPointVsPhotonIndexData(
 }
 
 /**
- *	photon µ¥ÀÌÅÍ¸¦ ÀÌ¿ëÇØ¼­ Photon Grid Box ¸¦ ¸¸µç´Ù.
- *	pIntersectionPoints Á¤º¸¿¡¼­ isHit() °¡ ¾Æ´Ñ°ÍÀº Á¦¿ÜÇØ¾ß ÇÑ´Ù.
+ *	photon ï¿½ï¿½ï¿½ï¿½ï¿½Í¸ï¿½ ï¿½Ì¿ï¿½ï¿½Ø¼ï¿½ Photon Grid Box ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½.
+ *	pIntersectionPoints ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ isHit() ï¿½ï¿½ ï¿½Æ´Ñ°ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ø¾ï¿½ ï¿½Ñ´ï¿½.
  */
 GGridBox<cuPhoton, char> *GPhotonMapRayTracer::makePhotonGridBox( cuPhoton *pPhotons, int size )
 {
@@ -1228,8 +1228,8 @@ GGridBox<cuPhoton, char> *GPhotonMapRayTracer::makePhotonGridBox( cuPhoton *pPho
 		( m_pScene->getKDTreeStructure()->getBoundingBox(), m_Option.m_fGridUnitLength, m_Option.m_fGridUnitLength, m_Option.m_fGridUnitLength );
 
 	/**
-	 *	°¢ Cell ¿¡ µé¾î°¥ photon counting.
-	 *	cuPhoton Á¤º¸¿¡¼­ dir ÀÌ ¸ðµÎ 0.0f ÀÎ°ÍÀº ¾²·¹±â photon ÀÌ¹Ç·Î Á¦¿Ü.
+	 *	ï¿½ï¿½ Cell ï¿½ï¿½ ï¿½ï¿½î°¥ photon counting.
+	 *	cuPhoton ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ dir ï¿½ï¿½ ï¿½ï¿½ï¿½ 0.0f ï¿½Î°ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ photon ï¿½Ì¹Ç·ï¿½ ï¿½ï¿½ï¿½ï¿½.
 	 */
 	for ( int i = 0; i < size; ++i ) {
 		if ( pPhotons[ i ].dir.x == 0.0f && 
@@ -1239,12 +1239,12 @@ GGridBox<cuPhoton, char> *GPhotonMapRayTracer::makePhotonGridBox( cuPhoton *pPho
 	}
 
 	/**
-	 *	Grid Á¤º¸¸¦ ±¸¼ºÇÏ±â À§ÇØ¼­ ¸Þ¸ð¸® allocation.
+	 *	Grid ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï±ï¿½ ï¿½ï¿½ï¿½Ø¼ï¿½ ï¿½Þ¸ï¿½ allocation.
 	 */
 	pPhotonGridBox->allocate();
 
 	/**
-	 *	°¢ Cell ¿¡ photon insert.
+	 *	ï¿½ï¿½ Cell ï¿½ï¿½ photon insert.
 	 */
 	for ( int i = 0; i < size; ++i ) {
 

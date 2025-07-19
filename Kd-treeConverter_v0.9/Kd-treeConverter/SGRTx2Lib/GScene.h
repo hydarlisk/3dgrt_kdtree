@@ -185,6 +185,10 @@ public:
 
 	int getSceneNumber();
 
+	//shyun
+	void setSceneKDTree(GKDTreeStructure* kd) { m_pKDTree = kd; }
+	//shyun end
+
 	/**
 	 *	Scene Rendering Option
 	 */

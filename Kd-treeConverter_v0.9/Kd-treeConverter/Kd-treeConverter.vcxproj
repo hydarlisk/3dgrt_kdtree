@@ -189,7 +189,9 @@
     <ClCompile Include="SGRTx2Lib\GColor.cpp" />
     <ClCompile Include="SGRTx2Lib\GCriticalSection.cpp" />
     <ClCompile Include="SGRTx2Lib\GDimension.cpp" />
-    <ClCompile Include="SGRTx2Lib\GDistributedPhotonRayTracer.cpp" />
+    <ClCompile Include="SGRTx2Lib\GDistributedPhotonRayTracer.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="SGRTx2Lib\GErrorManager.cpp" />
     <ClCompile Include="SGRTx2Lib\GEvent.cpp" />
     <ClCompile Include="SGRTx2Lib\GGLUtil.cpp" />
@@ -208,8 +210,12 @@
     <ClCompile Include="SGRTx2Lib\GOBJFileLoader.cpp" />
     <ClCompile Include="SGRTx2Lib\GOpenGLContext.cpp" />
     <ClCompile Include="SGRTx2Lib\GOpenGLPipelineRenderer.cpp" />
-    <ClCompile Include="SGRTx2Lib\GPhotonMappingOption.cpp" />
-    <ClCompile Include="SGRTx2Lib\GPhotonMapRayTracer.cpp" />
+    <ClCompile Include="SGRTx2Lib\GPhotonMappingOption.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GPhotonMapRayTracer.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="SGRTx2Lib\GPoint.cpp" />
     <ClCompile Include="SGRTx2Lib\GPolygonGeometry.cpp" />
     <ClCompile Include="SGRTx2Lib\GPolygonObject.cpp" />
@@ -244,8 +250,12 @@
     <ClInclude Include="MyMathUtility.h" />
     <ClInclude Include="OpenGLStuffs.h" />
     <ClInclude Include="RayTraversal.h" />
-    <ClInclude Include="SGRTx2Lib\cudaPhotonMapping.cuh" />
-    <ClInclude Include="SGRTx2Lib\cudaPhotonMapping.h" />
+    <ClInclude Include="SGRTx2Lib\cudaPhotonMapping.cuh">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\cudaPhotonMapping.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
     <ClInclude Include="SGRTx2Lib\cudaRenderCommon.cuh" />
     <ClInclude Include="SGRTx2Lib\cudaRenderPipeline.cuh" />
     <ClInclude Include="SGRTx2Lib\cudaRenderPipeline.h" />
@@ -258,7 +268,9 @@
     <ClInclude Include="SGRTx2Lib\GColor.h" />
     <ClInclude Include="SGRTx2Lib\GCriticalSection.h" />
     <ClInclude Include="SGRTx2Lib\GDimension.h" />
-    <ClInclude Include="SGRTx2Lib\GDistributedPhotonRayTracer.h" />
+    <ClInclude Include="SGRTx2Lib\GDistributedPhotonRayTracer.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
     <ClInclude Include="SGRTx2Lib\GError.h" />
     <ClInclude Include="SGRTx2Lib\GErrorManager.h" />
     <ClInclude Include="SGRTx2Lib\GEvent.h" />
@@ -281,8 +293,12 @@
     <ClInclude Include="SGRTx2Lib\GOBJFileLoader.h" />
     <ClInclude Include="SGRTx2Lib\GOpenGLContext.h" />
     <ClInclude Include="SGRTx2Lib\GOpenGLPipelineRenderer.h" />
-    <ClInclude Include="SGRTx2Lib\GPhotonMappingOption.h" />
-    <ClInclude Include="SGRTx2Lib\GPhotonMapRayTracer.h" />
+    <ClInclude Include="SGRTx2Lib\GPhotonMappingOption.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GPhotonMapRayTracer.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
     <ClInclude Include="SGRTx2Lib\GPoint.h" />
     <ClInclude Include="SGRTx2Lib\GPolygonGeometry.h" />
     <ClInclude Include="SGRTx2Lib\GPolygonObject.h" />
@@ -315,8 +331,12 @@
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cudaRayTracingKernel.cu" />
-    <CudaCompile Include="SGRTx2Lib\cudaPhotonMapping.cu" />
-    <CudaCompile Include="SGRTx2Lib\cudaPhotonMappingKernel.cu" />
+    <CudaCompile Include="SGRTx2Lib\cudaPhotonMapping.cu">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </CudaCompile>
+    <CudaCompile Include="SGRTx2Lib\cudaPhotonMappingKernel.cu">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </CudaCompile>
     <CudaCompile Include="SGRTx2Lib\cudaRenderPipeline.cu" />
     <CudaCompile Include="SGRTx2Lib\cudaRenderPipelineCommonKernel.cu" />
     <CudaCompile Include="SGRTx2Lib\cudaRenderPipelineKernel.cu" />

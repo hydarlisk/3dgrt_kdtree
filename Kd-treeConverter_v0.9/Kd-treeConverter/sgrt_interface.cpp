@@ -101,52 +101,81 @@
 
 // 임시: CompositeObject를 SGRTx2Lib의 GScene으로 변환
 // 필요한 데이터 타입: ExtendedVertex, GTriangle 등은 SGRTx2Lib 내부 구조 기반
-GScene* convertCompositeObjectToScene(CompositeObject* compObj) {
+GScene* convertCompositeObjectToScene(CompositeObject* obj)
+{
+    if (!obj || obj->n_triangles <= 0) return nullptr;
+
+    // 1) GScene 생성
     GScene* scene = new GScene();
 
-    // 1. 삼각형들을 GObject로 변환해서 Scene에 추가
-    for (int i = 0; i < compObj->n_triangles; ++i) {
-        GObject* gobj = new GTriangleObject();
+    // 2) GTriangleWrapperList 생성
+    //    - GTriangleWrapperList는 SGRTx2Lib에 존재
+    GTriangleWrapperList* triList = new GTriangleWrapperList();
 
-        TriAccel& tri = compObj->kd_tree->tri_accel_list[i];
+    // 3. 각 삼각형을 GTriangleWrapper로 변환
+    for (int i = 0; i < obj->n_triangles; ++i) {
+        const TriAccel& tri = obj->kd_tree->tri_accel_list[i];
 
-        // 좌표 정보는 ExtendedVertex에서 찾아야 함
-        const ExtendedVertex& v0 = compObj->extended_vertices[3 * i + 0];
-        const ExtendedVertex& v1 = compObj->extended_vertices[3 * i + 1];
-        const ExtendedVertex& v2 = compObj->extended_vertices[3 * i + 2];
+        int idx0 = tri.indexInObject + 0;
+        int idx1 = tri.indexInObject + 1;
+        int idx2 = tri.indexInObject + 2;
 
-        ((GTriangleObject*)gobj)->setVertex(0, GPoint(v0.vertex[0], v0.vertex[1], v0.vertex[2]));
-        ((GTriangleObject*)gobj)->setVertex(1, GPoint(v1.vertex[0], v1.vertex[1], v1.vertex[2]));
-        ((GTriangleObject*)gobj)->setVertex(2, GPoint(v2.vertex[0], v2.vertex[1], v2.vertex[2]));
+        float* v0 = new float[3] {
+            obj->extended_vertices[idx0].vertex[0],
+                obj->extended_vertices[idx0].vertex[1],
+                obj->extended_vertices[idx0].vertex[2]
+            };
+        float* v1 = new float[3] {
+            obj->extended_vertices[idx1].vertex[0],
+                obj->extended_vertices[idx1].vertex[1],
+                obj->extended_vertices[idx1].vertex[2]
+            };
+        float* v2 = new float[3] {
+            obj->extended_vertices[idx2].vertex[0],
+                obj->extended_vertices[idx2].vertex[1],
+                obj->extended_vertices[idx2].vertex[2]
+            };
 
-        scene->addObject(gobj);
+        GTriangleWrapper wrapper;
+        wrapper.p0 = v0;
+        wrapper.p1 = v1;
+        wrapper.p2 = v2;
+        wrapper.indexInObject = i;
+        wrapper.m_mailBoxId = -1;
+
+        triList->addTriangleWrapper(&wrapper);
     }
 
-    // 2. GKDTreeStructure를 구성
-    GKDTreeStructure* kdTree = new GKDTreeStructure(scene);
+    // 4) GKDTreeStructure 생성 및 데이터 복사
+    GKDTreeStructure* kd = new GKDTreeStructure(scene);
 
-    kdTree->m_iKDTreeNodeCount = compObj->kd_tree->tree_node_count;
-    kdTree->m_pKDTreeNodes = new kdtreeNode[kdTree->m_iKDTreeNodeCount];
-    memcpy(kdTree->m_pKDTreeNodes, compObj->kd_tree->tree, sizeof(kdtreeNode) * kdTree->m_iKDTreeNodeCount);
+    // 4-1) KdTree 노드 복사
+    kd->setKdTreeNodeCount(obj->kd_tree->tree_node_count);
+    kd->setKdTreeNode(new kdtreeNode[kd->getKdTreeNodeCount()]);
+    memcpy(kd->getKdTreeNode(),
+        obj->kd_tree->tree,
+        sizeof(kdtreeNode) * kd->getKdTreeNodeCount());
 
-    kdTree->m_iCurrentTriangleOffset = compObj->kd_tree->tri_offset_count;
-    kdTree->m_pTriangleOffsetList = new unsigned int[kdTree->m_iCurrentTriangleOffset];
-    memcpy(kdTree->m_pTriangleOffsetList, compObj->kd_tree->tri_offset_list,
-        sizeof(unsigned int) * kdTree->m_iCurrentTriangleOffset);
+    // 4-2) Triangle offset 리스트 복사
+    kd->setTriangleOffset(obj->kd_tree->tri_offset_count);
+    kd->setTriangleOffsetList(new unsigned int[kd->getTriangleOffset()]);
+    memcpy(kd->getTriangleOffsetList(),
+        obj->kd_tree->tri_offset_list,
+        sizeof(unsigned int) * kd->getTriangleOffset());
 
-    // 3. AABB 설정
-    kdTree->m_SceneBBox.setMin(GPoint(compObj->AABB[0], compObj->AABB[1], compObj->AABB[2]));
-    kdTree->m_SceneBBox.setMax(GPoint(compObj->AABB[3], compObj->AABB[4], compObj->AABB[5]));
 
-    // 4. TriangleWrapperList (실제 삼각형 참조 목록) 구성
-    kdTree->m_iSceneTriangleCount = compObj->n_triangles;
-    kdTree->m_pSceneTriangleList = new GTriangleWrapperList(compObj->n_triangles);
-    for (int i = 0; i < compObj->n_triangles; ++i) {
-        kdTree->m_pSceneTriangleList->setTriangle(i, scene->getObject(i)); // scene에 추가한 순서대로 참조
-    }
+    // 4-3) 씬 전체 AABB 설정
+    kd->setBBoxMin(
+        GPoint(obj->AABB[0], obj->AABB[1], obj->AABB[2]));
+    kd->setBBoxMax(
+        GPoint(obj->AABB[3], obj->AABB[4], obj->AABB[5]));
 
-    // 5. Scene에 KDTree 세팅
-    scene->m_pKDTree = kdTree;
+    // 4-4) 래퍼 리스트 연결
+    kd->setSceneTriangleCount(obj->n_triangles);
+    kd->setSceneTriangleList(triList);
+
+    // 5) Scene에 Kd-tree 연결
+    scene->setSceneKDTree(kd);
 
     return scene;
 }

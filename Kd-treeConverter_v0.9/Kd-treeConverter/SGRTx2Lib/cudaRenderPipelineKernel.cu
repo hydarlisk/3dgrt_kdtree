@@ -7,9 +7,9 @@
 #define __RENDER_PIPELINE_KERNEL_CU_
 
 #include "GKDTreeNode.h"
-#include <cuda_math.h>
+//#include <cuda_math.h>
 #include <cuda.h>
-#include <cutil.h>
+//#include <cutil.h>
 #include "cudaRenderPipelineCommonKernel.cu"
 
 

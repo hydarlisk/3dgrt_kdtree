@@ -270,8 +270,10 @@ GError GKDTreeStructure::makeCudaRenderStructureInfo( cudaRenderPipeline *pCudaP
 
 	cuBoundingBox sceneBox;
 	
-	sceneBox.setMin( make_float4( m_SceneBBox.m_Min.x, m_SceneBBox.m_Min.y, m_SceneBBox.m_Min.z, 0.0f ) );
-	sceneBox.setMax( make_float4( m_SceneBBox.m_Max.x, m_SceneBBox.m_Max.y, m_SceneBBox.m_Max.z, 0.0f ) );
+	//sceneBox.setMin( make_float4( m_SceneBBox.m_Min.x, m_SceneBBox.m_Min.y, m_SceneBBox.m_Min.z, 0.0f ) );
+	sceneBox.min_max[0] = make_float4(m_SceneBBox.m_Min.x, m_SceneBBox.m_Min.y, m_SceneBBox.m_Min.z, 0.0f);
+	//sceneBox.setMax( make_float4( m_SceneBBox.m_Max.x, m_SceneBBox.m_Max.y, m_SceneBBox.m_Max.z, 0.0f ) );
+	sceneBox.min_max[1] = make_float4(m_SceneBBox.m_Max.x, m_SceneBBox.m_Max.y, m_SceneBBox.m_Max.z, 0.0f);
 
 	/**
 	 *	KDTree ¼¼ÆÃ.

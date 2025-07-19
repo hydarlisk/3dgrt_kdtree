@@ -15,6 +15,8 @@
 
 #include <gl/glew.h>
 
+#include <cassert>
+
 const int MAX_DEPTH = 10;
 //! Empty Box (White)
 //! Intersected Box (BLUE)

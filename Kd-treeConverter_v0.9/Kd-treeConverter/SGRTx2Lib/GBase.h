@@ -1,8 +1,8 @@
 //--------------------------------------------------------------------------//
 //																			//
-//	¿©·¯°¡Áö º¯¼ö Type ¼±¾ð													//
+//	ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ Type ï¿½ï¿½ï¿½ï¿½													//
 //																			//
-//	Copyright (c) 2005  ÁøºÀÁØ	( sonagi21@naver.com )						//
+//	Copyright (c) 2005  ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½	( sonagi21@naver.com )						//
 //																			//
 //--------------------------------------------------------------------------//
 
@@ -14,7 +14,7 @@
 #include <float.h>
 
 /**
- *	À©µµ¿ì¿¡¼­´Â Å¬·¡½ºLib ¸¦ »ç¿ëÇÏ±â À§ÇØ¼­.
+ *	ï¿½ï¿½ï¿½ï¿½ï¿½ì¿¡ï¿½ï¿½ï¿½ï¿½ Å¬ï¿½ï¿½ï¿½ï¿½Lib ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ï±ï¿½ ï¿½ï¿½ï¿½Ø¼ï¿½.
  */
 #ifdef WIN32
 	#include <windows.h>
@@ -45,5 +45,16 @@
 #include "GErrorManager.h"
 #include "GLogManager.h"
 #include "GTimer.h"
+
+#define CUDA_SAFE_CALL(call)                                                   \
+do {                                                                           \
+    cudaError_t err = call;                                                   \
+    if (cudaSuccess != err) {                                                 \
+        fprintf(stderr, "Cuda error in file '%s' in line %i : %s.\n",         \
+                __FILE__, __LINE__, cudaGetErrorString(err));                 \
+        exit(EXIT_FAILURE);                                                   \
+    }                                                                          \
+} while (0)
+
 
 #endif
