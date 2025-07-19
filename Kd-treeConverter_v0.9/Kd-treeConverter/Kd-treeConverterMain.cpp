@@ -31,8 +31,8 @@
 #include "SGRTx2Lib/GGPUExperimentalRayTracer.h"
 
 float* g_render_framebuffer = nullptr;
-int g_render_width = 0;
-int g_render_height = 0;
+int g_render_width = 800;
+int g_render_height = 600;
 int g_cuda_rendering_done = 0;
 //shyun end
 UIParameters uip;
@@ -735,8 +735,16 @@ void main_menu_action(int selection) {
 			}
 
 			//TODO: CUDA rendering*****************************************
-			
-			GScene* scene = convertCompositeObjectToGScene(&uip.poly_model);
+			CompositeObject* compObj = &uip.poly_model;
+			GScene* scene = convertCompositeObjectToScene(compObj);
+
+			scene->convertRenderScene();
+
+			GGPUExperimentalRayTracer tracer;
+			//tracer.setScene(scene);//TODO
+			tracer.rendering(scene, false);
+
+			/*GScene* scene = convertCompositeObjectToGScene(&uip.poly_model);
 			GGPUExperimentalRayTracer raytracer;
 			GError err = raytracer.rendering(scene, false);
 
@@ -753,7 +761,7 @@ void main_menu_action(int selection) {
 
 			printf("Rendering done. Displaying on screen...\n");
 			glutPostRedisplay();
-			break;
+			break;*/
 
 			/*GKdTreeAccel* kdAccel = new GKdTreeAccel();
 			kdAccel->setFromCompositeObject(&obj_model);

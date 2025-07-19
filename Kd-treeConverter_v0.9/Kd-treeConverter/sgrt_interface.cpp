@@ -99,45 +99,54 @@
 //    printf("[SGRT] Scene ready.\n");
 //}
 
-
 // 임시: CompositeObject를 SGRTx2Lib의 GScene으로 변환
-GScene* convertCompositeObjectToGScene(const CompositeObject* compObj) {
-    if (!compObj) return nullptr;
-
+// 필요한 데이터 타입: ExtendedVertex, GTriangle 등은 SGRTx2Lib 내부 구조 기반
+GScene* convertCompositeObjectToScene(CompositeObject* compObj) {
     GScene* scene = new GScene();
 
-    // 해상도, 샘플링, 쉐이딩 등 설정
-    scene->setResolution(800, 600);
-    scene->setSuperSampling(1, 1);
-    scene->setEnableLocalShading(false);
-    scene->setEnableShadow(false);
-    scene->setUseTexture(false);
-    scene->setMaxReflectionDepth(1);
-    scene->setFrontFace(faceCCW);
+    // 1. 삼각형들을 GObject로 변환해서 Scene에 추가
+    for (int i = 0; i < compObj->n_triangles; ++i) {
+        GObject* gobj = new GTriangleObject();
 
-    // geometry 추가
-    int nTris = compObj->n_triangles;
-    for (int i = 0; i < nTris; ++i) {
-        ExtendedVertex v0 = compObj->extended_vertices[i * 3 + 0];
-        ExtendedVertex v1 = compObj->extended_vertices[i * 3 + 1];
-        ExtendedVertex v2 = compObj->extended_vertices[i * 3 + 2];
+        TriAccel& tri = compObj->kd_tree->tri_accel_list[i];
 
-        GVertex gv0(v0.vertex[0], v0.vertex[1], v0.vertex[2]);
-        GVertex gv1(v1.vertex[0], v1.vertex[1], v1.vertex[2]);
-        GVertex gv2(v2.vertex[0], v2.vertex[1], v2.vertex[2]);
+        // 좌표 정보는 ExtendedVertex에서 찾아야 함
+        const ExtendedVertex& v0 = compObj->extended_vertices[3 * i + 0];
+        const ExtendedVertex& v1 = compObj->extended_vertices[3 * i + 1];
+        const ExtendedVertex& v2 = compObj->extended_vertices[3 * i + 2];
 
-        GTriangle tri(gv0, gv1, gv2);
-        scene->addTriangle(tri);
+        ((GTriangleObject*)gobj)->setVertex(0, GPoint(v0.vertex[0], v0.vertex[1], v0.vertex[2]));
+        ((GTriangleObject*)gobj)->setVertex(1, GPoint(v1.vertex[0], v1.vertex[1], v1.vertex[2]));
+        ((GTriangleObject*)gobj)->setVertex(2, GPoint(v2.vertex[0], v2.vertex[1], v2.vertex[2]));
+
+        scene->addObject(gobj);
     }
 
-    // KD-Tree 설정
-    GKdTreeAccel* kdAccel = new GKdTreeAccel();
-    kdAccel->setFromCompositeObject(compObj); // 이 함수가 SGRTx2Lib에 존재해야 함
-    scene->setKDTreeStructure(kdAccel);
+    // 2. GKDTreeStructure를 구성
+    GKDTreeStructure* kdTree = new GKDTreeStructure(scene);
 
-    // 기타 정보
-    scene->setSceneNumber(1);
-    scene->setGeometryChangeTimestamp(1);
+    kdTree->m_iKDTreeNodeCount = compObj->kd_tree->tree_node_count;
+    kdTree->m_pKDTreeNodes = new kdtreeNode[kdTree->m_iKDTreeNodeCount];
+    memcpy(kdTree->m_pKDTreeNodes, compObj->kd_tree->tree, sizeof(kdtreeNode) * kdTree->m_iKDTreeNodeCount);
+
+    kdTree->m_iCurrentTriangleOffset = compObj->kd_tree->tri_offset_count;
+    kdTree->m_pTriangleOffsetList = new unsigned int[kdTree->m_iCurrentTriangleOffset];
+    memcpy(kdTree->m_pTriangleOffsetList, compObj->kd_tree->tri_offset_list,
+        sizeof(unsigned int) * kdTree->m_iCurrentTriangleOffset);
+
+    // 3. AABB 설정
+    kdTree->m_SceneBBox.setMin(GPoint(compObj->AABB[0], compObj->AABB[1], compObj->AABB[2]));
+    kdTree->m_SceneBBox.setMax(GPoint(compObj->AABB[3], compObj->AABB[4], compObj->AABB[5]));
+
+    // 4. TriangleWrapperList (실제 삼각형 참조 목록) 구성
+    kdTree->m_iSceneTriangleCount = compObj->n_triangles;
+    kdTree->m_pSceneTriangleList = new GTriangleWrapperList(compObj->n_triangles);
+    for (int i = 0; i < compObj->n_triangles; ++i) {
+        kdTree->m_pSceneTriangleList->setTriangle(i, scene->getObject(i)); // scene에 추가한 순서대로 참조
+    }
+
+    // 5. Scene에 KDTree 세팅
+    scene->m_pKDTree = kdTree;
 
     return scene;
 }
