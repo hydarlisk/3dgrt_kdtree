@@ -3,7 +3,7 @@
 #include "Kd-treeConverter.h"
 #include "Kd-treeConverterMain.h"
 #include "SGRTx2Lib/GScene.h"
-
+using namespace KDTConverter;
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -24,9 +24,9 @@ extern "C" {
 	//void SGRT_RenderFromCompositeObject(const CompositeObject* obj);
     GScene* convertCompositeObjectToScene(CompositeObject* obj);
     //GScene* convertCompositeObjectToGScene(const CompositeObject* compObj);
-    void upload_composite_object_to_cuda(CompositeObject* h_obj, CompositeObject* d_obj_out);
-    void deep_copy_composite_object_to_cuda(const CompositeObject* h_obj, CompositeObject** d_obj_out);
-    void save_as_ppm(const float* framebuffer, int width, int height, const char* filename);
+    //void upload_composite_object_to_cuda(CompositeObject* h_obj, CompositeObject* d_obj_out);
+    //void deep_copy_composite_object_to_cuda(const CompositeObject* h_obj, CompositeObject** d_obj_out);
+    //void save_as_ppm(const float* framebuffer, int width, int height, const char* filename);
 #ifdef __cplusplus
 }
 #endif

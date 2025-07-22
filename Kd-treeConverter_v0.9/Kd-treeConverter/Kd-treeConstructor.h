@@ -6,10 +6,11 @@
 
 #include <stdio.h>
 #include "Kd-treeConverter.h"
+using namespace KDTConverter;
 
 #define KD_TREE_EPSILON        0.00001f
 
-// Kd-tree build parameters --> KD-treeConstructor.cpp º¯¼ö·Î ÀüÈ¯
+// Kd-tree build parameters --> KD-treeConstructor.cpp ë³€ìˆ˜ë¡œ ì „í™˜
 //#define KD_TREE_TRAVL_COST     1.0
 //#define KD_TREE_ISECT_COST     1.5
 //#define KD_TREE_MAX_LEVEL      100
@@ -33,7 +34,7 @@ typedef struct _BoundingBox {
 
 typedef struct _TriangleList {
 	int offset;
-	BoundingBox AABB;				//	split µÇ¾úÀ»¶§ÀÇ °¡»óÀÇ bounding box
+	BoundingBox AABB;				//	split ë˜ì—ˆì„ë•Œì˜ ê°€ìƒì˜ bounding box
 	//GTriangleWrapper *pTriangleWrapper;
 	ExtendedVertex point[3];
 	int side;
@@ -48,15 +49,15 @@ typedef struct _BoundEdge {
 } BoundEdge;
 
 typedef struct _SplitCost {
-	//splitµÉ ¶§ÀÇ cost, À§Ä¡, axis
+	//splitë  ë•Œì˜ cost, ìœ„ì¹˜, axis
 	double		cost;
 	float		splitPos;
 	int			axis;
-	//°¢ °æ¿ì¿¡ ´ëÇØ µû·Î µû·Î Áı°è
+	//ê° ê²½ìš°ì— ëŒ€í•´ ë”°ë¡œ ë”°ë¡œ ì§‘ê³„
 	int			n_onlyLeft, n_onlyRight, n_cross, n_planar;
 	//n_left = n_onlyLeft+n_cross+n_planar
 	int			n_left, n_right;
-	//planar triangleµéÀÌ ¼ÓÇÏ°Ô µÇ´Â side
+	//planar triangleë“¤ì´ ì†í•˜ê²Œ ë˜ëŠ” side
 	int			planar_side;
 	int			n_leftW, n_rightW;
 	int			splitIndex;

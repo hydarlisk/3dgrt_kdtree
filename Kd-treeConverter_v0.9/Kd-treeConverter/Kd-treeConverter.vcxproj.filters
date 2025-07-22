@@ -67,6 +67,9 @@
     <Filter Include="SGRTx2Lib\Renderer\ViewerModeRenderer">
       <UniqueIdentifier>{5f67e759-0766-45bb-915d-765399348f86}</UniqueIdentifier>
     </Filter>
+    <Filter Include="SGRTx2Lib\Pipeline\CPURenderPipeline">
+      <UniqueIdentifier>{7bc2a1ff-d11f-4ac1-9676-05d2e4c3bb50}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Kd-treeConverter.cpp">
@@ -246,6 +249,21 @@
     <ClCompile Include="SGRTx2Lib\GRenderSystem.cpp">
       <Filter>SGRTx2Lib\common</Filter>
     </ClCompile>
+    <ClCompile Include="SGRTx2Lib\SSERenderData.cpp">
+      <Filter>SGRTx2Lib\Pipeline\CPURenderPipeline</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\SSERenderPipeline.cpp">
+      <Filter>SGRTx2Lib\Pipeline\CPURenderPipeline</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\SSERenderPipeline1x1.cpp">
+      <Filter>SGRTx2Lib\Pipeline\CPURenderPipeline</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\SSERenderPipeline2x2.cpp">
+      <Filter>SGRTx2Lib\Pipeline\CPURenderPipeline</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\SSERenderPipeline4x4.cpp">
+      <Filter>SGRTx2Lib\Pipeline\CPURenderPipeline</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Kd-treeConverter.h">
@@ -271,24 +289,6 @@
     </ClInclude>
     <ClInclude Include="sgrt_interface.h">
       <Filter>CUDA</Filter>
-    </ClInclude>
-    <ClInclude Include="SGRTx2Lib\cuda_math.h">
-      <Filter>SGRTx2Lib\Pipeline\cudaRenderPipeline</Filter>
-    </ClInclude>
-    <ClInclude Include="SGRTx2Lib\cudaPhotonMapping.cuh">
-      <Filter>SGRTx2Lib\Pipeline\cudaRenderPipeline</Filter>
-    </ClInclude>
-    <ClInclude Include="SGRTx2Lib\cudaPhotonMapping.h">
-      <Filter>SGRTx2Lib\Pipeline\cudaRenderPipeline</Filter>
-    </ClInclude>
-    <ClInclude Include="SGRTx2Lib\cudaRenderCommon.cuh">
-      <Filter>SGRTx2Lib\Pipeline\cudaRenderPipeline</Filter>
-    </ClInclude>
-    <ClInclude Include="SGRTx2Lib\cudaRenderPipeline.cuh">
-      <Filter>SGRTx2Lib\Pipeline\cudaRenderPipeline</Filter>
-    </ClInclude>
-    <ClInclude Include="SGRTx2Lib\cudaRenderPipeline.h">
-      <Filter>SGRTx2Lib\Pipeline\cudaRenderPipeline</Filter>
     </ClInclude>
     <ClInclude Include="SGRTx2Lib\GOpenGLPipelineRenderer.h">
       <Filter>SGRTx2Lib\Pipeline\OpenGLPipeline</Filter>
@@ -470,6 +470,21 @@
     <ClInclude Include="SGRTx2Lib\GRenderSystem.h">
       <Filter>SGRTx2Lib\common</Filter>
     </ClInclude>
+    <ClInclude Include="SGRTx2Lib\SSE_common.h">
+      <Filter>SGRTx2Lib\Pipeline\CPURenderPipeline</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\SSE_math.h">
+      <Filter>SGRTx2Lib\Pipeline\CPURenderPipeline</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\SSERenderCommon.h">
+      <Filter>SGRTx2Lib\Pipeline\CPURenderPipeline</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\SSERenderData.h">
+      <Filter>SGRTx2Lib\Pipeline\CPURenderPipeline</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\SSERenderPipeline.h">
+      <Filter>SGRTx2Lib\Pipeline\CPURenderPipeline</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cudaRayTracingKernel.cu">
@@ -488,6 +503,24 @@
       <Filter>SGRTx2Lib\Pipeline\cudaRenderPipeline</Filter>
     </CudaCompile>
     <CudaCompile Include="SGRTx2Lib\cudaRenderPipelineCommonKernel.cu">
+      <Filter>SGRTx2Lib\Pipeline\cudaRenderPipeline</Filter>
+    </CudaCompile>
+    <CudaCompile Include="SGRTx2Lib\cuda_math.h">
+      <Filter>SGRTx2Lib\Pipeline\cudaRenderPipeline</Filter>
+    </CudaCompile>
+    <CudaCompile Include="SGRTx2Lib\cudaPhotonMapping.h">
+      <Filter>SGRTx2Lib\Pipeline\cudaRenderPipeline</Filter>
+    </CudaCompile>
+    <CudaCompile Include="SGRTx2Lib\cudaRenderPipeline.h">
+      <Filter>SGRTx2Lib\Pipeline\cudaRenderPipeline</Filter>
+    </CudaCompile>
+    <CudaCompile Include="SGRTx2Lib\cudaPhotonMapping.cuh">
+      <Filter>SGRTx2Lib\Pipeline\cudaRenderPipeline</Filter>
+    </CudaCompile>
+    <CudaCompile Include="SGRTx2Lib\cudaRenderCommon.cuh">
+      <Filter>SGRTx2Lib\Pipeline\cudaRenderPipeline</Filter>
+    </CudaCompile>
+    <CudaCompile Include="SGRTx2Lib\cudaRenderPipeline.cuh">
       <Filter>SGRTx2Lib\Pipeline\cudaRenderPipeline</Filter>
     </CudaCompile>
   </ItemGroup>

@@ -19,7 +19,7 @@
 
 #define KD_TREE_DUMP_IN_ASCII 0
 #define KD_TREE_DUMP_IN_BINARY 1
-
+namespace KDTConverter{
 typedef struct _MeshGeom {
 	int nvertices;
 	int nfaces;
@@ -107,3 +107,4 @@ int build_kd_tree_for_composite_object(CompositeObject *);
 void dump_kd_tree_for_composite_object(CompositeObject *, const char *, int, const char *);
 int read_kd_tree_from_file(CompositeObject *, const char *, int);
 int find_ray_object_intersection(KdTree *, Ray *, float *, float *);
+}

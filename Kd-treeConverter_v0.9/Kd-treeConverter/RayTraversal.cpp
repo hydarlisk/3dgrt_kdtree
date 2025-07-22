@@ -12,6 +12,7 @@
 
 #include "Kd-treeConverter.h"
 #include "RayTraversal.h"
+using namespace KDTConverter;
 
 #pragma warning ( disable : 4068 )
 #pragma warning ( disable : 949 )
@@ -107,7 +108,7 @@ void IsectShadowRay( const KdTreeNode *node )
 		acc.mbox = rp->RayID;
 
 		// ---------------------------------------------------------------
-		// ≈ı∏Ì«— π∞√º¥¬ ≈ı∞˙
+		// ÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩ ÔøΩÔøΩ√ºÔøΩÔøΩ ÔøΩÔøΩÔøΩÔøΩ
 		// ---------------------------------------------------------------
 		if (acc.isTransparent) continue;
 
@@ -292,7 +293,7 @@ void IsectRay( const KdTreeNode *node, int nIdx )
 		acc.mbox = rp->RayID;
 
 		// ---------------------------------------------------------------
-		// Backface Culling : ≈ı∏Ì«œ¡ˆ æ ¥¬ π∞√º∏∏ «ÿ¥Á
+		// Backface Culling : ÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩ ÔøΩ ¥ÔøΩ ÔøΩÔøΩ√ºÔøΩÔøΩ ÔøΩÿ¥ÔøΩ
 		// ---------------------------------------------------------------
 		if (!acc.isTransparent && BACKFACE_CULLING) {
 			if (fMyVecDotProduct(rp->df, acc.N) < 0) {
@@ -553,7 +554,7 @@ void Shading (int nIdx)
 			shadow_rp->of[2] = hit_p[2];
 		}
 
-		// Shading ø°º≠, ≈ı∏Ì«— π∞√º¿œ∂ß, Normal ∞˙ dir ¿« dot ¿Ã < 0 ¿Ã∂Û∏È normal ¿ª µ⁄¬§¥¬¥Ÿ.
+		// Shading ÔøΩÔøΩÔøΩÔøΩ, ÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩ ÔøΩÔøΩ√ºÔøΩœ∂ÔøΩ, Normal ÔøΩÔøΩ dir ÔøΩÔøΩ dot ÔøΩÔøΩ < 0 ÔøΩÃ∂ÔøΩÔøΩ normal ÔøΩÔøΩ ÔøΩÔøΩ¬§ÔøΩ¬¥ÔøΩ.
 		if (mat_fRefr > 0.0f && fMyVecDotProduct(is->nf, rp->df) > 0.0f) N = -N;
 
 		R = GVector(-2 * N.innerProduct(rayD) * N + rayD).normalize();
@@ -571,19 +572,19 @@ void Shading (int nIdx)
 			// Diffuse & Specular color
 			const vector<GLight*>* pLightList = m_Scene->getLightList();
 			for ( int lx = 0; lx < (int) pLightList->size(); ++lx ) {	GLight* pLight = (*pLightList)[ lx ];
-				// Point Light ∏∏ ¿œ¥‹ ¡ˆø¯
+				// Point Light ÔøΩÔøΩ ÔøΩœ¥ÔøΩ ÔøΩÔøΩÔøΩÔøΩ
 				if ( pLight->getLightType() != typePointLight || !pLight->isEnabled() )  continue;
 
 				GColor   lightColor = pLight->getLightColor();
 				GPoint   lightPos   = pLight->getPosition();
 
-				// ±§ø¯ ¿⁄±‚¿⁄Ω≈¿Œ ∞ÊøÏ
+				// ÔøΩÔøΩÔøΩÔøΩ ÔøΩ⁄±ÔøΩÔøΩ⁄ΩÔøΩÔøΩÔøΩ ÔøΩÔøΩÔøΩ
 				if (obj_num == pLight->getObjectNumber()) {
 					oColor = oColor + lightColor * pLight->getIntensity();
 					continue;
 				}
 
-				// ±◊∏≤¿⁄ »Æ¿Œ
+				// ÔøΩ◊∏ÔøΩÔøΩÔøΩ »ÆÔøΩÔøΩ
 				if ( bIsEnableShadow ) {
 					checkVisibility(&hitP, &lightPos);
 
@@ -592,9 +593,9 @@ void Shading (int nIdx)
 					// Phong shading
 					L = GVector(lightPos - hitP).normalize();
 
-					// shadow ∞¸∑√ visible ¡∂∞«
-					//		¡ﬂ∞£ø° shadow ray øÕ ±≥¡°¿Ã æ¯∞≈≥™
-					//		shadow ray ∞° ±≥¬˜¡°¿Ã µ⁄ø° ¡∏¿Á«œ∞≈≥™ æ∆¥œ∏È ∞≈∏Æ∞° ∞≈¿« ∞°±ı∞≈≥™
+					// shadow ÔøΩÔøΩÔøΩÔøΩ visible ÔøΩÔøΩÔøΩÔøΩ
+					//		ÔøΩﬂ∞ÔøΩÔøΩÔøΩ shadow ray ÔøΩÔøΩ ÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩ ÔøΩÔøΩÔøΩ≈≥ÔøΩ
+					//		shadow ray ÔøΩÔøΩ ÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩ ÔøΩ⁄øÔøΩ ÔøΩÔøΩÔøΩÔøΩÔøΩœ∞≈≥ÔøΩ ÔøΩ∆¥œ∏ÔøΩ ÔøΩ≈∏ÔøΩÔøΩÔøΩ ÔøΩÔøΩÔøΩÔøΩ ÔøΩÔøΩÔøΩÔøΩÔøΩ≈≥ÔøΩ
 					if (shadow_is->tacc == 0 || fabsf(lDist - shadow_is->dist) < 1.f*RAY_DIST_EPSILON || shadow_is->dist > lDist) {
 						oColor += mat_cDiff * lightColor * max( 0.0f, L.innerProduct(N) ) +
 								  mat_cSpec * lightColor * pow( max( 0.0f, R.innerProduct(L) ), mat_fRough);

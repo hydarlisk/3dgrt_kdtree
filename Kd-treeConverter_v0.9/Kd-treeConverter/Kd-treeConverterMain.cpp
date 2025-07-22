@@ -29,6 +29,7 @@
 #include "cudaRayTracingKernel.cu"
 #include "SGRTx2Lib/GGPURayTracer.h"
 #include "SGRTx2Lib/GGPUExperimentalRayTracer.h"
+using namespace KDTConverter;
 
 float* g_render_framebuffer = nullptr;
 int g_render_width = 800;

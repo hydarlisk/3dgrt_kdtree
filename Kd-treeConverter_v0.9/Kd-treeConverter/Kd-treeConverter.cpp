@@ -15,7 +15,7 @@
 #include "Kd-treeConstructor.h"
 #include "RayTraversal.h"
 #include "MyMathUtility.h"
- 
+using namespace KDTConverter;
 int build_kd_tree_for_composite_object(CompositeObject *c_object) {
 	// Returns 1 if a kd-tree was constructed successfully, or 0 otherwise.
 	// Input: "c_object->n_triangles" & "c_object->extended_vertices"

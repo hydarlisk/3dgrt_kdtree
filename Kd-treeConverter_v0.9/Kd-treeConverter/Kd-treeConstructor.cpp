@@ -14,6 +14,7 @@
 #include "Kd-treeConverter.h"
 #include "Kd-treeConstructor.h"
 #include "MyMathUtility.h"
+using namespace KDTConverter;
 
 static const unsigned int modulo[] = { 0,1,2,0,1 };
 
