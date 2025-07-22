@@ -1,7 +1,9 @@
 #include "GTimer.h"
 
 #ifdef WIN32
+	#define _SAL_VERSION 0
 	#include <windows.h>
+	#include <sal.h>
 #elif USE_LINUX
 	#include <sys/time.h>
 	#include <time.h>

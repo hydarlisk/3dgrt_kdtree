@@ -1,19 +1,20 @@
 #pragma once
-
+#define _SAL_VERSION 0
 #include <windows.h>
+#include <sal.h>
 #include "GThread.h"
 #include <vector>
 
 using namespace std;
 
 /**
- *	ÇÁ·Î±×·¥ ¿¡¼­ ÇÊ¿äÇÑ Thread ¸¦ °ü¸®ÇÏ°í,
- *	 °¢ Thread º°·Î ÀúÀå°ø°£À» ÇÒ´çÇÏ±â À§ÇØ¼­ TLS ¸¦
- *	°ü¸®ÇÏ´Â Å¬·¡½º.
+ *	í”„ë¡œê·¸ë¨ ì—ì„œ í•„ìš”í•œ Thread ë¥¼ ê´€ë¦¬í•˜ê³ ,
+ *	 ê° Thread ë³„ë¡œ ì €ì¥ê³µê°„ì„ í• ë‹¹í•˜ê¸° ìœ„í•´ì„œ TLS ë¥¼
+ *	ê´€ë¦¬í•˜ëŠ” í´ë˜ìŠ¤.
  *
- *	 ¹İµå½Ã ÇÁ·Î±×·¥½ÃÀÛ½Ã¿¡ ÀÌ Å¬·¡½º³»ÀÇ 
- *	initThreadManager ÇÔ¼ö¸¦ È£ÃâÇØ¼­ ThreadManager ¸¦ ÃÊ±âÈ­ ÇÏ°í
- *  uninitThreadManager ÇÔ¼ö¸¦ È£ÃâÇØ¼­ ÀÚ¿øÀ» ÇØÁ¦ÇØ¾ß ÇÑ´Ù.
+ *	 ë°˜ë“œì‹œ í”„ë¡œê·¸ë¨ì‹œì‘ì‹œì— ì´ í´ë˜ìŠ¤ë‚´ì˜ 
+ *	initThreadManager í•¨ìˆ˜ë¥¼ í˜¸ì¶œí•´ì„œ ThreadManager ë¥¼ ì´ˆê¸°í™” í•˜ê³ 
+ *  uninitThreadManager í•¨ìˆ˜ë¥¼ í˜¸ì¶œí•´ì„œ ìì›ì„ í•´ì œí•´ì•¼ í•œë‹¤.
  *
  *	by poovi
  *
@@ -23,24 +24,24 @@ class GThreadManager
 {
 private:
 	/**
-	 *	¸ŞÀÎ ¾²·¹µå¸¦ À§ÇÑ µğÆúÆ® Thread Context
+	 *	ë©”ì¸ ì“°ë ˆë“œë¥¼ ìœ„í•œ ë””í´íŠ¸ Thread Context
 	 */
 	static GThreadContext *g_pMainThreadContext;
 
 	/**
-	 *	TLS¸¦ À§ÇÑ Index
+	 *	TLSë¥¼ ìœ„í•œ Index
 	 */
 	static DWORD g_dwTlsIndex;
 
 	/**
-	 *	Thread Pool ¿¡ ÀÖ´Â thread µéÁß ÇöÀç ÀÛ¾÷À» ¼öÇàÇÏ°í
-	 *	ÀÖ´Â thread °¹¼ö.
+	 *	Thread Pool ì— ìˆëŠ” thread ë“¤ì¤‘ í˜„ì¬ ì‘ì—…ì„ ìˆ˜í–‰í•˜ê³ 
+	 *	ìˆëŠ” thread ê°¯ìˆ˜.
 	 */	
 	static int m_iCurrentWorkers;
 
 private:
 	/**
-	 *	ÇÁ·Î±×·¥ ¿¡¼­ »ç¿ëÇÒ ¾²·¹µåµé
+	 *	í”„ë¡œê·¸ë¨ ì—ì„œ ì‚¬ìš©í•  ì“°ë ˆë“œë“¤
 	 */
 	static vector<GThread*> g_vecSgrtThreadPool;
 
@@ -56,14 +57,14 @@ public:
 	static void freeThreadContext();
 
 	/**
-	 *	¾²·¹µå·Î ±¸µ¿½ÃÅ³ ÀÛ¾÷À» ¼öÇà½ÃÅ²´Ù.
-	 *	@param pWork ¾²·¹µå·Î ±¸µ¿½ÃÅ³ ÀÛ¾÷
-	 *	@param threadCount ¾²·¹µå °¹¼ö. ( threadPool ¿¡ ÀÖ´Â ¾²·¹µå °¹¼ö°¡ ÃÖ´ë )
+	 *	ì“°ë ˆë“œë¡œ êµ¬ë™ì‹œí‚¬ ì‘ì—…ì„ ìˆ˜í–‰ì‹œí‚¨ë‹¤.
+	 *	@param pWork ì“°ë ˆë“œë¡œ êµ¬ë™ì‹œí‚¬ ì‘ì—…
+	 *	@param threadCount ì“°ë ˆë“œ ê°¯ìˆ˜. ( threadPool ì— ìˆëŠ” ì“°ë ˆë“œ ê°¯ìˆ˜ê°€ ìµœëŒ€ )
 	 */
 	static int startThreadWork( GThreadWork *pWork, int threadCount );
 
 	/**
-	 *	ÇöÀç ¼öÇà½ÃÅ² ¾²·¹µåÀÇ ¸ğµç ÀÛ¾÷ÀÌ Á¾·áµÉ¶§±îÁö ±â´Ù¸°´Ù.
+	 *	í˜„ì¬ ìˆ˜í–‰ì‹œí‚¨ ì“°ë ˆë“œì˜ ëª¨ë“  ì‘ì—…ì´ ì¢…ë£Œë ë•Œê¹Œì§€ ê¸°ë‹¤ë¦°ë‹¤.
 	 */
 	static void waitThreadWork();
 

@@ -32,7 +32,7 @@ int GRaySetLight::getRaySetDataCount()
 }
 
 /**
- *	ÁöÁ¡ pos ¿Í normal À» °¡Áø ÇöÀçÁöÁ¡À¸·Î µé¾î¿À´Â radiance ¸¦ ±¸ÇÑ´Ù.
+ *	ì§€ì  pos ì™€ normal ì„ ê°€ì§„ í˜„ì¬ì§€ì ìœ¼ë¡œ ë“¤ì–´ì˜¤ëŠ” radiance ë¥¼ êµ¬í•œë‹¤.
  */
 GColor GRaySetLight::getRadiance( GPoint &pos, GVector &normal )
 {
@@ -40,9 +40,9 @@ GColor GRaySetLight::getRadiance( GPoint &pos, GVector &normal )
 }
 
 /**
- *	polygon µ¥ÀÌÅÍ¸¦ º¯°æÇÑ´ÙÀ½¿¡,
- *	rayset µ¥ÀÌÅÍµµ º¯È¯ÇÑ´Ù.
- *	º¯È¯ÇÏ°í, matrix ¸¦ identity ·Î ÃÊ±âÈ­ ÇÑ´Ù.
+ *	polygon ë°ì´í„°ë¥¼ ë³€ê²½í•œë‹¤ìŒì—,
+ *	rayset ë°ì´í„°ë„ ë³€í™˜í•œë‹¤.
+ *	ë³€í™˜í•˜ê³ , matrix ë¥¼ identity ë¡œ ì´ˆê¸°í™” í•œë‹¤.
  */
 GError GRaySetLight::convertToWorldObject()
 {
@@ -77,7 +77,7 @@ GError GRaySetLight::convertToWorldObject()
 	makeDebugInfoObject();
 
 	/** 
-	 *	¹İµå½Ã ¸¶Áö¸·¿¡ ÇöÀç polygon µ¥ÀÌÅÍµµ convert ½ÃÄÑ¾ß ÇÑ´Ù. 
+	 *	ë°˜ë“œì‹œ ë§ˆì§€ë§‰ì— í˜„ì¬ polygon ë°ì´í„°ë„ convert ì‹œì¼œì•¼ í•œë‹¤. 
 	 */
 	return GLight::convertToWorldObject();
 }
@@ -90,10 +90,10 @@ GError GRaySetLight::validObject()
 void GRaySetLight::makeDebugInfoObject()
 {
 	/**
-	 *	È­¸é¿¡ light ¸¦ Á¡À¸·Î º¸¿©ÁÖ±â À§ÇØ¼­, debug info 
-	 *	object ¸¦ ±¸¼ºÇÑ´Ù.
-	 *	RaySet Á¤º¸¿¡¼­ point ¿Í normal À» ¶¼¾î³»¼­
-	 *	point set À» À§ÇÑ geometry Á¤º¸·Î ±¸¼ºÇÑ´Ù. point Á¤º¸·Î ±¸¼º.
+	 *	í™”ë©´ì— light ë¥¼ ì ìœ¼ë¡œ ë³´ì—¬ì£¼ê¸° ìœ„í•´ì„œ, debug info 
+	 *	object ë¥¼ êµ¬ì„±í•œë‹¤.
+	 *	RaySet ì •ë³´ì—ì„œ point ì™€ normal ì„ ë–¼ì–´ë‚´ì„œ
+	 *	point set ì„ ìœ„í•œ geometry ì •ë³´ë¡œ êµ¬ì„±í•œë‹¤. point ì •ë³´ë¡œ êµ¬ì„±.
 	 */
 	float *pVertexArray = (float*) malloc( sizeof( float ) * m_iRaySetDataCount * 3 );
 	float *pNormalArray = (float*) malloc( sizeof( float ) * m_iRaySetDataCount * 3 );

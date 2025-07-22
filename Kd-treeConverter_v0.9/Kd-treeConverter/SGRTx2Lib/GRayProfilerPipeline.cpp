@@ -31,7 +31,7 @@ static const unsigned int modulo[] =  {0,1,2,0,1};
 #define ku modulo[k+1]
 #define kv modulo[k+2]
 
-// ÀÓ½Ã ·¹ÀÌ
+// ì„ì‹œ ë ˆì´
 float ori[] = { 2.0f, 2.0f, 2.0f, 1.0f };
 float dest[] = { 5.0f, 5.0f, 5.0f, 1.0f };
 
@@ -319,7 +319,7 @@ void GRayProfilerPipeline::TracePacket1x1( unsigned int quad, int nIdx )
 	while (1) {
 		while (IS_LEAF(*node) == 0) {
 			const float node_split = SPLIT_POS(*node);
-			const unsigned int dim = SPLIT_AXIS(*node); // 11 Àº ¾Æ´Ï¹Ç·Î, 00, 01, 10 Áß¿¡ ÇÏ³ª
+			const unsigned int dim = SPLIT_AXIS(*node); // 11 ì€ ì•„ë‹ˆë¯€ë¡œ, 00, 01, 10 ì¤‘ì— í•˜ë‚˜
 			KdTreeNode *FrontSideSon	= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[dim << 1])];
 			KdTreeNode *BackSideSon		= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[(dim << 1)+1])];
 
@@ -401,17 +401,17 @@ void GRayProfilerPipeline::TracePacket1x1( unsigned int quad, int nIdx )
 				}
 
 			COUNT_TREE_OPERATOR( nIdx, TRAVERSE_DOWN );
-			// front ¸¦ traverse, back À» ³ÖÀ½
+			// front ë¥¼ traverse, back ì„ ë„£ìŒ
 			// case:  near < d < far
 			if( !neg )
 			{
 				bb_stack[stackIndex+1] = minBox; // traverse
-				bb_stack[stackIndex] = maxBox; // ³ÖÀ½
+				bb_stack[stackIndex] = maxBox; // ë„£ìŒ
 			}
 			else
 			{
 				bb_stack[stackIndex+1] = maxBox; // traverse
-				bb_stack[stackIndex] = minBox; // ³ÖÀ½
+				bb_stack[stackIndex] = minBox; // ë„£ìŒ
 			}
 
 			m_Stack1x1[stackIndex].t_far_ = t_far_;
@@ -556,13 +556,13 @@ void GRayProfilerPipeline::Render1x1( int nThreadID )
 				tpos.d.z = r.z;
 				is->addr = tx + (m_Height - 1 - ty) * m_Width;
 
-				// Ray ¸¦ ¼ÂÆÃ - ½ÃÀÛÁ¡(rp->o) ~ ³¡Á¡(jpos)
+				// Ray ë¥¼ ì…‹íŒ… - ì‹œì‘ì (rp->o) ~ ëì (jpos)
 				rp->d = sse_fsub(tpos.d, rp->o);
 				rp->Depth = 0;
 				m_RayID = 1;
-				InitPacket1x1( 0 );	// direction vector normalize µî
+				InitPacket1x1( 0 );	// direction vector normalize ë“±
 
-				// ray dir °áÁ¤ (q = 8¹æÇâÁßÇÏ³ª)
+				// ray dir ê²°ì • (q = 8ë°©í–¥ì¤‘í•˜ë‚˜)
 				int q = (rp->d.x < 0) + ((rp->d.y < 0) << 1) + ((rp->d.z < 0) << 2);
 				RenderPacket1x1(q, 0);
 				//GRayTracerProfiler::AddData( GRayTracerProfiler::GetCurrentRayProfiler() );
@@ -575,7 +575,7 @@ void GRayProfilerPipeline::Render1x1( int nThreadID )
 	{
 		if( m_pOption->isDrawTestRays() && m_pOption->isSetRayToCamera() )
 		{
-			// Á¤¸é¿¡ ±¸ ±×¸®±â
+			// ì •ë©´ì— êµ¬ ê·¸ë¦¬ê¸°
 			_sse_1x1_raypacket tpos;
 			//tpos = sse_fset1( rp->d.f );
 			tpos.d = rp->d;
@@ -602,9 +602,9 @@ void GRayProfilerPipeline::Render1x1( int nThreadID )
 				is->addr = 0;
 				rp->Depth = 0;
 				m_RayID = 1;
-				InitPacket1x1( 0 );	// direction vector normalize µî
+				InitPacket1x1( 0 );	// direction vector normalize ë“±
 
-				// ray dir °áÁ¤ (q = 8¹æÇâÁßÇÏ³ª)
+				// ray dir ê²°ì • (q = 8ë°©í–¥ì¤‘í•˜ë‚˜)
 				int q = (rp->d.x < 0) + ((rp->d.y < 0) << 1) + ((rp->d.z < 0) << 2);
 				RenderPacket1x1(q, 0);
 			}
@@ -636,12 +636,12 @@ void GRayProfilerPipeline::IsectPacket1x1( const KdTreeNode *node, int nIdx )
 		// Mailbox
 		// ---------------------------------------------------------------
 		if (acc.mbox == rp->RayId) { continue; }
-		else { acc.mbox = rp->RayId; }	// ¹«Á¶°Ç isect ¾ÈµÇµµ ½ÇÇà µÇ¾î¾ß ÇÔ
+		else { acc.mbox = rp->RayId; }	// ë¬´ì¡°ê±´ isect ì•ˆë˜ë„ ì‹¤í–‰ ë˜ì–´ì•¼ í•¨
 
 		COUNT_STATE( nIdx, TRIANGLE_COUNT, 1 );
 
 		// ---------------------------------------------------------------
-		// Backface Culling : Åõ¸íÇÏÁö ¾Ê´Â ¹°Ã¼¸¸ ÇØ´ç
+		// Backface Culling : íˆ¬ëª…í•˜ì§€ ì•ŠëŠ” ë¬¼ì²´ë§Œ í•´ë‹¹
 		// ---------------------------------------------------------------
 		if (!acc.isTransparent && m_Scene->isBackFaceCulling()) {
 			if (vector3(rp->d.f).innerProduct(acc.N) < 0) {
@@ -784,8 +784,8 @@ void GRayProfilerPipeline::shading1x1 (int nIdx) {
 		}
 		else
 
-		// Shading ¿¡¼­, Åõ¸íÇÑ ¹°Ã¼ÀÏ¶§, Normal °ú dir ÀÇ dot ÀÌ < 0 ÀÌ¶ó¸é normal À» µÚÂ¤´Â´Ù.
-		// È®ÀÎ ÇÊ¿ä!!
+		// Shading ì—ì„œ, íˆ¬ëª…í•œ ë¬¼ì²´ì¼ë•Œ, Normal ê³¼ dir ì˜ dot ì´ < 0 ì´ë¼ë©´ normal ì„ ë’¤ì§šëŠ”ë‹¤.
+		// í™•ì¸ í•„ìš”!!
 		if (mat_refr > 0.0f && sse_fdot(is->n, rp->d) > 0.0f) 
 		{
 			// neagtor
@@ -811,7 +811,7 @@ void GRayProfilerPipeline::shading1x1 (int nIdx) {
 
 				if( !pLight->isEnabled() )
 					continue;
-				// Point Light ¸¸ ÀÏ´Ü Áö¿ø
+				// Point Light ë§Œ ì¼ë‹¨ ì§€ì›
 				if ( pLight->getLightType() != typePointLight )
 				{
 					continue;
@@ -820,13 +820,13 @@ void GRayProfilerPipeline::shading1x1 (int nIdx) {
 				GColor   lightColor = pLight->getLightColor();
 				GPoint   lightPos   = pLight->getPosition();
 
-				// ±¤¿ø ÀÚ±âÀÚ½ÅÀÎ °æ¿ì
+				// ê´‘ì› ìê¸°ìì‹ ì¸ ê²½ìš°
 				if (obj_num == pLight->getObjectNumber()) {
 					//oColor = oColor + lightColor * pLight->getIntensity();
 					continue;
 				}
 
-				// ±×¸²ÀÚ È®ÀÎ
+				// ê·¸ë¦¼ì í™•ì¸
 				if (m_Scene->isEnableShadow()) {
 					checkVisibility1x1(&hitP, &lightPos);
 
@@ -835,9 +835,9 @@ void GRayProfilerPipeline::shading1x1 (int nIdx) {
 					// Phong shading
 					L = GVector(lightPos - hitP).normalize();
 
-					// shadow °ü·Ã visible Á¶°Ç
-					//		Áß°£¿¡ shadow ray ¿Í ±³Á¡ÀÌ ¾ø°Å³ª
-					//		shadow ray °¡ ±³Â÷Á¡ÀÌ µÚ¿¡ Á¸ÀçÇÏ°Å³ª ¾Æ´Ï¸é °Å¸®°¡ °ÅÀÇ °¡±õ°Å³ª
+					// shadow ê´€ë ¨ visible ì¡°ê±´
+					//		ì¤‘ê°„ì— shadow ray ì™€ êµì ì´ ì—†ê±°ë‚˜
+					//		shadow ray ê°€ êµì°¨ì ì´ ë’¤ì— ì¡´ì¬í•˜ê±°ë‚˜ ì•„ë‹ˆë©´ ê±°ë¦¬ê°€ ê±°ì˜ ê°€ê¹ê±°ë‚˜
 					if (shadow_is->tacc == 0 || fabsf(lDist - shadow_is->dist) < 1.f*EPSILON || shadow_is->dist > lDist) {
 						//oColor += mat_tex  * lightColor * max( 0.0f, L.innerProduct(N) ) +
 						//	mat_spec * lightColor * pow( max( 0.0f, R.innerProduct(L) ), mat_rough);
@@ -979,12 +979,12 @@ void GRayProfilerPipeline::IsectShadowPacket1x1( const KdTreeNode *node )
 		{
 			//COUNT_INSTRUCTION( BRANCH, 1 );
 			acc.mbox = rp->RayId;
-		}	// ¹«Á¶°Ç isect ¾ÈµÇµµ ½ÇÇà µÇ¾î¾ß ÇÔ
+		}	// ë¬´ì¡°ê±´ isect ì•ˆë˜ë„ ì‹¤í–‰ ë˜ì–´ì•¼ í•¨
 
 		COUNT_STATE( -1, TRIANGLE_COUNT, 1 );
 
 		// ---------------------------------------------------------------
-		// Åõ¸íÇÑ ¹°Ã¼´Â Åõ°ú
+		// íˆ¬ëª…í•œ ë¬¼ì²´ëŠ” íˆ¬ê³¼
 		// ---------------------------------------------------------------
 		if (acc.isTransparent)
 		{

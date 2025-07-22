@@ -1,8 +1,8 @@
 //--------------------------------------------------------------------------//
 //																			//
-//	Ä«¸Ş¶ó º¯È¯¿¡ °üÇÑ Å¬·¡½º												//
+//	ì¹´ë©”ë¼ ë³€í™˜ì— ê´€í•œ í´ë˜ìŠ¤												//
 //																			//
-//	Copyright (c) 2005  ÁøºÀÁØ	( sonagi21@naver.com )						//
+//	Copyright (c) 2005  ì§„ë´‰ì¤€	( sonagi21@naver.com )						//
 //																			//
 //--------------------------------------------------------------------------//
 
@@ -58,13 +58,13 @@ void GCamera::setCameraPos( GVector eye, GVector view, GVector up )
 	m_uVec = up.outerProduct( m_nVec ).normalize();
 	m_vVec = m_nVec.outerProduct( m_uVec ).normalize();
 
-	// ÃÊ±â ÁÂÇ¥ÃàÀ» ±â¾ï
+	// ì´ˆê¸° ì¢Œí‘œì¶•ì„ ê¸°ì–µ
 	m_uInitVec = m_uVec;
 	m_vInitVec = m_vVec;
 	m_nInitVec = m_nVec;
 
 	/** 
-	 *	up º¤ÅÍÁß °¡Àå Å« ±ä Ãà Ä«¸Ş¶ó upAxis ·Î ¼³Á¤. Ä«¸Ş¶ó È¸ÀüÃà ±âÁØÀ» À§ÇØ¼­.
+	 *	up ë²¡í„°ì¤‘ ê°€ì¥ í° ê¸´ ì¶• ì¹´ë©”ë¼ upAxis ë¡œ ì„¤ì •. ì¹´ë©”ë¼ íšŒì „ì¶• ê¸°ì¤€ì„ ìœ„í•´ì„œ.
 	 */
 	if ( m_vInitVec.x >= m_vInitVec.y && m_vInitVec.x >= m_vInitVec.z )
 		m_UpAxis = AXIS_X;
@@ -76,7 +76,7 @@ void GCamera::setCameraPos( GVector eye, GVector view, GVector up )
 	calViewMatrix();
 }
 
-// U, V, N ¿Í eye ÁÂÇ¥¸¦ ÀÌ¿ëÇØ¼­, Ä«¸Ş¶ó º¯È¯ Matrix ¸¦ °è»êÇÑ´Ù.
+// U, V, N ì™€ eye ì¢Œí‘œë¥¼ ì´ìš©í•´ì„œ, ì¹´ë©”ë¼ ë³€í™˜ Matrix ë¥¼ ê³„ì‚°í•œë‹¤.
 void GCamera::calViewMatrix()
 {
 	m_rotateMatrix.SetMatrix( m_uVec.x, m_uVec.y, m_uVec.z, 0.0f,
@@ -91,31 +91,31 @@ void GCamera::calViewMatrix()
 
 	m_matrix = m_rotateMatrix * m_transMatrix;
 
-	/** world ÁÂÇ¥ÃàÀÌ ¾î¶»°Ô ¹Ù²î¾ú´ÂÁö Á¤º¸ ±â·ÏÇØµÒ */
+	/** world ì¢Œí‘œì¶•ì´ ì–´ë–»ê²Œ ë°”ë€Œì—ˆëŠ”ì§€ ì •ë³´ ê¸°ë¡í•´ë‘  */
 	m_transformedWorldX = m_rotateMatrix * GVector( 1.0f, 0.0f, 0.0f );
 	m_transformedWorldY = m_rotateMatrix * GVector( 0.0f, 1.0f, 0.0f );
 	m_transformedWorldZ = m_rotateMatrix * GVector( 0.0f, 0.0f, 1.0f );
 }
 
 //----------------------------------------------------------------------//
-// Pivot Æ÷ÀÎÆ® ( Æ¯Á¤¹°Ã¼Áß½É ) À¸·Î Ä«¸Ş¶ó¸¦ È¸Àü½ÃÅ²´Ù.				//
-// ¸¸¾à Ä«¸Ş¶ó°¡ ¹Ù¶óº¸´Â ¹æÇâ¿¡ Pivot Æ÷ÀÎÆ®°¡ ¾ø´Ù¸é,					//
-// Ä«¸Ş¶ó°¡ ¹Ù¶óº¸´Â ¹æÇâº¤ÅÍÀ§¿¡ ÀÌ pivot Æ÷ÀÎÆ®°¡ ¼öÁ÷À¸·Î ¸¸³ª´Â		//
-// À§Ä¡±îÁöÀÇ °Å¸®°¡ Ä«¸Ş¶óÈ¸Àü ¹İ°æÀÇ ±âÁØÀÌ µÈ´Ù.						//
-//	ÀÌ °ªÀ» distance ¶ó°í ÇÏÀÚ.	ÀÌ distance °¡ È¸Àü ¹İ°æÀÌ´Ù.			//
-// ±×¸®°í º¯È¯Çà·ÄÀº ´ÙÀ½°ú °°ÀÌ ±¸ÇÑ´Ù.								//
-// ¸ÕÀú Camera ¸¦ -n ¹æÇâÀ¸·Î distance ¸¸Å­ ÁøÇà½ÃÄÑ¼­ pivot point ¿¡	//
-// À§Ä¡½ÃÅ°°í, camera È¸ÀüÀ» ÇÑÈÄ ´Ù½Ã n ¹æÇâÀ¸·Î distance ¸¸Å­			//
-//	ÁøÇà½ÃÅ²´Ù.															//
+// Pivot í¬ì¸íŠ¸ ( íŠ¹ì •ë¬¼ì²´ì¤‘ì‹¬ ) ìœ¼ë¡œ ì¹´ë©”ë¼ë¥¼ íšŒì „ì‹œí‚¨ë‹¤.				//
+// ë§Œì•½ ì¹´ë©”ë¼ê°€ ë°”ë¼ë³´ëŠ” ë°©í–¥ì— Pivot í¬ì¸íŠ¸ê°€ ì—†ë‹¤ë©´,					//
+// ì¹´ë©”ë¼ê°€ ë°”ë¼ë³´ëŠ” ë°©í–¥ë²¡í„°ìœ„ì— ì´ pivot í¬ì¸íŠ¸ê°€ ìˆ˜ì§ìœ¼ë¡œ ë§Œë‚˜ëŠ”		//
+// ìœ„ì¹˜ê¹Œì§€ì˜ ê±°ë¦¬ê°€ ì¹´ë©”ë¼íšŒì „ ë°˜ê²½ì˜ ê¸°ì¤€ì´ ëœë‹¤.						//
+//	ì´ ê°’ì„ distance ë¼ê³  í•˜ì.	ì´ distance ê°€ íšŒì „ ë°˜ê²½ì´ë‹¤.			//
+// ê·¸ë¦¬ê³  ë³€í™˜í–‰ë ¬ì€ ë‹¤ìŒê³¼ ê°™ì´ êµ¬í•œë‹¤.								//
+// ë¨¼ì € Camera ë¥¼ -n ë°©í–¥ìœ¼ë¡œ distance ë§Œí¼ ì§„í–‰ì‹œì¼œì„œ pivot point ì—	//
+// ìœ„ì¹˜ì‹œí‚¤ê³ , camera íšŒì „ì„ í•œí›„ ë‹¤ì‹œ n ë°©í–¥ìœ¼ë¡œ distance ë§Œí¼			//
+//	ì§„í–‰ì‹œí‚¨ë‹¤.															//
 //																		//
-//	ÀÌ¿Í °°Àº Ä«¸Ş¶ó¿òÁ÷ÀÓÀº Maya ÀÇ Ä«¸Ş¶ó ¿òÁ÷ÀÓÀ» ±¸ÇöÇÏ±â À§ÇÑ°Í.	//
+//	ì´ì™€ ê°™ì€ ì¹´ë©”ë¼ì›€ì§ì„ì€ Maya ì˜ ì¹´ë©”ë¼ ì›€ì§ì„ì„ êµ¬í˜„í•˜ê¸° ìœ„í•œê²ƒ.	//
 //----------------------------------------------------------------------//
 void GCamera::rotateByPivot( GVector pivot, float harc, float varc, float narc )
 {
 	/** 
-	 *	ÇöÀç Ä«¸Ş¶ó°¡ ¹Ù¶óº¸´Â ¹æÇâº¤ÅÍ¿¡, 
-	 *	pivot Á¡ÀÌ ¼öÁ÷À¸·Î ¸¸³ª´Â Á¡±îÁöÀÇ
-	 *	°Å¸®¸¦ ±¸ÇÑ´Ù.
+	 *	í˜„ì¬ ì¹´ë©”ë¼ê°€ ë°”ë¼ë³´ëŠ” ë°©í–¥ë²¡í„°ì—, 
+	 *	pivot ì ì´ ìˆ˜ì§ìœ¼ë¡œ ë§Œë‚˜ëŠ” ì ê¹Œì§€ì˜
+	 *	ê±°ë¦¬ë¥¼ êµ¬í•œë‹¤.
 	 */
 	GVector toPivot = ( pivot - m_eye ).normalize();
 	float cost = -m_nVec.innerProduct( toPivot );
@@ -133,7 +133,7 @@ void GCamera::rotateByPivot( GVector pivot, float harc, float varc, float narc )
 	rotateUVN( -varc, 0.0f, -narc );
 
 	/** 
-	 *	Ä«¸Ş¶óÀÇ up ¹æÇâÀÌ x, y, z Ãà ¾îµğÀÎÁö¿¡ µû¶ó¼­ È¸Àü°áÁ¤
+	 *	ì¹´ë©”ë¼ì˜ up ë°©í–¥ì´ x, y, z ì¶• ì–´ë””ì¸ì§€ì— ë”°ë¼ì„œ íšŒì „ê²°ì •
 	 */
 	//if ( m_UpAxis == AXIS_X )
 	//	rotateWorldXYZ( -harc, 0.0, 0.0f );
@@ -149,8 +149,8 @@ void GCamera::rotateByPivot( GVector pivot, float harc, float varc, float narc )
 }
 
 /**
- *	Ä«¸Ş¶ó ÃÊ±â u, v, n ÃàÀ¸·ÎºÎÅÍ ¾ó¸¶³ª È¸ÀüÇß´ÂÁö¸¦ ´©Àû. 
- *	-360~360 »çÀÌ·Î Á¤±ÔÈ­ÇÑ´Ù.
+ *	ì¹´ë©”ë¼ ì´ˆê¸° u, v, n ì¶•ìœ¼ë¡œë¶€í„° ì–¼ë§ˆë‚˜ íšŒì „í–ˆëŠ”ì§€ë¥¼ ëˆ„ì . 
+ *	-360~360 ì‚¬ì´ë¡œ ì •ê·œí™”í•œë‹¤.
  */
 void GCamera::rotateUVN( float uarc, float varc, float narc )
 {
@@ -166,13 +166,13 @@ void GCamera::rotateUVN( float uarc, float varc, float narc )
 	m_vVec = rotate * m_vVec;
 	m_nVec = rotate * m_nVec;
 
-	// »õ·Î¿î View Matrix Çà·ÄÀ» ±¸ÇÑ´Ù.
+	// ìƒˆë¡œìš´ View Matrix í–‰ë ¬ì„ êµ¬í•œë‹¤.
 	calViewMatrix();
 }
 
 /**
- *	World ÁÂÇ¥°è x, y, z ÃàÀ» ±âÁØÀ¸·Î ¾ó¸¶³ª È¸ÀüÇß´ÂÁö¸¦ ´©Àû. 
- *	-360~360 »çÀÌ·Î Á¤±ÔÈ­ÇÑ´Ù.
+ *	World ì¢Œí‘œê³„ x, y, z ì¶•ì„ ê¸°ì¤€ìœ¼ë¡œ ì–¼ë§ˆë‚˜ íšŒì „í–ˆëŠ”ì§€ë¥¼ ëˆ„ì . 
+ *	-360~360 ì‚¬ì´ë¡œ ì •ê·œí™”í•œë‹¤.
  */
 void GCamera::rotateWorldXYZ( float xarc, float yarc, float zarc )
 {
@@ -188,12 +188,12 @@ void GCamera::rotateWorldXYZ( float xarc, float yarc, float zarc )
 	m_vVec = rotate * m_vVec;
 	m_nVec = rotate * m_nVec;
 
-	// »õ·Î¿î View Matrix Çà·ÄÀ» ±¸ÇÑ´Ù.
+	// ìƒˆë¡œìš´ View Matrix í–‰ë ¬ì„ êµ¬í•œë‹¤.
 	calViewMatrix();
 }
 
 /**
- *	Ä«¸Ş¶ó°¡ ¹Ù¶óº¸´Â ¹æÇâ(z) À¸·Î zoom in, out ¼öÇà
+ *	ì¹´ë©”ë¼ê°€ ë°”ë¼ë³´ëŠ” ë°©í–¥(z) ìœ¼ë¡œ zoom in, out ìˆ˜í–‰
  */
 void GCamera::zooming( float zoom )
 {

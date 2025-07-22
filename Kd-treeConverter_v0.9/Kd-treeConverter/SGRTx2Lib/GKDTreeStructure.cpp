@@ -7,9 +7,9 @@
 #include "GlobalOption.h"
 
 /**
- *	KD Tree ¸¦ ÀÌ¿ëÇÑ °ø°£ ±¸Á¶Ã¼.
- *	KD Tree »ı¼º. Å½»öÀº ¿À»ó¶ô±ºÀÇ ÄÚµå¸¦ ±âºÎ ¹Ş¾Æ
- *	¼öÁ¤ÇÔ.
+ *	KD Tree ë¥¼ ì´ìš©í•œ ê³µê°„ êµ¬ì¡°ì²´.
+ *	KD Tree ìƒì„±. íƒìƒ‰ì€ ì˜¤ìƒë½êµ°ì˜ ì½”ë“œë¥¼ ê¸°ë¶€ ë°›ì•„
+ *	ìˆ˜ì •í•¨.
  *
  *	by graphicsian.
  */
@@ -70,7 +70,7 @@ void GKDTreeStructure::setKDTreeOption( GKDTreeOption *pKDTreeOption )
 }
 
 /**
- *	KD-Tree ¸¦ ¸¸µç´Ù.
+ *	KD-Tree ë¥¼ ë§Œë“ ë‹¤.
  */
 GError GKDTreeStructure::initialize()
 {
@@ -101,21 +101,21 @@ GError GKDTreeStructure::initialize()
 	GLogManager::logging( LOG_INFO, " -> KDTree build started..." );
 
 	/** 
-	 *	Scene ÀüÃ¼ÀÇ »ï°¢Çü list ¸¦ ±¸¼ºÇØ ¿Â´Ù.
+	 *	Scene ì „ì²´ì˜ ì‚¼ê°í˜• list ë¥¼ êµ¬ì„±í•´ ì˜¨ë‹¤.
 	 */
 	m_pSceneTriangleList = m_pScene->createSceneTriangleList( m_SceneBBox );
 	m_iSceneTriangleCount = m_pSceneTriangleList->size();
 
 	/**
-	 *	KD-Tree ¸¦ À§ÇÑ µ¥ÀÌÅÍ ±¸¼º. 
-	 *	¸ğµç »ï°¢ÇüÀÇ Á¤·ÄÀ» À§ÇÑ °ø°£.offset Á¤º¸´Â 
-	 *	m_SceneTriangleList vector ¾ÈÀÇ index ¿Í µ¿ÀÏÇÏ´Ù.
+	 *	KD-Tree ë¥¼ ìœ„í•œ ë°ì´í„° êµ¬ì„±. 
+	 *	ëª¨ë“  ì‚¼ê°í˜•ì˜ ì •ë ¬ì„ ìœ„í•œ ê³µê°„.offset ì •ë³´ëŠ” 
+	 *	m_SceneTriangleList vector ì•ˆì˜ index ì™€ ë™ì¼í•˜ë‹¤.
 	 */
 	TriangleInfo *pTriangleInfos = new TriangleInfo[ m_iSceneTriangleCount ];
 	for( int i = 0; i < m_iSceneTriangleCount; i++ ) {
 		pTriangleInfos[ i ].offset = i;
 		pTriangleInfos[ i ].pTriangleWrapper = m_pSceneTriangleList->getTriangleWrapper( i );
-		/** bounding box ´Â ½ÇÁ¦ triangle bouding box °ú´Â ´Ù¸¦¼ö ÀÖÀ¸¹Ç·Î µû·Î ÀúÀå°ü¸® */
+		/** bounding box ëŠ” ì‹¤ì œ triangle bouding box ê³¼ëŠ” ë‹¤ë¥¼ìˆ˜ ìˆìœ¼ë¯€ë¡œ ë”°ë¡œ ì €ì¥ê´€ë¦¬ */
 		pTriangleInfos[ i ].boundingBox = m_pSceneTriangleList->getTriangleWrapper( i )->m_BBox;
 	}
 
@@ -131,7 +131,7 @@ GError GKDTreeStructure::initialize()
 	memset( m_pTriangleOffsetList, 0x00, sizeof( unsigned int ) * m_iAllocatedTriangleOffsetSize );
 
 	/**
-	 *	pTraangleInfos ´Â buildKDTree ¾È¿¡¼­ »ç¿ëÇÏ°í ¾ø¾Ø´Ù.
+	 *	pTraangleInfos ëŠ” buildKDTree ì•ˆì—ì„œ ì‚¬ìš©í•˜ê³  ì—†ì•¤ë‹¤.
 	 */
 	buildKDTree( bEdge, pTriangleInfos, m_iSceneTriangleCount, m_SceneBBox, 0, &(m_pKDTreeNodes[0]) );
 	
@@ -187,7 +187,7 @@ inline cuPlueckerTriangleInfo GKDTreeStructure::toCuPlueckerTriangleInfo( GTrian
 	t.p1.x = tri.p1[ 0 ]; t.p1.y = tri.p1[ 1 ]; t.p1.z = tri.p1[ 2 ];
 	t.p2.x = tri.p2[ 0 ]; t.p2.y = tri.p2[ 1 ]; t.p2.z = tri.p2[ 2 ];
 
-	/** normal ÀúÀå */
+	/** normal ì €ì¥ */
 	t.normal.x = N[0]; t.normal.y = N[1]; t.normal.z = N[2];
 
 	t.attrib.x = unsigned_as_float( tri.objectIndexInScene );
@@ -208,7 +208,7 @@ inline cuWaldTriangleInfo GKDTreeStructure::toCuWaldTriangleInfo( GTriangleWrapp
 	unsigned k = 0;
 	int flag = 0;
 
-	/** projection axis ¸¦ ¼±ÅÃ */
+	/** projection axis ë¥¼ ì„ íƒ */
 	for (unsigned i = 1; i < 3; ++i) 
 		k = fabsf(N[i]) > fabsf(N[k]) ? i : k;
 
@@ -233,11 +233,11 @@ inline cuWaldTriangleInfo GKDTreeStructure::toCuWaldTriangleInfo( GTriangleWrapp
 	w.internal2.y = float( cnv );
 
 	/** 
-	 *	z ¸¦ ÀÌ¿ëÇØ¼­ Åõ¸íÇÑÁö ¿©ºÎ¿Í krec °¡ À½¼öÀÎÁö ¾ç¼öÀÎÁö ÀúÀå 
-	 *	³ªÁß¿¡ back face ÀÎÁö¸¦ Ã¼Å©ÇÏ±â À§ÇØ¼­ normal ÀÇ ¹æÇâÀ» °è»êÇÒ¶§ »ç¿ë.
+	 *	z ë¥¼ ì´ìš©í•´ì„œ íˆ¬ëª…í•œì§€ ì—¬ë¶€ì™€ krec ê°€ ìŒìˆ˜ì¸ì§€ ì–‘ìˆ˜ì¸ì§€ ì €ì¥ 
+	 *	ë‚˜ì¤‘ì— back face ì¸ì§€ë¥¼ ì²´í¬í•˜ê¸° ìœ„í•´ì„œ normal ì˜ ë°©í–¥ì„ ê³„ì‚°í• ë•Œ ì‚¬ìš©.
 	 */
 	/** 
-	 * Åõ¸íÇÑ ¹°Ã¼ÀÎÁö ¿©ºÎ.
+	 * íˆ¬ëª…í•œ ë¬¼ì²´ì¸ì§€ ì—¬ë¶€.
 	 */
 	if ( tri.m_pObject->getMaterial()->m_fTransparency > 0.0f )
 		flag = 1;
@@ -245,21 +245,21 @@ inline cuWaldTriangleInfo GKDTreeStructure::toCuWaldTriangleInfo( GTriangleWrapp
 		flag = 2;
 
 	/** 
-	 *	krec °¡ ¾ç¼ö/À½¼öÀÎÁö ¿©ºÎ¸¦ ±×´ë·Î Àû¿ë.
+	 *	krec ê°€ ì–‘ìˆ˜/ìŒìˆ˜ì¸ì§€ ì—¬ë¶€ë¥¼ ê·¸ëŒ€ë¡œ ì ìš©.
 	 */
 	if ( krec < 0.0f ) 
 		flag = -flag;
 
 	w.internal2.z = unsigned_as_float( flag );
 
-	// »óÀ§1bytes ´Â »ï°¢ÇüÀÌ ¼±ÅÃµÇ¾ú´ÂÁö ¿©ºÎ. ÇÏÀ§3bytes ´Â ¹°Ã¼ id
+	// ìƒìœ„1bytes ëŠ” ì‚¼ê°í˜•ì´ ì„ íƒë˜ì—ˆëŠ”ì§€ ì—¬ë¶€. í•˜ìœ„3bytes ëŠ” ë¬¼ì²´ id
 	w.internal2.w = unsigned_as_float( (tri.bSelected << 24) | tri.objectIndexInScene );
 
 	return w;
 }
 
 /**
- *	CUDA KERNEL ¿¡ ¿Ã¸± KDTree µ¥ÀÌÅÍ¸¦ º¹»ç.
+ *	CUDA KERNEL ì— ì˜¬ë¦´ KDTree ë°ì´í„°ë¥¼ ë³µì‚¬.
  */
 GError GKDTreeStructure::makeCudaRenderStructureInfo( cudaRenderPipeline *pCudaPipeline )
 {
@@ -276,22 +276,22 @@ GError GKDTreeStructure::makeCudaRenderStructureInfo( cudaRenderPipeline *pCudaP
 	sceneBox.min_max[1] = make_float4(m_SceneBBox.m_Max.x, m_SceneBBox.m_Max.y, m_SceneBBox.m_Max.z, 0.0f);
 
 	/**
-	 *	KDTree ¼¼ÆÃ.
+	 *	KDTree ì„¸íŒ….
 	 */
 	error = pCudaPipeline->setKDTreeNodeData( m_pKDTreeNodes, m_iKDTreeNodeCount, sceneBox );
 	if ( error != errorNo )
 		return error;
 
 	/**
-	 *	Triangle Offset List ¼¼ÆÃ. ÃÑ ¸Ş¸ğ¸®Áß m_iCurrentTriangleOffset ¸¸ ¼¼ÆÃÇÏ¸é µÊ.
+	 *	Triangle Offset List ì„¸íŒ…. ì´ ë©”ëª¨ë¦¬ì¤‘ m_iCurrentTriangleOffset ë§Œ ì„¸íŒ…í•˜ë©´ ë¨.
 	 */
 	error = pCudaPipeline->setTriangleOffsetList( m_pTriangleOffsetList, m_iCurrentTriangleOffset );
 	if ( error != errorNo )
 		return error;
 	
 	/**
-	 *	cuda ·Î ¿Ã¸± Object Material Á¤º¸ ±¸¼º. ¼ø¼­´Â scene ÀÇ object list ¼ø¼­¸¦ µû¸¥´Ù.
-	 *	cu_tri ±¸Á¶Ã¼ÀÇ internal2.w ¿¡ °¢ »ï°¢ÇüÀÌ Æ÷ÇÔµÈ object ÀÇ	material offset À» ±â·ÏÇÑ´Ù.
+	 *	cuda ë¡œ ì˜¬ë¦´ Object Material ì •ë³´ êµ¬ì„±. ìˆœì„œëŠ” scene ì˜ object list ìˆœì„œë¥¼ ë”°ë¥¸ë‹¤.
+	 *	cu_tri êµ¬ì¡°ì²´ì˜ internal2.w ì— ê° ì‚¼ê°í˜•ì´ í¬í•¨ëœ object ì˜	material offset ì„ ê¸°ë¡í•œë‹¤.
 	 */
 	GObject *pObject = NULL;
 	GMaterial *pMaterial = NULL;
@@ -303,13 +303,13 @@ GError GKDTreeStructure::makeCudaRenderStructureInfo( cudaRenderPipeline *pCudaP
 		pObject = m_pScene->getObject( i );
 		pMaterial = pObject->getMaterial();
 
-		// ±¤¿øÀÌ¸é 1.0 À» ¼¼ÆÃ. 
+		// ê´‘ì›ì´ë©´ 1.0 ì„ ì„¸íŒ…. 
 		if ( pObject->isLight() )
 			pcuObjectMaterial[ i ].light = 1.0f;
 		else
 			pcuObjectMaterial[ i ].light = 0.0f;
 	
-		pcuObjectMaterial[ i ].iObjectID = int_as_float( pObject->getObjectNumber() );
+		pcuObjectMaterial[ i ].iObjectID = int_as_float_H( pObject->getObjectNumber() );
 /*		
 		pcuObjectMaterial[ i ].ambient = make_float3( pMaterial->m_Ambient.r, 
 													pMaterial->m_Ambient.g, 
@@ -335,18 +335,18 @@ GError GKDTreeStructure::makeCudaRenderStructureInfo( cudaRenderPipeline *pCudaP
 		pcuObjectMaterial[ i ].refractionIndex = pMaterial->m_fRefractionIndex;
 		
 		/**
-		 *	texture id ¼¼ÆÃ. texture °¡ loading ÀÌ µÇ¾úÀ»¶§¸¸.
+		 *	texture id ì„¸íŒ…. texture ê°€ loading ì´ ë˜ì—ˆì„ë•Œë§Œ.
 		 */
 		if ( pObject->hasTexture() && GTextureManager::getInstance()->getTexture( pObject->getTextureID() )->isLoaded() ) {
-			pcuObjectMaterial[ i ].textureNumber = int_as_float( pObject->getTextureID() );
+			pcuObjectMaterial[ i ].textureNumber = int_as_float_H( pObject->getTextureID() );
 		} else {
-			pcuObjectMaterial[ i ].textureNumber = int_as_float( -1 );
+			pcuObjectMaterial[ i ].textureNumber = int_as_float_H( -1 );
 		}
 
 	}
 
 	/**
-	 *	Texture Manager ·ÎºÎÅÍ texture µéÀ» °¡Á®¿Í¼­ gpu ·Î ¿Ã¸°´Ù.
+	 *	Texture Manager ë¡œë¶€í„° texture ë“¤ì„ ê°€ì ¸ì™€ì„œ gpu ë¡œ ì˜¬ë¦°ë‹¤.
 	 */
 	int textureCount = GTextureManager::getInstance()->getTextureCount();
 	if ( textureCount > 0 ) {
@@ -380,7 +380,7 @@ GError GKDTreeStructure::makeCudaRenderStructureInfo( cudaRenderPipeline *pCudaP
 	}
 
 	/**
-	 *	GPU ·Î OBJECT Á¤º¸µéÀ» ¿Ã¸®°í HOST ´Â delete
+	 *	GPU ë¡œ OBJECT ì •ë³´ë“¤ì„ ì˜¬ë¦¬ê³  HOST ëŠ” delete
 	 */
 	error = pCudaPipeline->setObjectMaterial( pcuObjectMaterial, objectSize );
 	delete[] pcuObjectMaterial;
@@ -389,7 +389,7 @@ GError GKDTreeStructure::makeCudaRenderStructureInfo( cudaRenderPipeline *pCudaP
 	}
 
 	/**
-	 *	cuda ·Î ¿Ã¸± »ï°¢Çü Á¤º¸ ±¸¼º.
+	 *	cuda ë¡œ ì˜¬ë¦´ ì‚¼ê°í˜• ì •ë³´ êµ¬ì„±.
 	 */
 	#if INTERSECTION_METHOD == 0
 		cuWaldTriangleInfo *pcuTriangleInfo = new cuWaldTriangleInfo[ m_iSceneTriangleCount ];
@@ -406,7 +406,7 @@ GError GKDTreeStructure::makeCudaRenderStructureInfo( cudaRenderPipeline *pCudaP
 	float *uv0, *uv1, *uv2;
 
 	/**
-	 *	cuda ·Î ¿Ã¸± »ï°¢Çü Á¤º¸ ±¸¼º.
+	 *	cuda ë¡œ ì˜¬ë¦´ ì‚¼ê°í˜• ì •ë³´ êµ¬ì„±.
 	 */
 	for( int i = 0; i < m_iSceneTriangleCount; i++ ) {
 
@@ -417,7 +417,7 @@ GError GKDTreeStructure::makeCudaRenderStructureInfo( cudaRenderPipeline *pCudaP
 		#endif
 
 		/** 
-		 *	»ï°¢Çü geometry Á¤º¸ ±¸¼º. normal ¸¸¿Ã¸®¸é µÈ´Ù.
+		 *	ì‚¼ê°í˜• geometry ì •ë³´ êµ¬ì„±. normal ë§Œì˜¬ë¦¬ë©´ ëœë‹¤.
 		 */
 		n0 = (*m_pSceneTriangleList)[i]->n0;
 		n1 = (*m_pSceneTriangleList)[i]->n1;
@@ -451,7 +451,7 @@ GError GKDTreeStructure::makeCudaRenderStructureInfo( cudaRenderPipeline *pCudaP
 
 	
 	/**
-	 *	GPU ·Î »ï°¢Çü Á¤º¸µéÀ» ¿Ã¸®°í HOST ´Â delete
+	 *	GPU ë¡œ ì‚¼ê°í˜• ì •ë³´ë“¤ì„ ì˜¬ë¦¬ê³  HOST ëŠ” delete
 	 */
 	GLogManager::logging( LOG_DEBUG, "Triangles = %d, pcuTriangleInfo = %p "
 					"pcuTriangleGeometry = %p, triangleinfo type sizeof=%d, trianglegeometry type sizeof=%d",
@@ -486,7 +486,7 @@ GError GKDTreeStructure::makeCudaRenderStructureInfo( cudaRenderPipeline *pCudaP
 }
 
 /**
- *	SSE Å¬·¡½º ¿¡¼­ ÂüÁ¶ÇÒ KDTree Æ÷ÀÎÅÍ º¹»ç.
+ *	SSE í´ë˜ìŠ¤ ì—ì„œ ì°¸ì¡°í•  KDTree í¬ì¸í„° ë³µì‚¬.
  */
 GError GKDTreeStructure::makeSSERenderStructureInfo( SSESceneData *pSSEData )
 {
@@ -496,28 +496,28 @@ GError GKDTreeStructure::makeSSERenderStructureInfo( SSESceneData *pSSEData )
 		return errorUnknown;
 
 	/**
-	 *	KDTree ¼¼ÆÃ.
+	 *	KDTree ì„¸íŒ….
 	 */
 	error = pSSEData->setKDTreeNodeData( m_pKDTreeNodes, m_iKDTreeNodeCount, m_SceneBBox );
 	if ( error != errorNo )
 		return error;
 
 	/**
-	 *	Triangle Offset List ¼¼ÆÃ. ÃÑ ¸Ş¸ğ¸®Áß m_iCurrentTriangleOffset ¸¸ ¼¼ÆÃÇÏ¸é µÊ.
+	 *	Triangle Offset List ì„¸íŒ…. ì´ ë©”ëª¨ë¦¬ì¤‘ m_iCurrentTriangleOffset ë§Œ ì„¸íŒ…í•˜ë©´ ë¨.
 	 */
 	error = pSSEData->setTriangleOffsetList( m_pTriangleOffsetList, m_iCurrentTriangleOffset );
 	if ( error != errorNo )
 		return error;
 
 	/**
-	 *	Triangle Object List ¼¼ÆÃ
+	 *	Triangle Object List ì„¸íŒ…
 	 */
 	error = pSSEData->setTriangleObjectList( m_pSceneTriangleList );
 	if ( error != errorNo )
 		return error;
 
 	/**
-	 *	Triangle Accel List ¼¼ÆÃ
+	 *	Triangle Accel List ì„¸íŒ…
 	 */
 	error = pSSEData->buildTriAccList_Barycentric();
 	//error = pSSEData->buildTriAccList_Pluecker();
@@ -528,7 +528,7 @@ GError GKDTreeStructure::makeSSERenderStructureInfo( SSESceneData *pSSEData )
 }
 
 /**
- *	»ï°¢Çü index Á¤º¸¸¦ °¡Áö°í TriangleWrapper Á¤º¸¸¦ Ã£¾Æ¼­ ¸®ÅÏ.
+ *	ì‚¼ê°í˜• index ì •ë³´ë¥¼ ê°€ì§€ê³  TriangleWrapper ì •ë³´ë¥¼ ì°¾ì•„ì„œ ë¦¬í„´.
  */
 GTriangleWrapper *GKDTreeStructure::getTriangleWrapper( const unsigned int triIndex )
 {
@@ -548,13 +548,13 @@ void GKDTreeStructure::buildKDTree(	BoundEdge *bEdge, const TriangleInfo *pTrian
 	m_iTreeLevel = max( inNodeLevel, m_iTreeLevel );
 
 	/**
-	 *	split ÇÏÁö ¾Ê¾ÒÀ» ¶§ÀÇ cost¸¦ ¼¼ÆÃÇÑ´Ù.
+	 *	split í•˜ì§€ ì•Šì•˜ì„ ë•Œì˜ costë¥¼ ì„¸íŒ…í•œë‹¤.
 	 */
 	bestCost.cost = 1. * double( triangleSize ) * m_fIntersectionCost;
 
 	/** 
-	 *	¸¸¾à tree level°ú object ¼ö°¡ threashold¸¦ ³ÑÁö ¾Ê´Â´Ù¸é 
-	 *	splitÀ» ½ÃµµÇÑ´Ù.
+	 *	ë§Œì•½ tree levelê³¼ object ìˆ˜ê°€ threasholdë¥¼ ë„˜ì§€ ì•ŠëŠ”ë‹¤ë©´ 
+	 *	splitì„ ì‹œë„í•œë‹¤.
 	 */
 	if( inNodeLevel < m_iMaxTreeLevel && triangleSize > m_iMinObjPerLeafNode ){
 		for( int axis = 0; axis < 3; axis++ ){
@@ -571,24 +571,24 @@ void GKDTreeStructure::buildKDTree(	BoundEdge *bEdge, const TriangleInfo *pTrian
 
 
 	/**
-	 *	split ÇÒ ÇÊ¿ä°¡ ¾ø´Ù¸é leaf node ·Î ¸¸µç´Ù.
-	 *  (split µÈ ÈÄÀÇ left/right ÀÇ »ï°¢Çü °³¼ö°¡ minimum º¸´Ù ÀÛÀ¸¸é split ÇÏÁö ¾ÊÀ½.)
+	 *	split í•  í•„ìš”ê°€ ì—†ë‹¤ë©´ leaf node ë¡œ ë§Œë“ ë‹¤.
+	 *  (split ëœ í›„ì˜ left/right ì˜ ì‚¼ê°í˜• ê°œìˆ˜ê°€ minimum ë³´ë‹¤ ì‘ìœ¼ë©´ split í•˜ì§€ ì•ŠìŒ.)
 	 */
 	if( !bestCost.is_valid() )
 	{
 #if FRUSTUM_CULLING == ON
-		const int bbox_data_size = 6;		// bbox ÀÇ min/max ÁÂÇ¥°ªÀ» ÀúÀåÇÒ °ø°£ ¸¶·Ã
+		const int bbox_data_size = 6;		// bbox ì˜ min/max ì¢Œí‘œê°’ì„ ì €ì¥í•  ê³µê°„ ë§ˆë ¨
 #else
-		const int bbox_data_size = 0;		// ±âÁ¸ÀÇ °æ¿ì bbox Á¤º¸ ÀúÀåÇÏÁö ¾ÊÀ½
+		const int bbox_data_size = 0;		// ê¸°ì¡´ì˜ ê²½ìš° bbox ì •ë³´ ì €ì¥í•˜ì§€ ì•ŠìŒ
 #endif
 		/**
-		 *	leaf³ëµå°¡ ¸¹¾Æ¼­ objectOffsetList°¡ ºÎÁ·ÇÏ¸é ¸Ş¸ğ¸®¸¦ ´õ ÇÒ´çÇÑ´Ù.
+		 *	leafë…¸ë“œê°€ ë§ì•„ì„œ objectOffsetListê°€ ë¶€ì¡±í•˜ë©´ ë©”ëª¨ë¦¬ë¥¼ ë” í• ë‹¹í•œë‹¤.
 		 */
 		if( m_iCurrentTriangleOffset + triangleSize + bbox_data_size >= m_iAllocatedTriangleOffsetSize )
 			reAllocTriangleOffsetList( max( 2 * m_iAllocatedTriangleOffsetSize, 512 ) );
 
 		/**
-		 *	leaf node°¡ ÂüÁ¶ÇÏ´Â triangleÀÇ offset À» offsetList ¸¶Áö¸·¿¡ Ãß°¡ÇØ ³Ö´Â´Ù.
+		 *	leaf nodeê°€ ì°¸ì¡°í•˜ëŠ” triangleì˜ offset ì„ offsetList ë§ˆì§€ë§‰ì— ì¶”ê°€í•´ ë„£ëŠ”ë‹¤.
 		 */
 		unsigned *currOffsetList = &m_pTriangleOffsetList[ m_iCurrentTriangleOffset ];
 
@@ -617,7 +617,7 @@ void GKDTreeStructure::buildKDTree(	BoundEdge *bEdge, const TriangleInfo *pTrian
 		m_iCurrentTriangleOffset += (bbox_data_size + leafCount);
 
 		/** 
-		 *	´õÀÌ»ó pTriangleInfos ´Â ÇÊ¿ä¾øÀ¸¹Ç·Î ¸Ş¸ğ¸® °ø°£ Àı¾àÀ» À§ÇØ ¾ø¾Ø´Ù.
+		 *	ë”ì´ìƒ pTriangleInfos ëŠ” í•„ìš”ì—†ìœ¼ë¯€ë¡œ ë©”ëª¨ë¦¬ ê³µê°„ ì ˆì•½ì„ ìœ„í•´ ì—†ì•¤ë‹¤.
 		 */
 		delete[] pTriangleInfos;
 
@@ -631,20 +631,20 @@ void GKDTreeStructure::buildKDTree(	BoundEdge *bEdge, const TriangleInfo *pTrian
 		TriangleInfo *pRightTriangles = new TriangleInfo[ bestCost.n_right ];
 
 		const unsigned n_bEdge = 2 * triangleSize;
-		setBoundEdgeList( bestCost.axis, pTriangleInfos, n_bEdge, bEdge );						// TriangleInfo ºÎÅÍ bEdge ¸¦ »ı¼º ¹× Á¤·Ä
+		setBoundEdgeList( bestCost.axis, pTriangleInfos, n_bEdge, bEdge );						// TriangleInfo ë¶€í„° bEdge ë¥¼ ìƒì„± ë° ì •ë ¬
 
-		pushChildTriangles( n_bEdge, bEdge, pLeftTriangles, pRightTriangles, bestCost );		// bEdge ·Î ºÎÅÍ pLeftTriangle, pRightTriangle À» »ı¼º
+		pushChildTriangles( n_bEdge, bEdge, pLeftTriangles, pRightTriangles, bestCost );		// bEdge ë¡œ ë¶€í„° pLeftTriangle, pRightTriangle ì„ ìƒì„±
 		splitClipping( bestCost.n_left, bestCost, pLeftTriangles, 0 );
 		splitClipping( bestCost.n_right, bestCost, pRightTriangles, 1 );
 
 		/** 
-		 *	´õÀÌ»ó pTriangleInfos ´Â ÇÊ¿ä¾øÀ¸¹Ç·Î ¸Ş¸ğ¸® °ø°£ Àı¾àÀ» À§ÇØ ¾ø¾Ø´Ù.
-		 *	¹İµå½Ã pushChildTriangles ¸¦ ¼öÇàÇÑ ÀÌÈÄ¿¡ ¾ø¾Ö¾ß ÇÑ´Ù.
+		 *	ë”ì´ìƒ pTriangleInfos ëŠ” í•„ìš”ì—†ìœ¼ë¯€ë¡œ ë©”ëª¨ë¦¬ ê³µê°„ ì ˆì•½ì„ ìœ„í•´ ì—†ì•¤ë‹¤.
+		 *	ë°˜ë“œì‹œ pushChildTriangles ë¥¼ ìˆ˜í–‰í•œ ì´í›„ì— ì—†ì• ì•¼ í•œë‹¤.
 		 */
 		delete[] pTriangleInfos;
 
 		/**
-		 *	left, child node ¼¼ÆÃ.
+		 *	left, child node ì„¸íŒ….
 		 */
 		const unsigned int nodeNum = m_iKDTreeNodeCount;
 		m_iKDTreeNodeCount += 2;
@@ -652,15 +652,15 @@ void GKDTreeStructure::buildKDTree(	BoundEdge *bEdge, const TriangleInfo *pTrian
 		setInnerNode( inNode, bestCost.axis, nodeNum, bestCost.splitPos );
 
 		/**
-		 *	³ëµå°¡ ¸¹¾Æ¼­ m_iKDTreeNodeCount°¡ ºÎÁ·ÇÏ¸é ¸Ş¸ğ¸®¸¦ ´õ ÇÒ´çÇÑ´Ù.
+		 *	ë…¸ë“œê°€ ë§ì•„ì„œ m_iKDTreeNodeCountê°€ ë¶€ì¡±í•˜ë©´ ë©”ëª¨ë¦¬ë¥¼ ë” í• ë‹¹í•œë‹¤.
 		 */
 		if( m_iKDTreeNodeCount >= m_iAllocatedkdNodeCount )
 			reAllocKdtreeNodes( max( 2 * m_iAllocatedkdNodeCount, 512 ) );
 
 		/**
-		 *	Left, Right Àç±Í Å½»ö. 
-		 *	pLeftTriangles, pRightTriangles ´Â buildKDTree ÇÔ¼ö ¾È¿¡¼­
-		 *	»ç¿ëÇÏ°í ¹Ù·Î ¾ø¾Ø´Ù.
+		 *	Left, Right ì¬ê·€ íƒìƒ‰. 
+		 *	pLeftTriangles, pRightTriangles ëŠ” buildKDTree í•¨ìˆ˜ ì•ˆì—ì„œ
+		 *	ì‚¬ìš©í•˜ê³  ë°”ë¡œ ì—†ì•¤ë‹¤.
 		 */
 		buildKDTree( bEdge, pLeftTriangles, bestCost.n_left, leftnBounds, inNodeLevel + 1, &m_pKDTreeNodes[ nodeNum ] );
 		buildKDTree( bEdge, pRightTriangles, bestCost.n_right, rightnBounds, inNodeLevel + 1, &m_pKDTreeNodes[ nodeNum + 1 ] );
@@ -764,8 +764,8 @@ void GKDTreeStructure::tryEmptySplit( const int axis, GBoundingBox inBBox,
 	const int axis1 = ( axis + 1 ) % 3, axis2 = ( axis + 2 ) % 3;
 	GVector cell_extent( inBBox.m_Max - inBBox.m_Min );
 
-	//´Ù¸¥ Ãà¿¡ ºñÇØ ³Ê¹« ÀÛÀº ÃàÀ» ÀÚ¸£·Á¸é ½ºÅµÇÏ´Â ·çÆ¾À» Ãß°¡ÇÒ ¼öµµ.
-	//ÀüÃ¼ ¾À¿¡ ´ëÇØ¼­ ³Ê¹« Å« ¸®ÇÁ¸¦ ¸¸µé·Á°í ÇÏ¸é ¸Şµğ¾È ½ºÇÃ¸´?(Å« empty node¸¦ ¹æÇØÇÒÁöµµ)
+	//ë‹¤ë¥¸ ì¶•ì— ë¹„í•´ ë„ˆë¬´ ì‘ì€ ì¶•ì„ ìë¥´ë ¤ë©´ ìŠ¤í‚µí•˜ëŠ” ë£¨í‹´ì„ ì¶”ê°€í•  ìˆ˜ë„.
+	//ì „ì²´ ì”¬ì— ëŒ€í•´ì„œ ë„ˆë¬´ í° ë¦¬í”„ë¥¼ ë§Œë“¤ë ¤ê³  í•˜ë©´ ë©”ë””ì•ˆ ìŠ¤í”Œë¦¿?(í° empty nodeë¥¼ ë°©í•´í• ì§€ë„)
 	const double
 		cell_area = cell_extent.x * cell_extent.y + 
 					cell_extent.y * cell_extent.z + 
@@ -784,7 +784,7 @@ void GKDTreeStructure::tryEmptySplit( const int axis, GBoundingBox inBBox,
 		cell_length = cell_max - cell_min;
 
 	/**
-	 *	¸ğµç split candidate ¿¡ ´ëÇØ¼­ Cost ¸¦ °è»êÇÑ´Ù.
+	 *	ëª¨ë“  split candidate ì— ëŒ€í•´ì„œ Cost ë¥¼ ê³„ì‚°í•œë‹¤.
 	 */
 	{
 		int open = 0, close = 0, num_planars = 0, local_open = 0, local_close = 0, j;
@@ -798,15 +798,15 @@ void GKDTreeStructure::tryEmptySplit( const int axis, GBoundingBox inBBox,
 
 			BoundEdge curr_bEdge = bEdge[i];
 
-			//planar´Â open°ú close¿¡ µÑ ´Ù Æ÷ÇÔµÊ
+			//planarëŠ” openê³¼ closeì— ë‘˜ ë‹¤ í¬í•¨ë¨
 			open += local_open + num_planars;
 			close += local_close + num_planars;
 			local_open = 0;  local_close = 0; num_planars = 0;			
 
-			//ÇöÀç axis¿Í side¿¡ ´ëÇØ Æ÷Áö¼Ç±¸ÇÔ
+			//í˜„ì¬ axisì™€ sideì— ëŒ€í•´ í¬ì§€ì…˜êµ¬í•¨
 			float cur_position = curr_bEdge.t;
 			{
-				//¶È°°Àº°Ô ¿©·¯°³ ÀÖÀ» ¶§´Â Á¦ÀÏ ¿À¸¥ÂÊ¿¡¼­¸¸ SAH °è»êÀ» ÇÑ´Ù.
+				//ë˜‘ê°™ì€ê²Œ ì—¬ëŸ¬ê°œ ìˆì„ ë•ŒëŠ” ì œì¼ ì˜¤ë¥¸ìª½ì—ì„œë§Œ SAH ê³„ì‚°ì„ í•œë‹¤.
 				for ( j = i; j < (int)n_bEdge; j++ )
 				{
 					BoundEdge tmp_bEdge = bEdge[j];
@@ -816,12 +816,12 @@ void GKDTreeStructure::tryEmptySplit( const int axis, GBoundingBox inBBox,
 						is_left		= (tmp_bEdge.type == BoundEdge::START),
 						is_planar	= tmp_bEdge.isPlanar;//(axis);
 
-					//Ä«¿îÆÃ
+					//ì¹´ìš´íŒ…
 					if (!is_planar) {
 						local_open	+= is_left ? 1 : 0;
 						local_close	+= is_left ? 0 : 1;
 					}
-					else//ÇÃ¶ó³ªÇÏ´Ù¸é µû·Î Ä«¿îÆÃ
+					else//í”Œë¼ë‚˜í•˜ë‹¤ë©´ ë”°ë¡œ ì¹´ìš´íŒ…
 						num_planars += is_left ? 1 : 0;	// only count it once
 
 					curr_bEdge = tmp_bEdge;
@@ -830,7 +830,7 @@ void GKDTreeStructure::tryEmptySplit( const int axis, GBoundingBox inBBox,
 				}
 			}
 
-			//ÀÌ·± °æ¿ì°¡ ½ÇÁ¦·Î »ı±æ·Á³ª? ==ÀÇ °æ¿ì´Â ´ç¿¬È÷ ÀÖ°ÚÁö.
+			//ì´ëŸ° ê²½ìš°ê°€ ì‹¤ì œë¡œ ìƒê¸¸ë ¤ë‚˜? ==ì˜ ê²½ìš°ëŠ” ë‹¹ì—°íˆ ìˆê² ì§€.
 			if (cur_position <= cell_min + SYS_EPSILON_FLT) continue;//
 			if (cur_position >= cell_max - SYS_EPSILON_FLT) break;//
 
@@ -875,22 +875,22 @@ void GKDTreeStructure::tryEmptySplit( const int axis, GBoundingBox inBBox,
 					n_cross			= open - n_leftOnly,
 					n_rightOnly		= triangleSize - (n_leftOnly + n_cross + num_planars);
 
-				//ÀÛÀº ¼¿ÀÌ°Å³ª, ÇÑÂÊÀÌ ºñ¾î ÀÖ´Ù¸é ´Ù¸¥ÂÊ ¼¿·Î planar°¡ °£´Ù.
+				//ì‘ì€ ì…€ì´ê±°ë‚˜, í•œìª½ì´ ë¹„ì–´ ìˆë‹¤ë©´ ë‹¤ë¥¸ìª½ ì…€ë¡œ planarê°€ ê°„ë‹¤.
 
 				int planar_side = area_l < area_r ? BoundEdge::START : BoundEdge::END;
 				if ((n_leftOnly+n_cross == 0) | (n_rightOnly+n_cross == 0))
 					planar_side = n_leftOnly == 0 ? BoundEdge::END : BoundEdge::START;
-				//ÇÃ¶ó³ª¸¦ ÇÑÂÊÀ¸·Î ´Ù ¹Ğ¾úÀ¸¹Ç·Î ¾ø´Â ¼¿Àº °¹¼ö¸¦ 0À¸·Î ¼¼ÆÃ
+				//í”Œë¼ë‚˜ë¥¼ í•œìª½ìœ¼ë¡œ ë‹¤ ë°€ì—ˆìœ¼ë¯€ë¡œ ì—†ëŠ” ì…€ì€ ê°¯ìˆ˜ë¥¼ 0ìœ¼ë¡œ ì„¸íŒ…
 				const int
 					num_planar_left		= planar_side == BoundEdge::START ? num_planars : 0,
 					num_planar_right	= planar_side == BoundEdge::END ? num_planars : 0;
 
-				//ÃÖÁ¾ÀûÀÎ ¾çÂÊ °¹¼ö.
+				//ìµœì¢…ì ì¸ ì–‘ìª½ ê°¯ìˆ˜.
 				const int
 					cost_num_left	= n_leftOnly+n_cross+num_planar_left,
 					cost_num_right	= n_rightOnly+n_cross+num_planar_right;
 
-				// ÇöÀç m_fEmptyBonus = 0.15
+				// í˜„ì¬ m_fEmptyBonus = 0.15
 				//! \ref <1> "Fast Ray Tracing for Modern General Purpose CPU"
 				const float
 					emptyBonus = 
@@ -898,16 +898,16 @@ void GKDTreeStructure::tryEmptySplit( const int axis, GBoundingBox inBBox,
 
 				const double
 					factor = 1, // .85, //.5, //
-					//¾Æ¸¶ cost_num_left¸¦ ±×´ë·Î ¾È ¾²´Â ÀÌÀ¯´Â Àû´çÇÑ factor¸¦ ÁÖ±â À§ÇØ¼­ÀÎµí.
+					//ì•„ë§ˆ cost_num_leftë¥¼ ê·¸ëŒ€ë¡œ ì•ˆ ì“°ëŠ” ì´ìœ ëŠ” ì ë‹¹í•œ factorë¥¼ ì£¼ê¸° ìœ„í•´ì„œì¸ë“¯.
 					nl = double(n_leftOnly+num_planar_left) + factor*(n_cross),
 					nr = double(n_rightOnly+num_planar_right) + factor*(n_cross),
 
-					//ÀÌ·± ÈçÀûÀ» º¸´Ï ´Ù¾çÇÑ ½Ãµµ¸¦ ÇÏ¸ç »ğÁúÇÑ°Ô º¸ÀÌ´Â±¸³ª.
+					//ì´ëŸ° í”ì ì„ ë³´ë‹ˆ ë‹¤ì–‘í•œ ì‹œë„ë¥¼ í•˜ë©° ì‚½ì§ˆí•œê²Œ ë³´ì´ëŠ”êµ¬ë‚˜.
 					//mul = ((nl == 0.) | (nr == 0.)) ? cost_term_mul*factor : cost_term_mul,
 					//score = cost_term_add + mul*(nl*area_l + nr*area_r);
 					score = (cost_term_add + cost_term_mul*(nl*area_l + nr*area_r))*emptyBonus;
 				if (
-					((cost_num_left > 0) | (cost_num_right > 0)) &//¾È ÀÌ·± °æ¿ìµµ ÀÖ³ª?;;;;
+					((cost_num_left > 0) | (cost_num_right > 0)) &//ì•ˆ ì´ëŸ° ê²½ìš°ë„ ìˆë‚˜?;;;;
 					//((cost_num_left > 0) & (cost_num_right > 0)) &	// shouldn't happen, and in any case should be produced by the space cut heuristic earlier.
 					(score < bestCost.cost))
 				{
@@ -955,31 +955,31 @@ void GKDTreeStructure::splitWithSAH( const int axis, GBoundingBox inBBox,
 {
 	/**
 	 * 2009. 12. 02.
-	 * boolean ÇüÀÇ ¿¬»êÀ» | -> || ·Î & -> && ·Î °íÃÆÀ½
-	 * ±× ¿Ü °³ÀÎ ÀûÀÎ ¹Ù·¥Àº double À» ¾ø¾Ö°í, edge ¸¦ Æ÷ÀÎÅÍ·Î ¹Ù²Ù°í ½ÍÀ½.
+	 * boolean í˜•ì˜ ì—°ì‚°ì„ | -> || ë¡œ & -> && ë¡œ ê³ ì³¤ìŒ
+	 * ê·¸ ì™¸ ê°œì¸ ì ì¸ ë°”ë¨ì€ double ì„ ì—†ì• ê³ , edge ë¥¼ í¬ì¸í„°ë¡œ ë°”ê¾¸ê³  ì‹¶ìŒ.
 	*/
 	/**
 	 * 2010. 3. 8.
-	 * score ¶ó´Â ´Ü¾î¸¦ ¸ğµÎ cost ·Î ¹Ù²åÀ½. (score ¿Í cost ´Â Á¤ ¹İ´ëÀÇ ÀÇ¹Ì)
-	 * coord ¶ó´Â ´Ü¾î¸¦ ¸ğµÎ cur_position À¸·Î ¹Ù²åÀ½.
-	 * Build time À» ÁÙÀÏ ¼ö ÀÖ´Â ¿ä¼Ò.
-	 *	1. Edge ¸¦ Æ÷ÀÎÅÍ·Î ¹Ù²ã¼­ »ç¿ëÇÔ.
-	 *	2. Edge Á¤·ÄÀ» ¸Å¹ø ÇÏÁö ¸»°í, ÇÑ¹ø¿¡ ÇÔ.
-	 *	3. Edge ÀÇ Type À» °í·ÁÇØ¼­ Á¤·Ä¿¡ »ç¿ëÇÏ°Å³ª ÇÒ ¼ö ÀÖ´Â °ÍÀ¸·Î ¾Ë°í ÀÖÀ½.
+	 * score ë¼ëŠ” ë‹¨ì–´ë¥¼ ëª¨ë‘ cost ë¡œ ë°”ê¿¨ìŒ. (score ì™€ cost ëŠ” ì • ë°˜ëŒ€ì˜ ì˜ë¯¸)
+	 * coord ë¼ëŠ” ë‹¨ì–´ë¥¼ ëª¨ë‘ cur_position ìœ¼ë¡œ ë°”ê¿¨ìŒ.
+	 * Build time ì„ ì¤„ì¼ ìˆ˜ ìˆëŠ” ìš”ì†Œ.
+	 *	1. Edge ë¥¼ í¬ì¸í„°ë¡œ ë°”ê¿”ì„œ ì‚¬ìš©í•¨.
+	 *	2. Edge ì •ë ¬ì„ ë§¤ë²ˆ í•˜ì§€ ë§ê³ , í•œë²ˆì— í•¨.
+	 *	3. Edge ì˜ Type ì„ ê³ ë ¤í•´ì„œ ì •ë ¬ì— ì‚¬ìš©í•˜ê±°ë‚˜ í•  ìˆ˜ ìˆëŠ” ê²ƒìœ¼ë¡œ ì•Œê³  ìˆìŒ.
 	*/
 	const int axis1 = ( axis + 1 ) % 3, axis2 = ( axis + 2 ) % 3;
 
-	// ½ÇÁ¦ º¤ÅÍ°¡ ¾Æ´Ô. 3ÃàÀÇ ±æÀÌ.
+	// ì‹¤ì œ ë²¡í„°ê°€ ì•„ë‹˜. 3ì¶•ì˜ ê¸¸ì´.
 	GVector cell_extent( inBBox.m_Max - inBBox.m_Min );
 
 	/**
-	 * ¿©±â¼­ ¸ğµç ³ĞÀÌ´Â ½ÇÁ¦ ³ĞÀÌ°¡ ¾Æ´Ï¶ó 1/2 µÈ ³ĞÀÌÀÓ.
+	 * ì—¬ê¸°ì„œ ëª¨ë“  ë„“ì´ëŠ” ì‹¤ì œ ë„“ì´ê°€ ì•„ë‹ˆë¼ 1/2 ëœ ë„“ì´ì„.
 	*/
 
-	//´Ù¸¥ Ãà¿¡ ºñÇØ ³Ê¹« ÀÛÀº ÃàÀ» ÀÚ¸£·Á¸é ½ºÅµÇÏ´Â ·çÆ¾À» Ãß°¡ÇÒ ¼öµµ.
-	//ÀüÃ¼ ¾À¿¡ ´ëÇØ¼­ ³Ê¹« Å« ¸®ÇÁ¸¦ ¸¸µé·Á°í ÇÏ¸é ¸Şµğ¾È ½ºÇÃ¸´?(Å« empty node¸¦ ¹æÇØÇÒÁöµµ)
+	//ë‹¤ë¥¸ ì¶•ì— ë¹„í•´ ë„ˆë¬´ ì‘ì€ ì¶•ì„ ìë¥´ë ¤ë©´ ìŠ¤í‚µí•˜ëŠ” ë£¨í‹´ì„ ì¶”ê°€í•  ìˆ˜ë„.
+	//ì „ì²´ ì”¬ì— ëŒ€í•´ì„œ ë„ˆë¬´ í° ë¦¬í”„ë¥¼ ë§Œë“¤ë ¤ê³  í•˜ë©´ ë©”ë””ì•ˆ ìŠ¤í”Œë¦¿?(í° empty nodeë¥¼ ë°©í•´í• ì§€ë„)
 
-	// ÀüÃ¼ Cell ³ĞÀÌÀÇ 1/2
+	// ì „ì²´ Cell ë„“ì´ì˜ 1/2
 	const double
 		cell_area = cell_extent.x * cell_extent.y + 
 					cell_extent.y * cell_extent.z + 
@@ -998,35 +998,35 @@ void GKDTreeStructure::splitWithSAH( const int axis, GBoundingBox inBBox,
 		cell_length = cell_max - cell_min;
 
 	/**
-	 *	¸ğµç split candidate ¿¡ ´ëÇØ¼­ Cost ¸¦ °è»êÇÑ´Ù.
+	 *	ëª¨ë“  split candidate ì— ëŒ€í•´ì„œ Cost ë¥¼ ê³„ì‚°í•œë‹¤.
 	 */
 	{
 		/**
-		 * open			: triangle box ±âÁØÀ¸·Î min ¿¡ ÇØ´çÇÏ´Â °³¼ö
-		 * close		: triangle box ±âÁØÀ¸·Î max ¿¡ ÇØ´çÇÏ´Â °³¼ö
-		 * num_planars	: triangle box °¡ min = max °¡ µÇ´Â °ÍµéÀÇ °³¼ö(local ÀÓ)
-		 * local_open / local_close : ÇöÀç curr_bEdge.t ÀÎ split position ¿¡ ÇØ´çÇÏ´Â °³¼ö
+		 * open			: triangle box ê¸°ì¤€ìœ¼ë¡œ min ì— í•´ë‹¹í•˜ëŠ” ê°œìˆ˜
+		 * close		: triangle box ê¸°ì¤€ìœ¼ë¡œ max ì— í•´ë‹¹í•˜ëŠ” ê°œìˆ˜
+		 * num_planars	: triangle box ê°€ min = max ê°€ ë˜ëŠ” ê²ƒë“¤ì˜ ê°œìˆ˜(local ì„)
+		 * local_open / local_close : í˜„ì¬ curr_bEdge.t ì¸ split position ì— í•´ë‹¹í•˜ëŠ” ê°œìˆ˜
 		*/
 		int open = 0, close = 0, num_planars = 0, local_open = 0, local_close = 0;
 		
 		const unsigned n_bEdge = triangleSize * 2;
-		// nlogn ¹æ½ÄÃ³·³ Á¤·ÄÇÏÁö ¾ÊÀ½, edge ÀÇ type Àº °í·ÁÇÏÁö ¾Ê°í ¼ø¼öÈ÷ À§Ä¡·Î¸¸ Á¤·ÄÇÔ
+		// nlogn ë°©ì‹ì²˜ëŸ¼ ì •ë ¬í•˜ì§€ ì•ŠìŒ, edge ì˜ type ì€ ê³ ë ¤í•˜ì§€ ì•Šê³  ìˆœìˆ˜íˆ ìœ„ì¹˜ë¡œë§Œ ì •ë ¬í•¨
 		setBoundEdgeList( axis, pTriangles, n_bEdge, bEdge );
 
 		for ( unsigned int i = 0; i < n_bEdge; i++ ) {
 
 			BoundEdge curr_bEdge = bEdge[i];
 
-			//planar´Â open°ú close¿¡ µÑ ´Ù Æ÷ÇÔµÊ
-			// (¿ø·¡´Â 2°³(min/max)°¡ planar ÇÑ°³·Î °è»ê µÆÀ¸¹Ç·Î min->open, max->close ·Î °¢°¢ µé¾î°¨.)
+			//planarëŠ” openê³¼ closeì— ë‘˜ ë‹¤ í¬í•¨ë¨
+			// (ì›ë˜ëŠ” 2ê°œ(min/max)ê°€ planar í•œê°œë¡œ ê³„ì‚° ëìœ¼ë¯€ë¡œ min->open, max->close ë¡œ ê°ê° ë“¤ì–´ê°.)
 			open += local_open + num_planars;
 			close += local_close + num_planars;
-			local_open = 0;  local_close = 0; num_planars = 0; // num_planars µµ local °è»êÀÓ
+			local_open = 0;  local_close = 0; num_planars = 0; // num_planars ë„ local ê³„ì‚°ì„
 
-			//ÇöÀç axis¿Í side¿¡ ´ëÇØ Æ÷Áö¼Ç±¸ÇÔ
+			//í˜„ì¬ axisì™€ sideì— ëŒ€í•´ í¬ì§€ì…˜êµ¬í•¨
 			const float cur_position = curr_bEdge.t;
 			{
-				//¶È°°Àº°Ô ¿©·¯°³ ÀÖÀ» ¶§´Â Á¦ÀÏ ¿À¸¥ÂÊ¿¡¼­¸¸ SAH °è»êÀ» ÇÑ´Ù.
+				//ë˜‘ê°™ì€ê²Œ ì—¬ëŸ¬ê°œ ìˆì„ ë•ŒëŠ” ì œì¼ ì˜¤ë¥¸ìª½ì—ì„œë§Œ SAH ê³„ì‚°ì„ í•œë‹¤.
 				for ( unsigned int j = i; j < n_bEdge; j++ )
 				{
 					BoundEdge tmp_bEdge = bEdge[j];
@@ -1036,12 +1036,12 @@ void GKDTreeStructure::splitWithSAH( const int axis, GBoundingBox inBBox,
 						is_left		= (tmp_bEdge.type == BoundEdge::START),
 						is_planar	= tmp_bEdge.isPlanar;//(axis);
 
-					//Ä«¿îÆÃ
+					//ì¹´ìš´íŒ…
 					if (!is_planar) {
-						local_open	+= is_left ? 1 : 0; //!< box ÀÇ ¿ŞÂÊÀº local_open À» Áõ°¡
-						local_close	+= is_left ? 0 : 1; //!< box ÀÇ ¿À¸¥ÂÊÀº local_close ¸¦ Áõ°¡
+						local_open	+= is_left ? 1 : 0; //!< box ì˜ ì™¼ìª½ì€ local_open ì„ ì¦ê°€
+						local_close	+= is_left ? 0 : 1; //!< box ì˜ ì˜¤ë¥¸ìª½ì€ local_close ë¥¼ ì¦ê°€
 					}
-					else//ÇÃ¶ó³ªÇÏ´Ù¸é µû·Î Ä«¿îÆÃ
+					else//í”Œë¼ë‚˜í•˜ë‹¤ë©´ ë”°ë¡œ ì¹´ìš´íŒ…
 						num_planars += is_left ? 1 : 0;	// only count it once
 
 					curr_bEdge = tmp_bEdge;
@@ -1050,7 +1050,7 @@ void GKDTreeStructure::splitWithSAH( const int axis, GBoundingBox inBBox,
 				}
 			}
 
-			//ÀÌ·± °æ¿ì°¡ ½ÇÁ¦·Î »ı±æ·Á³ª? ==ÀÇ °æ¿ì´Â ´ç¿¬È÷ ÀÖ°ÚÁö.
+			//ì´ëŸ° ê²½ìš°ê°€ ì‹¤ì œë¡œ ìƒê¸¸ë ¤ë‚˜? ==ì˜ ê²½ìš°ëŠ” ë‹¹ì—°íˆ ìˆê² ì§€.
 			if (cur_position <= cell_min + SYS_EPSILON_FLT) continue;//
 			if (cur_position >= cell_max - SYS_EPSILON_FLT) break;//
 
@@ -1064,31 +1064,31 @@ void GKDTreeStructure::splitWithSAH( const int axis, GBoundingBox inBBox,
 					area_r = extent_r*area_mul + area_add;
 
 				const int
-					n_leftOnly		= close + local_close,	// close °¡ µÈ´Ù¸é ±× »ï°¢ÇüÀº ¿À¸¥ÂÊ¿¡ ÀÖÁöµµ ¾Ê°Ô µÊ (°ãÄ¡Áöµµ ¾ÊÀ½)
-					n_cross			= open - n_leftOnly,	// open = n_leftOnly + n_cross (ÇöÀç local_open Àº Æ÷ÇÔÇÏÁö ¾ÊÀ½)
+					n_leftOnly		= close + local_close,	// close ê°€ ëœë‹¤ë©´ ê·¸ ì‚¼ê°í˜•ì€ ì˜¤ë¥¸ìª½ì— ìˆì§€ë„ ì•Šê²Œ ë¨ (ê²¹ì¹˜ì§€ë„ ì•ŠìŒ)
+					n_cross			= open - n_leftOnly,	// open = n_leftOnly + n_cross (í˜„ì¬ local_open ì€ í¬í•¨í•˜ì§€ ì•ŠìŒ)
 					n_rightOnly		= triangleSize - (n_leftOnly + n_cross + num_planars);
 
-				//////ÀÛÀº ¼¿ÀÌ°Å³ª, ÇÑÂÊÀÌ ºñ¾î ÀÖ´Ù¸é ´Ù¸¥ÂÊ ¼¿·Î planar°¡ °£´Ù.
+				//////ì‘ì€ ì…€ì´ê±°ë‚˜, í•œìª½ì´ ë¹„ì–´ ìˆë‹¤ë©´ ë‹¤ë¥¸ìª½ ì…€ë¡œ planarê°€ ê°„ë‹¤.
 
 				/**
-				 * 2010. 3. 8. ±âÁ¸ ÄÚµå´Â planar ¸¦ ³ÖÀ» ¶§ 
-				 *	1. ±âº»ÀûÀ¸·Î ÀÛÀº Å©±âÀÇ ¹Ú½º·Î µé¾î°¨.
-				 *	2. ¸¸¾à Å« Å©±âÀÇ ¹Ú½º¿¡ ³Ö¾îºÃ´Âµ¥, ÀÛÀº ¹Ú½º°¡ empty °¡ µÉ °æ¿ì Å« ¹Ú½º¿¡ ³ÖÀ½.
-				 * ¼öÁ¤ : ¾çÂÊ´Ù ³Ö¾îº¸°í, ½ÇÁúÀûÀ¸·Î cost ¸¦ °è»êÇÔ.
+				 * 2010. 3. 8. ê¸°ì¡´ ì½”ë“œëŠ” planar ë¥¼ ë„£ì„ ë•Œ 
+				 *	1. ê¸°ë³¸ì ìœ¼ë¡œ ì‘ì€ í¬ê¸°ì˜ ë°•ìŠ¤ë¡œ ë“¤ì–´ê°.
+				 *	2. ë§Œì•½ í° í¬ê¸°ì˜ ë°•ìŠ¤ì— ë„£ì–´ë´¤ëŠ”ë°, ì‘ì€ ë°•ìŠ¤ê°€ empty ê°€ ë  ê²½ìš° í° ë°•ìŠ¤ì— ë„£ìŒ.
+				 * ìˆ˜ì • : ì–‘ìª½ë‹¤ ë„£ì–´ë³´ê³ , ì‹¤ì§ˆì ìœ¼ë¡œ cost ë¥¼ ê³„ì‚°í•¨.
 				*/
 				{
-					//// ±âº»ÀûÀ¸·Î planar »ï°¢ÇüµéÀº ÀÛÀº °÷À¸·Î µé¾î°¨ 
+					//// ê¸°ë³¸ì ìœ¼ë¡œ planar ì‚¼ê°í˜•ë“¤ì€ ì‘ì€ ê³³ìœ¼ë¡œ ë“¤ì–´ê° 
 					//int planar_side = area_l < area_r ? BoundEdge::START : BoundEdge::END;
-					//// ÇÏÁö¸¸ ¸¸¾à planar °¡ ´õ Å« °÷À¸·Î µé¾î°¡¼­ ´Ù¸¥ °÷ÀÌ empty °¡ µÉ °æ¿ì´Â ´õ Å« °÷À¸·Î µé¾î°¨
+					//// í•˜ì§€ë§Œ ë§Œì•½ planar ê°€ ë” í° ê³³ìœ¼ë¡œ ë“¤ì–´ê°€ì„œ ë‹¤ë¥¸ ê³³ì´ empty ê°€ ë  ê²½ìš°ëŠ” ë” í° ê³³ìœ¼ë¡œ ë“¤ì–´ê°
 					//if ((n_leftOnly+n_cross == 0) || (n_rightOnly+n_cross == 0))
 					//	planar_side = n_leftOnly == 0 ? BoundEdge::END : BoundEdge::START;
 
-					////ÇÃ¶ó³ª¸¦ ÇÑÂÊÀ¸·Î ´Ù ¹Ğ¾úÀ¸¹Ç·Î ¾ø´Â ¼¿Àº °¹¼ö¸¦ 0À¸·Î ¼¼ÆÃ
+					////í”Œë¼ë‚˜ë¥¼ í•œìª½ìœ¼ë¡œ ë‹¤ ë°€ì—ˆìœ¼ë¯€ë¡œ ì—†ëŠ” ì…€ì€ ê°¯ìˆ˜ë¥¼ 0ìœ¼ë¡œ ì„¸íŒ…
 					//const int
 					//	num_planar_left		= planar_side == BoundEdge::START ? num_planars : 0,
 					//	num_planar_right	= planar_side == BoundEdge::END ? num_planars : 0;
 
-					////ÃÖÁ¾ÀûÀÎ ¾çÂÊ °¹¼ö.
+					////ìµœì¢…ì ì¸ ì–‘ìª½ ê°¯ìˆ˜.
 					//const int
 					//	cost_num_left	= n_leftOnly+n_cross+num_planar_left,
 					//	cost_num_right	= n_rightOnly+n_cross+num_planar_right;
@@ -1099,23 +1099,23 @@ void GKDTreeStructure::splitWithSAH( const int axis, GBoundingBox inBBox,
 
 					//const double
 					//	factor = 1, // .85, //.5, //
-					//	//¾Æ¸¶ cost_num_left¸¦ ±×´ë·Î ¾È ¾²´Â ÀÌÀ¯´Â Àû´çÇÑ factor¸¦ ÁÖ±â À§ÇØ¼­ÀÎµí.
+					//	//ì•„ë§ˆ cost_num_leftë¥¼ ê·¸ëŒ€ë¡œ ì•ˆ ì“°ëŠ” ì´ìœ ëŠ” ì ë‹¹í•œ factorë¥¼ ì£¼ê¸° ìœ„í•´ì„œì¸ë“¯.
 					//	nl = double(n_leftOnly+num_planar_left) + factor*(n_cross),
 					//	nr = double(n_rightOnly+num_planar_right) + factor*(n_cross),
 
-					//	//ÀÌ·± ÈçÀûÀ» º¸´Ï ´Ù¾çÇÑ ½Ãµµ¸¦ ÇÏ¸ç »ğÁúÇÑ°Ô º¸ÀÌ´Â±¸³ª.
+					//	//ì´ëŸ° í”ì ì„ ë³´ë‹ˆ ë‹¤ì–‘í•œ ì‹œë„ë¥¼ í•˜ë©° ì‚½ì§ˆí•œê²Œ ë³´ì´ëŠ”êµ¬ë‚˜.
 					//	//mul = ((nl == 0.) | (nr == 0.)) ? cost_term_mul*factor : cost_term_mul,
 					//	//cost = cost_term_add + mul*(nl*area_l + nr*area_r);
 					//	cost = (cost_term_add + cost_term_mul*(nl*area_l + nr*area_r))*emptyBonus;
 					////if (
-					////	((cost_num_left > 0) || (cost_num_right > 0)) &&//¾È ÀÌ·± °æ¿ìµµ ÀÖ³ª?;;;;
+					////	((cost_num_left > 0) || (cost_num_right > 0)) &&//ì•ˆ ì´ëŸ° ê²½ìš°ë„ ìˆë‚˜?;;;;
 					////	//((cost_num_left > 0) && (cost_num_right > 0)) &&	// shouldn't happen, and in any case should be produced by the space cut heuristic earlier.
 				}
 
-				// ¹è¿­[0] Àº plnar °¡ ¿ŞÂÊ¿¡ µé¾î°¬À» °æ¿ì
-				// ¹è¿­[1] Àº plnar °¡ ¿À¸¥ÂÊ¿¡ µé¾î°¬À» °æ¿ì
+				// ë°°ì—´[0] ì€ plnar ê°€ ì™¼ìª½ì— ë“¤ì–´ê°”ì„ ê²½ìš°
+				// ë°°ì—´[1] ì€ plnar ê°€ ì˜¤ë¥¸ìª½ì— ë“¤ì–´ê°”ì„ ê²½ìš°
 
-				//ÃÖÁ¾ÀûÀÎ ¾çÂÊ °¹¼ö.
+				//ìµœì¢…ì ì¸ ì–‘ìª½ ê°¯ìˆ˜.
 				const int cost_num_left[2]		= { n_leftOnly+n_cross+num_planars, n_leftOnly+n_cross };
 				const int cost_num_right[2]	= { n_rightOnly+n_cross, n_rightOnly+n_cross+num_planars };
 
@@ -1126,9 +1126,9 @@ void GKDTreeStructure::splitWithSAH( const int axis, GBoundingBox inBBox,
 					(cost_num_left[0] == 0 || cost_num_right[0] == 0) ? m_fEmptyBonus : 1.0f, 
 					(cost_num_left[1] == 0 || cost_num_right[1] == 0) ? m_fEmptyBonus : 1.0f };
 
-					// ÀÌ ÄÚµå´Â n_cross ¿¡ ´ëÇÑ factor ¸¦ °í·ÁÇÏÁö ¾Ê¾ÒÀ½
-					// factor = 1 ·Î µÇ¾î ÀÖ±â ¶§¹®ÀÓ. ¸¸¾à factor °¡ 1 ¸»°í ´Ù¸¥ °ªÀÌ µé¾î°¥ °æ¿ì ÄÚµå°¡ »ìÂ¦ ¼öÁ¤µÇ¾î¾ßÇÔ.
-					// unrolling ÇØÁÙ °ÍÀÌ¶ó°í °¡Á¤ÇÔ
+					// ì´ ì½”ë“œëŠ” n_cross ì— ëŒ€í•œ factor ë¥¼ ê³ ë ¤í•˜ì§€ ì•Šì•˜ìŒ
+					// factor = 1 ë¡œ ë˜ì–´ ìˆê¸° ë•Œë¬¸ì„. ë§Œì•½ factor ê°€ 1 ë§ê³  ë‹¤ë¥¸ ê°’ì´ ë“¤ì–´ê°ˆ ê²½ìš° ì½”ë“œê°€ ì‚´ì§ ìˆ˜ì •ë˜ì–´ì•¼í•¨.
+					// unrolling í•´ì¤„ ê²ƒì´ë¼ê³  ê°€ì •í•¨
 					double SAH[2]; // SAH cost
 					for( int i = 0; i < 2; i++ )
 					{
@@ -1136,8 +1136,8 @@ void GKDTreeStructure::splitWithSAH( const int axis, GBoundingBox inBBox,
 
 						if( emptyTestOnly == true )
 						{
-							// Empty Test Only ÀÏ °æ¿ì Empty Test ¸¸ ¼öÇàÇÏ°í best cost ¿Í ºñ±³ÇÏÁö ¾ÊÀ½.
-							// Áï, µÑ Áß ÇÏ³ª°¡ Empty ÀÏ °æ¿ì¸¸ ÀÚ¸§.
+							// Empty Test Only ì¼ ê²½ìš° Empty Test ë§Œ ìˆ˜í–‰í•˜ê³  best cost ì™€ ë¹„êµí•˜ì§€ ì•ŠìŒ.
+							// ì¦‰, ë‘˜ ì¤‘ í•˜ë‚˜ê°€ Empty ì¼ ê²½ìš°ë§Œ ìë¦„.
 							if( cost_num_left[i] != 0 && cost_num_right[i] != 0 )
 								continue;
 						}
@@ -1154,7 +1154,7 @@ void GKDTreeStructure::splitWithSAH( const int axis, GBoundingBox inBBox,
 					int num_left;
 					int num_right;
 
-					if( SAH[0] <= SAH[1] ) //! planar ¸¦ ¿ŞÂÊ¿¡ ³Ö´Â °ÍÀÌ ³´´Ù¸é,
+					if( SAH[0] <= SAH[1] ) //! planar ë¥¼ ì™¼ìª½ì— ë„£ëŠ” ê²ƒì´ ë‚«ë‹¤ë©´,
 					{
 						cost = SAH[0];
 						planar_side = BoundEdge::START;
@@ -1198,8 +1198,8 @@ void GKDTreeStructure::splitWithSAH_ExtraCost( const int axis, GBoundingBox inBB
 	const int axis1 = ( axis + 1 ) % 3, axis2 = ( axis + 2 ) % 3;
 	GVector cell_extent( inBBox.m_Max - inBBox.m_Min );
 
-	//´Ù¸¥ Ãà¿¡ ºñÇØ ³Ê¹« ÀÛÀº ÃàÀ» ÀÚ¸£·Á¸é ½ºÅµÇÏ´Â ·çÆ¾À» Ãß°¡ÇÒ ¼öµµ.
-	//ÀüÃ¼ ¾À¿¡ ´ëÇØ¼­ ³Ê¹« Å« ¸®ÇÁ¸¦ ¸¸µé·Á°í ÇÏ¸é ¸Şµğ¾È ½ºÇÃ¸´?(Å« empty node¸¦ ¹æÇØÇÒÁöµµ)
+	//ë‹¤ë¥¸ ì¶•ì— ë¹„í•´ ë„ˆë¬´ ì‘ì€ ì¶•ì„ ìë¥´ë ¤ë©´ ìŠ¤í‚µí•˜ëŠ” ë£¨í‹´ì„ ì¶”ê°€í•  ìˆ˜ë„.
+	//ì „ì²´ ì”¬ì— ëŒ€í•´ì„œ ë„ˆë¬´ í° ë¦¬í”„ë¥¼ ë§Œë“¤ë ¤ê³  í•˜ë©´ ë©”ë””ì•ˆ ìŠ¤í”Œë¦¿?(í° empty nodeë¥¼ ë°©í•´í• ì§€ë„)
 	const double
 		cell_area = cell_extent.x * cell_extent.y + 
 					cell_extent.y * cell_extent.z + 
@@ -1218,7 +1218,7 @@ void GKDTreeStructure::splitWithSAH_ExtraCost( const int axis, GBoundingBox inBB
 		cell_length = cell_max - cell_min;
 
 	/**
-	 *	¸ğµç split candidate ¿¡ ´ëÇØ¼­ Cost ¸¦ °è»êÇÑ´Ù.
+	 *	ëª¨ë“  split candidate ì— ëŒ€í•´ì„œ Cost ë¥¼ ê³„ì‚°í•œë‹¤.
 	 */
 	{
 		int open = 0, close = 0, num_planars = 0, local_open = 0, local_close = 0;
@@ -1230,15 +1230,15 @@ void GKDTreeStructure::splitWithSAH_ExtraCost( const int axis, GBoundingBox inBB
 
 			BoundEdge curr_bEdge = bEdge[i];
 
-			//planar´Â open°ú close¿¡ µÑ ´Ù Æ÷ÇÔµÊ
+			//planarëŠ” openê³¼ closeì— ë‘˜ ë‹¤ í¬í•¨ë¨
 			open += local_open + num_planars;
 			close += local_close + num_planars;
 			local_open = 0;  local_close = 0; num_planars = 0;			
 
-			//ÇöÀç axis¿Í side¿¡ ´ëÇØ Æ÷Áö¼Ç±¸ÇÔ
+			//í˜„ì¬ axisì™€ sideì— ëŒ€í•´ í¬ì§€ì…˜êµ¬í•¨
 			const float cur_position = curr_bEdge.t;
 			{
-				//¶È°°Àº°Ô ¿©·¯°³ ÀÖÀ» ¶§´Â Á¦ÀÏ ¿À¸¥ÂÊ¿¡¼­¸¸ SAH °è»êÀ» ÇÑ´Ù.
+				//ë˜‘ê°™ì€ê²Œ ì—¬ëŸ¬ê°œ ìˆì„ ë•ŒëŠ” ì œì¼ ì˜¤ë¥¸ìª½ì—ì„œë§Œ SAH ê³„ì‚°ì„ í•œë‹¤.
 				for ( unsigned int j = i; j < n_bEdge; j++ )
 				{
 					BoundEdge tmp_bEdge = bEdge[j];
@@ -1248,12 +1248,12 @@ void GKDTreeStructure::splitWithSAH_ExtraCost( const int axis, GBoundingBox inBB
 						is_left		= (tmp_bEdge.type == BoundEdge::START),
 						is_planar	= tmp_bEdge.isPlanar;//(axis);
 
-					//Ä«¿îÆÃ
+					//ì¹´ìš´íŒ…
 					if (!is_planar) {
 						local_open	+= is_left ? 1 : 0;
 						local_close	+= is_left ? 0 : 1;
 					}
-					else//ÇÃ¶ó³ªÇÏ´Ù¸é µû·Î Ä«¿îÆÃ
+					else//í”Œë¼ë‚˜í•˜ë‹¤ë©´ ë”°ë¡œ ì¹´ìš´íŒ…
 						num_planars += is_left ? 1 : 0;	// only count it once
 
 					curr_bEdge = tmp_bEdge;
@@ -1262,7 +1262,7 @@ void GKDTreeStructure::splitWithSAH_ExtraCost( const int axis, GBoundingBox inBB
 				}
 			}
 
-			//ÀÌ·± °æ¿ì°¡ ½ÇÁ¦·Î »ı±æ·Á³ª? ==ÀÇ °æ¿ì´Â ´ç¿¬È÷ ÀÖ°ÚÁö.
+			//ì´ëŸ° ê²½ìš°ê°€ ì‹¤ì œë¡œ ìƒê¸¸ë ¤ë‚˜? ==ì˜ ê²½ìš°ëŠ” ë‹¹ì—°íˆ ìˆê² ì§€.
 			if (cur_position <= cell_min + SYS_EPSILON_FLT) continue;//
 			if (cur_position >= cell_max - SYS_EPSILON_FLT) break;//
 
@@ -1280,22 +1280,22 @@ void GKDTreeStructure::splitWithSAH_ExtraCost( const int axis, GBoundingBox inBB
 					n_cross			= open - n_leftOnly,
 					n_rightOnly		= triangleSize - (n_leftOnly + n_cross + num_planars);
 
-				//ÀÛÀº ¼¿ÀÌ°Å³ª, ÇÑÂÊÀÌ ºñ¾î ÀÖ´Ù¸é ´Ù¸¥ÂÊ ¼¿·Î planar°¡ °£´Ù.
+				//ì‘ì€ ì…€ì´ê±°ë‚˜, í•œìª½ì´ ë¹„ì–´ ìˆë‹¤ë©´ ë‹¤ë¥¸ìª½ ì…€ë¡œ planarê°€ ê°„ë‹¤.
 
 				int planar_side = area_l < area_r ? BoundEdge::START : BoundEdge::END;	
 				if ((n_leftOnly+n_cross == 0) | (n_rightOnly+n_cross == 0))
 					planar_side = n_leftOnly == 0 ? BoundEdge::END : BoundEdge::START;
-				//ÇÃ¶ó³ª¸¦ ÇÑÂÊÀ¸·Î ´Ù ¹Ğ¾úÀ¸¹Ç·Î ¾ø´Â ¼¿Àº °¹¼ö¸¦ 0À¸·Î ¼¼ÆÃ
+				//í”Œë¼ë‚˜ë¥¼ í•œìª½ìœ¼ë¡œ ë‹¤ ë°€ì—ˆìœ¼ë¯€ë¡œ ì—†ëŠ” ì…€ì€ ê°¯ìˆ˜ë¥¼ 0ìœ¼ë¡œ ì„¸íŒ…
 				const int
 					num_planar_left		= planar_side == BoundEdge::START ? num_planars : 0,
 					num_planar_right	= planar_side == BoundEdge::END ? num_planars : 0;
 
-				//ÃÖÁ¾ÀûÀÎ ¾çÂÊ °¹¼ö.
+				//ìµœì¢…ì ì¸ ì–‘ìª½ ê°¯ìˆ˜.
 				const int
 					cost_num_left	= n_leftOnly+n_cross+num_planar_left,
 					cost_num_right	= n_rightOnly+n_cross+num_planar_right;
 
-				// µÑ Áß ÇÏ³ª°¡ empty ÀÏ °æ¿ì
+				// ë‘˜ ì¤‘ í•˜ë‚˜ê°€ empty ì¼ ê²½ìš°
 				const bool emptyBoxed = (cost_num_left == 0 || cost_num_right == 0);
 
 
@@ -1306,24 +1306,24 @@ void GKDTreeStructure::splitWithSAH_ExtraCost( const int axis, GBoundingBox inBB
 
 				const double
 					factor = 1, // .85, //.5, //
-					//¾Æ¸¶ cost_num_left¸¦ ±×´ë·Î ¾È ¾²´Â ÀÌÀ¯´Â Àû´çÇÑ factor¸¦ ÁÖ±â À§ÇØ¼­ÀÎµí.
+					//ì•„ë§ˆ cost_num_leftë¥¼ ê·¸ëŒ€ë¡œ ì•ˆ ì“°ëŠ” ì´ìœ ëŠ” ì ë‹¹í•œ factorë¥¼ ì£¼ê¸° ìœ„í•´ì„œì¸ë“¯.
 					nl = double(n_leftOnly+num_planar_left) + factor*(n_cross),
 					nr = double(n_rightOnly+num_planar_right) + factor*(n_cross),
 
-					//ÀÌ·± ÈçÀûÀ» º¸´Ï ´Ù¾çÇÑ ½Ãµµ¸¦ ÇÏ¸ç »ğÁúÇÑ°Ô º¸ÀÌ´Â±¸³ª.
+					//ì´ëŸ° í”ì ì„ ë³´ë‹ˆ ë‹¤ì–‘í•œ ì‹œë„ë¥¼ í•˜ë©° ì‚½ì§ˆí•œê²Œ ë³´ì´ëŠ”êµ¬ë‚˜.
 					//mul = ((nl == 0.) | (nr == 0.)) ? cost_term_mul*factor : cost_term_mul,
 					//score = cost_term_add + mul*(nl*area_l + nr*area_r);
 
-					// ±âÁ¸ ¹æ¹ı
+					// ê¸°ì¡´ ë°©ë²•
 					//score = (cost_term_add + cost_term_mul*(nl*area_l + nr*area_r))*emptyBonus;
 
 					// with extra cost
-					// extra cost ´Â empty box °¡ ¾Æ´Ò °æ¿ì¸¸ Àû¿ëµÊ
+					// extra cost ëŠ” empty box ê°€ ì•„ë‹ ê²½ìš°ë§Œ ì ìš©ë¨
 					score = (cost_term_add + cost_term_mul*(nl*area_l + nr*area_r) + 
 						bothProbability * m_fExtraTraversalCost)*emptyBonus;
 
 				if (
-					((cost_num_left > 0) | (cost_num_right > 0)) &//¾È ÀÌ·± °æ¿ìµµ ÀÖ³ª?;;;;
+					((cost_num_left > 0) | (cost_num_right > 0)) &//ì•ˆ ì´ëŸ° ê²½ìš°ë„ ìˆë‚˜?;;;;
 					//((cost_num_left > 0) & (cost_num_right > 0)) &	// shouldn't happen, and in any case should be produced by the space cut heuristic earlier.
 					(score < bestCost.cost))
 				{
@@ -1352,8 +1352,8 @@ void GKDTreeStructure::splitWithVisibility( const int axis, GBoundingBox inBBox,
 	const int axis1 = ( axis + 1 ) % 3, axis2 = ( axis + 2 ) % 3;
 	GVector cell_extent( inBBox.m_Max - inBBox.m_Min );
 
-	//´Ù¸¥ Ãà¿¡ ºñÇØ ³Ê¹« ÀÛÀº ÃàÀ» ÀÚ¸£·Á¸é ½ºÅµÇÏ´Â ·çÆ¾À» Ãß°¡ÇÒ ¼öµµ.
-	//ÀüÃ¼ ¾À¿¡ ´ëÇØ¼­ ³Ê¹« Å« ¸®ÇÁ¸¦ ¸¸µé·Á°í ÇÏ¸é ¸Şµğ¾È ½ºÇÃ¸´?(Å« empty node¸¦ ¹æÇØÇÒÁöµµ)
+	//ë‹¤ë¥¸ ì¶•ì— ë¹„í•´ ë„ˆë¬´ ì‘ì€ ì¶•ì„ ìë¥´ë ¤ë©´ ìŠ¤í‚µí•˜ëŠ” ë£¨í‹´ì„ ì¶”ê°€í•  ìˆ˜ë„.
+	//ì „ì²´ ì”¬ì— ëŒ€í•´ì„œ ë„ˆë¬´ í° ë¦¬í”„ë¥¼ ë§Œë“¤ë ¤ê³  í•˜ë©´ ë©”ë””ì•ˆ ìŠ¤í”Œë¦¿?(í° empty nodeë¥¼ ë°©í•´í• ì§€ë„)
 	const double
 		cell_area = cell_extent.x * cell_extent.y + 
 					cell_extent.y * cell_extent.z + 
@@ -1372,7 +1372,7 @@ void GKDTreeStructure::splitWithVisibility( const int axis, GBoundingBox inBBox,
 		cell_length = cell_max - cell_min;
 
 	/**
-	 *	¸ğµç split candidate ¿¡ ´ëÇØ¼­ Cost ¸¦ °è»êÇÑ´Ù.
+	 *	ëª¨ë“  split candidate ì— ëŒ€í•´ì„œ Cost ë¥¼ ê³„ì‚°í•œë‹¤.
 	 */
 	{
 		int open = 0, close = 0, num_planars = 0, local_open = 0, local_close = 0;
@@ -1384,15 +1384,15 @@ void GKDTreeStructure::splitWithVisibility( const int axis, GBoundingBox inBBox,
 
 			BoundEdge curr_bEdge = bEdge[i];
 
-			//planar´Â open°ú close¿¡ µÑ ´Ù Æ÷ÇÔµÊ
+			//planarëŠ” openê³¼ closeì— ë‘˜ ë‹¤ í¬í•¨ë¨
 			open += local_open + num_planars;
 			close += local_close + num_planars;
 			local_open = 0;  local_close = 0; num_planars = 0;			
 
-			//ÇöÀç axis¿Í side¿¡ ´ëÇØ Æ÷Áö¼Ç±¸ÇÔ
+			//í˜„ì¬ axisì™€ sideì— ëŒ€í•´ í¬ì§€ì…˜êµ¬í•¨
 			const float cur_position = curr_bEdge.t;
 			{
-				//¶È°°Àº°Ô ¿©·¯°³ ÀÖÀ» ¶§´Â Á¦ÀÏ ¿À¸¥ÂÊ¿¡¼­¸¸ SAH °è»êÀ» ÇÑ´Ù.
+				//ë˜‘ê°™ì€ê²Œ ì—¬ëŸ¬ê°œ ìˆì„ ë•ŒëŠ” ì œì¼ ì˜¤ë¥¸ìª½ì—ì„œë§Œ SAH ê³„ì‚°ì„ í•œë‹¤.
 				for ( unsigned int j = i; j < n_bEdge; j++ )
 				{
 					BoundEdge tmp_bEdge = bEdge[j];
@@ -1402,12 +1402,12 @@ void GKDTreeStructure::splitWithVisibility( const int axis, GBoundingBox inBBox,
 						is_left		= (tmp_bEdge.type == BoundEdge::START),
 						is_planar	= tmp_bEdge.isPlanar;//(axis);
 
-					//Ä«¿îÆÃ
+					//ì¹´ìš´íŒ…
 					if (!is_planar) {
 						local_open	+= is_left ? 1 : 0;
 						local_close	+= is_left ? 0 : 1;
 					}
-					else//ÇÃ¶ó³ªÇÏ´Ù¸é µû·Î Ä«¿îÆÃ
+					else//í”Œë¼ë‚˜í•˜ë‹¤ë©´ ë”°ë¡œ ì¹´ìš´íŒ…
 						num_planars += is_left ? 1 : 0;	// only count it once
 
 					curr_bEdge = tmp_bEdge;
@@ -1416,7 +1416,7 @@ void GKDTreeStructure::splitWithVisibility( const int axis, GBoundingBox inBBox,
 				}
 			}
 
-			//ÀÌ·± °æ¿ì°¡ ½ÇÁ¦·Î »ı±æ·Á³ª? ==ÀÇ °æ¿ì´Â ´ç¿¬È÷ ÀÖ°ÚÁö.
+			//ì´ëŸ° ê²½ìš°ê°€ ì‹¤ì œë¡œ ìƒê¸¸ë ¤ë‚˜? ==ì˜ ê²½ìš°ëŠ” ë‹¹ì—°íˆ ìˆê² ì§€.
 			if (cur_position <= cell_min + SYS_EPSILON_FLT) continue;//
 			if (cur_position >= cell_max - SYS_EPSILON_FLT) break;//
 
@@ -1434,17 +1434,17 @@ void GKDTreeStructure::splitWithVisibility( const int axis, GBoundingBox inBBox,
 					n_cross			= open - n_leftOnly,
 					n_rightOnly		= triangleSize - (n_leftOnly + n_cross + num_planars);
 
-				//ÀÛÀº ¼¿ÀÌ°Å³ª, ÇÑÂÊÀÌ ºñ¾î ÀÖ´Ù¸é ´Ù¸¥ÂÊ ¼¿·Î planar°¡ °£´Ù.
+				//ì‘ì€ ì…€ì´ê±°ë‚˜, í•œìª½ì´ ë¹„ì–´ ìˆë‹¤ë©´ ë‹¤ë¥¸ìª½ ì…€ë¡œ planarê°€ ê°„ë‹¤.
 
 				int planar_side = area_l < area_r ? BoundEdge::START : BoundEdge::END;	
 				if ((n_leftOnly+n_cross == 0) | (n_rightOnly+n_cross == 0))
 					planar_side = n_leftOnly == 0 ? BoundEdge::END : BoundEdge::START;
-				//ÇÃ¶ó³ª¸¦ ÇÑÂÊÀ¸·Î ´Ù ¹Ğ¾úÀ¸¹Ç·Î ¾ø´Â ¼¿Àº °¹¼ö¸¦ 0À¸·Î ¼¼ÆÃ
+				//í”Œë¼ë‚˜ë¥¼ í•œìª½ìœ¼ë¡œ ë‹¤ ë°€ì—ˆìœ¼ë¯€ë¡œ ì—†ëŠ” ì…€ì€ ê°¯ìˆ˜ë¥¼ 0ìœ¼ë¡œ ì„¸íŒ…
 				const int
 					num_planar_left		= planar_side == BoundEdge::START ? num_planars : 0,
 					num_planar_right	= planar_side == BoundEdge::END ? num_planars : 0;
 
-				//ÃÖÁ¾ÀûÀÎ ¾çÂÊ °¹¼ö.
+				//ìµœì¢…ì ì¸ ì–‘ìª½ ê°¯ìˆ˜.
 				const int
 					cost_num_left	= n_leftOnly+n_cross+num_planar_left,
 					cost_num_right	= n_rightOnly+n_cross+num_planar_right;
@@ -1455,16 +1455,16 @@ void GKDTreeStructure::splitWithVisibility( const int axis, GBoundingBox inBBox,
 
 				const double
 					factor = 1, // .85, //.5, //
-					//¾Æ¸¶ cost_num_left¸¦ ±×´ë·Î ¾È ¾²´Â ÀÌÀ¯´Â Àû´çÇÑ factor¸¦ ÁÖ±â À§ÇØ¼­ÀÎµí.
+					//ì•„ë§ˆ cost_num_leftë¥¼ ê·¸ëŒ€ë¡œ ì•ˆ ì“°ëŠ” ì´ìœ ëŠ” ì ë‹¹í•œ factorë¥¼ ì£¼ê¸° ìœ„í•´ì„œì¸ë“¯.
 					nl = double(n_leftOnly+num_planar_left) + factor*(n_cross),
 					nr = double(n_rightOnly+num_planar_right) + factor*(n_cross),
 
-					//ÀÌ·± ÈçÀûÀ» º¸´Ï ´Ù¾çÇÑ ½Ãµµ¸¦ ÇÏ¸ç »ğÁúÇÑ°Ô º¸ÀÌ´Â±¸³ª.
+					//ì´ëŸ° í”ì ì„ ë³´ë‹ˆ ë‹¤ì–‘í•œ ì‹œë„ë¥¼ í•˜ë©° ì‚½ì§ˆí•œê²Œ ë³´ì´ëŠ”êµ¬ë‚˜.
 					//mul = ((nl == 0.) | (nr == 0.)) ? cost_term_mul*factor : cost_term_mul,
 					//score = cost_term_add + mul*(nl*area_l + nr*area_r);
 					score = (cost_term_add + cost_term_mul*(nl*area_l + nr*area_r))*emptyBonus;
 				if (
-					((cost_num_left > 0) | (cost_num_right > 0)) &//¾È ÀÌ·± °æ¿ìµµ ÀÖ³ª?;;;;
+					((cost_num_left > 0) | (cost_num_right > 0)) &//ì•ˆ ì´ëŸ° ê²½ìš°ë„ ìˆë‚˜?;;;;
 					//((cost_num_left > 0) & (cost_num_right > 0)) &	// shouldn't happen, and in any case should be produced by the space cut heuristic earlier.
 					(score < bestCost.cost))
 				{
@@ -1533,7 +1533,7 @@ bool GKDTreeStructure::interSectEdgePlane( GPoint &p0,
 	float D = planeNorm.innerProduct( u );
 	float N = -planeNorm.innerProduct( w );
 
-	// N==0ÀÌ¸é plane¿¡ ¿§Áö°¡ ºÙ¾î ÀÖ´Â°Å°í, ¾Æ´Ï¸é intersection¾È ÇÑ°Å.
+	// N==0ì´ë©´ planeì— ì—£ì§€ê°€ ë¶™ì–´ ìˆëŠ”ê±°ê³ , ì•„ë‹ˆë©´ intersectionì•ˆ í•œê±°.
 	if ( fabs( D ) < SYS_EPSILON_FLT )
 		return false;
 
@@ -1564,7 +1564,7 @@ void GKDTreeStructure::splitClipping( const int triangleSize,
 		GBoundingBox currBBox = pTriangleInfos[i].boundingBox;
 
 		/**
-		 *	¸¸¾à »ï°¢ÇüÀÌ Split Plane°ú ±³Â÷ ÇÑ´Ù¸é,
+		 *	ë§Œì•½ ì‚¼ê°í˜•ì´ Split Planeê³¼ êµì°¨ í•œë‹¤ë©´,
 		 */
 		if( ( currBBox.m_Min[ axis ] < bestCost.splitPos ) && 
 			( currBBox.m_Max[ axis ] > bestCost.splitPos ) ) {
@@ -1575,7 +1575,7 @@ void GKDTreeStructure::splitClipping( const int triangleSize,
 			int nLeft = 0,	nRight = 0;
 			GPoint leftVec[4], rightVec[4];
 
-			//¿ŞÂÊ subBox¿¡ ÀÖ´Â°Ç ¿ŞÂÊ¿¡, ¿À¸¥ÂÊµµ ¸¶Âù°¡Áö·Î.
+			//ì™¼ìª½ subBoxì— ìˆëŠ”ê±´ ì™¼ìª½ì—, ì˜¤ë¥¸ìª½ë„ ë§ˆì°¬ê°€ì§€ë¡œ.
 			for( int nPoint = 0; nPoint < 3; nPoint++ ) {
 				if( p[ nPoint ][ axis ] < bestCost.splitPos )
 					leftVec[ nLeft++ ] = p[ nPoint ];
@@ -1693,21 +1693,21 @@ bool GKDTreeStructure::loadfromFile_EmptySAH( const char *filename )
 	GLogManager::logging( LOG_INFO, " -> KDTree load started..." );
 
 	/** 
-	 *	Scene ÀüÃ¼ÀÇ »ï°¢Çü list ¸¦ ±¸¼ºÇØ ¿Â´Ù.
+	 *	Scene ì „ì²´ì˜ ì‚¼ê°í˜• list ë¥¼ êµ¬ì„±í•´ ì˜¨ë‹¤.
 	 */
 	m_pSceneTriangleList = m_pScene->createSceneTriangleList( m_SceneBBox );
 	m_iSceneTriangleCount = m_pSceneTriangleList->size();
 
 	/**
-	 *	KD-Tree ¸¦ À§ÇÑ µ¥ÀÌÅÍ ±¸¼º. 
-	 *	¸ğµç »ï°¢ÇüÀÇ Á¤·ÄÀ» À§ÇÑ °ø°£.offset Á¤º¸´Â 
-	 *	m_SceneTriangleList vector ¾ÈÀÇ index ¿Í µ¿ÀÏÇÏ´Ù.
+	 *	KD-Tree ë¥¼ ìœ„í•œ ë°ì´í„° êµ¬ì„±. 
+	 *	ëª¨ë“  ì‚¼ê°í˜•ì˜ ì •ë ¬ì„ ìœ„í•œ ê³µê°„.offset ì •ë³´ëŠ” 
+	 *	m_SceneTriangleList vector ì•ˆì˜ index ì™€ ë™ì¼í•˜ë‹¤.
 	 */
 	TriangleInfo *pTriangleInfos = new TriangleInfo[ m_iSceneTriangleCount ];
 	for( int i = 0; i < m_iSceneTriangleCount; i++ ) {
 		pTriangleInfos[ i ].offset = i;
 		pTriangleInfos[ i ].pTriangleWrapper = m_pSceneTriangleList->getTriangleWrapper( i );
-		/** bounding box ´Â ½ÇÁ¦ triangle bouding box °ú´Â ´Ù¸¦¼ö ÀÖÀ¸¹Ç·Î µû·Î ÀúÀå°ü¸® */
+		/** bounding box ëŠ” ì‹¤ì œ triangle bouding box ê³¼ëŠ” ë‹¤ë¥¼ìˆ˜ ìˆìœ¼ë¯€ë¡œ ë”°ë¡œ ì €ì¥ê´€ë¦¬ */
 		pTriangleInfos[ i ].boundingBox = m_pSceneTriangleList->getTriangleWrapper( i )->m_BBox;
 	}
 
@@ -1721,10 +1721,10 @@ bool GKDTreeStructure::loadfromFile_EmptySAH( const char *filename )
 	// ------------------------------------------------------------
 	// Load kd-tree node info
 	// ------------------------------------------------------------
-	int nLeafSize_MIN = 100000;		// Åë°è¿ë
-	int nLeafSize_AVG = 0;			// Åë°è¿ë
-	int nLeafSize_MAX = 0;			// Åë°è¿ë
-	int nTreeEmptyNodeCount = 0;	// Åë°è¿ë
+	int nLeafSize_MIN = 100000;		// í†µê³„ìš©
+	int nLeafSize_AVG = 0;			// í†µê³„ìš©
+	int nLeafSize_MAX = 0;			// í†µê³„ìš©
+	int nTreeEmptyNodeCount = 0;	// í†µê³„ìš©
 	int nTreeNodeCount = 0;
 	fgets( data, 1024, f );
 	sscanf(data+1,"%d", &nTreeNodeCount);
@@ -1783,15 +1783,15 @@ bool GKDTreeStructure::loadfromFile_EmptySAH( const char *filename )
 	// ------------------------------------------------------------
 	// Rebuild kd-tree
 	// ------------------------------------------------------------
-	int nTreeLevel_MIN = 100000;	// Åë°è¿ë
-	int nTreeLevel_AVG = 0;			// Åë°è¿ë
-	int nTreeLevel_MAX = 0;			// Åë°è¿ë
-	int curDepth = 0;				// Åë°è¿ë
+	int nTreeLevel_MIN = 100000;	// í†µê³„ìš©
+	int nTreeLevel_AVG = 0;			// í†µê³„ìš©
+	int nTreeLevel_MAX = 0;			// í†µê³„ìš©
+	int curDepth = 0;				// í†µê³„ìš©
 	m_iAllocatedTriangleOffsetSize = 1048576;
 	m_pTriangleOffsetList = new unsigned int [ m_iAllocatedTriangleOffsetSize ];
 	memset( m_pTriangleOffsetList, 0x00, sizeof( unsigned int ) * m_iAllocatedTriangleOffsetSize );
 
-	const int    stackmax   = (nTreeNodeCount + 1)/2;		// ÀÌ¹Ì ±¸¼ºµÈ Empty SAH tree ÀÇ ÃÖ´ë °¡´ÉÇÑ level Å©±â
+	const int    stackmax   = (nTreeNodeCount + 1)/2;		// ì´ë¯¸ êµ¬ì„±ëœ Empty SAH tree ì˜ ìµœëŒ€ ê°€ëŠ¥í•œ level í¬ê¸°
 	unsigned int stackIndex = 0;
 	GBoundingBox*	pStack_BBox  = (GBoundingBox*) malloc (stackmax * sizeof (GBoundingBox));
 	KdTreeNode**	pStack_Node  = (kdtreeNode**)  malloc (stackmax * sizeof (kdtreeNode*));
@@ -1823,7 +1823,7 @@ bool GKDTreeStructure::loadfromFile_EmptySAH( const char *filename )
 		nTreeLevel_AVG += curDepth;
 
 		{
-			// pTriangles ±¸¼º
+			// pTriangles êµ¬ì„±
 			const int baseOffset = OBJECTLIST_OFFSET(*curNode);
 			const int nObjs		 = OBJECT_SIZE(*curNode);
 
@@ -1838,7 +1838,7 @@ bool GKDTreeStructure::loadfromFile_EmptySAH( const char *filename )
 			//buildKDTree( bEdge, pTriangles, nObjs, curBBox, stackIndex, &m_pKDTreeNodes[ m_iKDTreeNodeCount ] );
 			buildKDTree( bEdge, pTriangles, nObjs, curBBox, stackIndex, curNode );
 
-			//delete[] pTriangles; // buildKDTree() ¾È¿¡¼­ ¸Ş¸ğ¸®°¡ ÇØÁ¦µÊ
+			//delete[] pTriangles; // buildKDTree() ì•ˆì—ì„œ ë©”ëª¨ë¦¬ê°€ í•´ì œë¨
 		}
 		
 		if (stackIndex == 0) break;
@@ -1913,22 +1913,22 @@ bool GKDTreeStructure::loadfromFile_SAH( const char *filename )
 //	GLogManager::logging( LOG_INFO, " -> KDTree load started..." );
 
 	/** 
-	 *	Scene ÀüÃ¼ÀÇ »ï°¢Çü list ¸¦ ±¸¼ºÇØ ¿Â´Ù.
+	 *	Scene ì „ì²´ì˜ ì‚¼ê°í˜• list ë¥¼ êµ¬ì„±í•´ ì˜¨ë‹¤.
 	 */
 	m_pSceneTriangleList = m_pScene->createSceneTriangleList( m_SceneBBox );
 	m_iSceneTriangleCount = m_pSceneTriangleList->size();
 
 #if 0
 	/**
-	 *	KD-Tree ¸¦ À§ÇÑ µ¥ÀÌÅÍ ±¸¼º. 
-	 *	¸ğµç »ï°¢ÇüÀÇ Á¤·ÄÀ» À§ÇÑ °ø°£.offset Á¤º¸´Â 
-	 *	m_SceneTriangleList vector ¾ÈÀÇ index ¿Í µ¿ÀÏÇÏ´Ù.
+	 *	KD-Tree ë¥¼ ìœ„í•œ ë°ì´í„° êµ¬ì„±. 
+	 *	ëª¨ë“  ì‚¼ê°í˜•ì˜ ì •ë ¬ì„ ìœ„í•œ ê³µê°„.offset ì •ë³´ëŠ” 
+	 *	m_SceneTriangleList vector ì•ˆì˜ index ì™€ ë™ì¼í•˜ë‹¤.
 	 */
 	TriangleInfo *pTriangleInfos = new TriangleInfo[ m_iSceneTriangleCount ];
 	for( int i = 0; i < m_iSceneTriangleCount; i++ ) {
 		pTriangleInfos[ i ].offset = i;
 		pTriangleInfos[ i ].pTriangleWrapper = m_pSceneTriangleList->getTriangleWrapper( i );
-		/** bounding box ´Â ½ÇÁ¦ triangle bouding box °ú´Â ´Ù¸¦¼ö ÀÖÀ¸¹Ç·Î µû·Î ÀúÀå°ü¸® */
+		/** bounding box ëŠ” ì‹¤ì œ triangle bouding box ê³¼ëŠ” ë‹¤ë¥¼ìˆ˜ ìˆìœ¼ë¯€ë¡œ ë”°ë¡œ ì €ì¥ê´€ë¦¬ */
 		pTriangleInfos[ i ].boundingBox = m_pSceneTriangleList->getTriangleWrapper( i )->m_BBox;
 	}
 
@@ -2004,13 +2004,13 @@ bool GKDTreeStructure::saveStructureToFile( const char *filename )
 	// Dump kd-tree node info
 	// ------------------------------------------------------------
 	int nTreeNodeCount = m_iKDTreeNodeCount;
-	fwrite( &nTreeNodeCount, 4, 1, f );						// ÀüÃ¼ node °³¼ö write(4)
+	fwrite( &nTreeNodeCount, 4, 1, f );						// ì „ì²´ node ê°œìˆ˜ write(4)
 
 	KdTreeNode* node = &m_pKDTreeNodes[0];
 
 	for ( i = 0; i < nTreeNodeCount; i++, node++ ) {
 		if (IS_LEAF(*node) == 0) {
-			fwrite( node, 8, 1, f );					// internal node Á¤º¸ write (8)
+			fwrite( node, 8, 1, f );					// internal node ì •ë³´ write (8)
 		} else {
 			fwrite( node, 8, 1, f );
 		}

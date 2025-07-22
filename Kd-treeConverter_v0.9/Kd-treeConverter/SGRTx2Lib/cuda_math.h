@@ -43,7 +43,7 @@
 #ifndef CUTIL_MATH_H
 #define CUTIL_MATH_H
 
-#include "cuda_runtime.h"
+#include <cuda_runtime.h>
 
 ////////////////////////////////////////////////////////////////////////////////
 typedef unsigned int uint;
@@ -54,7 +54,7 @@ typedef unsigned short ushort;
 
 inline float min(float a, float b)
 {
-  return a < b ? a : b;
+    return a < b ? a : b;
 }
 
 inline float max(float a, float b)

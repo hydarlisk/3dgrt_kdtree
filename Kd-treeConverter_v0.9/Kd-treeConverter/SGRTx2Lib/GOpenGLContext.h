@@ -4,7 +4,7 @@
 #include "gl/gl.h"
 
 /**
- *	Window ╟Х©╜©║╪╜ OpenGL Context ╦╕ ╟Э╦╝го╢б е╛╥║╫╨
+ *	Window ЙЁ└Л≈╢Л≈░Л└° OpenGL Context К╔╪ Й╢─К╕╛М∙≤К┼■ М│╢К·≤Л┼╓
  *	by graphicsian
  */
 class  GOpenGLContext

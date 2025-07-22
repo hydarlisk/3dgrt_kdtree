@@ -4,7 +4,7 @@
 #include "GKDTreeStructure.h"
 #include "GPointLight.h"
 #include "GRenderCommon.h"
-		#include "SSERenderPipeline.h"				//yet GRenderCommon.h ø° ≥÷¿ª∞Õ
+		#include "SSERenderPipeline.h"				//yet GRenderCommon.h Ïóê ÎÑ£ÏùÑÍ≤É
 #include "math.h"
 
 #include "GThreadManager.h"
@@ -89,7 +89,7 @@ void GSSEGRIDRayTracer::uninitialize()
 }
 
 // ------------------------------------------------------------------------------------------------
-// initialize()		: scene ¡§∫∏∏¶ ¿Á±∏º∫«ÿæﬂ«“∂ß √ ±‚»≠«—¥Ÿ.
+// initialize()		: scene Ï†ïÎ≥¥Î•º Ïû¨Íµ¨ÏÑ±Ìï¥ÏïºÌï†Îïå Ï¥àÍ∏∞ÌôîÌïúÎã§.
 // ------------------------------------------------------------------------------------------------
 GError GSSEGRIDRayTracer::initialize( GScene *pScene )
 {
@@ -106,7 +106,7 @@ GError GSSEGRIDRayTracer::initialize( GScene *pScene )
 		 m_oldResolution != pScene->getResolution() ) {
 
 		//----------------------------------------------------------------------------------------------
-		//Grid ∞¸∑√ init.
+		//Grid Í¥ÄÎ†® init.
 
 		if ( m_pSSESceneData ) {
 			delete m_pSSESceneData;
@@ -119,13 +119,13 @@ GError GSSEGRIDRayTracer::initialize( GScene *pScene )
 			return error;
 
 		// ----------------------------------------------------------
-		// ø©∑Ø∞°¡ˆ ºˆ ∞ËªÍ
+		// Ïó¨Îü¨Í∞ÄÏßÄ Ïàò Í≥ÑÏÇ∞
 		// ----------------------------------------------------------
 		m_pSSESceneData->calSceneProperty();
 
 		// ----------------------------------------------------------
 
-		// «ˆ¿Á Renderer ∞° √≥∏Æ«— Scene ¿ª ±‚æÔ«—¥Ÿ.
+		// ÌòÑÏû¨ Renderer Í∞Ä Ï≤òÎ¶¨Ìïú Scene ÏùÑ Í∏∞ÏñµÌïúÎã§.
 		// ----------------------------------------------------------
 		m_iOldSceneNumber = pScene->getSceneNumber();
 		m_iSceneTimestamp = pScene->getGeometryChangeTimestamp();
@@ -141,7 +141,7 @@ GError GSSEGRIDRayTracer::initialize( GScene *pScene )
 	if (bModifiedScene || bModifiedThread) {
 #if GOThread
 		// ----------------------------------------------------------
-		// Render Pipeline ª˝º∫
+		// Render Pipeline ÏÉùÏÑ±
 		// ----------------------------------------------------------
 		for ( int i = 0; i < (int)m_SSERenderPipelineList.size(); ++i ) {
 			delete m_SSERenderPipelineList[i];
@@ -159,7 +159,7 @@ GError GSSEGRIDRayTracer::initialize( GScene *pScene )
 		}
 #else
 		// ----------------------------------------------------------
-		// Render Pipeline ª˝º∫
+		// Render Pipeline ÏÉùÏÑ±
 		// ----------------------------------------------------------
 		if ( m_pSSERenderPipeline ) {
 			delete m_pSSERenderPipeline;
@@ -192,8 +192,8 @@ GError GSSEGRIDRayTracer::rendering( GScene *pScene, bool isDebug )
 	GError error;
 
 	// ----------------------------------------------------------
-	//	Scene ¿Ã ¿Ã¿¸ geometry ªÛ≈¬ø°º≠ ∫Ø«—∞‘ ¿÷¥¬¡ˆ √º≈©«ÿº≠ ¿÷¥Ÿ∏È
-	//	SpatialStructure ∏¶ ¿Á±∏º∫«—¥Ÿ.
+	//	Scene Ïù¥ Ïù¥Ï†Ñ geometry ÏÉÅÌÉúÏóêÏÑú Î≥ÄÌïúÍ≤å ÏûàÎäîÏßÄ Ï≤¥ÌÅ¨Ìï¥ÏÑú ÏûàÎã§Î©¥
+	//	SpatialStructure Î•º Ïû¨Íµ¨ÏÑ±ÌïúÎã§.
 	// ----------------------------------------------------------
 	error = initialize( pScene );
 	if ( error != errorNo ) {
@@ -202,7 +202,7 @@ GError GSSEGRIDRayTracer::rendering( GScene *pScene, bool isDebug )
 	}
 
 	// ----------------------------------------------------------
-	// PrepareRender »£√‚ : Screen π◊ Ray µÓ º¬∆√
+	// PrepareRender Ìò∏Ï∂ú : Screen Î∞è Ray Îì± ÏÖãÌåÖ
 	// ----------------------------------------------------------
 	#if GOThread
 	for ( int i = 0; i < m_iThreadCount; ++i ) {
@@ -375,21 +375,21 @@ void GSSEGRIDRayTracer::logging_out()
 	fprintf(fp, "PRE-5  , Ray Bounce Depth      , %d\n", iMaxReflectionDepth);
 
 
-	// «¡∑Œ∆ƒ¿œ∏µøÎ --------------------------------------------------------------------------
+	// ÌîÑÎ°úÌååÏùºÎßÅÏö© --------------------------------------------------------------------------
 	float fRatio;
-	unsigned int nDupTri = 0;				// ∫∏¿Ã¥¬ ªÔ∞¢«¸ ∞≥ºˆ (¡ﬂ∫π«„øÎ)
-	unsigned int nUniTri = 1;				// ∫∏¿Ã¥¬ ªÔ∞¢«¸ ∞≥ºˆ (unique)
+	unsigned int nDupTri = 0;				// Î≥¥Ïù¥Îäî ÏÇºÍ∞ÅÌòï Í∞úÏàò (Ï§ëÎ≥µÌóàÏö©)
+	unsigned int nUniTri = 1;				// Î≥¥Ïù¥Îäî ÏÇºÍ∞ÅÌòï Í∞úÏàò (unique)
 
-	// PRI-6 : Spec/Diff ¡ˆ¡°
+	// PRI-6 : Spec/Diff ÏßÄÏ†ê
 	unsigned int _pf_nHit_DiffPnt_ALL, _pf_nHit_DiffPnt_PR, _pf_nHit_DiffPnt_RR; _pf_nHit_DiffPnt_ALL = _pf_nHit_DiffPnt_PR = _pf_nHit_DiffPnt_RR = 0;
 	unsigned int _pf_nHit_SpecPnt_ALL, _pf_nHit_SpecPnt_PR, _pf_nHit_SpecPnt_RR; _pf_nHit_SpecPnt_ALL = _pf_nHit_SpecPnt_PR = _pf_nHit_SpecPnt_RR = 0;
-	// PRI-9 : ±◊∏≤¿⁄ ¡ˆ¥¬ ¡ˆ¡°
+	// PRI-9 : Í∑∏Î¶ºÏûê ÏßÄÎäî ÏßÄÏ†ê
 	unsigned int _pf_nHit_ShwPnt_ALL    = 0;
 	unsigned int _pf_nHit_ShwCnt_PR, _pf_nHit_ShwCnt_RR;	_pf_nHit_ShwCnt_PR = _pf_nHit_ShwCnt_RR = 0;
-	// CMI-7 : ≈ÿΩ∫√ƒ access
+	// CMI-7 : ÌÖçÏä§Ï≥ê access
 	unsigned int _pf_nTexRef_ALL, _pf_nTexRef_PR, _pf_nTexRef_RR; _pf_nTexRef_ALL = _pf_nTexRef_PR = _pf_nTexRef_RR = 0;
 
-	// CMI-6 : Shading √≥∏Æ »Ωºˆ
+	// CMI-6 : Shading Ï≤òÎ¶¨ ÌöüÏàò
 	unsigned int _pf_nHit_ShadPnt_PR, _pf_nHit_ShadPnt_RR; _pf_nHit_ShadPnt_PR = _pf_nHit_ShadPnt_RR = 0;
 	unsigned int _pf_nHit_ShadCnt_PR, _pf_nHit_ShadCnt_RR; _pf_nHit_ShadCnt_PR = _pf_nHit_ShadCnt_RR = 0;
 	unsigned int _pf_nGen_RaysCnt_PR, _pf_nGen_RaysCnt_RR, _pf_nGen_RaysCnt_SR;  _pf_nGen_RaysCnt_PR = _pf_nGen_RaysCnt_RR = _pf_nGen_RaysCnt_SR = 0;
@@ -515,7 +515,7 @@ void GSSEGRIDRayTracer::logging_out()
 	GLogManager::logging( LOG_INFO, "Pri Isect Frustum Cull / TriTest        :  %d / %d", PriIsect_FC_Cull_Count, PriIsect_TriChk_Count);
 
 
- //min ∞πºˆ : 4
+ //min Í∞ØÏàò : 4
  //-> KDTree Node Count: 163151 (1.244743MB)
  //-> n_leafNode: 81576
  //-> treeLevel: 57
@@ -526,7 +526,7 @@ void GSSEGRIDRayTracer::logging_out()
 	//// Call			72907
 	//// FCull/Test	66,605 / 166,747
 
- //min ∞πºˆ : 14
+ //min Í∞ØÏàò : 14
  //-> KDTree Node Count: 27867 (0.212608MB)
  //-> n_leafNode: 13934
  //-> treeLevel: 44
@@ -537,7 +537,7 @@ void GSSEGRIDRayTracer::logging_out()
 	//// Call			62139
 	//// FCull/Test	211,082 / 340,249
 
- //min ∞πºˆ : 24
+ //min Í∞ØÏàò : 24
  //-> KDTree Node Count: 13123 (0.100121MB)
  //-> n_leafNode: 6562
  //-> treeLevel: 36
@@ -548,7 +548,7 @@ void GSSEGRIDRayTracer::logging_out()
 	//// Call			64547
 	//// FCull/Test	509,584 / 652,093
 
- //min ∞πºˆ : 40
+ //min Í∞ØÏàò : 40
  //-> KDTree Node Count: 6819 (0.052025MB)
  //-> n_leafNode: 3410
  //-> treeLevel: 31

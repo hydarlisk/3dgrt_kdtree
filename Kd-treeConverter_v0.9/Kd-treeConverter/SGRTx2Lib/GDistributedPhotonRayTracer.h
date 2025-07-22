@@ -6,21 +6,21 @@
 #include "GPhotonMapRayTracer.h"
 
 /**
- *	MPICH2 ¸¦ »ç¿ëÇÑ ºĞ»ê·»´õ¸µ.
- *	PHOTON MAPPING °ú RayTracing À» °¡Áö°í ¼öÇàÇÑ´Ù.
+ *	MPICH2 ë¥¼ ì‚¬ìš©í•œ ë¶„ì‚°ë Œë”ë§.
+ *	PHOTON MAPPING ê³¼ RayTracing ì„ ê°€ì§€ê³  ìˆ˜í–‰í•œë‹¤.
  *
  *	by graphicsian.
  */
 
 /** 
- *	·»´õ¸µ½Ã root °¡ °¢ node ¿¡°Ô Àü¼ÛÇÒ
- *	render config. Àı´ë pointer º¯¼ö´Â ¾ø¾î¾ß ÇÔ.
+ *	ë Œë”ë§ì‹œ root ê°€ ê° node ì—ê²Œ ì „ì†¡í• 
+ *	render config. ì ˆëŒ€ pointer ë³€ìˆ˜ëŠ” ì—†ì–´ì•¼ í•¨.
  */
 typedef struct _render_env_info_ {
 	
 	/** 
-	 *	camera Á¤º¸. camera ¾È¿¡¼­
-	 *	value º¯¼öµé¸¸ °¢ node ¿¡¼­ ´ëÀÔµÉ °ÍÀÌ´Ù.
+	 *	camera ì •ë³´. camera ì•ˆì—ì„œ
+	 *	value ë³€ìˆ˜ë“¤ë§Œ ê° node ì—ì„œ ëŒ€ì…ë  ê²ƒì´ë‹¤.
 	 */
 	GCamera camera;
 	/**

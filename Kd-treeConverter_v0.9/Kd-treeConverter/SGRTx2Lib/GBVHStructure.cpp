@@ -92,19 +92,19 @@ GBVHStructure::initialize()
 	GLogManager::logging( LOG_INFO, " -> KDTree build started..." );
 
 	
-	// *	Scene ÀüÃ¼ÀÇ »ï°¢Çü list ¸¦ ±¸¼ºÇØ ¿Â´Ù.
+	// *	Scene ì „ì²´ì˜ ì‚¼ê°í˜• list ë¥¼ êµ¬ì„±í•´ ì˜¨ë‹¤.
 	m_pSceneTriangleList = m_pScene->precalcBVHTriangleList( aryvCentroid, aryGAABB, m_aabbScene );
 	m_iSceneTriangleCount = m_pSceneTriangleList->size();
 
-	 //*	KD-Tree ¸¦ À§ÇÑ µ¥ÀÌÅÍ ±¸¼º. 
-	 //*	¸ğµç »ï°¢ÇüÀÇ Á¤·ÄÀ» À§ÇÑ °ø°£.offset Á¤º¸´Â 
-	 //*	m_SceneTriangleList vector ¾ÈÀÇ index ¿Í µ¿ÀÏÇÏ´Ù.
+	 //*	KD-Tree ë¥¼ ìœ„í•œ ë°ì´í„° êµ¬ì„±. 
+	 //*	ëª¨ë“  ì‚¼ê°í˜•ì˜ ì •ë ¬ì„ ìœ„í•œ ê³µê°„.offset ì •ë³´ëŠ” 
+	 //*	m_SceneTriangleList vector ì•ˆì˜ index ì™€ ë™ì¼í•˜ë‹¤.
 	 //
 	TriangleInfo *pTriangleInfos = new TriangleInfo[ m_iSceneTriangleCount ];
 	for( int i = 0; i < m_iSceneTriangleCount; i++ ) {
 		pTriangleInfos[ i ].offset = i;
 		pTriangleInfos[ i ].pTriangleWrapper = m_pSceneTriangleList->getTriangleWrapper( i );
-		// bounding box ´Â ½ÇÁ¦ triangle bouding box °ú´Â ´Ù¸¦¼ö ÀÖÀ¸¹Ç·Î µû·Î ÀúÀå°ü¸® 
+		// bounding box ëŠ” ì‹¤ì œ triangle bouding box ê³¼ëŠ” ë‹¤ë¥¼ìˆ˜ ìˆìœ¼ë¯€ë¡œ ë”°ë¡œ ì €ì¥ê´€ë¦¬ 
 		pTriangleInfos[ i ].boundingBox = m_pSceneTriangleList->getTriangleWrapper( i )->m_BBox;
 	}
 
@@ -119,7 +119,7 @@ GBVHStructure::initialize()
 	m_pTriangleOffsetList = new unsigned int [ m_iAllocatedTriangleOffsetSize ];
 	memset( m_pTriangleOffsetList, 0x00, sizeof( unsigned int ) * m_iAllocatedTriangleOffsetSize );
 
-	 //*	pTraangleInfos ´Â buildKDTree ¾È¿¡¼­ »ç¿ëÇÏ°í ¾ø¾Ø´Ù.
+	 //*	pTraangleInfos ëŠ” buildKDTree ì•ˆì—ì„œ ì‚¬ìš©í•˜ê³  ì—†ì•¤ë‹¤.
 	 
 	buildKDTree( bEdge, pTriangleInfos, m_iSceneTriangleCount, m_SceneBBox, 0, &(m_pKDTreeNodes[0]) );
 	
@@ -156,10 +156,10 @@ GBVHStructure::pre_calculate(GVector* aryvCentroid, GBoundingBox* aryGAABB)
 	{
 		TriData = m_pSceneTriangleList->getTriangleWrapper(i);
 		
-		// »ï°¢Çü¸¶´Ù AABB¸¦ ±¸ÇØ¼­ ÀúÀå.
+		// ì‚¼ê°í˜•ë§ˆë‹¤ AABBë¥¼ êµ¬í•´ì„œ ì €ì¥.
 		aryGAABB[i] = TriData->m_BBox;
 		
-		// »ï°¢Çü Áß½É(¹«°Ô Áß½É) ÁÂÇ¥ ÀúÀå.
+		// ì‚¼ê°í˜• ì¤‘ì‹¬(ë¬´ê²Œ ì¤‘ì‹¬) ì¢Œí‘œ ì €ì¥.
 		TriData->calCentroid(aryvCentroid[i]);		
 	}
 }
@@ -253,24 +253,24 @@ GBVHStructure::constructBVH(const GVector* aryvCentroid, const GBoundingBox* ary
 	// ** create temporary buffers
 	SVPOLYINDEX* temparyPoly[NUM_AXIS];
 	
-	// Ãàº°·Î polygon ¼ö ¸¸Å­ ÀúÀå Àå¼Ò »ı¼º.
+	// ì¶•ë³„ë¡œ polygon ìˆ˜ ë§Œí¼ ì €ì¥ ì¥ì†Œ ìƒì„±.
 	for(unsigned int axis = 0; axis < NUM_AXIS; ++ axis)
 	{
 		temparyPoly[axis] = new SVPOLYINDEX(nPoly);
 	}
-	// leftArea¸¦ »ï°¢Çü °³¼ö¸¸Å­ »ı¼º. aryfLeftArea = S1
+	// leftAreaë¥¼ ì‚¼ê°í˜• ê°œìˆ˜ë§Œí¼ ìƒì„±. aryfLeftArea = S1
 	float* aryfLeftArea = new float[nPoly];
 
 
 	// push root node onto stack
 	{
-		//x Ãà ÀÎµ¦½º ¼³Á¤.
+		//x ì¶• ì¸ë±ìŠ¤ ì„¤ì •.
 		SVPOLYINDEX* pbaseset = temparyPoly[0];
 		for(unsigned int i = 0; i < nPoly; ++ i)
 		{			
 			(*pbaseset)[i] = i;
 		}		
-		// XÃà Áß½ÉÀ¸·Î polygonµé sorting
+		// Xì¶• ì¤‘ì‹¬ìœ¼ë¡œ polygonë“¤ sorting
 		sort(temparyPoly[0]->begin(), temparyPoly[0]->end(), compareCentroidX(aryvCentroid));			
 	}	
 
@@ -279,7 +279,7 @@ GBVHStructure::constructBVH(const GVector* aryvCentroid, const GBoundingBox* ary
 	std::stack<int> stacknStart;
 	std::stack<int> stacknEnd;
 	
-	m_pnodeRoot = new GBVHNode(m_aabbScene); // ÀüÃ¼ AABB
+	m_pnodeRoot = new GBVHNode(m_aabbScene); // ì „ì²´ AABB
 	
 	stackpNode.push(m_pnodeRoot);
 	stackpBaseSet.push(temparyPoly[0]);
@@ -447,7 +447,7 @@ GBVHStructure::constructBVH(const GVector* aryvCentroid, const GBoundingBox* ary
 
 
 /**
- *	SSE Å¬·¡½º ¿¡¼­ ÂüÁ¶ÇÒ BVH Æ÷ÀÎÅÍ º¹»ç.
+ *	SSE í´ë˜ìŠ¤ ì—ì„œ ì°¸ì¡°í•  BVH í¬ì¸í„° ë³µì‚¬.
  */
 GError 
 GBVHStructure::makeSSERenderStructureInfo( SSESceneData *pSSEData )
@@ -457,17 +457,17 @@ GBVHStructure::makeSSERenderStructureInfo( SSESceneData *pSSEData )
 	if ( m_pScene->getObjectCount() <= 0 || m_totTriCount <= 0 )
 		return errorUnknown;
 
-	 //	BVH ¼¼ÆÃ.
+	 //	BVH ì„¸íŒ….
 	error = pSSEData->setBVHNodeData( m_pnodeRoot, m_aabbScene );
 	if ( error != errorNo )
 		return error;
 	
-	 //Triangle Object List ¼¼ÆÃ
+	 //Triangle Object List ì„¸íŒ…
 	error = pSSEData->setTriangleObjectList( m_pSceneTriangleList );
 	if ( error != errorNo )
 		return error;
 
-	 //	Triangle Accel List ¼¼ÆÃ
+	 //	Triangle Accel List ì„¸íŒ…
 	error = pSSEData->buildTriAccList_Barycentric();
 	//error = pSSEData->buildTriAccList_Pluecker();
 	if ( error != errorNo )

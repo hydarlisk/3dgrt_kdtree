@@ -65,9 +65,9 @@ SSERenderPipeline::Render_SSE_BVHPacketTraversal( int nThreadID )
 			for(int width = tx; width < tx+PACKET_WIDTH; ++width)
 			{
 				// -----------------------------------------------------------------------
-				// tpos (Ray ¸¦ ½ò ¹æÇâÁöÁ¡) °è»ê
+				// tpos (Ray ç‘œï¿½ ï¿½ë£§ è«›â‘ºë¼¢ï§ï¿½ï¿½ì ) æ€¨ê¾©ê¶›
 				// -----------------------------------------------------------------------
-				// m_LeftUp : image screen À§ÂÊ ¿ŞÆí ¸ğ¼­¸®ÀÇ pixel Áß½É À¸·Î ÀÌ¹Ì ¼ÂÆÃ µÇ¾î ÀÖÀ½
+				// m_LeftUp : image screen ï¿½ìï§Ÿï¿½ ï¿½ì‡Šï¿½ë ª ï§â‘¥ê½Œç”±ÑŠì“½ pixel ä»¥ë¬’ë–– ï¿½ì‘æ¿¡ï¿½ ï¿½ì” èª˜ï¿½ ï¿½ë€‘ï¿½ë˜¿ ï¿½ë¦ºï¿½ë¼± ï¿½ì—³ï¿½ì“¬
 				vector3 r = m_LeftUp + (m_DX * (float)width) - (m_DY * (float)height);		
 
 				tpos.d.x = r.x;
@@ -81,12 +81,12 @@ SSERenderPipeline::Render_SSE_BVHPacketTraversal( int nThreadID )
 
 				jpos = tpos;
 
-				// Ray ¸¦ ¼ÂÆÃ - ½ÃÀÛÁ¡(rp->o) ~ ³¡Á¡(jpos)
+				// Ray ç‘œï¿½ ï¿½ë€‘ï¿½ë˜¿ - ï¿½ë–†ï¿½ì˜‰ï¿½ì (rp->o) ~ ï¿½ê±¹ï¿½ì (jpos)
 				rp->d = cpu_fsub(jpos.d, rp->o);
 				rp->Depth = 0;
-				Split_InitPkt1x1( 0 );	// direction vector normalize µî
+				Split_InitPkt1x1( 0 );	// direction vector normalize ï¿½ë²‘
 
-				// ray dir °áÁ¤ (q = 8¹æÇâÁßÇÏ³ª)
+				// ray dir å¯ƒê³—ì ™ (q = 8è«›â‘ºë¼¢ä»¥ë¬“ë¸¯ï¿½êµ¹)
 				//int q = (rp->d.x < 0) + ((rp->d.y < 0) << 1) + ((rp->d.z < 0) << 2);
 
 				RayPacket.dir[0][k] = rp->d.x;
@@ -100,7 +100,7 @@ SSERenderPipeline::Render_SSE_BVHPacketTraversal( int nThreadID )
 				++k;
 			}
 		}		
-		// RAY - FRUSTUM °è»ê À§ÇØ ÄÚ³Ê ·¹ÀÌ¿Í Æò¸éÀÇ ¹æÁ¤½Ä °è»ê.
+		// RAY - FRUSTUM æ€¨ê¾©ê¶› ï¿½ìï¿½ë¹ è‚„ë¶¾ê¼« ï¿½ì …ï¿½ì” ï¿½ï¿½ï¿½ ï¿½ë£Šï§ëŒì“½ è«›â‘¹ì ™ï¿½ë–‡ æ€¨ê¾©ê¶›.
 		RayPacket.pre_cal();
 
 		//Split_Trace1x1__PriRay(q, 0, 0);

@@ -39,9 +39,9 @@ SSERenderPipeline::Render1x1_BVHTraversal( int nThreadID )
 	for (tx = 0; tx < xTileEnd;  tx++) {
 
 		// -----------------------------------------------------------------------
-		// tpos (Ray ∏¶ ΩÚ πÊ«‚¡ˆ¡°) ∞ËªÍ
+		// tpos (Ray Î•º Ïè† Î∞©Ìñ•ÏßÄÏ†ê) Í≥ÑÏÇ∞
 		// -----------------------------------------------------------------------
-		// m_LeftUp : image screen ¿ß¬  øﬁ∆Ì ∏º≠∏Æ¿« pixel ¡ﬂΩ… ¿∏∑Œ ¿ÃπÃ º¬∆√ µ«æÓ ¿÷¿Ω
+		// m_LeftUp : image screen ÏúÑÏ™Ω ÏôºÌé∏ Î™®ÏÑúÎ¶¨Ïùò pixel Ï§ëÏã¨ ÏúºÎ°ú Ïù¥ÎØ∏ ÏÖãÌåÖ ÎêòÏñ¥ ÏûàÏùå
 		vector3 r = m_LeftUp + (m_DX * (float)tx) - (m_DY * (float)ty);		
 
 		tpos.d.x = r.x;
@@ -52,10 +52,10 @@ SSERenderPipeline::Render1x1_BVHTraversal( int nThreadID )
 			GColor o_color(0.0f, 0.0f, 0.0f);
 			jpos = tpos;
 
-			// Ray ∏¶ º¬∆√ - Ω√¿€¡°(rp->o) ~ ≥°¡°(jpos)
+			// Ray Î•º ÏÖãÌåÖ - ÏãúÏûëÏ†ê(rp->o) ~ ÎÅùÏ†ê(jpos)
 			rp->d = cpu_fsub(jpos.d, rp->o);
 			rp->Depth = 0;
-			Split_InitPkt1x1( 0 );	// direction vector normalize µÓ
+			Split_InitPkt1x1( 0 );	// direction vector normalize Îì±
 
 			//Split_Trace1x1__PriRay(q, 0, 0);
 
@@ -151,9 +151,9 @@ SSERenderPipeline::Render1x1_BVHPacketTraversal( int nThreadID )
 			for(int width = tx; width < tx+PACKET_WIDTH; ++width)
 			{
 				// -----------------------------------------------------------------------
-				// tpos (Ray ∏¶ ΩÚ πÊ«‚¡ˆ¡°) ∞ËªÍ
+				// tpos (Ray Î•º Ïè† Î∞©Ìñ•ÏßÄÏ†ê) Í≥ÑÏÇ∞
 				// -----------------------------------------------------------------------
-				// m_LeftUp : image screen ¿ß¬  øﬁ∆Ì ∏º≠∏Æ¿« pixel ¡ﬂΩ… ¿∏∑Œ ¿ÃπÃ º¬∆√ µ«æÓ ¿÷¿Ω
+				// m_LeftUp : image screen ÏúÑÏ™Ω ÏôºÌé∏ Î™®ÏÑúÎ¶¨Ïùò pixel Ï§ëÏã¨ ÏúºÎ°ú Ïù¥ÎØ∏ ÏÖãÌåÖ ÎêòÏñ¥ ÏûàÏùå
 				vector3 r = m_LeftUp + (m_DX * (float)width) - (m_DY * (float)height);		
 
 				tpos.d.x = r.x;
@@ -167,12 +167,12 @@ SSERenderPipeline::Render1x1_BVHPacketTraversal( int nThreadID )
 
 				jpos = tpos;
 
-				// Ray ∏¶ º¬∆√ - Ω√¿€¡°(rp->o) ~ ≥°¡°(jpos)
+				// Ray Î•º ÏÖãÌåÖ - ÏãúÏûëÏ†ê(rp->o) ~ ÎÅùÏ†ê(jpos)
 				rp->d = cpu_fsub(jpos.d, rp->o);
 				rp->Depth = 0;
-				Split_InitPkt1x1( 0 );	// direction vector normalize µÓ
+				Split_InitPkt1x1( 0 );	// direction vector normalize Îì±
 
-				// ray dir ∞·¡§ (q = 8πÊ«‚¡ﬂ«œ≥™)
+				// ray dir Í≤∞Ï†ï (q = 8Î∞©Ìñ•Ï§ëÌïòÎÇò)
 				//int q = (rp->d.x < 0) + ((rp->d.y < 0) << 1) + ((rp->d.z < 0) << 2);
 
 				RayPacket.dir[0][k] = rp->d.x;
@@ -196,7 +196,7 @@ SSERenderPipeline::Render1x1_BVHPacketTraversal( int nThreadID )
 				++k;
 			}
 		}		
-		// RAY - FRUSTUM ∞ËªÍ ¿ß«ÿ ƒ⁄≥  ∑π¿ÃøÕ ∆Ú∏È¿« πÊ¡§Ωƒ ∞ËªÍ.
+		// RAY - FRUSTUM Í≥ÑÏÇ∞ ÏúÑÌï¥ ÏΩîÎÑà Î†àÏù¥ÏôÄ ÌèâÎ©¥Ïùò Î∞©Ï†ïÏãù Í≥ÑÏÇ∞.
 		RayPacket.pre_cal();
 
 		//Split_Trace1x1__PriRay(q, 0, 0);
@@ -426,7 +426,7 @@ SSERenderPipeline::BVH_Ranged_Traverse(GBVH_RayPacket& prays, TMIntCandidate* ca
 	{
 		GBVHNode* pNode = stackpNode[--nCurrDepth];				
 RECURSECHILD:
-		// getFirstHit ø©±‚ø° T∞™ ∫Ò±≥«œ¥¬ ∞≈ ¿÷æÓæﬂ π∞√º æ’ µ⁄ ±∏∫– ∞°¥…!!!!		
+		// getFirstHit Ïó¨Í∏∞Ïóê TÍ∞í ÎπÑÍµêÌïòÎäî Í±∞ ÏûàÏñ¥Ïïº Î¨ºÏ≤¥ Ïïû Îí§ Íµ¨Î∂Ñ Í∞ÄÎä•!!!!		
 		GBoundingBox bbox = pNode->getAABB();
 		f_index = getFirstHit( prays, bbox, pNode->getFirstActive() );
 		if(f_index < PACKET_SIZE) // hit
@@ -436,10 +436,10 @@ RECURSECHILD:
 				GBVHNode* pnodeTmp;
 				GVector rayDir = GVector(prays.dir[0][f_index], prays.dir[1][f_index], prays.dir[2][f_index]);				
 				pNode->getOrderedChilds(&pnodeTmp, &stackpNode[nCurrDepth], rayDir);				
-				stackpNode[nCurrDepth++]->setFirstActive(f_index); // ø¿∏•¬  ¿⁄Ωƒø° first index ¿˙¿Â.
+				stackpNode[nCurrDepth++]->setFirstActive(f_index); // Ïò§Î•∏Ï™Ω ÏûêÏãùÏóê first index Ï†ÄÏû•.
 				
 				pNode = pnodeTmp;
-				pNode->setFirstActive(f_index);                    // øﬁ¬  ¿⁄Ωƒø° first index ¿˙¿Â.
+				pNode->setFirstActive(f_index);                    // ÏôºÏ™Ω ÏûêÏãùÏóê first index Ï†ÄÏû•.
 
 				goto RECURSECHILD;
 			}
@@ -449,7 +449,7 @@ RECURSECHILD:
 				//bbox = pNode->getGAABB();
 				unsigned int e_index = getLastHit(prays, bbox, f_index);
 				const unsigned int nPoly = (unsigned int) svpolyidx.size();
-				for(unsigned int i=0; i<nPoly; ++i) // leaf ≥ÎµÂ¿« ªÔ∞¢«¸ ºˆ
+				for(unsigned int i=0; i<nPoly; ++i) // leaf ÎÖ∏ÎìúÏùò ÏÇºÍ∞ÅÌòï Ïàò
 				{
 					for(unsigned int j=f_index; j<e_index; ++j)					
 					{	
@@ -497,15 +497,15 @@ SSERenderPipeline::UpdateBBoxes( GBVHNode *node)
 		{				
 			if( pNode->getChildrenFlag() )
 			{
-				// µŒ ¿⁄Ωƒ¿« bbox∏¶ ∫Ò±≥«œø© ¿⁄Ω≈¿« bbox∏¶ update «‘.
+				// Îëê ÏûêÏãùÏùò bboxÎ•º ÎπÑÍµêÌïòÏó¨ ÏûêÏã†Ïùò bboxÎ•º update Ìï®.
 				pNode->in_nodeUpdateAABB( pNode->thisAABB() );
 				pNode->flag = 1;
-				// update«— ¿⁄Ωƒ¿« flag¥¬ ¥ŸΩ√ false∑Œ setting
+				// updateÌïú ÏûêÏãùÏùò flagÎäî Îã§Ïãú falseÎ°ú setting
 				pNode->setChildrenFlagZero();
 				continue;
 			}
 
-			// ø¿∏•¬  ¿⁄Ωƒ¿ª Ω∫≈√ø° push«œ∞Ì øﬁ¬  ¿⁄Ωƒ push
+			// Ïò§Î•∏Ï™Ω ÏûêÏãùÏùÑ Ïä§ÌÉùÏóê pushÌïòÍ≥† ÏôºÏ™Ω ÏûêÏãù push
 			pNode->getChildforUpdate(&stackpNode[nCurrDepth+2], &stackpNode[nCurrDepth+1]);
 			nCurrDepth += 3;			
 		}
@@ -996,7 +996,7 @@ SSERenderPipeline::RayBoxTest(Ray &ray, GBoundingBox& bbox ) const
 	if(Tnear > Tfar) return false;
 	if(Tfar < 0) return false;
 
-	// yø° ¥Î«ÿº≠µµ
+	// yÏóê ÎåÄÌï¥ÏÑúÎèÑ
 	float Yl = bbox.m_Min.y;
 	float Yh = bbox.m_Max.y;
 
@@ -1010,7 +1010,7 @@ SSERenderPipeline::RayBoxTest(Ray &ray, GBoundingBox& bbox ) const
 	if(Tnear > Tfar) return false;
 	if( Tfar < 0) return false;
 	
-	// zø° ¥Î«ÿº≠µµ
+	// zÏóê ÎåÄÌï¥ÏÑúÎèÑ
 	float Zl = bbox.m_Min.z;
 	float Zh = bbox.m_Max.z;
 
@@ -1409,7 +1409,7 @@ int
 SSERenderPipeline::getFirstHit(GBVH_RayPacket& prays, GBoundingBox& aabb, const unsigned int &first)
 {	
 	// ----------------------------------------------
-	// !!! ∏’¿˙ EARLY HIT CHECK
+	// !!! Î®ºÏ†Ä EARLY HIT CHECK
 	// First : Quick 'hit' test using 'first' ray.	
 	Ray first_ray;
 	prays.getRay(first_ray, first);	
@@ -1444,7 +1444,7 @@ SSERenderPipeline::getFirstHit(GBVH_RayPacket& prays, GBoundingBox& aabb, const 
 	// --------------------------------------------------------------------------------
 
 	// --------------------------------------------------------------------------------
-	// AABB & FRUSTUM ±≥¬˜ «—¥Ÿ¥¬ ∞Õ.
+	// AABB & FRUSTUM ÍµêÏ∞® ÌïúÎã§Îäî Í≤É.
 	for(int i=first+1; i<PACKET_SIZE; ++i)
 	{			
 		prays.getRay(first_ray, i);
@@ -1453,11 +1453,11 @@ SSERenderPipeline::getFirstHit(GBVH_RayPacket& prays, GBoundingBox& aabb, const 
 
 		if( testCollision(first_ray, aabb) )
 			return i;			
-		// ø÷ ¿Ã∞« æ»ª°∂Û¡˙±Ó? §—§—;;;
+		// Ïôú Ïù¥Í±¥ ÏïàÎπ®ÎùºÏßàÍπå? „Ö°„Ö°;;;
 		//if( intersect_ray_bbox(first_ray, aabb) )
 		//	return i;
 		
-		/* // ¿Ã∞≈∑Œ «œ∑¡∏È inv, sign ∞ËªÍ«ÿæﬂ «‘.
+		/* // Ïù¥Í±∞Î°ú ÌïòÎ†§Î©¥ inv, sign Í≥ÑÏÇ∞Ìï¥Ïïº Ìï®.
 		Ray temp_ray = prays.getRayMore( i );		
 		if( intersect_bbox(temp_ray, aabb, &fDist) && fDist < prays.t[i] && fDist < FLOAT_MAX )
 			return i;			
@@ -1610,8 +1610,8 @@ void SSERenderPipeline::BVH_Shading1x1__LocalShading (const int nIdx, _sse_float
 		shadow_rp->o = hit_p;
 	}
 
-	// Shading ø°º≠, ≈ı∏Ì«— π∞√º¿œ∂ß, Normal ∞˙ dir ¿« dot ¿Ã < 0 ¿Ã∂Û∏È normal ¿ª µ⁄¬§¥¬¥Ÿ.
-	// »Æ¿Œ « ø‰!!
+	// Shading ÏóêÏÑú, Ìà¨Î™ÖÌïú Î¨ºÏ≤¥ÏùºÎïå, Normal Í≥º dir Ïùò dot Ïù¥ < 0 Ïù¥ÎùºÎ©¥ normal ÏùÑ Îí§ÏßöÎäîÎã§.
+	// ÌôïÏù∏ ÌïÑÏöî!!
 	N = GVector(is->n.f);
 	if (mat_fRefr > 0.0f && cpu_fdot(is->n, rp->d) > 0.0f) 	N = -N;
 	const float fdot = _GVEC_rINNDOT(N,rayD) * -2;
@@ -1634,13 +1634,13 @@ void SSERenderPipeline::BVH_Shading1x1__LocalShading (const int nIdx, _sse_float
 		// Diffuse & Specular color
 		const vector<GLight*>* pLightList = m_Scene->getLightList();
 		for ( int lx = 0; lx < (int) pLightList->size(); ++lx ) {	GLight* pLight = (*pLightList)[ lx ];
-			// Point Light ∏∏ ¿œ¥‹ ¡ˆø¯
+			// Point Light Îßå ÏùºÎã® ÏßÄÏõê
 			if ( pLight->getLightType() != typePointLight || !pLight->isEnabled() )  continue;
 
 			GColor   lightColor = pLight->getLightColor();
 			GPoint   lightPos   = pLight->getPosition();
 
-			// ±§ø¯ ¿⁄±‚¿⁄Ω≈¿Œ ∞ÊøÏ
+			// Í¥ëÏõê ÏûêÍ∏∞ÏûêÏã†Ïù∏ Í≤ΩÏö∞
 			if (obj_num == pLight->m_iObjectNumber) {
 				//oColor = oColor + lightColor * pLight->getIntensity();
 				GColor _tcol_a;
@@ -1650,7 +1650,7 @@ void SSERenderPipeline::BVH_Shading1x1__LocalShading (const int nIdx, _sse_float
 				continue;
 			}
 
-			// ±◊∏≤¿⁄ »Æ¿Œ
+			// Í∑∏Î¶ºÏûê ÌôïÏù∏
 			if ( m_bIsEnableShadow ) {
 				BVH_Shading1x1_RayGeneration_ShwRay(&hitP, &lightPos);
 
@@ -1659,9 +1659,9 @@ void SSERenderPipeline::BVH_Shading1x1__LocalShading (const int nIdx, _sse_float
 				float lDist = _GVEC_vLENGTH(L);
 				_GVEC_vDIV(L,L,lDist);
 
-				// shadow ∞¸∑√ visible ¡∂∞«
-				//		¡ﬂ∞£ø° shadow ray øÕ ±≥¡°¿Ã æ¯∞≈≥™
-				//		shadow ray ∞° ±≥¬˜¡°¿Ã µ⁄ø° ¡∏¿Á«œ∞≈≥™ æ∆¥œ∏È ∞≈∏Æ∞° ∞≈¿« ∞°±ı∞≈≥™
+				// shadow Í¥ÄÎ†® visible Ï°∞Í±¥
+				//		Ï§ëÍ∞ÑÏóê shadow ray ÏôÄ ÍµêÏ†êÏù¥ ÏóÜÍ±∞ÎÇò
+				//		shadow ray Í∞Ä ÍµêÏ∞®Ï†êÏù¥ Îí§Ïóê Ï°¥Ïû¨ÌïòÍ±∞ÎÇò ÏïÑÎãàÎ©¥ Í±∞Î¶¨Í∞Ä Í±∞Ïùò Í∞ÄÍπùÍ±∞ÎÇò
 				if (shadow_is->tacc == 0 || fabsf(lDist - shadow_is->dist) < 1.f*EPSILON || shadow_is->dist > lDist) {
 					//oColor += mat_cTex  * lightColor * max( 0.0f, _GVEC_rINNDOT(L,N) ) +
 					//		    mat_cSpec * lightColor * pow( max( 0.0f, _GVEC_rINNDOT(R,L) ), mat_fRough);

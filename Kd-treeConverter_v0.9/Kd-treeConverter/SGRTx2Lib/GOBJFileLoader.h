@@ -5,14 +5,14 @@
 using namespace std;
 
 /**
- *	OBJECT File Format À» Load ÇÏ´Â Å¬·¡½º.
- *	»ï°¢ÇüÀ¸·Î¸¸ ±¸¼ºµÈ face ¸¦ ·ÎµåÇÒ¼ö ÀÖ´Ù.
+ *	OBJECT File Format ì„ Load í•˜ëŠ” í´ë˜ìŠ¤.
+ *	ì‚¼ê°í˜•ìœ¼ë¡œë§Œ êµ¬ì„±ëœ face ë¥¼ ë¡œë“œí• ìˆ˜ ìˆë‹¤.
  *
  *	by graphicsian.
  */
 
 /**
- *	object ÆÄÀÏÀÇ material Á¤º¸¸¦ Ç¥Çö.
+ *	object íŒŒì¼ì˜ material ì •ë³´ë¥¼ í‘œí˜„.
  */
 class GOBJMaterial {
 
@@ -20,7 +20,7 @@ public:
 	char *pName;				//	material name
 
 	int illum;
-	float kr;					//	SGRTx2 ¿¡¼­ È®Àå. raytracing ½Ã reflection ºñÀ².
+	float kr;					//	SGRTx2 ì—ì„œ í™•ì¥. raytracing ì‹œ reflection ë¹„ìœ¨.
 	float ka[3];
 	float kd[3];
 	float ks[3];
@@ -84,8 +84,8 @@ public:
 };
 
 /**
- *	obj file ¿¡ ³ªÅ¸³ª´Â
- *	vertex, texture, normal µî 3°³ data set ¸¦ Ç¥Çö.
+ *	obj file ì— ë‚˜íƒ€ë‚˜ëŠ”
+ *	vertex, texture, normal ë“± 3ê°œ data set ë¥¼ í‘œí˜„.
  */
 class GOBJGeometryData {
 
@@ -126,8 +126,8 @@ public:
 };
 
 /**
- *	ÇÏ³ªÀÇ »ï°¢Çü face ¸¦ À§ÇÑ vertex, normal, texture ÁÂÇ¥µ¥ÀÌÅÍ index.
- *	½ÇÁ¦µ¥ÀÌÅÍ´Â GOBJGeometryData ¿¡ ÀÖÀ½.
+ *	í•˜ë‚˜ì˜ ì‚¼ê°í˜• face ë¥¼ ìœ„í•œ vertex, normal, texture ì¢Œí‘œë°ì´í„° index.
+ *	ì‹¤ì œë°ì´í„°ëŠ” GOBJGeometryData ì— ìˆìŒ.
  */
 class GOBJTriangleFace {
 public:
@@ -143,7 +143,7 @@ public:
 };
 
 /**
- *	Object Á¤º¸.
+ *	Object ì •ë³´.
  */
 class GOBJObject {
 	

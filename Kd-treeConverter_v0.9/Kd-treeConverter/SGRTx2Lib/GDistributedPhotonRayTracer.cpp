@@ -6,8 +6,8 @@
 #include "GGPURayTracer.h"
 
 /**
- *	MPICH2 ¸¦ »ç¿ëÇÑ ºĞ»ê·»´õ¸µ.
- *	PHOTON MAPPING °ú RayTracing À» °¡Áö°í ¼öÇàÇÑ´Ù.
+ *	MPICH2 ë¥¼ ì‚¬ìš©í•œ ë¶„ì‚°ë Œë”ë§.
+ *	PHOTON MAPPING ê³¼ RayTracing ì„ ê°€ì§€ê³  ìˆ˜í–‰í•œë‹¤.
  *
  *	by graphicsian.
  */
@@ -18,16 +18,16 @@ GDistributedPhotonRayTracer::GDistributedPhotonRayTracer(
 	m_pDistRenderManager = pDistManager;
 
 	/**
-	 *	render node °³¼ö¸¸Å­ ³ª´©¾î¼­ »Ñ¸± °ÍÀÌ¹Ç·Î emitPhoton À» 
-	 *	³ª´«´Ù. ±×¸®°í ´Ù½Ã ¸î¹øÀÇ iteration À» ÇÒÁö °áÁ¤.
-	 *	power µµ ³ª´©¾îÁ®¾ß ÇÑ´Ù.
+	 *	render node ê°œìˆ˜ë§Œí¼ ë‚˜ëˆ„ì–´ì„œ ë¿Œë¦´ ê²ƒì´ë¯€ë¡œ emitPhoton ì„ 
+	 *	ë‚˜ëˆˆë‹¤. ê·¸ë¦¬ê³  ë‹¤ì‹œ ëª‡ë²ˆì˜ iteration ì„ í• ì§€ ê²°ì •.
+	 *	power ë„ ë‚˜ëˆ„ì–´ì ¸ì•¼ í•œë‹¤.
 	 */
 	GPhotonMappingOption newOption = (*pOption);
 
 	/**
-	 *	°¢ node °¡ Ã³¸®ÇÒ photon ¼öÄ¡¸¦ °áÁ¤ÇÑ´Ù.
-	 *	¹İº¹ÇÒ iteration À» °¢ node °¡ ³ª¿ì¾î¼­ Ã³¸®. ÃÖ¼ÒÇÑ ÇÑ node °¡ ÇÑ¹øÀÇ
-	 *	iteration Àº µ¹¾Æ¾ß ÇÑ´Ù( ¿øÇÏ´Â photon °³¼öº¸´Ù ¸¹¾ÆÁö´õ¶óµµ )
+	 *	ê° node ê°€ ì²˜ë¦¬í•  photon ìˆ˜ì¹˜ë¥¼ ê²°ì •í•œë‹¤.
+	 *	ë°˜ë³µí•  iteration ì„ ê° node ê°€ ë‚˜ìš°ì–´ì„œ ì²˜ë¦¬. ìµœì†Œí•œ í•œ node ê°€ í•œë²ˆì˜
+	 *	iteration ì€ ëŒì•„ì•¼ í•œë‹¤( ì›í•˜ëŠ” photon ê°œìˆ˜ë³´ë‹¤ ë§ì•„ì§€ë”ë¼ë„ )
 	 */
 	newOption.m_iIteration = max( 1, (int) ( newOption.m_iIteration / (float) pDistManager->getProcessCount() ) );
 	newOption.m_fTotalSceneLightPower = pOption->m_fTotalSceneLightPower / (float) pDistManager->getProcessCount();
@@ -43,11 +43,11 @@ GDistributedPhotonRayTracer::~GDistributedPhotonRayTracer(void)
 
 
 /**
- *	¸ğµç Node °¡ ÀÌ ºÎºĞÀº µ¿½Ã¿¡ ÁøÇàµÇ°Ô ÇØ¾ß ÇÑ´Ù.
- *	root °¡ MPI_Bcast ·Î rendering ½ÃÀÛÀ» ¾Ë¸®°í, 
- *	ÀÌ¶§ ÀÎÀÚ·Î Scene ¿¡¼­ º¯°æµÈ »çÇ×À» °¡Áö°í Bcast ¸¦ ¼öÇà.
+ *	ëª¨ë“  Node ê°€ ì´ ë¶€ë¶„ì€ ë™ì‹œì— ì§„í–‰ë˜ê²Œ í•´ì•¼ í•œë‹¤.
+ *	root ê°€ MPI_Bcast ë¡œ rendering ì‹œì‘ì„ ì•Œë¦¬ê³ , 
+ *	ì´ë•Œ ì¸ìë¡œ Scene ì—ì„œ ë³€ê²½ëœ ì‚¬í•­ì„ ê°€ì§€ê³  Bcast ë¥¼ ìˆ˜í–‰.
  *
- *	¼­·Î network µ¿±âÈ­¸¦ Àß ¸ÂÃß¾î¼­ deadlock ÀÌ ¾È»ı±â°Ô ÁÖÀÇÇÒ°Í.
+ *	ì„œë¡œ network ë™ê¸°í™”ë¥¼ ì˜ ë§ì¶”ì–´ì„œ deadlock ì´ ì•ˆìƒê¸°ê²Œ ì£¼ì˜í• ê²ƒ.
  */
 GError GDistributedPhotonRayTracer::rendering( GScene* pScene, bool isDebug )
 {
@@ -63,8 +63,8 @@ GError GDistributedPhotonRayTracer::rendering( GScene* pScene, bool isDebug )
 	int iPointCount = 0;
 
 	/**
-	 *	ÇöÀç root °¡ rendering config ¸¦ ±¸¼ºÇØ¼­ node ¿¡ bcast ÇØ¼­
-	 *	·»´õ¸µÀÌ ¼öÇàµÇ°Ô ÇÑ´Ù.
+	 *	í˜„ì¬ root ê°€ rendering config ë¥¼ êµ¬ì„±í•´ì„œ node ì— bcast í•´ì„œ
+	 *	ë Œë”ë§ì´ ìˆ˜í–‰ë˜ê²Œ í•œë‹¤.
 	 */
 	if ( m_pDistRenderManager->getProcessID() == JEDI_MPI_ROOT ) {
 		renderConfig = makeRenderConfig( pScene );
@@ -81,8 +81,8 @@ GError GDistributedPhotonRayTracer::rendering( GScene* pScene, bool isDebug )
 	GLogManager::logging( LOG_DEBUG, "-----------------------------------------------------" );
 
 	/**----------------------------------------------------------------------------------------------
-	 **	error °¡ ¾ø´Â node µéÀº root ·Î ºÎÅÍ ³Ñ°Ü¹ŞÀº ÇöÀç Ä«¸Ş¶ó Á¤º¸ ¹× 
-	 **	Scene ¿¡¼­ º¯ÇÑ Á¤º¸ ¼¼ÆÃÈÄ °¢°¢ rendering ¼öÇà.
+	 **	error ê°€ ì—†ëŠ” node ë“¤ì€ root ë¡œ ë¶€í„° ë„˜ê²¨ë°›ì€ í˜„ì¬ ì¹´ë©”ë¼ ì •ë³´ ë° 
+	 **	Scene ì—ì„œ ë³€í•œ ì •ë³´ ì„¸íŒ…í›„ ê°ê° rendering ìˆ˜í–‰.
 	 **--------------------------------------------------------------------------------------------*/
 
 	if ( error == errorNo ) {
@@ -93,8 +93,8 @@ GError GDistributedPhotonRayTracer::rendering( GScene* pScene, bool isDebug )
 	}
 GLogManager::logging( LOG_INFO, "rendering photon");
 	/**----------------------------------------------------------------------------------------------
-	 **	MPI_AllGather ÇÔ¼ö¸¦ ÅëÇØ¼­ ¸ğµç node µéÀÌ ÀüÃ¼ rendering °á°ú¸¦ Ã¼Å©ÇÏ°Ô ÇÑ´Ù.
-	 **	error ¹ß»ı½Ã Á¾·á.
+	 **	MPI_AllGather í•¨ìˆ˜ë¥¼ í†µí•´ì„œ ëª¨ë“  node ë“¤ì´ ì „ì²´ rendering ê²°ê³¼ë¥¼ ì²´í¬í•˜ê²Œ í•œë‹¤.
+	 **	error ë°œìƒì‹œ ì¢…ë£Œ.
 	 **---------------------------------------------------------------------------------------------*/
 	GError *pErrorList = (GError*) malloc( sizeof( GError ) * m_pDistRenderManager->getProcessCount() );
 	int errorData = error;
@@ -120,12 +120,12 @@ GLogManager::logging( LOG_INFO, "rendering photon");
 		goto finalize;
 
 	/**--------------------------------------------------------------------------------------------
-	 ** node µéÀº master ¿¡°Ô ÀÚ½ÅÀÌ ±¸ÇÑ ipoint µéÀÇ power ¸¦ º¸³»¼­ ÇÕ»êÇÏ°Ô ¸¸µç´Ù.
+	 ** node ë“¤ì€ master ì—ê²Œ ìì‹ ì´ êµ¬í•œ ipoint ë“¤ì˜ power ë¥¼ ë³´ë‚´ì„œ í•©ì‚°í•˜ê²Œ ë§Œë“ ë‹¤.
 	 **------------------------------------------------------------------------------------------*/
 
 	/**
-	 *	ipoint set Á¤º¸¸¦ °¡Á®¿Â´Ù. 
-	 *	power ¸¸ »Ì¾Æ¼­ ( r,g,b float 3 ) master ¿¡°Ô Àü¼ÛÇÑ´Ù.
+	 *	ipoint set ì •ë³´ë¥¼ ê°€ì ¸ì˜¨ë‹¤. 
+	 *	power ë§Œ ë½‘ì•„ì„œ ( r,g,b float 3 ) master ì—ê²Œ ì „ì†¡í•œë‹¤.
 	 */
 	piPointPowerSum = NULL;
 	GGridBox<cuIntersectionPoint, cuPMIntersectionPoint> *pIPointGridBox = 
@@ -140,7 +140,7 @@ GLogManager::logging( LOG_INFO, "rendering photon");
 	}
 		
 	/**
-	 *	master ¿¡°Ô º¸³»¼­ ÀÌ °ªµéÀ» ÇÕ»êÇÏ°Ô ¸¸µç´Ù. piPointPowerSum ¸Ş¸ğ¸®´Â root ¸¸ÇÒ´çÇÏ¸é µÊ.
+	 *	master ì—ê²Œ ë³´ë‚´ì„œ ì´ ê°’ë“¤ì„ í•©ì‚°í•˜ê²Œ ë§Œë“ ë‹¤. piPointPowerSum ë©”ëª¨ë¦¬ëŠ” root ë§Œí• ë‹¹í•˜ë©´ ë¨.
 	 */
 	if ( m_pDistRenderManager->isMasterProcess() ) {
 		piPointPowerSum = (float*) malloc( sizeof( float ) * iPointCount * 3 );
@@ -153,8 +153,8 @@ GLogManager::logging( LOG_INFO, "rendering photon");
 	}
 
 	/**-------------------------------------------------------------------------------------------
-	 **	root °¡ ÀÚ½ÅÀÇ direct illumination °á°ú¿Í ÇÕ»êÇØ¼­, ÃÖÁ¾ÀûÀ¸·Î scene ÀÇ image buffer ¿¡
-	 **	±â·ÏÇÑ´Ù.
+	 **	root ê°€ ìì‹ ì˜ direct illumination ê²°ê³¼ì™€ í•©ì‚°í•´ì„œ, ìµœì¢…ì ìœ¼ë¡œ scene ì˜ image buffer ì—
+	 **	ê¸°ë¡í•œë‹¤.
 	 **------------------------------------------------------------------------------------------*/
 
 	GImageBuffer *pImageBuffer = pScene->getImageBuffer();
@@ -162,12 +162,12 @@ GLogManager::logging( LOG_INFO, "rendering photon");
 	GImageBuffer *pIndirectImageBuffer = pScene->getIndirectIllumImageBuffer();
 
 	/**
-	 *	photon À¸·Î °è»êµÈ indirect ¿Í direct illumination À» ÇÕ»êÇÑ´Ù.
+	 *	photon ìœ¼ë¡œ ê³„ì‚°ëœ indirect ì™€ direct illumination ì„ í•©ì‚°í•œë‹¤.
 	 */
 	if ( m_pDistRenderManager->isMasterProcess() ) {
 	
 		/** 
-		 * indirect ´Â ¸ğµç node ÀÇ ipoint power ¸¦ ÇÕ»êÇÑ °É·Î °è»êÇÑ´Ù.
+		 * indirect ëŠ” ëª¨ë“  node ì˜ ipoint power ë¥¼ í•©ì‚°í•œ ê±¸ë¡œ ê³„ì‚°í•œë‹¤.
 		 */
 		pIndirectImageBuffer->clear();
 
@@ -183,7 +183,7 @@ GLogManager::logging( LOG_INFO, "rendering photon");
 			GGPURayTracer::toImageIndex( pScene, pIPointGridBox->m_pData[ i ].rayIndex, &x, &y );
 			cuIntersectionPoint* pIPoint = ( pIPointGridBox->m_pData + i );
 
-			/** power ´Â ¸ğµç node ÀÇ ipoint power ¸¦ ÇÕ»êÇÑ °É·Î °è»ê */
+			/** power ëŠ” ëª¨ë“  node ì˜ ipoint power ë¥¼ í•©ì‚°í•œ ê±¸ë¡œ ê³„ì‚° */
 			color.r = pIPoint->colorWeight.x * piPointPowerSum[ i * 3 + 0 ];
 			color.g = pIPoint->colorWeight.y * piPointPowerSum[ i * 3 + 1 ];
 			color.b = pIPoint->colorWeight.z * piPointPowerSum[ i * 3 + 2 ];
@@ -217,7 +217,7 @@ finalize:
 	}
 
 	/**-------------------------------------------------------------------------------------------
-	 **	»ç¿ëµÈ ÀÓ½Ã ¸Ş¸ğ¸®µé ÇØÁ¦.
+	 **	ì‚¬ìš©ëœ ì„ì‹œ ë©”ëª¨ë¦¬ë“¤ í•´ì œ.
 	 **------------------------------------------------------------------------------------------*/
 
 	if ( piPointPower )

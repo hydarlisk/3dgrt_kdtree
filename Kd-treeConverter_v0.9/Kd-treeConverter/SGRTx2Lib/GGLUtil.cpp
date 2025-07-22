@@ -1,8 +1,8 @@
 //--------------------------------------------------------------------------//
 //																			//
-//	°øÅëÀ¸·Î »ç¿ëÇÒ UTIL Å¬·¡½º												//
+//	ê³µí†µìœ¼ë¡œ ì‚¬ìš©í•  UTIL í´ë˜ìŠ¤												//
 //																			//
-//	Copyright (c) 2005  ÁøºÀÁØ	( sonagi21@naver.com )						//
+//	Copyright (c) 2005  ì§„ë´‰ì¤€	( sonagi21@naver.com )						//
 //																			//
 //--------------------------------------------------------------------------//
 
@@ -18,20 +18,20 @@ GGLUtil::~GGLUtil(void)
 }
 
 /**
- *	ÄõÅÍ´Ï¾ğÀ» ÀÌ¿ëÇØ¼­ ´ÜÀ§È¸ÀüÃà e ¸¦ Áß½ÉÀ¸·Î arc ¸¸Å­ È¸ÀüÇÑ
- *	°á°ú¸¦ ¸®ÅÏÇÑ´Ù. arc ÀÇ ´ÜÀ§´Â degree
+ *	ì¿¼í„°ë‹ˆì–¸ì„ ì´ìš©í•´ì„œ ë‹¨ìœ„íšŒì „ì¶• e ë¥¼ ì¤‘ì‹¬ìœ¼ë¡œ arc ë§Œí¼ íšŒì „í•œ
+ *	ê²°ê³¼ë¥¼ ë¦¬í„´í•œë‹¤. arc ì˜ ë‹¨ìœ„ëŠ” degree
  */
 GMatrix4 GGLUtil::getQuaternianMatrix( float arc, GVector e )
 {
 	GMatrix4 mat;
 
-	/** ÄõÅÍ´Ï¾ğÀÇ q0, q1, q2, q3 ¸¦ ±¸ÇÑ´Ù. */
+	/** ì¿¼í„°ë‹ˆì–¸ì˜ q0, q1, q2, q3 ë¥¼ êµ¬í•œë‹¤. */
 	float q0 = (float) cos( arc / 2.0 * G_TO_RADIAN );
 	float q1 = e.x * (float) sin( arc / 2.0 * G_TO_RADIAN );
 	float q2 = e.y * (float) sin( arc / 2.0 * G_TO_RADIAN );
 	float q3 = e.z * (float) sin( arc / 2.0 * G_TO_RADIAN );
 
-	/** ÄõÅÍ´Ï¾ğÀ» ÀÌ¿ëÇÑ È¸Àü Matrix ¸¦ ±¸ÇÑ´Ù. */
+	/** ì¿¼í„°ë‹ˆì–¸ì„ ì´ìš©í•œ íšŒì „ Matrix ë¥¼ êµ¬í•œë‹¤. */
 	mat.SetMatrix( 2.0f * ( q0 * q0 + q1 * q1 ) - 1.0f, 2.0f * ( q1 * q2 - q0 * q3 ), 2.0f * ( q1 * q3 + q0 * q2 ), 0.0f,
 				   2.0f * ( q1 * q2 + q0 * q3 ), 2.0f * ( q0 * q0 + q2 * q2 ) - 1.0f, 2.0f * ( q2 * q3 - q0 * q1 ), 0.0f,
 				   2.0f * ( q1 * q3 - q0 * q2 ), 2.0f * ( q3 * q2 + q0 * q1 ), 2.0f * ( q0 * q0 + q3 * q3 ) - 1.0f, 0.0f,
@@ -41,14 +41,14 @@ GMatrix4 GGLUtil::getQuaternianMatrix( float arc, GVector e )
 }
 
 /**
- *	vec °¡ xÃà¿¡ ÀÏÄ¡ÇÏ±â À§ÇØ¼­ x, y, z ÃàÀ¸·Î ¾ó¸¶¸¸Å­ rotate ÇØ¾ß ÇÏ´ÂÁö¸¦
- *	°è»êÇØ¼­ ¸®ÅÏÇÑ´Ù. return °ªÀº degree ´ÜÀ§·Î (xarc,yarc,zarc) ¸¦ ÀÇ¹Ì
+ *	vec ê°€ xì¶•ì— ì¼ì¹˜í•˜ê¸° ìœ„í•´ì„œ x, y, z ì¶•ìœ¼ë¡œ ì–¼ë§ˆë§Œí¼ rotate í•´ì•¼ í•˜ëŠ”ì§€ë¥¼
+ *	ê³„ì‚°í•´ì„œ ë¦¬í„´í•œë‹¤. return ê°’ì€ degree ë‹¨ìœ„ë¡œ (xarc,yarc,zarc) ë¥¼ ì˜ë¯¸
  */
 GVector GGLUtil::getRotateArcFromXAxis( const GVector &vec )
 {
 	GVector arc;
 
-	/** x Ãà ±âÁØÀ¸·Î rotate µÈ arc ¸¦ ±¸ÇÑ´Ù. */
+	/** x ì¶• ê¸°ì¤€ìœ¼ë¡œ rotate ëœ arc ë¥¼ êµ¬í•œë‹¤. */
 	float xlength = sqrt( vec.y * vec.y + vec.z * vec.z );
 	float ylength = sqrt( vec.x * vec.x + vec.z * vec.z );
 
@@ -62,7 +62,7 @@ GVector GGLUtil::getRotateArcFromXAxis( const GVector &vec )
 }
 
 /**
- *	Æò¸éÀ§ÀÇ ¼¼Á¡À» ÁÖ¸é, normal º¤ÅÍ¸¦ °è»êÇØ¼­ ¸®ÅÏ
+ *	í‰ë©´ìœ„ì˜ ì„¸ì ì„ ì£¼ë©´, normal ë²¡í„°ë¥¼ ê³„ì‚°í•´ì„œ ë¦¬í„´
  */	
 GVector GGLUtil::calNormal( GVector &v1, GVector &v2, GVector &v3 )
 {

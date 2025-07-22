@@ -9,7 +9,7 @@
 #include "cudaRenderPipeline.h"
 
 /**
- *	¿©·¯°¡Áö ¼Óµµ Å×½ºÆ®¸¦ À§ÇÑ CUDA GPU RayTracer
+ *	ì—¬ëŸ¬ê°€ì§€ ì†ë„ í…ŒìŠ¤íŠ¸ë¥¼ ìœ„í•œ CUDA GPU RayTracer
  */
 class GGPUExperimentalRayTracer : public GRenderer
 {

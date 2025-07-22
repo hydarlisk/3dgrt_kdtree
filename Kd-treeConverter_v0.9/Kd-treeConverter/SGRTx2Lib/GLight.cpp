@@ -79,8 +79,8 @@ void GLight::setEnable( bool flag )
 }
 
 /**
- *	µ¥ÀÌÅÍ¸¦ world ÁÂÇ¥°è»óÀÇ µ¥ÀÌÅÍ·Î 
- *	º¯È¯ÇÏ°í, matrix ¸¦ identity ·Î ÃÊ±âÈ­ ÇÑ´Ù.
+ *	ë°ì´í„°ë¥¼ world ì¢Œí‘œê³„ìƒì˜ ë°ì´í„°ë¡œ 
+ *	ë³€í™˜í•˜ê³ , matrix ë¥¼ identity ë¡œ ì´ˆê¸°í™” í•œë‹¤.
  */
 GError GLight::convertToWorldObject()
 {

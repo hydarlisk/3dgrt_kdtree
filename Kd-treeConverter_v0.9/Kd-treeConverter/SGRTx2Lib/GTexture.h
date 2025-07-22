@@ -4,7 +4,7 @@
 #include "GColor.h"
 
 /**
- *	Texture ÇÏ³ªÀÇ Á¤º¸.
+ *	Texture í•˜ë‚˜ì˜ ì •ë³´.
  *
  *	by graphicsian
  */

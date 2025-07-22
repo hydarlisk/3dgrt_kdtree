@@ -9,7 +9,7 @@ GVirtualLight::~GVirtualLight(void)
 }
 
 /**
- *	ÁöÁ¡ pos ¿Í normal À» °¡Áø ÇöÀçÁöÁ¡À¸·Î µé¾î¿À´Â radiance ¸¦ ±¸ÇÑ´Ù.
+ *	ì§€ì  pos ì™€ normal ì„ ê°€ì§„ í˜„ì¬ì§€ì ìœ¼ë¡œ ë“¤ì–´ì˜¤ëŠ” radiance ë¥¼ êµ¬í•œë‹¤.
  */
 GColor GVirtualLight::getRadiance( GPoint &pos, GVector &normal )
 {

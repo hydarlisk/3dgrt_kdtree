@@ -8,25 +8,25 @@
 #include "cudaRenderPipeline.h"
 
 ///**
-// *	Itersection Point Á¤º¸¸¦ °ü¸®.
+// *	Itersection Point ì •ë³´ë¥¼ ê´€ë¦¬.
 // *	by graphicsian.
 // */
 //typedef struct _GIntersectionPoint_
 //{
 //	GPoint m_Position;				//	position.
-//	GVector m_Dir;					//	ray direction. intersection point ·ÎºÎÅÍ ¹ÛÀ» ÇâÇÏ´Â ¹æÇâ.
+//	GVector m_Dir;					//	ray direction. intersection point ë¡œë¶€í„° ë°–ì„ í–¥í•˜ëŠ” ë°©í–¥.
 //	GVector m_Normal;				//	normal.
 //	GPolygonObject *m_pObject;		//	Object.
-//	float m_fU, m_fV;				//	Texture ÁÂÇ¥.
-//	int m_iImageIndex;				//	ÀÌ point °¡ ¿µÇâÀ» ÁÙ ÀÌ¹ÌÁö ³» index.
+//	float m_fU, m_fV;				//	Texture ì¢Œí‘œ.
+//	int m_iImageIndex;				//	ì´ point ê°€ ì˜í–¥ì„ ì¤„ ì´ë¯¸ì§€ ë‚´ index.
 //} GIntersectionPoint;
 
 /**
- *	Intersection Point ¸¦ °ü¸®ÇÏ´Â Å¬·¡½º.
- *	Scene ÀÇ resolution °ú supersambling °³¼ö
- *	¿¡ µû¶ó¼­ ´Ş¶óÁø´Ù. 
- *	 3Â÷¿øÀ¸·Î (resolution.x,resolution.y, samping°³¼ö) ¸¸Å­ depth
- *	ÇÏ³ª¿¡ ´ëÇØ¼­ Ç¥ÇöÇÏ°í ÀÌ·¯ÇÑ 3Â÷¿ø¸ÊÀÌ depth °³¼ö ¸¸Å­ ÀÖ´Ù.
+ *	Intersection Point ë¥¼ ê´€ë¦¬í•˜ëŠ” í´ë˜ìŠ¤.
+ *	Scene ì˜ resolution ê³¼ supersambling ê°œìˆ˜
+ *	ì— ë”°ë¼ì„œ ë‹¬ë¼ì§„ë‹¤. 
+ *	 3ì°¨ì›ìœ¼ë¡œ (resolution.x,resolution.y, sampingê°œìˆ˜) ë§Œí¼ depth
+ *	í•˜ë‚˜ì— ëŒ€í•´ì„œ í‘œí˜„í•˜ê³  ì´ëŸ¬í•œ 3ì°¨ì›ë§µì´ depth ê°œìˆ˜ ë§Œí¼ ìˆë‹¤.
  *
  *	by graphicsian.
  */
@@ -34,7 +34,7 @@
 class GIntersectionPointMap
 {
 private:
-	GDimension m_Resolution;									//	ÇØ»óµµ.
+	GDimension m_Resolution;									//	í•´ìƒë„.
 	GDimension m_Sampling;										//	Super Sampling.
 
 	int m_iCurrentCount;

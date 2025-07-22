@@ -1,8 +1,8 @@
 //--------------------------------------------------------------------------//
 //																			//
-//	Ä«¸Ş¶ó º¯È¯¿¡ °üÇÑ Å¬·¡½º												//
+//	ì¹´ë©”ë¼ ë³€í™˜ì— ê´€í•œ í´ë˜ìŠ¤												//
 //																			//
-//	Copyright (c) 2005  ÁøºÀÁØ	( sonagi21@naver.com )						//
+//	Copyright (c) 2005  ì§„ë´‰ì¤€	( sonagi21@naver.com )						//
 //																			//
 //--------------------------------------------------------------------------//
 
@@ -21,17 +21,17 @@
 class  GCamera
 {
 private:
-	GMatrix4 m_matrix;				//	View º¯È¯¿¡ »ç¿ëµÉ Ä«¸Ş¶ó º¯È¯ Matrix
-	GMatrix4 m_rotateMatrix;		//  u,v,n ÃàÀ¸·ÎÀÇ rotation ¸¸°è»êÇÏ´Â matrix
-	GMatrix4 m_transMatrix;			//	´« À§Ä¡ÀÇ translate ¸¸ °è»êÇÏ´Â matrix
+	GMatrix4 m_matrix;				//	View ë³€í™˜ì— ì‚¬ìš©ë  ì¹´ë©”ë¼ ë³€í™˜ Matrix
+	GMatrix4 m_rotateMatrix;		//  u,v,n ì¶•ìœ¼ë¡œì˜ rotation ë§Œê³„ì‚°í•˜ëŠ” matrix
+	GMatrix4 m_transMatrix;			//	ëˆˆ ìœ„ì¹˜ì˜ translate ë§Œ ê³„ì‚°í•˜ëŠ” matrix
 
-	GVector m_eye;					//	Ä«¸Ş¶ó À§Ä¡
+	GVector m_eye;					//	ì¹´ë©”ë¼ ìœ„ì¹˜
 
-	GVector m_uInitVec, m_uVec;		//	ÃÊ±â Ä«¸Ş¶ó u ÁÂÇ¥Ãà°ú, ÇöÀç Ä«¸Ş¶ó u ÁÂÇ¥Ãà
-	GVector m_vInitVec, m_vVec;		//	ÃÊ±â Ä«¸Ş¶ó v ÁÂÇ¥Ãà°ú, ÇöÀç Ä«¸Ş¶ó v ÁÂÇ¥Ãà
-	GVector m_nInitVec, m_nVec;		//	ÃÊ±â Ä«¸Ş¶ó n ÁÂÇ¥Ãà°ú, ÇöÀç Ä«¸Ş¶ó n ÁÂÇ¥Ãà
+	GVector m_uInitVec, m_uVec;		//	ì´ˆê¸° ì¹´ë©”ë¼ u ì¢Œí‘œì¶•ê³¼, í˜„ì¬ ì¹´ë©”ë¼ u ì¢Œí‘œì¶•
+	GVector m_vInitVec, m_vVec;		//	ì´ˆê¸° ì¹´ë©”ë¼ v ì¢Œí‘œì¶•ê³¼, í˜„ì¬ ì¹´ë©”ë¼ v ì¢Œí‘œì¶•
+	GVector m_nInitVec, m_nVec;		//	ì´ˆê¸° ì¹´ë©”ë¼ n ì¢Œí‘œì¶•ê³¼, í˜„ì¬ ì¹´ë©”ë¼ n ì¢Œí‘œì¶•
 
-	GVector m_transformedWorldX;		//	x, y, z ¿ùµå ÁÂÇ¥°è°¡ Ä«¸Ş¶ó ÁÂÇ¥Ãà¿¡¼­ º¯È¯µÈ vector
+	GVector m_transformedWorldX;		//	x, y, z ì›”ë“œ ì¢Œí‘œê³„ê°€ ì¹´ë©”ë¼ ì¢Œí‘œì¶•ì—ì„œ ë³€í™˜ëœ vector
 	GVector m_transformedWorldY;
 	GVector m_transformedWorldZ;
 
@@ -51,38 +51,38 @@ public:
 	GCamera(void);
 	virtual ~GCamera(void);
 
-	BOOL operator== ( const GCamera &camera );		// Ä«¸Ş¶óÀÇ ÇöÀç ÇÁ·¹ÀÓ Ãà°ú ´«À§Ä¡°¡ °°À¸¸é true
+	BOOL operator== ( const GCamera &camera );		// ì¹´ë©”ë¼ì˜ í˜„ì¬ í”„ë ˆì„ ì¶•ê³¼ ëˆˆìœ„ì¹˜ê°€ ê°™ìœ¼ë©´ true
 	void operator= ( const GCamera &camera );
 
 	/**
-	 * pivot Æ÷ÀÎÆ®¸¦ Áß½ÉÀ¸·Î Ä«¸Ş¶ó µ¹¸®±â
+	 * pivot í¬ì¸íŠ¸ë¥¼ ì¤‘ì‹¬ìœ¼ë¡œ ì¹´ë©”ë¼ ëŒë¦¬ê¸°
 	 */
 	void rotateByPivot( GVector pivot, float harc, float varc, float narc = 0 );
 
 	/**
-	 *	Ä«¸Ş¶ó ÃàÀ» ±âÁØÀ¸·Î È¸ÀüÇÏ±â
+	 *	ì¹´ë©”ë¼ ì¶•ì„ ê¸°ì¤€ìœ¼ë¡œ íšŒì „í•˜ê¸°
 	 */
 	void rotateUVN( float uarc, float varc, float narc );
 
 	/**
-	 *	World ÁÂÇ¥°è x,y,z ±âÁØÀ¸·Î È¸ÀüÇÏ±â
+	 *	World ì¢Œí‘œê³„ x,y,z ê¸°ì¤€ìœ¼ë¡œ íšŒì „í•˜ê¸°
 	 */
 	void rotateWorldXYZ( float xarc, float yarc, float zarc );
 
 	/**
-	 *	Ä«¸Ş¶ó zoom in, out
+	 *	ì¹´ë©”ë¼ zoom in, out
 	 */
 	void zooming( float zoom );
 
 	int getUpAxis();
 
 	/**
-	 *	Ä«¸Ş¶óÀÇ ¼öÆò, ¼öÁ÷ ¿òÁ÷ÀÓ.
+	 *	ì¹´ë©”ë¼ì˜ ìˆ˜í‰, ìˆ˜ì§ ì›€ì§ì„.
 	 */
 	void moveHorizonalVertical( float h, float v );
 
 	/**
-	 *	Ä«¸Ş¶ó À§Ä¡ ¹× Åõ¿µ¹æ¹ı ¼³Á¤ ÇÔ¼öµé.
+	 *	ì¹´ë©”ë¼ ìœ„ì¹˜ ë° íˆ¬ì˜ë°©ë²• ì„¤ì • í•¨ìˆ˜ë“¤.
 	 */
 	void setCameraPos( GVector eye, GVector view, GVector up );
 	void setOrtho( float left, float right, float bottom, float top, float n, float f );
@@ -120,7 +120,7 @@ public:
 
 protected:
 	/**
-	 *	Ä«¸Ş¶ó Ãà¹æÇâÀ¸·Î ±âÁØÀ¸·Î ÀÌµ¿ÇÏ±â
+	 *	ì¹´ë©”ë¼ ì¶•ë°©í–¥ìœ¼ë¡œ ê¸°ì¤€ìœ¼ë¡œ ì´ë™í•˜ê¸°
 	 */
 	void moveCameraUVNAxis( float du, float dv, float dn );
 

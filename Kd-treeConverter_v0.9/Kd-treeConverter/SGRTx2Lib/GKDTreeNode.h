@@ -2,9 +2,9 @@
 #define GKDTREE_NODE_H
 
 /**
- *	KD Tree ¸¦ ÀÌ¿ëÇÑ °ø°£ ±¸Á¶Ã¼.
- *	KD Tree »ı¼º. Å½»öÀº ¿À»ó¶ô±ºÀÇ ÄÚµå¸¦ ±âºÎ ¹Ş¾Æ
- *	¼öÁ¤ÇÔ.
+ *	KD Tree ë¥¼ ì´ìš©í•œ ê³µê°„ êµ¬ì¡°ì²´.
+ *	KD Tree ìƒì„±. íƒìƒ‰ì€ ì˜¤ìƒë½êµ°ì˜ ì½”ë“œë¥¼ ê¸°ë¶€ ë°›ì•„
+ *	ìˆ˜ì •í•¨.
  *
  *	by graphicsian.
  */
@@ -16,7 +16,7 @@ typedef uint2 kdtreeNode;
 
 typedef struct _triinfo_ {
 	int offset;
-	GBoundingBox boundingBox;				//	split µÇ¾úÀ»¶§ÀÇ °¡»óÀÇ bounding box
+	GBoundingBox boundingBox;				//	split ë˜ì—ˆì„ë•Œì˜ ê°€ìƒì˜ bounding box
 	GTriangleWrapper *pTriangleWrapper;		
 } TriangleInfo;
 

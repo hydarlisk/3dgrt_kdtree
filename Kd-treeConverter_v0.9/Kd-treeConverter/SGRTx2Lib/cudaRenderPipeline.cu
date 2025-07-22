@@ -1,9 +1,9 @@
 /**
- *	Cuda �� Rendering �� �����ϱ� ���ؼ�
- *	���������� �����ϴ� class.
+ *	Cuda 로 Rendering 을 수행하기 위해서
+ *	여러가지를 관리하는 class.
  *
  *	light, texture, shading, ray tracing, photon mapping
- *	���.
+ *	등등.
  *	
  */
 #include <stdio.h>
@@ -11,7 +11,7 @@
 #include <time.h>
 #include <string.h>
 #include <cuda.h>
-//#include <cutil.h>
+//#include "cutil.h"
 #include <cuda_runtime.h>
 
 #include "cudaRenderPipeline.cuh"
@@ -20,15 +20,14 @@
 
 #pragma comment(lib, "cudart.lib")
 //#pragma comment(lib, "cutil32.lib")
-#include <GL/freeglut.h> 
 
 #define GENERAL_THREAD_COUNT	128
 
 cudaChannelFormatDesc uchar4tex = cudaCreateChannelDesc<uchar4>();
 
 /**
- *	Adaptive Sampling �� 4������ ���ø����θ� üũ�Ҷ� ����� �ֺ� �ȼ��� ���������� ���� index.
- *	(x,y) ������ ��3���� �� 24��
+ *	Adaptive Sampling 시 4모퉁이 샘플링여부를 체크할때 사용할 주변 픽셀이 무엇인지에 대한 index.
+ *	(x,y) 쌍으로 각3개씩 총 24개
  */
 static int g_staticPatternData[] = { 
 		-1, 0, -1, -1, 0, -1,			// left-top corner.
@@ -38,9 +37,9 @@ static int g_staticPatternData[] = {
 };
 
 /**
- *	�� ������ pixel index �� �ش�Ǵ� pixel weight. �ϳ��� sub-pixel �� ĥ�� ����
- *	interpolation �Ҷ� ����� ��. �� g_staticPatternData �� ����Ű�� index �������
- *	weight �� �����Ǿ� �־�� �Ѵ�.
+ *	위 각각의 pixel index 에 해당되는 pixel weight. 하나의 sub-pixel 에 칠할 값을
+ *	interpolation 할때 사용할 값. 위 g_staticPatternData 가 가리키는 index 순서대로
+ *	weight 가 구성되어 있어야 한다.
  */
 static float g_staticPixelColorWeight[] = {
 		0.1875f, 0.0625f, 0.1875f,
@@ -82,32 +81,28 @@ cudaRenderPipeline::~cudaRenderPipeline()
 }
 
 /**
- *	�ʱ�ȭ. GScene ���� ���� sceneInfo �� �����ϰ�
- *	KDTree �� ���� data �� �����Ѵ�.
+ *	초기화. GScene 으로 부터 sceneInfo 를 구성하고
+ *	KDTree 로 부터 data 를 구성한다.
  */
 GError cudaRenderPipeline::initialize( cuScene pScene, int maxray )
 {
 	GError error;
 	
 	int argc = 1;	char *argv[] ={"init"};
-	//CUT_DEVICE_INIT(argc, argv);
-	glutInit(&argc, argv);
-	//glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);
-	//glutInitWindowSize(800, 600);         // �ʿ信 ���� ����
-	//glutCreateWindow("SGRTx2 Viewer");
+	CUT_DEVICE_INIT(argc, argv);
 	
 	if ( ( error = setSceneInfo( pScene ) ) != errorNo )
 		return error;
 
 	/**
-	 *	ray �� intersection point �� ���� ���� �Ҵ�.
+	 *	ray 와 intersection point 를 위한 공간 할당.
 	 */	
 	error = initRayIntersection( maxray );
 	if ( error != errorNo )
 		return error;
 
 	/**
-	 *	Intersection check �� ���� Stack size ����.
+	 *	Intersection check 를 위한 Stack size 세팅.
 	 */
 	unsigned int depth = SHORT_STACK_DEPTH;
 	CUDA_SAFE_CALL( cudaMemcpyToSymbol( shortStackDepth, &depth, sizeof( unsigned int ) ) );
@@ -122,7 +117,7 @@ GError cudaRenderPipeline::setSceneInfo( cuScene pScene )
 	m_SceneInfo = pScene;
 
 	/**
-	 *	Scene ������ constant �� �ø�.
+	 *	Scene 정보를 constant 로 올림.
 	 */
 	CUDA_SAFE_CALL( cudaMemcpyToSymbol( g_SceneInfo, &m_SceneInfo, sizeof( cuScene ) ) );
 	if ( checkError( "SceneInfo Upload" ) != cudaSuccess )
@@ -136,7 +131,7 @@ GError cudaRenderPipeline::setThresholdInfo( cuThreshold threshold )
 	m_ThresholdInfo = threshold;
 
 	/**
-	 *	Scene ������ constant �� �ø�.
+	 *	Scene 정보를 constant 로 올림.
 	 */
 	CUDA_SAFE_CALL( cudaMemcpyToSymbol( g_ThresholdInfo, &m_ThresholdInfo, sizeof( cuThreshold ) ) );
 	if ( checkError( "ThresholdInfo Upload" ) != cudaSuccess )
@@ -152,7 +147,7 @@ void cudaRenderPipeline::swapFrameBuffer()
 	m_pDeviceFrameBuffer = m_pDeviceFrameBuffer2;
 	m_pDeviceFrameBuffer2 = temp;
 
-	/** texture �� �޸��ּҵ� �ٲپ�� �Ѵ�. */
+	/** texture 의 메모리주소도 바꾸어야 한다. */
 
 	CUDA_SAFE_CALL( cudaUnbindTexture( inFrameBufferTexture ) );
 	CUDA_SAFE_CALL( cudaBindTexture( 0, inFrameBufferTexture, m_pDeviceFrameBuffer ) );
@@ -167,7 +162,7 @@ GError cudaRenderPipeline::renderingOption( bool shadow, bool texture )
 	m_SceneInfo.bEnableTexture = texture;
 	
 	/**
-	 *	Scene ������ constant �� �ø�.
+	 *	Scene 정보를 constant 로 올림.
 	 */
 	CUDA_SAFE_CALL( cudaMemcpyToSymbol( g_SceneInfo, &m_SceneInfo, sizeof( cuScene ) ) );
 	if ( checkError( "SceneInfo Upload" ) != cudaSuccess )
@@ -177,7 +172,7 @@ GError cudaRenderPipeline::renderingOption( bool shadow, bool texture )
 }
 
 /**
- *	Light RaySet Data �� Device �� �ø���.
+ *	Light RaySet Data 를 Device 에 올린다.
  */
 GError cudaRenderPipeline::setLightRaySetData( cuLightRaySet *pRaySet, int count )
 {
@@ -211,8 +206,7 @@ GError cudaRenderPipeline::initRayIntersection( int maxray )
 	if ( checkError( "cudaMalloc::m_pDeviceRays" ) != cudaSuccess )
 		return errorCudaError;
 
-	size_t rayDataSize = sizeof(float4) * maxray * 2;
-	CUDA_SAFE_CALL( cudaBindTexture( 0, inRayListTex,  m_pDeviceRays, rayDataSize) );
+	CUDA_SAFE_CALL( cudaBindTexture( 0, inRayListTex,  m_pDeviceRays ) );
 	if ( checkError( "cudaBindTexture::inRayListTex" ) != cudaSuccess )
 		return errorCudaError;
 	
@@ -226,12 +220,12 @@ GError cudaRenderPipeline::initRayIntersection( int maxray )
 					malloc( sizeof( cuIntersectionPoint ) * m_iMaxIntersectionPoint );
 
 	/**
-	 *	int result 4���� ���� ����.
+	 *	int result 4개를 위한 공간.
 	 */									
 	CUDA_SAFE_CALL( cudaMalloc( (void**) & m_pDeviceIntResult, sizeof( int ) * 4 ) );
 
 	/**
-	 *	frame buffer. rgb �̹Ƿ� float * 3
+	 *	frame buffer. rgb 이므로 float * 3
 	 */
 	CUDA_SAFE_CALL( cudaMalloc( (void**) &m_pDeviceFrameBuffer, 
 								sizeof( float ) * 3 * m_iImagePixelCount ) );
@@ -242,9 +236,9 @@ GError cudaRenderPipeline::initRayIntersection( int maxray )
 	CUDA_SAFE_CALL( cudaBindTexture( 0, inFrameBuffer2Texture, m_pDeviceFrameBuffer2 ) );
 
 	/**
-	 *	Adaptive Sampling �� ���� AS-Buffer. �� pixel �� �ִ� 4���� sub-pixel �� ����� �ְ�
-	 *	�ش� ������ float �ϳ��� ����Ѵ�. �׸��� padding subpixel ���� ���� �� �����Ƿ�
-	 *	�ϹǷ� �̹����ػ��� * 5 ��size �� ��´�.
+	 *	Adaptive Sampling 을 위한 AS-Buffer. 한 pixel 당 최대 4개의 sub-pixel 이 생길수 있고
+	 *	해당 정보는 float 하나를 사용한다. 그리고 padding subpixel 들이 생길 수 있으므로
+	 *	하므로 이미지해상도의 * 5 배size 를 잡는다.
 	 */
 	CUDA_SAFE_CALL( cudaMalloc( (void**) &m_pDeviceASBuffer, sizeof( int ) * 5 * m_iImagePixelCount ) );
 	if ( checkError( "cudaRenderPipeline::initRayIntersection" ) != cudaSuccess )
@@ -252,7 +246,7 @@ GError cudaRenderPipeline::initRayIntersection( int maxray )
 	CUDA_SAFE_CALL( cudaBindTexture( 0, inASBufferTexture, m_pDeviceASBuffer ) );
 
 	/**
-	 *	Pattern Data�� constant �� ���ε�.
+	 *	Pattern Data를 constant 로 업로드.
 	 */
 	CUDA_SAFE_CALL( cudaMemcpyToSymbol( constantIndexTablePattern, g_staticPatternData, sizeof( int ) * 24 ) );
 	CUDA_SAFE_CALL( cudaMemcpyToSymbol( constantPixelWeight, g_staticPixelColorWeight, sizeof( float ) * 12 ) );
@@ -271,7 +265,7 @@ GError cudaRenderPipeline::initRayIntersection( int maxray )
 }
 
 /**
- *	blooming �� ���� ����� �ʱ�ȭ �Ѵ�.
+ *	blooming 을 위한 기능을 초기화 한다.
  */
 GError cudaRenderPipeline::initBloomingFilter( float radius, float weight )
 {
@@ -429,9 +423,9 @@ cuIntersectionPoint* cudaRenderPipeline::getDeviceIntersectionBuffer()
 }
 
 /**
- *	���� Texture �� cuda ���� �������� ������ �Ұ��� �ϹǷ�.
- *	texture �ϳ��� ��� texture �� �� ��� �ø��� ���������� ó���Ѵ�.
- *	���ڷ� �־� texture ���� width ���� padding �� ���ٴ� ����.
+ *	여러 Texture 를 cuda 에서 동적으로 관리가 불가능 하므로.
+ *	texture 하나에 모든 texture 를 다 묶어서 올린뒤 내부적으로 처리한다.
+ *	인자로 주언 texture 들의 width 에는 padding 이 없다는 가정.
  */
 GError cudaRenderPipeline::setTextureData( cuTexture* pTextureData, int count )
 {
@@ -447,8 +441,8 @@ GError cudaRenderPipeline::setTextureData( cuTexture* pTextureData, int count )
 	cuTextureRef *pTextureRef = new cuTextureRef[ count ];
 	unsigned char *pTempTexture = NULL;
 	
-	/** TODO: ȿ�������� texture size �����. �ϴ��� �����ϰ� */
-	/** ��ü texture �߿��� width �� ���� ū���� ã�´�. height �� ��ü��. */
+	/** TODO: 효율적으로 texture size 만들기. 일단은 무식하게 */
+	/** 전체 texture 중에서 width 가 가장 큰것을 찾는다. height 는 전체합. */
 	for ( int i = 0; i < count; ++i ) {
 		totalWidth = max( totalWidth, pTextureData[ i ].width );
 		totalHeight += pTextureData[ i ].height;
@@ -459,11 +453,11 @@ GError cudaRenderPipeline::setTextureData( cuTexture* pTextureData, int count )
 	
 	pTempTexture = (unsigned char*) malloc( sizeof( unsigned char ) * 4 * totalWidth * totalHeight );
 	
-	/** pTempTexture �ȿ� texture ���� ��ġ�Ѵ�. */
+	/** pTempTexture 안에 texture 들을 배치한다. */
 	/** 
-	 *	�ϴ��� �����ϰ� row ������. 
-	 *	���� totalTexture �� �� �ȿ� ¤��������� texture �� �ػ󵵰� Ʋ���Ƿ�
-	 *	�� texture �� �����Ҷ��� �������� �����ؾ� �Ѵ�. 
+	 *	일단은 무식하게 row 순으로. 
+	 *	또한 totalTexture 와 그 안에 짚어넣으려는 texture 는 해상도가 틀리므로
+	 *	각 texture 를 복사할때는 한줄한줄 복사해야 한다. 
 	 */
 	heightOffset = 0;
 	for ( int i = 0; i < count; ++i ) {
@@ -473,7 +467,7 @@ GError cudaRenderPipeline::setTextureData( cuTexture* pTextureData, int count )
 					sizeof( unsigned char ) * 4 * pTextureData[ i ].width );
 		}
 
-		/** texture ref info ���� ���� */
+		/** texture ref info 정보 설정 */
 		pTextureRef[ i ].x = widthOffset;
 		pTextureRef[ i ].y = heightOffset;
 		pTextureRef[ i ].width = pTextureData[ i ].width;
@@ -486,7 +480,7 @@ GError cudaRenderPipeline::setTextureData( cuTexture* pTextureData, int count )
 		"Texture Collection Size : %d x %d, texture count=%d", totalWidth, totalHeight, count );
 	
 	/**
-	 *	CUDA Texture �� �ø���.
+	 *	CUDA Texture 로 올린다.
 	 */
 	CUDA_SAFE_CALL( cudaMallocArray( &m_pDeviceTextureData, &uchar4tex, totalWidth, totalHeight ) );
 						 
@@ -503,7 +497,7 @@ GError cudaRenderPipeline::setTextureData( cuTexture* pTextureData, int count )
 	//inObjectTexture.addressMode[ 1 ] = cudaAddressModeWrap;
 	inObjectTexture.filterMode = cudaFilterModeLinear;
 	
-	/** ������ǥ�� ���ٽ��Ѿ� �ϱ� ������ normalized = false */
+	/** 실제좌표로 접근시켜야 하기 때문에 normalized = false */
 	inObjectTexture.normalized = false;
 
 	CUDA_SAFE_CALL( cudaBindTextureToArray( inObjectTexture, m_pDeviceTextureData ) );
@@ -513,7 +507,7 @@ GError cudaRenderPipeline::setTextureData( cuTexture* pTextureData, int count )
 	}
 	
 	/**
-	 *	Texture info �� constant ������ �ѱ��.
+	 *	Texture info 를 constant 변수로 넘긴다.
 	 */
 	CUDA_SAFE_CALL( cudaMemcpyToSymbol( g_TextureRefInfo, pTextureRef, sizeof( cuTextureRef ) * count ) );
 	if ( checkError( "g_TextureRefInfo g_TextureRefCount" ) != cudaSuccess ) {
@@ -540,7 +534,7 @@ end:
 GError cudaRenderPipeline::setCameraInfo( cuCamera *pCamera )
 {
 	/**
-	 *	Camera ������ constant �� �ѱ��.
+	 *	Camera 정보를 constant 로 넘긴다.
 	 */
 	CUDA_SAFE_CALL( cudaMemcpyToSymbol( g_CameraInfo, pCamera, sizeof( cuCamera ) ) );
 	cudaError_t error = checkError( "g_CameraInfo" );	
@@ -555,7 +549,7 @@ GError cudaRenderPipeline::setObjectMaterial( cuObjectMaterial *pObjectMaterial,
 	 m_iObjectMaterialCount = count;
 
 	/**
-	 *	�ﰢ���� ���Ե� object �� material ����.
+	 *	삼각형이 포함된 object 의 material 정보.
 	 */
 	CUDA_SAFE_CALL( cudaMalloc( (void**) & m_pDeviceObjectMaterial, 
 						sizeof( cuObjectMaterial ) * count ) );
@@ -588,9 +582,9 @@ GError cudaRenderPipeline::setKDTreeNodeData( kdtreeNode *pKDTreeNodes, int node
 		return errorCudaError;
 
 	/**
-	 *	BBox ������ constant �� �ѱ��.
+	 *	BBox 정보를 constant 로 넘긴다.
 	 */
-	CUDA_SAFE_CALL( cudaMemcpyToSymbol( g_SceneBBox, &sceneBox, sizeof( cuBoundingBox ) ) );
+	CUDA_SAFE_CALL( cudaMemcpyToSymbol( g_SceneBBox, &sceneBox, sizeof( GBoundingBox ) ) );
 	cudaError_t error = checkError( "g_SceneBBox" );	
 	if ( error != cudaSuccess ) {
 		return errorCudaError;
@@ -622,7 +616,7 @@ GError cudaRenderPipeline::setTriangleGeometry( cuTriangleGeometry *pTriangleGeo
 	m_iTriangleCount = triangleCount;
 
 	/**
-	 *	�ﰢ�� geometry ����.
+	 *	삼각형 geometry 정보.
 	 */
 	CUDA_SAFE_CALL( cudaMalloc( (void**) &m_pDeviceTriangleGeometry, 
 								sizeof( cuTriangleGeometry ) * triangleCount ) );
@@ -646,7 +640,7 @@ GError cudaRenderPipeline::setTriangleGeometry( cuTriangleGeometry *pTriangleGeo
 GError cudaRenderPipeline::setPlueckerTriangleInfo( cuPlueckerTriangleInfo *pTriangleInfo, int triangleCount )
 {
 	/**
-	 *	�ﰢ�� intersection üũ�� ���� ����.
+	 *	삼각형 intersection 체크를 위한 정보.
 	 */
 	CUDA_SAFE_CALL( cudaMalloc( (void**) & m_pDevicePlueckerTriangleInfo, 
 								sizeof( cuPlueckerTriangleInfo ) * triangleCount ) );
@@ -662,7 +656,7 @@ GError cudaRenderPipeline::setPlueckerTriangleInfo( cuPlueckerTriangleInfo *pTri
 GError cudaRenderPipeline::setWaldTriangleInfo( cuWaldTriangleInfo *pTriangleInfo, int triangleCount )
 {
 	/**
-	 *	�ﰢ�� intersection üũ�� ���� ����.
+	 *	삼각형 intersection 체크를 위한 정보.
 	 */
 	CUDA_SAFE_CALL( cudaMalloc( (void**) & m_pDeviceWaldTriangleInfo, 
 								sizeof( cuWaldTriangleInfo ) * triangleCount ) );
@@ -676,7 +670,7 @@ GError cudaRenderPipeline::setWaldTriangleInfo( cuWaldTriangleInfo *pTriangleInf
 }
 
 /**
- *	CPU ���� ray ������ �����Ҷ� ���.
+ *	CPU 에서 ray 정보를 세팅할때 사용.
  */
 GError cudaRenderPipeline::setRayInfo( cuRay *pRays, int destOffset, int count )
 {
@@ -699,7 +693,7 @@ GError cudaRenderPipeline::setRayInfo( cuRay *pRays, int destOffset, int count )
 }
 
 /**
- *	Intersection ����� �����ϴ� device buffer �� clear �Ѵ�.
+ *	Intersection 결과를 저장하는 device buffer 를 clear 한다.
  */
 GError cudaRenderPipeline::clearIntersectionResult()
 {
@@ -709,7 +703,7 @@ GError cudaRenderPipeline::clearIntersectionResult()
 	}
 		
 	/** 
-	 *	hit �������� �˸��� objIndex �� ���� -1 �̹Ƿ� -1 �� �ʱ�ȭ �Ѵ�. 
+	 *	hit 안했음을 알리는 objIndex 의 값이 -1 이므로 -1 로 초기화 한다. 
 	 */
 	CUDA_SAFE_CALL( cudaMemset(  m_pDeviceIntersectionPoint, -1, 
 					sizeof( cuIntersectionPoint ) *  m_iMaxIntersectionPoint ) );
@@ -720,7 +714,7 @@ GError cudaRenderPipeline::clearIntersectionResult()
 }
 
 /**
- *	���� �޸𸮻� �ִ� intersection point ���� ����ؼ� Shading �� �����Ų��.
+ *	현재 메모리상에 있는 intersection point 들을 계산해서 Shading 을 수행시킨다.
  */
 GError cudaRenderPipeline::calDirectIllumination( int maxReflectionDepth )
 {
@@ -744,7 +738,7 @@ GError cudaRenderPipeline::calDirectIllumination( int maxReflectionDepth )
 		blocks.y++;
 
 	/**
-	 *	shading ����.
+	 *	shading 수행.
 	 */
 	shadingKernel<<< blocks, threads, 
 				sizeof( float ) * ( SHORT_STACK_DEPTH * threads.x * threads.y ) * 2 >>>
@@ -784,8 +778,8 @@ void cudaRenderPipeline::setFrameBuffer( float* pBuffer )
 }
 
 /**
- *	primary ray �� ������Ų��. ������ ray ������ device �޸𸮿�
- *	����ȴ�. ī�޶� ������ constant �� �ø���.
+ *	primary ray 를 생성시킨다. 생성된 ray 정보는 device 메모리에
+ *	저장된다. 카메라 정보를 constant 로 올린다.
  */
 GError cudaRenderPipeline::generatePrimaryRay( cuCamera camera, int *pGeneratedCount, 
 											   int currentSampleX, int currentSampleY,
@@ -815,7 +809,7 @@ GError cudaRenderPipeline::generatePrimaryRay( cuCamera camera, int *pGeneratedC
 		blocks.y++;
 
 	/**
-	 *	primary ����.
+	 *	primary 생성.
 	 */
 	generatePrimaryRayKernel<<< blocks, threads >>> ( 
 		startRayIndex, rayNum, m_pDeviceRays,  m_pDeviceIntersectionPoint, 
@@ -828,7 +822,7 @@ GError cudaRenderPipeline::generatePrimaryRay( cuCamera camera, int *pGeneratedC
 	}
 	
 	/** 
-	 *	cuda ���� ������ ray ���� ���� 
+	 *	cuda 에서 생성한 ray 개수 세팅 
 	 */
 	 (*pGeneratedCount) = rayNum;
 	
@@ -837,11 +831,11 @@ GError cudaRenderPipeline::generatePrimaryRay( cuCamera camera, int *pGeneratedC
 }
 
 /**
- *	intersection point �� üũ�ؼ� secondary reflection ray �� ������Ų��. 
- *	intersection point �� ��� ���� �������� üũ�ؼ� second ray �� ����������
- *	startOffset �� count.
+ *	intersection point 를 체크해서 secondary reflection ray 를 생성시킨다. 
+ *	intersection point 의 어디서 부터 어디까지를 체크해서 second ray 를 생성할지는
+ *	startOffset 과 count.
  *
- *	������ ray ������ device �޸𸮿� ����ȴ�. 
+ *	생성된 ray 정보는 device 메모리에 저장된다. 
  *	
  */
 GError cudaRenderPipeline::generateReflectionRay(  int startOffset, int count, int *atLeastOneRay )
@@ -894,8 +888,8 @@ GError cudaRenderPipeline::generateReflectionRay(  int startOffset, int count, i
 }
 
 /**
- *	Anti-aliasing �� ���� filter. pixel �� 3x3 filter �� ���Ƿ� ������
- *	block size �� 12 x .. ���·� ������.
+ *	Anti-aliasing 을 위한 filter. pixel 당 3x3 filter 를 쓰므로 가급적
+ *	block size 는 12 x .. 형태로 맞추자.
  */
 GError cudaRenderPipeline::antialiasingFiltering()
 {
@@ -919,8 +913,8 @@ GError cudaRenderPipeline::antialiasingFiltering()
 }
 
 /**
- *	Anti-aliasing �� ���� filter. pixel �� 3x3 filter �� ���Ƿ� ������
- *	block size �� 12 x .. ���·� ������.
+ *	Anti-aliasing 을 위한 filter. pixel 당 3x3 filter 를 쓰므로 가급적
+ *	block size 는 12 x .. 형태로 맞추자.
  */
 GError cudaRenderPipeline::grayScaleFiltering()
 {
@@ -944,8 +938,8 @@ GError cudaRenderPipeline::grayScaleFiltering()
 }
 
 /**
- *	Anti-aliasing �� ���� filter. pixel �� 3x3 filter �� ���Ƿ� ������
- *	block size �� 12 x .. ���·� ������.
+ *	Anti-aliasing 을 위한 filter. pixel 당 3x3 filter 를 쓰므로 가급적
+ *	block size 는 12 x .. 형태로 맞추자.
  */
 GError cudaRenderPipeline::sobelMethodFiltering()
 {
@@ -969,8 +963,8 @@ GError cudaRenderPipeline::sobelMethodFiltering()
 }
 
 /**
- *	Anti-aliasing �� ���� filter. pixel �� 3x3 filter �� ���Ƿ� ������
- *	block size �� 12 x .. ���·� ������.
+ *	Anti-aliasing 을 위한 filter. pixel 당 3x3 filter 를 쓰므로 가급적
+ *	block size 는 12 x .. 형태로 맞추자.
  */
 GError cudaRenderPipeline::blurringFiltering()
 {
@@ -994,8 +988,8 @@ GError cudaRenderPipeline::blurringFiltering()
 }
 
 /**
- *	���� frame buffer �� blooming ȿ���� �ش�.
- *	�̹��� ũ�⸸ŭ cuda thread �� �����ؼ� ������.
+ *	현재 frame buffer 에 blooming 효과를 준다.
+ *	이미지 크기만큼 cuda thread 를 생성해서 돌린다.
  */
 GError cudaRenderPipeline::bloomingFiltering()
 {
@@ -1015,7 +1009,7 @@ GError cudaRenderPipeline::bloomingFiltering()
 		blocks.y++;
 
 	/**
-	 *	����.
+	 *	수행.
 	 */
 	bloomingFilteringKernel<<< blocks, threads >>>( 
 							startImageIndex,
@@ -1041,7 +1035,7 @@ GError cudaRenderPipeline::bloomingFiltering()
 }
 
 /**
- *	Intersection Result �� Debugging ���� ���.
+ *	Intersection Result 의 Debugging 정보 출력.
  */
 void cudaRenderPipeline::printIntersectionResultDebugInfo( int offset, int count )
 {
@@ -1087,8 +1081,8 @@ GError cudaRenderPipeline::doSinglePassRayCasting( cuCamera camera, int maxRefle
 		blocks.y++;
 
 	/**
-	 *	��ü�� ����, reflection depth �� ���� ��� kernel �ȿ��� sampling ������ŭ �ݺ��ϸ�
-	 *	Ŀ�ο��귮 �ʰ��� GPU �� �״°�찡 �ֱ� ������ kernel �� sampling ������ŭ ȣ���Ѵ�.
+	 *	물체가 많고, reflection depth 가 많은 경우 kernel 안에서 sampling 개수만큼 반복하면
+	 *	커널연산량 초과로 GPU 가 죽는경우가 있기 때문에 kernel 을 sampling 개수만큼 호출한다.
 	 */
 	for ( int i = 0; i < samplingX; ++i ) {
 		for ( int j = 0; j < samplingY; ++j ) {
@@ -1248,8 +1242,8 @@ GError cudaRenderPipeline::doSelectiveAndAdaptiveSamplingRayTracing(
 
 	
 	/**
-	 *	��ü�� ����, reflection depth �� ���� ��� kernel �ȿ��� sampling ������ŭ �ݺ��ϸ�
-	 *	Ŀ�ο��귮 �ʰ��� GPU �� �״°�찡 �ֱ� ������ kernel �� sampling ������ŭ ȣ���Ѵ�.
+	 *	물체가 많고, reflection depth 가 많은 경우 kernel 안에서 sampling 개수만큼 반복하면
+	 *	커널연산량 초과로 GPU 가 죽는경우가 있기 때문에 kernel 을 sampling 개수만큼 호출한다.
 	 */
 	if ( samplingX * samplingY == 1 ) {
 
@@ -1277,7 +1271,7 @@ GError cudaRenderPipeline::doSelectiveAndAdaptiveSamplingRayTracing(
 		}
 		CUDA_SAFE_CALL( cudaThreadSynchronize() );
 
-		/** 2���� ������ ����. */
+		/** 2개의 공간을 쓴다. */
 		CUDA_SAFE_CALL( cudaMemset( m_pDeviceIntResult, 0x00, sizeof( int ) * 4 ) );	
 		CUDA_SAFE_CALL( cudaThreadSynchronize() );
 
@@ -1285,7 +1279,7 @@ GError cudaRenderPipeline::doSelectiveAndAdaptiveSamplingRayTracing(
 		detectionTime.start();
 
 		///** 
-		// *	color difference map �� �����. �� kernel �� ���ϰ� ���Ǿ��� ������ thread �� ���̽ᵵ �� 
+		// *	color difference map 을 만든다. 이 kernel 은 부하가 거의없기 때문에 thread 를 많이써도 됨 
 		// */
 		//threads.x = 16;
 		//threads.y = 16;
@@ -1301,8 +1295,8 @@ GError cudaRenderPipeline::doSelectiveAndAdaptiveSamplingRayTracing(
 		//CUDA_SAFE_CALL( cudaThreadSynchronize() );
 
 		/** 
-		 *	���ȼ��� 4sub-pixel �� ������ �����尡 ó���ϰ� �ϱ� ���ؼ�.
-		 * x, y �� 2�� ����̾�� �Ѵ�. �׸��� �� ����� width*2, height*2 ũ���� �Ѵ�. 
+		 *	한픽셀의 4sub-pixel 을 각각의 쓰레드가 처리하게 하기 위해서.
+		 * x, y 는 2의 배수이어야 한다. 그리고 총 블락은 width*2, height*2 크기어야 한다. 
 		 */
 		threads.x = 8;
 		threads.y = 16;
@@ -1314,7 +1308,7 @@ GError cudaRenderPipeline::doSelectiveAndAdaptiveSamplingRayTracing(
 		if ( ( 2 * m_SceneInfo.iResolutionY ) % threads.y != 0 )
 			blocks.y++;
 
-		/** ���� shared memory ������� stack ������� ������� �Ʒ�ó�� ��ƾ��� */
+		/** 여기 shared memory 사이즈는 stack 사이즈와 상관없이 아래처럼 잡아야함 */
 		singlePassRayTracingKernel_DetectionStage<<<blocks, threads, 6 * sizeof( float ) * threads.x * threads.y>>>
 			( m_pDeviceFrameBuffer, m_pDeviceASBuffer,
 			  m_pDeviceIntResult, bAdaptiveInfo, compareType );
@@ -1326,9 +1320,9 @@ GError cudaRenderPipeline::doSelectiveAndAdaptiveSamplingRayTracing(
 		detectionTime.end();
 
 		/**
-		 *	����� ������ ���� ��.
-		 *	�߰������� ��� ray �� sampling �ؾ��ϴ����� ����Ѵ�. padding �� subpixel �� �����ϰ� ����ؾ� �ϹǷ�
-		 *	�޸𸮸� �m���.
+		 *	디버깅 정보를 위한 것.
+		 *	추가적으로 몇개의 ray 를 sampling 해야하는지를 계산한다. padding 된 subpixel 을 제외하고 계산해야 하므로
+		 *	메모리를 ?어본다.
 		 */
 		if ( bAdaptiveInfo ) {
 			
@@ -1390,9 +1384,9 @@ GError cudaRenderPipeline::doSelectiveAndAdaptiveSamplingRayTracing(
 		if ( !bAdaptiveInfo ) {
 
 			/**
-			 *	Kernel �ȿ��� shared �޸𸮸� �̿��ؼ� �� pixel �� ���ؼ� sampling ������ճ��� �����Ѵ�.
-			 *	block ���� thread ������ �ݵ�� �� pixel �� sampling ������ ����̾�� �Ѵ�.
-			 *	3x3 �� adaptive sampling ���� �����Ѵ�.
+			 *	Kernel 안에서 shared 메모리를 이용해서 한 pixel 에 대해서 sampling 값을평균내서 저장한다.
+			 *	block 안의 thread 갯수는 반드시 한 pixel 의 sampling 갯수의 배수이어야 한다.
+			 *	3x3 은 adaptive sampling 에서 제외한다.
 			 */
 			threads.x = ADAPTIVE_THREADS;
 			threads.y = 1;
@@ -1430,7 +1424,7 @@ GError cudaRenderPipeline::doSelectiveAndAdaptiveSamplingRayTracing(
 
 
 /**
- *	reflection depth=1, ���� 1�� ����.
+ *	reflection depth=1, 광원 1개 고정.
  */
 GError cudaRenderPipeline::fixedOption_doSelectiveAndAdaptiveSamplingRayTracing( 
 													int maxReflectionDepth, 
@@ -1462,8 +1456,8 @@ GError cudaRenderPipeline::fixedOption_doSelectiveAndAdaptiveSamplingRayTracing(
 
 	
 	/**
-	 *	��ü�� ����, reflection depth �� ���� ��� kernel �ȿ��� sampling ������ŭ �ݺ��ϸ�
-	 *	Ŀ�ο��귮 �ʰ��� GPU �� �״°�찡 �ֱ� ������ kernel �� sampling ������ŭ ȣ���Ѵ�.
+	 *	물체가 많고, reflection depth 가 많은 경우 kernel 안에서 sampling 개수만큼 반복하면
+	 *	커널연산량 초과로 GPU 가 죽는경우가 있기 때문에 kernel 을 sampling 개수만큼 호출한다.
 	 */
 	if ( samplingX * samplingY == 1 ) {
 
@@ -1491,7 +1485,7 @@ GError cudaRenderPipeline::fixedOption_doSelectiveAndAdaptiveSamplingRayTracing(
 		}
 		CUDA_SAFE_CALL( cudaThreadSynchronize() );
 
-		/** 2���� ������ ����. */
+		/** 2개의 공간을 쓴다. */
 		CUDA_SAFE_CALL( cudaMemset( m_pDeviceIntResult, 0x00, sizeof( int ) * 4 ) );	
 		CUDA_SAFE_CALL( cudaThreadSynchronize() );
 
@@ -1499,8 +1493,8 @@ GError cudaRenderPipeline::fixedOption_doSelectiveAndAdaptiveSamplingRayTracing(
 		detectionTime.start();
 
 		/** 
-		 *	���ȼ��� 4sub-pixel �� ������ �����尡 ó���ϰ� �ϱ� ���ؼ�.
-		 * x, y �� 2�� ����̾�� �Ѵ�. �׸��� �� ����� width*2, height*2 ũ���� �Ѵ�. 
+		 *	한픽셀의 4sub-pixel 을 각각의 쓰레드가 처리하게 하기 위해서.
+		 * x, y 는 2의 배수이어야 한다. 그리고 총 블락은 width*2, height*2 크기어야 한다. 
 		 */
 		threads.x = 8;
 		threads.y = 16;
@@ -1512,7 +1506,7 @@ GError cudaRenderPipeline::fixedOption_doSelectiveAndAdaptiveSamplingRayTracing(
 		if ( ( 2 * m_SceneInfo.iResolutionY ) % threads.y != 0 )
 			blocks.y++;
 
-		/** ���� shared memory ������� stack ������� ������� �Ʒ�ó�� ��ƾ��� */
+		/** 여기 shared memory 사이즈는 stack 사이즈와 상관없이 아래처럼 잡아야함 */
 		singlePassRayTracingKernel_DetectionStage<<<blocks, threads, 6 * sizeof( float ) * threads.x * threads.y>>>
 			( m_pDeviceFrameBuffer, m_pDeviceASBuffer,
 			  m_pDeviceIntResult, bAdaptiveInfo, compareType );
@@ -1524,9 +1518,9 @@ GError cudaRenderPipeline::fixedOption_doSelectiveAndAdaptiveSamplingRayTracing(
 		detectionTime.end();
 
 		/**
-		 *	����� ������ ���� ��.
-		 *	�߰������� ��� ray �� sampling �ؾ��ϴ����� ����Ѵ�. padding �� subpixel �� �����ϰ� ����ؾ� �ϹǷ�
-		 *	�޸𸮸� �m���.
+		 *	디버깅 정보를 위한 것.
+		 *	추가적으로 몇개의 ray 를 sampling 해야하는지를 계산한다. padding 된 subpixel 을 제외하고 계산해야 하므로
+		 *	메모리를 ?어본다.
 		 */
 		if ( bAdaptiveInfo ) {
 			
@@ -1588,12 +1582,12 @@ GError cudaRenderPipeline::fixedOption_doSelectiveAndAdaptiveSamplingRayTracing(
 		if ( !bAdaptiveInfo ) {
 
 			/**
-			 *	Kernel �ȿ��� shared �޸𸮸� �̿��ؼ� �� pixel �� ���ؼ� sampling ������ճ��� �����Ѵ�.
-			 *	block ���� thread ������ �ݵ�� �� pixel �� sampling ������ ����̾�� �Ѵ�.
-			 *	3x3 �� adaptive sampling ���� �����Ѵ�.
+			 *	Kernel 안에서 shared 메모리를 이용해서 한 pixel 에 대해서 sampling 값을평균내서 저장한다.
+			 *	block 안의 thread 갯수는 반드시 한 pixel 의 sampling 갯수의 배수이어야 한다.
+			 *	3x3 은 adaptive sampling 에서 제외한다.
 			 */
 
-			/** �ʹ����� block �� ����ٸ� ������ ����� �Ѵ�. */
+			/** 너무많은 block 이 생긴다면 여러번 나누어서 한다. */
 			int activeSubPixelCount = samplingCount[ 0 ];
 			int oneIterationSubPixel = 1000000;
 			int mincount = 0;
@@ -1639,8 +1633,8 @@ GError cudaRenderPipeline::fixedOption_doSelectiveAndAdaptiveSamplingRayTracing(
 }
 
 /**
- *	Ray Casting �� �����Ѵ�.
- *	�̹��� ��ü�� ���ؼ� �����ϴ°�.
+ *	Ray Casting 을 수행한다.
+ *	이미지 전체에 대해서 수행하는것.
  */
 GError cudaRenderPipeline::doRayCasting( int rayOffset, int rayCount, bool faceCCW, bool backFaceCulling )
 {
@@ -1677,13 +1671,13 @@ GError cudaRenderPipeline::doRayCasting( int rayOffset, int rayCount, bool faceC
 }
 
 /**
- *	Ray Casting �� �����Ѵ�.
- *	� ray �� ���������� �̹� device ���� ray memory �� �ö� �־�� �Ѵ�.
- *	generatePrimaryRay �� setRay ���� �̿��ؼ� �̸� �����ؾ� ��. intersection �����
- *	device �޸� �� ������� �д�.
- *	���ڴ� global memory �� �ö� �ִ� ray �������� ��� ��������
- *	intersection check ������ backface �� ��� culling �ɼ��� �ִ� �ﰢ���� ���ؼ�
- *	culling ���� ����.
+ *	Ray Casting 을 수행한다.
+ *	어떤 ray 를 추적할지는 이미 device 상의 ray memory 에 올라가 있어야 한다.
+ *	generatePrimaryRay 나 setRay 등을 이용해서 미리 세팅해야 함. intersection 결과는
+ *	device 메모리 상에 저장시켜 둔다.
+ *	인자는 global memory 에 올라가 있는 ray 정보들중 어디서 어디까지를
+ *	intersection check 할지와 backface 의 경우 culling 옵션이 있는 삼각형에 대해서
+ *	culling 할지 여부.
  */
 GError cudaRenderPipeline::doRayCastingSequentialData( int rayOffset, int rayCount, bool faceCCW, bool backFaceCulling )
 {
@@ -1717,13 +1711,13 @@ GError cudaRenderPipeline::doRayCastingSequentialData( int rayOffset, int rayCou
 }
 
 /**
- *	���� device �� �����ϴ� Intersection ����� �޾ƿ´�. 
- *	count �� ����� �޾ƿ��� �����ϴ� ��.
+ *	현재 device 상에 존재하는 Intersection 결과를 받아온다. 
+ *	count 는 몇개까지 받아올지 결정하는 것.
  */
 cuIntersectionPoint *cudaRenderPipeline::getIntersectionResult( int count )
 {
 	/** 
-	 *	���� Device ���� ����� �����ؼ� �����´�. 
+	 *	현재 Device 상의 결과를 복사해서 가져온다. 
 	 */
 	CUDA_SAFE_CALL( cudaMemcpy( m_pHostIntersectionPoint, 
 								m_pDeviceIntersectionPoint, 
@@ -1734,13 +1728,13 @@ cuIntersectionPoint *cudaRenderPipeline::getIntersectionResult( int count )
 }
 
 /**
- *	Memory ���¸� ����Ѵ�.
+ *	Memory 상태를 출력한다.
  */
 void cudaRenderPipeline::printStatusInfo()
 {
 	float fRayBufferSize = ( sizeof( cuRay ) * m_iMaxRay ) / 1048576.0f;
 	float fIntersectionBufferSize = ( sizeof( cuIntersectionPoint ) * m_iMaxIntersectionPoint ) /  1048576.0f;
-	// framebuffer �� 2��.
+	// framebuffer 는 2개.
 	float fFrameBufferSize = ( ( sizeof( float ) * 3 * m_iImagePixelCount ) / 1048576.0f ) * 2;
 	
 	float fKDTreeSize = ( sizeof( kdtreeNode ) * m_iNodeCount ) / 1048576.0f;
@@ -1774,6 +1768,3 @@ void cudaRenderPipeline::printStatusInfo()
 	
 	
 }
-
-
-

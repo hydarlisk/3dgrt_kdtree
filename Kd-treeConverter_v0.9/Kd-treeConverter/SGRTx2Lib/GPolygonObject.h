@@ -6,9 +6,9 @@
 #include "GTriangleWrapperList.h"
 
 /**
- *	Triangle ·Î ±¸¼ºµÈ µ¥ÀÌÅÍ¸¦ Áö¿øÇÏ´Â Object Å¬·¡½º.
- *	Ãß»ó°´Ã¼ÀÌ´Ù. ÇöÀç ¸ğµç Light ¹× Object ´Â ÀÌ TriangleObject ¸¦
- *	»ó¼Ó¹Ş¾Æ¾ß ÇÑ´Ù.
+ *	Triangle ë¡œ êµ¬ì„±ëœ ë°ì´í„°ë¥¼ ì§€ì›í•˜ëŠ” Object í´ë˜ìŠ¤.
+ *	ì¶”ìƒê°ì²´ì´ë‹¤. í˜„ì¬ ëª¨ë“  Light ë° Object ëŠ” ì´ TriangleObject ë¥¼
+ *	ìƒì†ë°›ì•„ì•¼ í•œë‹¤.
  *
  *	by graphicsian.
  */
@@ -38,39 +38,39 @@ public:
 	virtual void setVertexCount( int count );
 
 	/**
-	 *	ÇöÀç »ï°¢Çü µ¥ÀÌÅÍ¿¡ transform matrix ¸¦ Àû¿ëÇØ¼­
-	 *	µ¥ÀÌÅÍ ÀÚÃ¼¸¦ º¯°æÇÑ´Ù.
+	 *	í˜„ì¬ ì‚¼ê°í˜• ë°ì´í„°ì— transform matrix ë¥¼ ì ìš©í•´ì„œ
+	 *	ë°ì´í„° ìì²´ë¥¼ ë³€ê²½í•œë‹¤.
 	 */
 	virtual void applyTransform( GMatrix4 *pTransformMatrix, 
 								 GMatrix4 *pNormalTransformMatrix );
 
 	/** 
-	 * vertex ¹è¿­ÀÇ pointer ¸¦ ¸®ÅÏÇÑ´Ù. pCount ¿¡´Â vertex °¹¼ö ¸®ÅÏ 
+	 * vertex ë°°ì—´ì˜ pointer ë¥¼ ë¦¬í„´í•œë‹¤. pCount ì—ëŠ” vertex ê°¯ìˆ˜ ë¦¬í„´ 
 	 */
 	virtual void setVertexArray( float *array );
 	virtual const float* getVertexArray();
 
 	/** 
-	 * normal ¹è¿­ÀÇ pointer ¸¦ ¸®ÅÏÇÑ´Ù. count ¿¡´Â normal °¹¼ö ¸®ÅÏ 
+	 * normal ë°°ì—´ì˜ pointer ë¥¼ ë¦¬í„´í•œë‹¤. count ì—ëŠ” normal ê°¯ìˆ˜ ë¦¬í„´ 
 	 */
 	virtual void setNormalArray( float *array );
 	virtual const float* getNormalArray();
 
 	/** 
-	 * triangle index ¹è¿­ÀÇ pointer ¸¦ ¸®ÅÏÇÑ´Ù. count ¿¡´Â triangle °¹¼ö ¸®ÅÏ 
+	 * triangle index ë°°ì—´ì˜ pointer ë¥¼ ë¦¬í„´í•œë‹¤. count ì—ëŠ” triangle ê°¯ìˆ˜ ë¦¬í„´ 
 	 */
 	virtual void setIndexArray( int *array );
 	virtual const int* getIndexArray();
 
 	/** 
-	 * UV µ¥ÀÌÅÍ ¹è¿­ÀÇ pointer ¸¦ ¸®ÅÏÇÑ´Ù. count ¿¡´Â UV °¹¼ö ¸®ÅÏ 
+	 * UV ë°ì´í„° ë°°ì—´ì˜ pointer ë¥¼ ë¦¬í„´í•œë‹¤. count ì—ëŠ” UV ê°¯ìˆ˜ ë¦¬í„´ 
 	 */
 	virtual void setUVArray( float *array );
 	virtual const float* getUVArray();
 
 	/** 
-	 * Color µ¥ÀÌÅÍ ¹è¿­ÀÇ pointer ¸¦ ¸®ÅÏÇÑ´Ù. 
-	 * count ¿¡´Â UV °¹¼ö ¸®ÅÏ 
+	 * Color ë°ì´í„° ë°°ì—´ì˜ pointer ë¥¼ ë¦¬í„´í•œë‹¤. 
+	 * count ì—ëŠ” UV ê°¯ìˆ˜ ë¦¬í„´ 
 	 */
 	virtual void setColorArray( float *array );
 	virtual const float* getColorArray();
@@ -90,7 +90,7 @@ public:
 	virtual void calBarycentricNormal( int indexInObject, __m128 alpha, __m128 beta, __m128 gamma, _sse_vec *normal );
 	virtual void calBarycentricUV(  int indexInObject, __m128 alpha, __m128 beta, __m128 gamma, __m128 *uv );
 
-	// ±âÅ¸ ÇÔ¼ö
+	// ê¸°íƒ€ í•¨ìˆ˜
 	GVector getCenter( int indexInObject );
 	GVector getNormal( int indexInObject );
 	GVector getVertex( int indexInObject, int sub_index );

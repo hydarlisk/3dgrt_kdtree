@@ -101,7 +101,7 @@ public:
 		*ppRightChild = m_pnodeFirstChild + 1;
 	}
 
-	// inner node ÀÇ AABB¸¦ updateÇÑ´Ù.
+	// inner node ì˜ AABBë¥¼ updateí•œë‹¤.
 	void in_nodeUpdateAABB( GBoundingBox* bbox )
 	{
 		GBoundingBox* first = m_pnodeFirstChild->thisAABB();
@@ -116,14 +116,14 @@ public:
 		bbox->tryupdateMin(temp_min);
 	}
 
-	// µÎ ÀÚ½ÄÀÇ flag¸¦ return ÇÑ´Ù.
-	// ÇÑ ÀÚ½ÄÀÌ¶óµµ updateµÇ¾î flag ¼ÂÆÃ µÇ¾î ÀÖÀ¸¸é return true
+	// ë‘ ìì‹ì˜ flagë¥¼ return í•œë‹¤.
+	// í•œ ìì‹ì´ë¼ë„ updateë˜ì–´ flag ì…‹íŒ… ë˜ì–´ ìˆìœ¼ë©´ return true
 	bool getChildrenFlag()
 	{
 		return ( m_pnodeFirstChild->flag || (m_pnodeFirstChild+1)->flag );
 	}
 
-	// µÎ ÀÚ½ÄÀÇ flag¸¦ ´Ù½Ã false·Î ¸¸µç´Ù.
+	// ë‘ ìì‹ì˜ flagë¥¼ ë‹¤ì‹œ falseë¡œ ë§Œë“ ë‹¤.
 	void setChildrenFlagZero()
 	{
 		m_pnodeFirstChild->flag = false;
@@ -156,7 +156,7 @@ public:
 //----------------------------------------------------------------------------
 //----------------------------------------------------------------------------
 
-	bool flag;// BVH UPDATE¿¡ ¾²ÀÌ´Â flag. ³ªÁß¿¡ ÀÌ º¯¼ö ¾ø¾Ù ¼ö ÀÖµµ·Ï???
+	bool flag;// BVH UPDATEì— ì“°ì´ëŠ” flag. ë‚˜ì¤‘ì— ì´ ë³€ìˆ˜ ì—†ì•¨ ìˆ˜ ìˆë„ë¡???
 private:
 	// AABB of this node
 	GBoundingBox m_aabb;
@@ -208,7 +208,7 @@ private:
 		@pre
 			called from construct()
 	 */
-	void pre_calculate(GVector* aryvCentroid, GBoundingBox* aryAABB);   // ÀüÃ³¸®	
+	void pre_calculate(GVector* aryvCentroid, GBoundingBox* aryAABB);   // ì „ì²˜ë¦¬	
 
 	// functors for sort based on centroids
 	class compareCentroidX;

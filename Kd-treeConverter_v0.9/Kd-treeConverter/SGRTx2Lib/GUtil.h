@@ -3,7 +3,7 @@
 #include "GBase.h"
 
 /**
- *	¿©·¯°¡Áö Àâ½º·¯¿î ÇÔ¼ö.
+ *	ì—¬ëŸ¬ê°€ì§€ ì¡ìŠ¤ëŸ¬ìš´ í•¨ìˆ˜.
  *
  *	by graphicsian.
  */	
@@ -17,48 +17,48 @@ public:
 	~GUtil(void);
 
 	/**
-	 *	filename ¿¡¼­ È®ÀåÀÚ¸¦ ¸®ÅÏÇÑ´Ù. ¸®ÅÏ°ªÀº
-	 *	szFileName ÀÇ pointer ¸¦ ±âÁØÀ¸·Î »ó´ëÀûÀÎ À§Ä¡¸¦
-	 *	¸®ÅÏÇÏ´Â °ÍÀÌ¹Ç·Î, ¹İµå½Ã ÀÌ ¸®ÅÏ°ªÀ» »ç¿ëÇÒ¶§´Â szFileName ÀÌ
-	 *	³²¾Æ ÀÖ¾î¾ß ÇÑ´Ù.
+	 *	filename ì—ì„œ í™•ì¥ìë¥¼ ë¦¬í„´í•œë‹¤. ë¦¬í„´ê°’ì€
+	 *	szFileName ì˜ pointer ë¥¼ ê¸°ì¤€ìœ¼ë¡œ ìƒëŒ€ì ì¸ ìœ„ì¹˜ë¥¼
+	 *	ë¦¬í„´í•˜ëŠ” ê²ƒì´ë¯€ë¡œ, ë°˜ë“œì‹œ ì´ ë¦¬í„´ê°’ì„ ì‚¬ìš©í• ë•ŒëŠ” szFileName ì´
+	 *	ë‚¨ì•„ ìˆì–´ì•¼ í•œë‹¤.
 	 */
 	static const char* getFileExt( const char* szFileName );
 
 	/**
-	 *	filename Áß parent path ¸¦ ±¸ÇØ¼­ ¸®ÅÏÇÑ´Ù.
+	 *	filename ì¤‘ parent path ë¥¼ êµ¬í•´ì„œ ë¦¬í„´í•œë‹¤.
 	 */
 	static const char* getParentPath( const char* szFileName, char* result );
 
 	/**
-	 *	filename Áß file name ¸¦ ±¸ÇØ¼­ ¸®ÅÏÇÑ´Ù.
+	 *	filename ì¤‘ file name ë¥¼ êµ¬í•´ì„œ ë¦¬í„´í•œë‹¤.
 	 */
 	static const char* getFileName( const char* szFileName, char* result );
 	
 	/**
-	 *	string ÀÇ ¸¶Áö¸·¿¡ cr/lf ¸¦ null ¹®ÀÚ·Î ¹Ù²Û´Ù.
+	 *	string ì˜ ë§ˆì§€ë§‰ì— cr/lf ë¥¼ null ë¬¸ìë¡œ ë°”ê¾¼ë‹¤.
 	 */
 	static void removeCRLF( char *str );
 
 	/**
-	 *	data ¿¡¼­ = ¸¦ ±¸ºĞÇØ¼­ key ¿Í value ¸¦ ¸®ÅÏÇÑ´Ù.
-	 *	data ÀÚÃ¼¿¡¼­ = ¸¦ 0x00 À¸·Î ¸¸µé°í key ´Â data ÀÇ Ã¹ Æ÷ÀÎÅÍ
-	 *	value ¿¡´Â = ÀÌÈÄ Æ÷ÀÎÅÍ¸¦ °¡¸®Å²´Ù. µû¶ó¼­ data ÀÇ °ªÀÌ ÈÑ¼ÕµÊÀ»
-	 *	ÁÖÀÇÇÏ¶ó.
+	 *	data ì—ì„œ = ë¥¼ êµ¬ë¶„í•´ì„œ key ì™€ value ë¥¼ ë¦¬í„´í•œë‹¤.
+	 *	data ìì²´ì—ì„œ = ë¥¼ 0x00 ìœ¼ë¡œ ë§Œë“¤ê³  key ëŠ” data ì˜ ì²« í¬ì¸í„°
+	 *	value ì—ëŠ” = ì´í›„ í¬ì¸í„°ë¥¼ ê°€ë¦¬í‚¨ë‹¤. ë”°ë¼ì„œ data ì˜ ê°’ì´ í›¼ì†ë¨ì„
+	 *	ì£¼ì˜í•˜ë¼.
 	 */
 	static void getKeyValue( char* data, char **key, char **value );
 
 	/**
-	 *	blank ·Î ±¸ºĞµÇ´Â value °ªÀÇ list ¸¦ ¸¸µé¾î¼­ ¸®ÅÏÇÑ´Ù.
-	 *	getKeyValue°ú °°Àº ¹æ½ÄÀÌ¸ç, data Á¤º¸´Â ÈÑ¼ÕµÈ´Ù.
+	 *	blank ë¡œ êµ¬ë¶„ë˜ëŠ” value ê°’ì˜ list ë¥¼ ë§Œë“¤ì–´ì„œ ë¦¬í„´í•œë‹¤.
+	 *	getKeyValueê³¼ ê°™ì€ ë°©ì‹ì´ë©°, data ì •ë³´ëŠ” í›¼ì†ëœë‹¤.
 	 */
 	static void getValueList( char *data, vector<char*> &valueList );
 	static void getValueList( char *data, vector<char*> &valueList, const char* delimeter );
 
 	/**
-	 *	»õ·Î¿î ¸Ş¸ğ¸®¸¦ »ı¼ºÇØ¼­ src ¸¦ º¹»çÇØ¼­ ¸®ÅÏÇÑ´Ù.
+	 *	ìƒˆë¡œìš´ ë©”ëª¨ë¦¬ë¥¼ ìƒì„±í•´ì„œ src ë¥¼ ë³µì‚¬í•´ì„œ ë¦¬í„´í•œë‹¤.
 	 */
 	static char* copyString( const char *src );
 
-	/** ÇöÀç½Ã°£À» YYYY-MM-DD-HH-MM-SS ·Î ¸®ÅÏ */
+	/** í˜„ì¬ì‹œê°„ì„ YYYY-MM-DD-HH-MM-SS ë¡œ ë¦¬í„´ */
 	static void getToday( char *dest );
 };

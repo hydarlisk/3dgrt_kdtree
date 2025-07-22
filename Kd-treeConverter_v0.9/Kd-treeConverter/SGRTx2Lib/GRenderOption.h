@@ -1,7 +1,7 @@
 #pragma once
 
 /**
- *	Rendering Option ¼³Á¤.
+ *	Rendering Option ì„¤ì •.
  *
  *	by graphicsian.
  */

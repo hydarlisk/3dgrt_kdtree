@@ -5,7 +5,7 @@
 #include "GScene.h"
 #include "GRenderOption.h"
 
-#define JEDI_MPI_ROOT					0			//	·çÆ®·Î »ç¿ëÇÒ process id
+#define JEDI_MPI_ROOT					0			//	ë£¨íŠ¸ë¡œ ì‚¬ìš©í•  process id
 #define JEDI_MPI_TAG					1
 
 #define JEDI_TERMINATION_MESSAGE		1
@@ -27,11 +27,11 @@ typedef enum {
 } rendererType;
 
 /**
- *	MPICH2 ¸¦ »ç¿ëÇØ¼­ root ÀÌ¿ÜÀÇ °¢ node µéÀÇ message ¸¦
- *	Ã³¸®ÇÒ manager Å¬·¡½º. °¢ node ´Â ÇÁ·Î±×·¥ÀÌ ¼öÇàµÇ¸é
- *	ÀÌ Å¬·¡½º°¡ ÇÁ·Î±×·¥ µ¿ÀÛÀ» message ¸¦ °¡Áö°í ÇÚµé¸µÇÏ°Ô
- *	µÈ´Ù. root ÀÇ °æ¿ì´Â ÀÌ Å¬·¡½º¸¦ ºüÁ®³ª°¡¼­ GUI ¾È¿¡¼­
- *	Çàµ¿ÀÌ ¼öÇàµÈ´Ù.
+ *	MPICH2 ë¥¼ ì‚¬ìš©í•´ì„œ root ì´ì™¸ì˜ ê° node ë“¤ì˜ message ë¥¼
+ *	ì²˜ë¦¬í•  manager í´ë˜ìŠ¤. ê° node ëŠ” í”„ë¡œê·¸ë¨ì´ ìˆ˜í–‰ë˜ë©´
+ *	ì´ í´ë˜ìŠ¤ê°€ í”„ë¡œê·¸ë¨ ë™ì‘ì„ message ë¥¼ ê°€ì§€ê³  í•¸ë“¤ë§í•˜ê²Œ
+ *	ëœë‹¤. root ì˜ ê²½ìš°ëŠ” ì´ í´ë˜ìŠ¤ë¥¼ ë¹ ì ¸ë‚˜ê°€ì„œ GUI ì•ˆì—ì„œ
+ *	í–‰ë™ì´ ìˆ˜í–‰ëœë‹¤.
  *
  *	graphicsian.
  */
@@ -82,7 +82,7 @@ public:
 	GError slaveRenderNode();
 
 	/** 
-	 *	root ¸¦ Á¦¿ÜÇÑ ¸ğµç node ¿¡°Ô ¸í·ÉÀ» º¸³¿. 
+	 *	root ë¥¼ ì œì™¸í•œ ëª¨ë“  node ì—ê²Œ ëª…ë ¹ì„ ë³´ëƒ„. 
 	 */
 	void sendRootMessageToNode( int message );
 	GError mpiErrorCheck( int mpiError, const char* title );

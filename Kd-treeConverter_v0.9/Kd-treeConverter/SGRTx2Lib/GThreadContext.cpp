@@ -3,7 +3,7 @@
 GThreadContext::GThreadContext( UINT uiThreadID )
 {
 	/**
-	 *	¾²·¹µå ID
+	 *	ì“°ë ˆë“œ ID
 	 */
 	m_uiThreadID = uiThreadID;
 
@@ -20,7 +20,7 @@ UINT GThreadContext::getThreadID()
 }
 
 /**
- *	Thread ÀÇ WorkNumber ¸¦ ÁöÁ¤ÇÑ´Ù.
+ *	Thread ì˜ WorkNumber ë¥¼ ì§€ì •í•œë‹¤.
  */
 void GThreadContext::setWorkNumber( UINT nWork )
 {
@@ -28,7 +28,7 @@ void GThreadContext::setWorkNumber( UINT nWork )
 }
 
 /**
- *	Thread ÀÇ WorkNumber ¸¦ ¹İÈ¯ÇÑ´Ù.
+ *	Thread ì˜ WorkNumber ë¥¼ ë°˜í™˜í•œë‹¤.
  */
 UINT GThreadContext::getWorkNumber()
 {

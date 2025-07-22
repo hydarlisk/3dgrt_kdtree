@@ -10,7 +10,7 @@ GOpenGLContext::~GOpenGLContext(void)
 
 
 /**+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- *	MFCøÎ OpenGL √ ±‚»≠
+ *	MFCÏö© OpenGL Ï¥àÍ∏∞Ìôî
  *+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 BOOL GOpenGLContext::initOpenGL( HWND hwnd, int width, int height, BOOL isDoubleBuffering )
 {
@@ -29,7 +29,7 @@ BOOL GOpenGLContext::initOpenGL( HWND hwnd, int width, int height, BOOL isDouble
 }
 
 /**+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- *	»≠∏È «ÿªÛµµ∏¶ ∞·¡§«—¥Ÿ.
+ *	ÌôîÎ©¥ Ìï¥ÏÉÅÎèÑÎ•º Í≤∞Ï†ïÌïúÎã§.
  *+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 BOOL GOpenGLContext::setDisplay( int x, int y, int width, int height )
 {
@@ -45,7 +45,7 @@ BOOL GOpenGLContext::setDisplay( int x, int y, int width, int height )
 }
 
 /**+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- *	OpenGL Main Context ∏¶ m_hGLRC ∑Œ «—¥Ÿ.
+ *	OpenGL Main Context Î•º m_hGLRC Î°ú ÌïúÎã§.
  *+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 BOOL GOpenGLContext::setCurrentContext()
 {
@@ -54,7 +54,7 @@ BOOL GOpenGLContext::setCurrentContext()
 }
 
 /**+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- *	OpenGL Main Context «ÿ¡¶
+ *	OpenGL Main Context Ìï¥Ï†ú
  *+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 BOOL GOpenGLContext::removeCurrentContext()
 {
@@ -63,7 +63,7 @@ BOOL GOpenGLContext::removeCurrentContext()
 }
 
 /**+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- *	OpenGl ¿ª ¿©µµøÏ DC øÕ ø¨∞·«—¥Ÿ.
+ *	OpenGl ÏùÑ ÏúàÎèÑÏö∞ DC ÏôÄ Ïó∞Í≤∞ÌïúÎã§.
  *+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 BOOL GOpenGLContext::openGlSetPixelFormat( BOOL isDoubleBuffering )
 {
@@ -87,7 +87,7 @@ BOOL GOpenGLContext::openGlSetPixelFormat( BOOL isDoubleBuffering )
 }
 
 /**+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- *	OpenGl «ÿ¡¶
+ *	OpenGl Ìï¥Ï†ú
  *+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 BOOL GOpenGLContext::uninitOpenGL()
 {

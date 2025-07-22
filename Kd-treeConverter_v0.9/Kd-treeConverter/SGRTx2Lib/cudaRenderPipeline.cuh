@@ -1,9 +1,9 @@
 /**
- *	Cuda ·Î Rendering À» ¼öÇàÇÏ±â À§ÇØ¼­
- *	¿©·¯°¡Áö¸¦ °ü¸®ÇÏ´Â class.
+ *	Cuda ë¡œ Rendering ì„ ìˆ˜í–‰í•˜ê¸° ìœ„í•´ì„œ
+ *	ì—¬ëŸ¬ê°€ì§€ë¥¼ ê´€ë¦¬í•˜ëŠ” class.
  *
  *	light, texture, shading, ray tracing, photon mapping
- *	µîµî.
+ *	ë“±ë“±.
  *	
  *	by graphicsian.
  */
@@ -63,7 +63,7 @@ public:
 	~cudaRenderPipeline();
 	
 	/**
-	*	CUDA Render Context ÃÊ±âÈ­.
+	*	CUDA Render Context ì´ˆê¸°í™”.
 	*/
 	GError initialize( cuScene pScene, int maxRay );
 	GError setLightRaySetData( cuLightRaySet *pRaySet, int count );
@@ -84,7 +84,7 @@ public:
 
 
 	/**
-	 *	RAY ¿Í »ï°¢Çü Intersection Check ¸¦ À§ÇÑ µ¥ÀÌÅÍ ¼¼ÆÃ.
+	 *	RAY ì™€ ì‚¼ê°í˜• Intersection Check ë¥¼ ìœ„í•œ ë°ì´í„° ì„¸íŒ….
 	 */
 	GError setKDTreeNodeData( kdtreeNode *pKDTreeNodes, int nodeCount, cuBoundingBox sceneBox );
 	GError setTriangleOffsetList( unsigned int *pTriangleOffsetList, int offsetCount );
@@ -102,45 +102,45 @@ public:
 	cuIntersectionPoint* getDeviceIntersectionBuffer();
 	
 	/**
-	 *	ÃßÀûÇÒ ray Á¤º¸¸¦ cpu ·Î ºÎÅÍ ¼¼ÆÃ.
+	 *	ì¶”ì í•  ray ì •ë³´ë¥¼ cpu ë¡œ ë¶€í„° ì„¸íŒ….
 	 */
 	GError setRayInfo( cuRay *pRay, int destOffset, int count );
 	
 	/**
-	 *	ÇöÀç frame buffer ÀÇ °ªÀ» º¹»çÇØ¿Â´Ù. pBuffer ´Â 
-	 *	frame buffer ¿Í Å©±â°¡ °°¾Æ¾ß ÇÑ´Ù.
+	 *	í˜„ì¬ frame buffer ì˜ ê°’ì„ ë³µì‚¬í•´ì˜¨ë‹¤. pBuffer ëŠ” 
+	 *	frame buffer ì™€ í¬ê¸°ê°€ ê°™ì•„ì•¼ í•œë‹¤.
 	 */
 	void getFrameBuffer( float* pBuffer );
 	
 	/**
-	 *	ÇöÀç frame buffer À» pBuffer ·Î µ¤¾î¾´´Ù.
-	 *	µ¥ÀÌÅÍ´Â Å©±â´Â frame buffer size ¿Í °°¾Æ¾ß ÇÑ´Ù.
+	 *	í˜„ì¬ frame buffer ì„ pBuffer ë¡œ ë®ì–´ì“´ë‹¤.
+	 *	ë°ì´í„°ëŠ” í¬ê¸°ëŠ” frame buffer size ì™€ ê°™ì•„ì•¼ í•œë‹¤.
 	 */
 	void setFrameBuffer( float* pBuffer );
 	
 	/**
-	 *	FrameBuffer ¸¦ clear.
+	 *	FrameBuffer ë¥¼ clear.
 	 */
 	void clearFrameBuffer();
 	
 	/**
-	 *	ÇöÀç Intersection point Á¤º¸¸¦ clear.
+	 *	í˜„ì¬ Intersection point ì •ë³´ë¥¼ clear.
 	 */
 	GError clearIntersectionResult();
 
 	/**
-	 *	GPU »ó¿¡ ÀÖ´Â intersection Á¤º¸¸¦ ±â¹İÀ¸·Î ÇØ´ç point ÀÇ
-	 *	direct illumination À» ¼öÇàÇØ¼­ Frame Buffer ¿¡ ´©Àû.
+	 *	GPU ìƒì— ìˆëŠ” intersection ì •ë³´ë¥¼ ê¸°ë°˜ìœ¼ë¡œ í•´ë‹¹ point ì˜
+	 *	direct illumination ì„ ìˆ˜í–‰í•´ì„œ Frame Buffer ì— ëˆ„ì .
 	 */
 	GError calDirectIllumination( int maxReflectionDepth );
 
 	/** 
-	 *	GPU »ó¿¡¼­ primary ray »ı¼º.
+	 *	GPU ìƒì—ì„œ primary ray ìƒì„±.
 	 */
 	GError generatePrimaryRay( cuCamera camera, int *pGeneratedCount, int currentSampleX, int currentSampleY, bool Jittering );
 
 	/** 
-	 *	GPU »ó¿¡¼­ primary ray »ı¼º.
+	 *	GPU ìƒì—ì„œ primary ray ìƒì„±.
 	 */
 	GError generateReflectionRay( int offset, int count, int *atLeastOneRay );
 
@@ -167,7 +167,7 @@ public:
 												   float *pRayRate );
 
 	/**
-	 *	±¤¿ø1°³ °íÁ¤, reflection °íÁ¤, reflectionDepth=1 Àû¿ëÇÑ ray tracer.
+	 *	ê´‘ì›1ê°œ ê³ ì •, reflection ê³ ì •, reflectionDepth=1 ì ìš©í•œ ray tracer.
 	 */
 	GError fixedOption_doSelectiveAndAdaptiveSamplingRayTracing( 
 													int maxReflectionDepth,
@@ -179,15 +179,15 @@ public:
 												   float *pRayRate );
 
 	/** 
-	 *	GPU Device »ó¿¡ ¿Ã¶ó°¡ ÀÖ´Â cuRay Á¤º¸¸¦ ±â¹İÀ¸·Î Ray Casting ¼öÇà.
-	 *	checkRayCount ´Â offset 0 ºÎÅÍ ¸î °³ ±îÁöÀÇ ray ¸¦ Ã¼Å©ÇÒÁö ¿©ºÎ.
+	 *	GPU Device ìƒì— ì˜¬ë¼ê°€ ìˆëŠ” cuRay ì •ë³´ë¥¼ ê¸°ë°˜ìœ¼ë¡œ Ray Casting ìˆ˜í–‰.
+	 *	checkRayCount ëŠ” offset 0 ë¶€í„° ëª‡ ê°œ ê¹Œì§€ì˜ ray ë¥¼ ì²´í¬í• ì§€ ì—¬ë¶€.
 	 */
 	GError doRayCastingSequentialData( int offset, int count, bool faceCCW, bool backFaceCulling );
 	GError doRayCasting( int offset, int count, bool faceCCW, bool backFaceCulling );
 
 	/**
-	 *	ÇöÀç device »ó¿¡ Á¸ÀçÇÏ´Â Intersection °á°ú¸¦ cpu ·Î º¹»çÇÑµÚ ¸®ÅÏÇÑ´Ù. 
-	 *	pCount ´Â ¸î°³ÀÇ ray °á°ú°¡ ÀÖ´ÂÁö °á°ú.
+	 *	í˜„ì¬ device ìƒì— ì¡´ì¬í•˜ëŠ” Intersection ê²°ê³¼ë¥¼ cpu ë¡œ ë³µì‚¬í•œë’¤ ë¦¬í„´í•œë‹¤. 
+	 *	pCount ëŠ” ëª‡ê°œì˜ ray ê²°ê³¼ê°€ ìˆëŠ”ì§€ ê²°ê³¼.
 	 */
 	cuIntersectionPoint *getIntersectionResult( int count );
 	

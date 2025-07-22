@@ -1,5 +1,5 @@
 /**
- *	CUDA ·Î Rendering À» ¼öÇàÇÏ±â À§ÇÑ ±â´Éµé.
+ *	CUDA ë¡œ Rendering ì„ ìˆ˜í–‰í•˜ê¸° ìœ„í•œ ê¸°ëŠ¥ë“¤.
  *
  *	by graphicsian.
  */
@@ -7,8 +7,9 @@
 #define __RENDER_PIPELINE_KERNEL_CU_
 
 #include "GKDTreeNode.h"
-//#include <cuda_math.h>
+#include "cuda_math.h"
 #include <cuda.h>
+#include <cuda_runtime.h>
 //#include <cutil.h>
 #include "cudaRenderPipelineCommonKernel.cu"
 
@@ -38,8 +39,8 @@
 
 
 /**
- *	Scene ¾ÈÀÇ ±¤¿øÀ¸·ÎºÎÅÍ Direct Illumination À» °è»êÇÑ´Ù.
- *	¸¸¾à ÇöÀç ¹°Ã¼ ÀÚÃ¼°¡ ±¤¿øÀÌ¶ó¸é, ÇöÀç ¹°Ã¼ÀÇ »öÀ» ±×´ë·Î »ç¿ëÇÑ´Ù.
+ *	Scene ì•ˆì˜ ê´‘ì›ìœ¼ë¡œë¶€í„° Direct Illumination ì„ ê³„ì‚°í•œë‹¤.
+ *	ë§Œì•½ í˜„ì¬ ë¬¼ì²´ ìì²´ê°€ ê´‘ì›ì´ë¼ë©´, í˜„ì¬ ë¬¼ì²´ì˜ ìƒ‰ì„ ê·¸ëŒ€ë¡œ ì‚¬ìš©í•œë‹¤.
  *
  *	Phong Shading.
  */
@@ -60,8 +61,8 @@ __device__ float3 calDirectIllumination( cuIntersectionPoint &intersectResult,
 	N = intersectResult.normal;
 
 	/** 
-	 *	Åõ¸íÇÑ ¹°Ã¼ÀÏ¶§, Normal °ú dir ÀÇ dot ÀÌ < 0 ÀÌ¶ó¸é
-	 *	normal À» µÚÂ¤´Â´Ù.
+	 *	íˆ¬ëª…í•œ ë¬¼ì²´ì¼ë•Œ, Normal ê³¼ dir ì˜ dot ì´ < 0 ì´ë¼ë©´
+	 *	normal ì„ ë’¤ì§šëŠ”ë‹¤.
 	 */
 	if ( material.transparency > 0.0f && dot( dir, N ) < 0.0f ) {
 		N = -1.0f * N;
@@ -70,8 +71,8 @@ __device__ float3 calDirectIllumination( cuIntersectionPoint &intersectResult,
 	R = reflection( dir, N );
 	
 	/** 
-	 *	texture number ÀÌÁ¦ ÇÊ¿ä¾øÀ¸¹Ç·Î texture º¯¼ö¸¦
-	 *	texture À¯¹«°ªÀ¸·Î »ç¿ëÇÑ´Ù. texture ¸¦ 1·Î ¼¼ÆÃ. ¾ø´Ù¸é 0  
+	 *	texture number ì´ì œ í•„ìš”ì—†ìœ¼ë¯€ë¡œ texture ë³€ìˆ˜ë¥¼
+	 *	texture ìœ ë¬´ê°’ìœ¼ë¡œ ì‚¬ìš©í•œë‹¤. texture ë¥¼ 1ë¡œ ì„¸íŒ…. ì—†ë‹¤ë©´ 0  
 	 */
 	texture = fetchTexture( texture, intersectResult.u, intersectResult.v, texColor );
 	
@@ -82,9 +83,9 @@ __device__ float3 calDirectIllumination( cuIntersectionPoint &intersectResult,
 		pLight = ( constantLightInfo + i );
 
 		///**
-		// *	ÇöÀç ¹°Ã¼°¡ ±¤¿øÀÌ°í, Áö±İ Ã³¸®ÇÏ·Á´Â ±¤¿ø°ú µ¿ÀÏÇÑÁö¸¦ Ã¼Å©ÇÑ´Ù.
-		// *	Direct Illumination ¿¡ ÀÌ¿ëÇÏÁö ¾Ê´Â ±¤¿øÀÌ¶óµµ ÀÌ°Ç Ã³¸®ÇØ¾ß ÇÑ´Ù.
-		// *	°°Àº ±¤¿øÀÌ¶ó¸é shading ¾øÀÌ ÀÚ½ÅÀÇ »öÀ» ±×´ë·Î »ç¿ëÇÑ´Ù. light °¡ 0.0 ÀÌ ¾Æ´Ï¸é ±¤¿øÀÌ´Ù.
+		// *	í˜„ì¬ ë¬¼ì²´ê°€ ê´‘ì›ì´ê³ , ì§€ê¸ˆ ì²˜ë¦¬í•˜ë ¤ëŠ” ê´‘ì›ê³¼ ë™ì¼í•œì§€ë¥¼ ì²´í¬í•œë‹¤.
+		// *	Direct Illumination ì— ì´ìš©í•˜ì§€ ì•ŠëŠ” ê´‘ì›ì´ë¼ë„ ì´ê±´ ì²˜ë¦¬í•´ì•¼ í•œë‹¤.
+		// *	ê°™ì€ ê´‘ì›ì´ë¼ë©´ shading ì—†ì´ ìì‹ ì˜ ìƒ‰ì„ ê·¸ëŒ€ë¡œ ì‚¬ìš©í•œë‹¤. light ê°€ 0.0 ì´ ì•„ë‹ˆë©´ ê´‘ì›ì´ë‹¤.
 		// */
 		if ( material.light != 0.0f ) {
 			if ( pLight->iObjectID == objectID ) {
@@ -97,7 +98,7 @@ __device__ float3 calDirectIllumination( cuIntersectionPoint &intersectResult,
 			continue;
 
 		/** 
-		 *	visibility Ã¼Å©. shadow °¡ enable ¾Æ´Ï¸é ¹«Á¶°Ç º¸ÀÌ´Â°É·Î Ã³¸®. ¾Æ´Ï¸é ray ¸¦ ½÷¼­ Ã¼Å©.
+		 *	visibility ì²´í¬. shadow ê°€ enable ì•„ë‹ˆë©´ ë¬´ì¡°ê±´ ë³´ì´ëŠ”ê±¸ë¡œ ì²˜ë¦¬. ì•„ë‹ˆë©´ ray ë¥¼ ì´ì„œ ì²´í¬.
 		 */
 		visible = ( !g_SceneInfo.bEnableShadow || checkVisibility( pos, pLight->pos ) );
 		
@@ -106,7 +107,7 @@ __device__ float3 calDirectIllumination( cuIntersectionPoint &intersectResult,
 			L = normalize( pLight->pos - pos );
 			
 			/** 
-			 *	texture Á¸Àç ¿©ºÎ¿¡ µû¶ó¼­ material »ö±ò ¼±ÅÃ 
+			 *	texture ì¡´ì¬ ì—¬ë¶€ì— ë”°ë¼ì„œ material ìƒ‰ê¹” ì„ íƒ 
 			 */
 			if ( texture == 1 ) {
 				color += texColor * pLight->color * max( 0.0f, dot( L, N ) ) +
@@ -119,11 +120,11 @@ __device__ float3 calDirectIllumination( cuIntersectionPoint &intersectResult,
 	}
 
 	/**
-	 *	ÃÖÁ¾ÀûÀ¸·Î	kr, kt ¸¦ Ã¼Å©ÇØ¼­ ÇöÀç hit ÀÇ color ¸¦ ÃÖÁ¾ ÀÌ¹ÌÁö¿¡
-	 *	¾ó¸¶¸¸Å­ ´©ÀûÇØ¾ßÇÒÁö¸¦ °è»ê. ¸¸¾à ÇöÀç intersection point °¡
-	 *	¸¶Áö¸· depth ¶ó¸é ´õÀÌ»ó ¹İ»ç³ª ±¼ÀıÀ» ÅëÇÑ µ¥ÀÌÅÍ¸¦ °¡Á®¿Ã ¼ö ¾øÀ¸¹Ç·Î
-	 *	ÇöÀç local shading ÀüÃ¼¸¦ color ¿¡ ´©Àû½ÃÅ°±â À§ÇØ¼­ kr ÀÌ³ª kt ºñÀ²À» Àû¿ëÇÏÁö
-	 *	¾Ê´Â´Ù.
+	 *	ìµœì¢…ì ìœ¼ë¡œ	kr, kt ë¥¼ ì²´í¬í•´ì„œ í˜„ì¬ hit ì˜ color ë¥¼ ìµœì¢… ì´ë¯¸ì§€ì—
+	 *	ì–¼ë§ˆë§Œí¼ ëˆ„ì í•´ì•¼í• ì§€ë¥¼ ê³„ì‚°. ë§Œì•½ í˜„ì¬ intersection point ê°€
+	 *	ë§ˆì§€ë§‰ depth ë¼ë©´ ë”ì´ìƒ ë°˜ì‚¬ë‚˜ êµ´ì ˆì„ í†µí•œ ë°ì´í„°ë¥¼ ê°€ì ¸ì˜¬ ìˆ˜ ì—†ìœ¼ë¯€ë¡œ
+	 *	í˜„ì¬ local shading ì „ì²´ë¥¼ color ì— ëˆ„ì ì‹œí‚¤ê¸° ìœ„í•´ì„œ kr ì´ë‚˜ kt ë¹„ìœ¨ì„ ì ìš©í•˜ì§€
+	 *	ì•ŠëŠ”ë‹¤.
 	 */
 	if ( intersectResult.boundDepth < maxReflectionDepth && material.light == 0.0f ) {
 		color = color * ( 1 - material.reflection - material.transparency );
@@ -134,9 +135,9 @@ __device__ float3 calDirectIllumination( cuIntersectionPoint &intersectResult,
 }
 
 /**
- *	Intersection Point ÀÇ shading À» °è»êÇÑ´Ù.
- *	 ÀÌ ¾È¿¡¼­µµ intersection Ã¼Å©¸¦ ÇØ¾ßÇÏ¹Ç·Î stack À» À§ÇÑ shared memory ¸¦
- *	ÁöÁ¤ÇÏ°í È£ÃâÇØ¾ß ÇÑ´Ù.
+ *	Intersection Point ì˜ shading ì„ ê³„ì‚°í•œë‹¤.
+ *	 ì´ ì•ˆì—ì„œë„ intersection ì²´í¬ë¥¼ í•´ì•¼í•˜ë¯€ë¡œ stack ì„ ìœ„í•œ shared memory ë¥¼
+ *	ì§€ì •í•˜ê³  í˜¸ì¶œí•´ì•¼ í•œë‹¤.
  */
 __global__ void shadingKernel( int startImageIndex, int totalCount,
 							   cuIntersectionPoint *intersectResult, 
@@ -144,28 +145,28 @@ __global__ void shadingKernel( int startImageIndex, int totalCount,
 							   int maxReflectionDepth )
 {
 	/** 
-	 *	ÇöÀç thread ¿¡¼­ »ı¼ºÇÒ image pixel index. È­¸é left, top ¿¡¼­ºÎÅÍÀÇ ¼ø¼­¸¦ ÀÇ¹Ì 
+	 *	í˜„ì¬ thread ì—ì„œ ìƒì„±í•  image pixel index. í™”ë©´ left, top ì—ì„œë¶€í„°ì˜ ìˆœì„œë¥¼ ì˜ë¯¸ 
 	 */
 	int imageIndex = samplingImageIndex_BlockGrouping( startImageIndex );
 	float3 color = make_float3( 0.0f, 0.0f, 0.0f ), tempcolor = make_float3( 0.0f, 0.0f, 0.0f );
 	
 	/**
-	 *	¸î°³ÀÇ ¾²·¹µå°¡ ¿©ºĞÀ¸·Î ´õ ½ÇÇàµÉÁö ¸ğ¸£¹Ç·Î index ¹üÀ§¸¦ ÃÊ°úÇÑ
-	 *	¾²·¹µå´Â ±×³É Á¾·á.
+	 *	ëª‡ê°œì˜ ì“°ë ˆë“œê°€ ì—¬ë¶„ìœ¼ë¡œ ë” ì‹¤í–‰ë ì§€ ëª¨ë¥´ë¯€ë¡œ index ë²”ìœ„ë¥¼ ì´ˆê³¼í•œ
+	 *	ì“°ë ˆë“œëŠ” ê·¸ëƒ¥ ì¢…ë£Œ.
 	 */
 	if ( imageIndex >= totalCount )
 		return;
 
 	/** 
-	 *	imageIndex ¸¦ image ÁÂÇ¥( x, y ) ·Î º¯È¯ÇÑ´Ù. 
-	 *	°¢ pixel ´ç sampling ray ¸¦ ÇÏ³ª¾¿ Ã³¸®ÇØÇÑ´Ù.
+	 *	imageIndex ë¥¼ image ì¢Œí‘œ( x, y ) ë¡œ ë³€í™˜í•œë‹¤. 
+	 *	ê° pixel ë‹¹ sampling ray ë¥¼ í•˜ë‚˜ì”© ì²˜ë¦¬í•´í•œë‹¤.
 	 */
 	int x = imageIndex % ( g_SceneInfo.iResolutionX );
 	int y = imageIndex / ( g_SceneInfo.iResolutionX );
 		
 	/**
-	*	ÇöÀç ÀÌ¹ÌÁö»óÀÇ ÁÂÇ¥ÀÇ sub sampling ÁÂÇ¥¸¦ °è»êÇØ¼­ 
-	*	intersectResult ¹è¿­¾È¿¡¼­ÀÇ rayIndex ¸¦ ±¸ÇÑ´Ù.
+	*	í˜„ì¬ ì´ë¯¸ì§€ìƒì˜ ì¢Œí‘œì˜ sub sampling ì¢Œí‘œë¥¼ ê³„ì‚°í•´ì„œ 
+	*	intersectResult ë°°ì—´ì•ˆì—ì„œì˜ rayIndex ë¥¼ êµ¬í•œë‹¤.
 	*/
 	int rayIndex = y * g_SceneInfo.iResolutionX + x;
 			
@@ -180,8 +181,8 @@ __global__ void shadingKernel( int startImageIndex, int totalCount,
 	}
 
 	/** 
-	 *	ÇØ´ç ÁÂÇ¥ÀÇintersectResult °¡ hit ÀÌ¸é object ¸¦
-	 *	°¡Á®¿Í¼­ light °úÀÇ °ü°è¸¦ Àû¿ëÇØ¼­ shading À» °è»êÇØ¼­ framebuffer ¿¡±â·ÏÇÑ´Ù.
+	 *	í•´ë‹¹ ì¢Œí‘œì˜intersectResult ê°€ hit ì´ë©´ object ë¥¼
+	 *	ê°€ì ¸ì™€ì„œ light ê³¼ì˜ ê´€ê³„ë¥¼ ì ìš©í•´ì„œ shading ì„ ê³„ì‚°í•´ì„œ framebuffer ì—ê¸°ë¡í•œë‹¤.
 	*/
 	int idx = ( g_SceneInfo.iResolutionY - y - 1 ) * g_SceneInfo.iResolutionX * 3 + 3 * x;
 	
@@ -193,11 +194,11 @@ __global__ void shadingKernel( int startImageIndex, int totalCount,
 
 
 /**
- *	ray casting kernel. ÃßÀûÇØ¾ßÇÒ data °¡ sequential ÇÏ°Ô ±¸¼ºµÇ¾î ÀÖ´Â
- *	¸Ş¸ğ¸®¸¦ ÂüÁ¶ÇØ¼­ ÃßÀû.
- *	intersection point ¸¦ ¸®ÅÏÇÑ´Ù.
- *	backFaceCulling ÀÌ true ÀÌ¸é ¹°Ã¼Áß culling ¿É¼ÇÀÌ ÄÑÁ® ÀÖ´Â°Í¿¡
- *	´ëÇØ¼­´Â µŞ¸é¿¡ ¸Â¾ÒÀ»°æ¿ì intersection Ã¼Å©¸¦ ÇÏÁö ¾Ê´Â´Ù.
+ *	ray casting kernel. ì¶”ì í•´ì•¼í•  data ê°€ sequential í•˜ê²Œ êµ¬ì„±ë˜ì–´ ìˆëŠ”
+ *	ë©”ëª¨ë¦¬ë¥¼ ì°¸ì¡°í•´ì„œ ì¶”ì .
+ *	intersection point ë¥¼ ë¦¬í„´í•œë‹¤.
+ *	backFaceCulling ì´ true ì´ë©´ ë¬¼ì²´ì¤‘ culling ì˜µì…˜ì´ ì¼œì ¸ ìˆëŠ”ê²ƒì—
+ *	ëŒ€í•´ì„œëŠ” ë’·ë©´ì— ë§ì•˜ì„ê²½ìš° intersection ì²´í¬ë¥¼ í•˜ì§€ ì•ŠëŠ”ë‹¤.
  */
 __global__ void rayCastingKernelSequentialData( int startOffset, int maxIndex, 
 												cuIntersectionPoint *intersecResult, 
@@ -206,8 +207,8 @@ __global__ void rayCastingKernelSequentialData( int startOffset, int maxIndex,
 	const int tid = samplingRayID( startOffset );
 
 	/**
-	 *	¸î°³ÀÇ ¾²·¹µå°¡ ¿©ºĞÀ¸·Î ´õ ½ÇÇàµÉÁö ¸ğ¸£¹Ç·Î index ¹üÀ§¸¦ ÃÊ°úÇÑ
-	 *	¾²·¹µå´Â ±×³É Á¾·á.
+	 *	ëª‡ê°œì˜ ì“°ë ˆë“œê°€ ì—¬ë¶„ìœ¼ë¡œ ë” ì‹¤í–‰ë ì§€ ëª¨ë¥´ë¯€ë¡œ index ë²”ìœ„ë¥¼ ì´ˆê³¼í•œ
+	 *	ì“°ë ˆë“œëŠ” ê·¸ëƒ¥ ì¢…ë£Œ.
 	 */
 	if ( tid >= maxIndex )
 		return;
@@ -230,7 +231,7 @@ __global__ void rayCastingKernelSequentialData( int startOffset, int maxIndex,
 	MultipassIntersect( currRay, currIsectCheck, faceCCW, backFaceCulling );
 	
 	/**
-	 *	intersection Çß´Ù¸é, intersection point Á¤º¸¸¦ ±¸¼ºÇÑ´Ù.
+	 *	intersection í–ˆë‹¤ë©´, intersection point ì •ë³´ë¥¼ êµ¬ì„±í•œë‹¤.
 	 */
 	if ( currIsectCheck.isHit() ) {
 	
@@ -246,9 +247,9 @@ __global__ void rayCastingKernelSequentialData( int startOffset, int maxIndex,
 
 /**
  *	ray casting kernel. 
- *	intersection point ¸¦ ¸®ÅÏÇÑ´Ù.
- *	backFaceCulling ÀÌ true ÀÌ¸é ¹°Ã¼Áß culling ¿É¼ÇÀÌ ÄÑÁ® ÀÖ´Â°Í¿¡
- *	´ëÇØ¼­´Â µŞ¸é¿¡ ¸Â¾ÒÀ»°æ¿ì intersection Ã¼Å©¸¦ ÇÏÁö ¾Ê´Â´Ù.
+ *	intersection point ë¥¼ ë¦¬í„´í•œë‹¤.
+ *	backFaceCulling ì´ true ì´ë©´ ë¬¼ì²´ì¤‘ culling ì˜µì…˜ì´ ì¼œì ¸ ìˆëŠ”ê²ƒì—
+ *	ëŒ€í•´ì„œëŠ” ë’·ë©´ì— ë§ì•˜ì„ê²½ìš° intersection ì²´í¬ë¥¼ í•˜ì§€ ì•ŠëŠ”ë‹¤.
  */
 __global__ void rayCastingKernel( int startOffset, int maxIndex, 
 								  cuIntersectionPoint *intersecResult, 
@@ -257,8 +258,8 @@ __global__ void rayCastingKernel( int startOffset, int maxIndex,
 	const int tid = samplingRayID_BlockGrouping( startOffset );
 
 	/**
-	 *	¸î°³ÀÇ ¾²·¹µå°¡ ¿©ºĞÀ¸·Î ´õ ½ÇÇàµÉÁö ¸ğ¸£¹Ç·Î index ¹üÀ§¸¦ ÃÊ°úÇÑ
-	 *	¾²·¹µå´Â ±×³É Á¾·á.
+	 *	ëª‡ê°œì˜ ì“°ë ˆë“œê°€ ì—¬ë¶„ìœ¼ë¡œ ë” ì‹¤í–‰ë ì§€ ëª¨ë¥´ë¯€ë¡œ index ë²”ìœ„ë¥¼ ì´ˆê³¼í•œ
+	 *	ì“°ë ˆë“œëŠ” ê·¸ëƒ¥ ì¢…ë£Œ.
 	 */
 	if ( tid >= maxIndex )
 		return;
@@ -281,7 +282,7 @@ __global__ void rayCastingKernel( int startOffset, int maxIndex,
 	MultipassIntersect( currRay, currIsectCheck, faceCCW, backFaceCulling );
 	
 	/**
-	 *	intersection Çß´Ù¸é, intersection point Á¤º¸¸¦ ±¸¼ºÇÑ´Ù.
+	 *	intersection í–ˆë‹¤ë©´, intersection point ì •ë³´ë¥¼ êµ¬ì„±í•œë‹¤.
 	 */
 	if ( currIsectCheck.isHit() ) {
 	
@@ -296,7 +297,7 @@ __global__ void rayCastingKernel( int startOffset, int maxIndex,
 }
 
 /**
- *	primary ray ¸¦ »ı¼ºÇØ¼­, device ÀÇ inRay ¿¡ ÀúÀåÇØ µĞ´Ù.
+ *	primary ray ë¥¼ ìƒì„±í•´ì„œ, device ì˜ inRay ì— ì €ì¥í•´ ë‘”ë‹¤.
  */
 __global__ void generatePrimaryRayKernel( int startRayIndex, int rayCount, 
 										  cuRay* inRays, cuIntersectionPoint *pIntersectResult,
@@ -305,7 +306,7 @@ __global__ void generatePrimaryRayKernel( int startRayIndex, int rayCount,
 	float sx = 0.0f, sy = 0.0f;
 
 	/** 
-	 *	ÇöÀç thread ¿¡¼­ »ı¼ºÇÒ ray index. È­¸é left, top ¿¡¼­ºÎÅÍÀÇ ¼ø¼­¸¦ ÀÇ¹Ì 
+	 *	í˜„ì¬ thread ì—ì„œ ìƒì„±í•  ray index. í™”ë©´ left, top ì—ì„œë¶€í„°ì˜ ìˆœì„œë¥¼ ì˜ë¯¸ 
 	 */
 	int x = blockIdx.x * blockDim.x + threadIdx.x;
 	int y = blockIdx.y * blockDim.y + threadIdx.y; 
@@ -313,14 +314,14 @@ __global__ void generatePrimaryRayKernel( int startRayIndex, int rayCount,
 	int rayIndex = y * g_SceneInfo.iResolutionX + x;
 
 	/**
-	 *	¸î°³ÀÇ ¾²·¹µå°¡ ¿©ºĞÀ¸·Î ´õ ½ÇÇàµÉÁö ¸ğ¸£¹Ç·Î index ¹üÀ§¸¦ ÃÊ°úÇÑ
-	 *	¾²·¹µå´Â ±×³É Á¾·á.
+	 *	ëª‡ê°œì˜ ì“°ë ˆë“œê°€ ì—¬ë¶„ìœ¼ë¡œ ë” ì‹¤í–‰ë ì§€ ëª¨ë¥´ë¯€ë¡œ index ë²”ìœ„ë¥¼ ì´ˆê³¼í•œ
+	 *	ì“°ë ˆë“œëŠ” ê·¸ëƒ¥ ì¢…ë£Œ.
 	 */
 	if ( rayIndex >= rayCount ) 
 		return;
 
 	/**
-	 *	¿ŞÂÊ,»ó´Ü Æ÷ÀÎÆ®ÀÇ Ä«¸Ş¶ó plane »ó¿¡¼­ÀÇ ÁÂÇ¥.
+	 *	ì™¼ìª½,ìƒë‹¨ í¬ì¸íŠ¸ì˜ ì¹´ë©”ë¼ plane ìƒì—ì„œì˜ ì¢Œí‘œ.
 	 */
 	float3 dir, pos;
 
@@ -350,13 +351,13 @@ __global__ void generatePrimaryRayKernel( int startRayIndex, int rayCount,
 //	inRays[ rayIndex ].pos.w = FLT_MAX;
 	
 	/**
-	 *	super sampling °æ¿ì, ÇÑ pixel ÀÇ ÇÏ³ªÀÇ sample ray °¡ pixel ¿¡ ¹ÌÄ¥ ¿µÇâ.
+	 *	super sampling ê²½ìš°, í•œ pixel ì˜ í•˜ë‚˜ì˜ sample ray ê°€ pixel ì— ë¯¸ì¹  ì˜í–¥.
 	 */
 	float samplingWeight = __fdividef( 1.0f, ( g_SceneInfo.iSuperSamplingX * g_SceneInfo.iSuperSamplingY ) );
 
 	/**
-	 *	intersection °á°ú¸¦ ÀúÀåÇÒ µ¥ÀÌÅÍ¿¡ colorWeight ´Â 1.0 À¸·Î ÇÑ´Ù.
-	 *	primary ray °¡ ÀÌ¹ÌÁö¿¡ ¿µÇâÀ» ÁÙ weight.
+	 *	intersection ê²°ê³¼ë¥¼ ì €ì¥í•  ë°ì´í„°ì— colorWeight ëŠ” 1.0 ìœ¼ë¡œ í•œë‹¤.
+	 *	primary ray ê°€ ì´ë¯¸ì§€ì— ì˜í–¥ì„ ì¤„ weight.
 	 */
 	pIntersectResult[ rayIndex ].init();
 	pIntersectResult[ rayIndex ].boundDepth = 0;
@@ -365,15 +366,15 @@ __global__ void generatePrimaryRayKernel( int startRayIndex, int rayCount,
 }
 
 /**
- *	intersection point ¸¦ Ã¼Å©ÇØ¼­, reflection ray ¸¦ »ı¼ºÇÑ´Ù. 
- *	±×¸®°í ´Ù½Ã intersection point ¿¡´Â ÇØ´ç ray ¸¦ ÃßÀûÇÑ °á°ú¸¦ À§ÇØ¼­
- *	ÃÊ±âÈ­ ÇÑ´Ù.
- *	ÃÖ¼ÒÇÑ ÇÏ³ª¶óµµ intersection point °¡ ÀÖÀ»¶§ atLeast °¡ 1 ·Î ¼¼ÆÃµÊ.
- *	¸ÖÆ¼¾²·¹µå¿¡ ÀÇÇØ¼­ µ¿½Ã¿¡ atLeast °¡ Á¢±ÙµÇ´õ¶óµµ »ó°ü¾ø´Ù. ÇÏ³ª¶óµµ
- *	1ÀÌ¶ó¸é 1ÀÌ µÉÅ×´Ï.
+ *	intersection point ë¥¼ ì²´í¬í•´ì„œ, reflection ray ë¥¼ ìƒì„±í•œë‹¤. 
+ *	ê·¸ë¦¬ê³  ë‹¤ì‹œ intersection point ì—ëŠ” í•´ë‹¹ ray ë¥¼ ì¶”ì í•œ ê²°ê³¼ë¥¼ ìœ„í•´ì„œ
+ *	ì´ˆê¸°í™” í•œë‹¤.
+ *	ìµœì†Œí•œ í•˜ë‚˜ë¼ë„ intersection point ê°€ ìˆì„ë•Œ atLeast ê°€ 1 ë¡œ ì„¸íŒ…ë¨.
+ *	ë©€í‹°ì“°ë ˆë“œì— ì˜í•´ì„œ ë™ì‹œì— atLeast ê°€ ì ‘ê·¼ë˜ë”ë¼ë„ ìƒê´€ì—†ë‹¤. í•˜ë‚˜ë¼ë„
+ *	1ì´ë¼ë©´ 1ì´ ë í…Œë‹ˆ.
  *
- *	¸¸¾à ray ÀÇ colorWeight °¡ ÁöÁ¤µÈ threashold º¸´Ù ¹ØÀ¸·Î ³»·Á°¡´Â °æ¿ì´Â
- *	´õÀÌ»ó ÃßÀûÇÏÁö ¾Ê´Â´Ù. color °ª¿¡ °ÅÀÇ ¿µÇâÀ» ¾ÈÁÖ´Â weight °¡ µÇ¾úÀ»¶§.
+ *	ë§Œì•½ ray ì˜ colorWeight ê°€ ì§€ì •ëœ threashold ë³´ë‹¤ ë°‘ìœ¼ë¡œ ë‚´ë ¤ê°€ëŠ” ê²½ìš°ëŠ”
+ *	ë”ì´ìƒ ì¶”ì í•˜ì§€ ì•ŠëŠ”ë‹¤. color ê°’ì— ê±°ì˜ ì˜í–¥ì„ ì•ˆì£¼ëŠ” weight ê°€ ë˜ì—ˆì„ë•Œ.
  *	TODO: 
  */
 __global__ void generateReflectionRayKernel( int startIntersectionIndex, int maxIndex,
@@ -384,14 +385,14 @@ __global__ void generateReflectionRayKernel( int startIntersectionIndex, int max
 	int generate = 0, rayIndex = 0;
 	
 	/** 
-	 *	ÇöÀç thread ¿¡¼­ »ı¼ºÇÒ ray index. È­¸é left, top ¿¡¼­ºÎÅÍÀÇ ¼ø¼­¸¦ ÀÇ¹Ì 
+	 *	í˜„ì¬ thread ì—ì„œ ìƒì„±í•  ray index. í™”ë©´ left, top ì—ì„œë¶€í„°ì˜ ìˆœì„œë¥¼ ì˜ë¯¸ 
 	 */
 
 	int index = samplingRayID_BlockGrouping( startIntersectionIndex );
 
 	/**
-	 *	¸î°³ÀÇ ¾²·¹µå°¡ ¿©ºĞÀ¸·Î ´õ ½ÇÇàµÉÁö ¸ğ¸£¹Ç·Î index ¹üÀ§¸¦ ÃÊ°úÇÑ
-	 *	¾²·¹µå´Â ±×³É Á¾·á.
+	 *	ëª‡ê°œì˜ ì“°ë ˆë“œê°€ ì—¬ë¶„ìœ¼ë¡œ ë” ì‹¤í–‰ë ì§€ ëª¨ë¥´ë¯€ë¡œ index ë²”ìœ„ë¥¼ ì´ˆê³¼í•œ
+	 *	ì“°ë ˆë“œëŠ” ê·¸ëƒ¥ ì¢…ë£Œ.
 	 */
 	if ( index >= maxIndex )
 		return;
@@ -420,7 +421,7 @@ __global__ void generateReflectionRayKernel( int startIntersectionIndex, int max
 //			inRays[ index ].dir.w = 0.0f;
 
 			/** 
-			 *	self intersection À» ¸·±âÀ§ÇØ¼­ À§Ä¡ Á¶±İ Áõ°¡.
+			 *	self intersection ì„ ë§‰ê¸°ìœ„í•´ì„œ ìœ„ì¹˜ ì¡°ê¸ˆ ì¦ê°€.
 			 */
 			inRays[ index ].pos.x = intersectResult[ index ].pos.x + R.x * RAY_START_EPSILON;
 			inRays[ index ].pos.y = intersectResult[ index ].pos.y + R.y * RAY_START_EPSILON;
@@ -428,9 +429,9 @@ __global__ void generateReflectionRayKernel( int startIntersectionIndex, int max
 //			inRays[ index ].pos.w = FLT_MAX;
 			
 			/**
-			 *	ray ÀÇ intersection °á°ú¸¦ ÀúÀåÇÒ Àå¼Ò¸¦ ÃÊ±âÈ­ ÇÏ°í,
-			 *	intersection °á°ú°¡ ÀÌ¹ÌÁö¿¡ ÁÙ ¿µÇâÀ» colorWeight ¿¡ ¼¼ÆÃÇÑ´Ù.
-			 *	rayIndex ´Â ±âÁ¸ ray ¿Í µ¿ÀÏÇÑ index ·Î ¼¼ÆÃÇÑ´Ù.
+			 *	ray ì˜ intersection ê²°ê³¼ë¥¼ ì €ì¥í•  ì¥ì†Œë¥¼ ì´ˆê¸°í™” í•˜ê³ ,
+			 *	intersection ê²°ê³¼ê°€ ì´ë¯¸ì§€ì— ì¤„ ì˜í–¥ì„ colorWeight ì— ì„¸íŒ…í•œë‹¤.
+			 *	rayIndex ëŠ” ê¸°ì¡´ ray ì™€ ë™ì¼í•œ index ë¡œ ì„¸íŒ…í•œë‹¤.
 			 */
 			intersectResult[ index ].init();
 			intersectResult[ index ].colorWeight = 
@@ -454,7 +455,7 @@ __global__ void generateReflectionRayKernel( int startIntersectionIndex, int max
 //			inRays[ index ].dir.w = 0.0f;
 
 			/** 
-			 *	self intersection À» ¸·±âÀ§ÇØ¼­ À§Ä¡ Á¶±İ Áõ°¡.
+			 *	self intersection ì„ ë§‰ê¸°ìœ„í•´ì„œ ìœ„ì¹˜ ì¡°ê¸ˆ ì¦ê°€.
 			 */
 			inRays[ index ].pos.x = intersectResult[ index ].pos.x + R.x * RAY_START_EPSILON;
 			inRays[ index ].pos.y = intersectResult[ index ].pos.y + R.y * RAY_START_EPSILON;
@@ -462,9 +463,9 @@ __global__ void generateReflectionRayKernel( int startIntersectionIndex, int max
 //			inRays[ index ].pos.w = FLT_MAX;
 				
 			/**
-			 *	ray ÀÇ intersection °á°ú¸¦ ÀúÀåÇÒ Àå¼Ò¸¦ ÃÊ±âÈ­ ÇÏ°í,
-			 *	intersection °á°ú°¡ ÀÌ¹ÌÁö¿¡ ÁÙ ¿µÇâÀ» colorWeight ¿¡ ¼¼ÆÃÇÏ°í
-			 *	rayIndex ´Â ±âÁ¸ ray ¿Í µ¿ÀÏÇÑ index ·Î ¼¼ÆÃÇÑ´Ù.
+			 *	ray ì˜ intersection ê²°ê³¼ë¥¼ ì €ì¥í•  ì¥ì†Œë¥¼ ì´ˆê¸°í™” í•˜ê³ ,
+			 *	intersection ê²°ê³¼ê°€ ì´ë¯¸ì§€ì— ì¤„ ì˜í–¥ì„ colorWeight ì— ì„¸íŒ…í•˜ê³ 
+			 *	rayIndex ëŠ” ê¸°ì¡´ ray ì™€ ë™ì¼í•œ index ë¡œ ì„¸íŒ…í•œë‹¤.
 			 */
 			intersectResult[ index ].init();
 			intersectResult[ index ].colorWeight = 
@@ -479,9 +480,9 @@ __global__ void generateReflectionRayKernel( int startIntersectionIndex, int max
 	}
 	
 	/**
-	 *	secondary ray °¡ ¾ø°Å³ª
-	 *	color ÀÇ weight ¸¦ °è»êÇØ¼­, ÁöÁ¤µÈ threshold °ª ¹ØÀÌ¸é ÃßÀûÇÏÁö ¾Ê´Â´Ù.
-	 *  mint ¸¦ FLT_MAX ·Î ¼¼ÆÃ.
+	 *	secondary ray ê°€ ì—†ê±°ë‚˜
+	 *	color ì˜ weight ë¥¼ ê³„ì‚°í•´ì„œ, ì§€ì •ëœ threshold ê°’ ë°‘ì´ë©´ ì¶”ì í•˜ì§€ ì•ŠëŠ”ë‹¤.
+	 *  mint ë¥¼ FLT_MAX ë¡œ ì„¸íŒ….
 	 */
 	if ( generate == 0 || (
 			intersectResult[ index ].colorWeight.x <= COLOR_WEIGHT_THREADHOLD &&
@@ -526,8 +527,8 @@ __global__ void generateReflectionRayKernel( int startIntersectionIndex, int max
  **------------------------------------------------------------------------------------------*/
 
 /**
- *	anti-aliasing À» À§ÇÑ filter. frame buffer ´Â texture ·Îµµ ¿Ã·ÁÁ®
- *	ÀÖÀ¸¹Ç·Î inFrameBufferTexture ·Î Á¢±ÙÇÏ¸é µÈ´Ù.
+ *	anti-aliasing ì„ ìœ„í•œ filter. frame buffer ëŠ” texture ë¡œë„ ì˜¬ë ¤ì ¸
+ *	ìˆìœ¼ë¯€ë¡œ inFrameBufferTexture ë¡œ ì ‘ê·¼í•˜ë©´ ëœë‹¤.
  */
 __global__ void antialiasingFilteringKernel( float* m_pFrameBuffer2 )
 {
@@ -543,7 +544,7 @@ __global__ void antialiasingFilteringKernel( float* m_pFrameBuffer2 )
 	if ( x >= g_SceneInfo.iResolutionX || y >= g_SceneInfo.iResolutionY )
 		return;
 	
-	/** sobel method Àû¿ë */
+	/** sobel method ì ìš© */
 	for ( int j = -1; j <= 1; ++j ) {
 		for ( int i = -1; i <= 1; ++i ) {
 			if ( x + i >= 0 && x + i < g_SceneInfo.iResolutionX && 
@@ -591,8 +592,8 @@ __global__ void antialiasingFilteringKernel( float* m_pFrameBuffer2 )
 
 
 /**
- *	anti-aliasing À» À§ÇÑ filter. frame buffer ´Â texture ·Îµµ ¿Ã·ÁÁ®
- *	ÀÖÀ¸¹Ç·Î inFrameBufferTexture ·Î Á¢±ÙÇÏ¸é µÈ´Ù.
+ *	anti-aliasing ì„ ìœ„í•œ filter. frame buffer ëŠ” texture ë¡œë„ ì˜¬ë ¤ì ¸
+ *	ìˆìœ¼ë¯€ë¡œ inFrameBufferTexture ë¡œ ì ‘ê·¼í•˜ë©´ ëœë‹¤.
  */
 __global__ void blurringFilteringKernel( float* m_pFrameBuffer2 )
 {
@@ -625,8 +626,8 @@ __global__ void blurringFilteringKernel( float* m_pFrameBuffer2 )
 }
 
 /**
- *	anti-aliasing À» À§ÇÑ filter. frame buffer ´Â texture ·Îµµ ¿Ã·ÁÁ®
- *	ÀÖÀ¸¹Ç·Î inFrameBufferTexture ·Î Á¢±ÙÇÏ¸é µÈ´Ù.
+ *	anti-aliasing ì„ ìœ„í•œ filter. frame buffer ëŠ” texture ë¡œë„ ì˜¬ë ¤ì ¸
+ *	ìˆìœ¼ë¯€ë¡œ inFrameBufferTexture ë¡œ ì ‘ê·¼í•˜ë©´ ëœë‹¤.
  */
 __global__ void sobelMethodFilteringKernel( float* m_pFrameBuffer2 )
 {
@@ -641,7 +642,7 @@ __global__ void sobelMethodFilteringKernel( float* m_pFrameBuffer2 )
 	if ( x >= g_SceneInfo.iResolutionX || y >= g_SceneInfo.iResolutionY )
 		return;
 	
-	/** sobel method Àû¿ë */
+	/** sobel method ì ìš© */
 	for ( int j = -1; j <= 1; ++j ) {
 		for ( int i = -1; i <= 1; ++i ) {
 			if ( x + i >= 0 && x + i < g_SceneInfo.iResolutionX && 
@@ -694,8 +695,8 @@ __global__ void grayScaleFilteringKernel( float* m_pFrameBuffer2 )
 }
 
 /**
- *	ÇöÀç frame buffer ¿¡ blooming È¿°ú¸¦ Àû¿ëÇÑ´Ù.
- *	blooming ÄÚµå´Â Dr. Â÷µæÇö±ºÀÇ headlight ¼Ò½º¿¡¼­ °¡Á®¿ÔÀ½À» ¹àÈ÷´Â ¹ÙÀÔ´Ï´Ù.
+ *	í˜„ì¬ frame buffer ì— blooming íš¨ê³¼ë¥¼ ì ìš©í•œë‹¤.
+ *	blooming ì½”ë“œëŠ” Dr. ì°¨ë“í˜„êµ°ì˜ headlight ì†ŒìŠ¤ì—ì„œ ê°€ì ¸ì™”ìŒì„ ë°íˆëŠ” ë°”ì…ë‹ˆë‹¤.
  */
 __global__ void bloomingFilteringKernel( int startImageIndex,
 										 int maxIndex,
@@ -706,7 +707,7 @@ __global__ void bloomingFilteringKernel( int startImageIndex,
 										 float m_fBloomingWeight )
 {
 	/** 
-	 *	ÇöÀç thread ¿¡¼­ Ã³¸®ÇÒ image pixel index. È­¸é left, top ¿¡¼­ºÎÅÍÀÇ ¼ø¼­¸¦ ÀÇ¹Ì 
+	 *	í˜„ì¬ thread ì—ì„œ ì²˜ë¦¬í•  image pixel index. í™”ë©´ left, top ì—ì„œë¶€í„°ì˜ ìˆœì„œë¥¼ ì˜ë¯¸ 
 	 */
 	int x = blockIdx.x * blockDim.x + threadIdx.x;
 	int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -714,8 +715,8 @@ __global__ void bloomingFilteringKernel( int startImageIndex,
 	int imageIndex = y * g_SceneInfo.iResolutionX + x;
 	
 	/**
-	 *	¸î°³ÀÇ ¾²·¹µå°¡ ¿©ºĞÀ¸·Î ´õ ½ÇÇàµÉÁö ¸ğ¸£¹Ç·Î index ¹üÀ§¸¦ ÃÊ°úÇÑ
-	 *	¾²·¹µå´Â ±×³É Á¾·á.
+	 *	ëª‡ê°œì˜ ì“°ë ˆë“œê°€ ì—¬ë¶„ìœ¼ë¡œ ë” ì‹¤í–‰ë ì§€ ëª¨ë¥´ë¯€ë¡œ index ë²”ìœ„ë¥¼ ì´ˆê³¼í•œ
+	 *	ì“°ë ˆë“œëŠ” ê·¸ëƒ¥ ì¢…ë£Œ.
 	 */
 	if ( x >= g_SceneInfo.iResolutionX || y >= g_SceneInfo.iResolutionY )
 		return;
@@ -747,7 +748,7 @@ __global__ void bloomingFilteringKernel( int startImageIndex,
 				wt = tex1Dfetch( inBloomingFilterTexture, dist2 );
 				sumWt += wt;
 
-				/** loop ¾È¿¡¼­ ¸¹ÀÌ Á¢±ÙÇÏ¹Ç·Î texture ·Î Á¢±ÙÇÏ´Â°Ô ´õ ºü¸¦°ÍÀÌ´Ù. */
+				/** loop ì•ˆì—ì„œ ë§ì´ ì ‘ê·¼í•˜ë¯€ë¡œ texture ë¡œ ì ‘ê·¼í•˜ëŠ”ê²Œ ë” ë¹ ë¥¼ê²ƒì´ë‹¤. */
 				blooming.x += wt * tex1Dfetch( inFrameBufferTexture, 3 * bloomOffset + 0 );
 				blooming.y += wt * tex1Dfetch( inFrameBufferTexture, 3 * bloomOffset + 1 );
 				blooming.z += wt * tex1Dfetch( inFrameBufferTexture, 3 * bloomOffset + 2 );
@@ -760,8 +761,8 @@ __global__ void bloomingFilteringKernel( int startImageIndex,
 	blooming /= sumWt;
 
 	/** 
-	 *	m_pFrameBuffer2 ¿¡ ½á³õ´Â´Ù. 
-	 *	ÀÌ kernel ÀÌ ³¡³ª°í ³ª¸é m_pFrameBuffer °ú m_pFrameBuffer2 ¸¦ swap ÇÒ °ÍÀÌ´Ù. 
+	 *	m_pFrameBuffer2 ì— ì¨ë†“ëŠ”ë‹¤. 
+	 *	ì´ kernel ì´ ëë‚˜ê³  ë‚˜ë©´ m_pFrameBuffer ê³¼ m_pFrameBuffer2 ë¥¼ swap í•  ê²ƒì´ë‹¤. 
 	 */
 	m_pFrameBuffer2[ imageIndex * 3 + 0 ] = 
 		( 1.0f- m_fBloomingWeight ) * m_pFrameBuffer[ imageIndex * 3 + 0 ] + m_fBloomingWeight * blooming.x;	
@@ -781,9 +782,9 @@ __global__ void bloomingFilteringKernel( int startImageIndex,
  **
  **
  **
- **	SINGLE PASS RAYTRACING KERNEL °ü·Ã
- **	´Ù¸¥ ³í¹®µé°úÀÇ ¼Óµµºñ±³¸¦ À§ÇØ¼­ ÇÑ kernel ¾È¿¡¼­ primary »ı¼º. shadow. shading ±îÁö ÃÖÀûÀ¸·Î
- **	¼öÇàÇÏ´Â ¹öÀü. ¼Óµµ¸¦ À§ÇÑ °ÍÀÌ¹Ç·Î flexibility °¡ ¶³¾îÁ® ½ÇÁ¦ ÀÀ¿ë¿¡´Â ÀûÇÕÇÏÁö ¾Ê´Ù.
+ **	SINGLE PASS RAYTRACING KERNEL ê´€ë ¨
+ **	ë‹¤ë¥¸ ë…¼ë¬¸ë“¤ê³¼ì˜ ì†ë„ë¹„êµë¥¼ ìœ„í•´ì„œ í•œ kernel ì•ˆì—ì„œ primary ìƒì„±. shadow. shading ê¹Œì§€ ìµœì ìœ¼ë¡œ
+ **	ìˆ˜í–‰í•˜ëŠ” ë²„ì „. ì†ë„ë¥¼ ìœ„í•œ ê²ƒì´ë¯€ë¡œ flexibility ê°€ ë–¨ì–´ì ¸ ì‹¤ì œ ì‘ìš©ì—ëŠ” ì í•©í•˜ì§€ ì•Šë‹¤.
  **
  **
  **
@@ -865,15 +866,15 @@ __device__ inline void singlePassIntersectRoutine( const cuRay &ray, const int i
 	if ( ( hit.tHit <= t ) | ( t < t_near - EPSILON4 ) | ( t > t_far + EPSILON4 ) ) return;
 	
 	/**
-	 *	culling ¿É¼ÇÀÌ ÀÖ°í, object °¡ transparent ÇÏÁö ¾Ê´Ù¸é
-	 *	¾Õ¸éÀÎÁö µŞ¸éÀÎÁö Ã¼Å©. µŞ¸é¿¡ ¸ÂÀº°Å¸é hit Ã³¸® ¾ÈÇÔ.
+	 *	culling ì˜µì…˜ì´ ìˆê³ , object ê°€ transparent í•˜ì§€ ì•Šë‹¤ë©´
+	 *	ì•ë©´ì¸ì§€ ë’·ë©´ì¸ì§€ ì²´í¬. ë’·ë©´ì— ë§ì€ê±°ë©´ hit ì²˜ë¦¬ ì•ˆí•¨.
 	 */
 	const float hu = p.pos.y + t * p.dir.y - tri.vert_ku();
 	const float hv = p.pos.z + t * p.dir.z - tri.vert_kv();
 	const float beta = hv * tri.b_nu() + hu * tri.b_nv();
 	const float gamma = hu * tri.c_nu() + hv * tri.c_nv();
 	
-	/** »ï°¢ÇüÀÇ edge ¿Í ºÎµúÈú¶§, ¼öÄ¡¿ÀÂ÷°¡ ÀÖÀ¸¹Ç·Î epsilon À» Á» ÁØ´Ù. */
+	/** ì‚¼ê°í˜•ì˜ edge ì™€ ë¶€ë”ªíë•Œ, ìˆ˜ì¹˜ì˜¤ì°¨ê°€ ìˆìœ¼ë¯€ë¡œ epsilon ì„ ì¢€ ì¤€ë‹¤. */
 	//if ( isnan( beta * gamma ) ) return;
 	if ( ( beta < 0.f - BARYCENTRY_EPSILON ) | ( gamma < 0.f - BARYCENTRY_EPSILON ) | ( ( 1.0f - beta - gamma ) < 0.0f - BARYCENTRY_EPSILON ) ) return;
 
@@ -949,8 +950,8 @@ __device__ inline void singlePassIntersect( cuRay &currRay, cuIntersectionCheck 
 }
 
 /** 
- *	Texture °¡ Á¸ÀçÇÏ´Â °æ¿ì ÇöÀç diffuse color ¸¦ texture ³»ÀÇ u, v »óÀÇ
- *	color ·Î ´ëÃ¼.
+ *	Texture ê°€ ì¡´ì¬í•˜ëŠ” ê²½ìš° í˜„ì¬ diffuse color ë¥¼ texture ë‚´ì˜ u, v ìƒì˜
+ *	color ë¡œ ëŒ€ì²´.
  */
 __device__ inline void calTextureColor( cuIntersectionPoint &intersectResult,
 								   cuObjectMaterial &material, float3 &diffuse )
@@ -960,8 +961,8 @@ __device__ inline void calTextureColor( cuIntersectionPoint &intersectResult,
 }
 
 /**
- *	Scene ¾ÈÀÇ ±¤¿øÀ¸·ÎºÎÅÍ Direct Illumination À» °è»êÇÑ´Ù.
- *	¸¸¾à ÇöÀç ¹°Ã¼ ÀÚÃ¼°¡ ±¤¿øÀÌ¶ó¸é, ÇöÀç ¹°Ã¼ÀÇ »öÀ» ±×´ë·Î »ç¿ëÇÑ´Ù.
+ *	Scene ì•ˆì˜ ê´‘ì›ìœ¼ë¡œë¶€í„° Direct Illumination ì„ ê³„ì‚°í•œë‹¤.
+ *	ë§Œì•½ í˜„ì¬ ë¬¼ì²´ ìì²´ê°€ ê´‘ì›ì´ë¼ë©´, í˜„ì¬ ë¬¼ì²´ì˜ ìƒ‰ì„ ê·¸ëŒ€ë¡œ ì‚¬ìš©í•œë‹¤.
  *
  *	Phong Shading.
  */
@@ -1042,7 +1043,7 @@ __device__ inline float3 calSinglePassDirectIllumination_ShadowOff(
 
 
 /**
- *	±¤¿ø°³¼ö °íÁ¤. ÃÖ´ë2°³.
+ *	ê´‘ì›ê°œìˆ˜ ê³ ì •. ìµœëŒ€2ê°œ.
  *
  *	Phong Shading.
  */
@@ -1106,7 +1107,7 @@ __device__ inline float3 fixedOption_calSinglePassDirectIllumination_ShadowOn(
 
 
 /**
- *	±¤¿ø°³¼ö °íÁ¤. ÃÖ´ë2°³.
+ *	ê´‘ì›ê°œìˆ˜ ê³ ì •. ìµœëŒ€2ê°œ.
  *
  *	Phong Shading.
  */
@@ -1173,7 +1174,7 @@ __device__ inline float3 fixedOption_calSinglePassDirectIllumination_ShadowOn_Fo
 }
 
 /**
- *	±¤¿ø°³¼ö °íÁ¤. ÃÖ´ë 2°³
+ *	ê´‘ì›ê°œìˆ˜ ê³ ì •. ìµœëŒ€ 2ê°œ
  */
 __device__ inline float3 fixedOption_calSinglePassDirectIllumination_ShadowOff( 
 										cuIntersectionPoint &intersectResult, 
@@ -1214,7 +1215,7 @@ __device__ inline float3 fixedOption_calSinglePassDirectIllumination_ShadowOff(
 }
 
 /**
- *	Single Pass ·Î RayTracing À» ¼öÇà.
+ *	Single Pass ë¡œ RayTracing ì„ ìˆ˜í–‰.
  */
 __global__ void singlePassRayTracingKernel_ShadowOff( float* pFrameBuffer, 
 													  int maxReflectionDepth, 
@@ -1235,7 +1236,7 @@ __global__ void singlePassRayTracingKernel_ShadowOff( float* pFrameBuffer,
 		return;
 
 	/**
-	 *	¿ŞÂÊ,»ó´Ü Æ÷ÀÎÆ®ÀÇ Ä«¸Ş¶ó plane »ó¿¡¼­ÀÇ ÁÂÇ¥.
+	 *	ì™¼ìª½,ìƒë‹¨ í¬ì¸íŠ¸ì˜ ì¹´ë©”ë¼ plane ìƒì—ì„œì˜ ì¢Œí‘œ.
 	 */
 
 	if ( g_SceneInfo.iSuperSamplingX > 1 && g_SceneInfo.iSuperSamplingY > 1 && bJittering ) {
@@ -1279,7 +1280,7 @@ __global__ void singlePassRayTracingKernel_ShadowOff( float* pFrameBuffer,
 			cuObjectMaterial material;
 			getObjectMaterial( currIsectCheck.objectIndex, material );
 
-			/** texture °¡ Á¸ÀçÇÏ¸é diffuse color ¸¦ texture ³»ÀÇ u, v ¿¡¼­ °è»êµÈ color ·Î ´ëÃ¼ */
+			/** texture ê°€ ì¡´ì¬í•˜ë©´ diffuse color ë¥¼ texture ë‚´ì˜ u, v ì—ì„œ ê³„ì‚°ëœ color ë¡œ ëŒ€ì²´ */
 			float3 diffuse = material.diffuse;
 			calTextureColor( point, material, diffuse );
 
@@ -1326,7 +1327,7 @@ __global__ void singlePassRayTracingKernel_ShadowOff( float* pFrameBuffer,
 }
 
 /**
- *	Single Pass ·Î RayTracing À» ¼öÇà.
+ *	Single Pass ë¡œ RayTracing ì„ ìˆ˜í–‰.
  */
 __global__ void singlePassRayTracingKernel_ShadowOn( float* pFrameBuffer, 
 													 int maxReflectionDepth, 
@@ -1347,7 +1348,7 @@ __global__ void singlePassRayTracingKernel_ShadowOn( float* pFrameBuffer,
 		return;
 
 	/**
-	 *	¿ŞÂÊ,»ó´Ü Æ÷ÀÎÆ®ÀÇ Ä«¸Ş¶ó plane »ó¿¡¼­ÀÇ ÁÂÇ¥.
+	 *	ì™¼ìª½,ìƒë‹¨ í¬ì¸íŠ¸ì˜ ì¹´ë©”ë¼ plane ìƒì—ì„œì˜ ì¢Œí‘œ.
 	 */
 
 	if ( g_SceneInfo.iSuperSamplingX > 1 && g_SceneInfo.iSuperSamplingY > 1 && bJittering ) {
@@ -1391,7 +1392,7 @@ __global__ void singlePassRayTracingKernel_ShadowOn( float* pFrameBuffer,
 			cuObjectMaterial material;
 			getObjectMaterial( currIsectCheck.objectIndex, material );
 
-			/** texture °¡ Á¸ÀçÇÏ¸é diffuse color ¸¦ texture ³»ÀÇ u, v ¿¡¼­ °è»êµÈ color ·Î ´ëÃ¼ */
+			/** texture ê°€ ì¡´ì¬í•˜ë©´ diffuse color ë¥¼ texture ë‚´ì˜ u, v ì—ì„œ ê³„ì‚°ëœ color ë¡œ ëŒ€ì²´ */
 			float3 diffuse = material.diffuse;
 			calTextureColor( point, material, diffuse );
 
@@ -1439,7 +1440,7 @@ __global__ void singlePassRayTracingKernel_ShadowOn( float* pFrameBuffer,
 }
 
 /**
- *	Single Pass ·Î RayTracing À» ¼öÇà.
+ *	Single Pass ë¡œ RayTracing ì„ ìˆ˜í–‰.
  */
 __global__ void singlePassRayTracingKernel_Coherent_ShadowOff( float* pFrameBuffer, 
 																int maxReflectionDepth, bool bJittering )
@@ -1463,7 +1464,7 @@ __global__ void singlePassRayTracingKernel_Coherent_ShadowOff( float* pFrameBuff
 		return;
 
 	/**
-	 *	¿ŞÂÊ,»ó´Ü Æ÷ÀÎÆ®ÀÇ Ä«¸Ş¶ó plane »ó¿¡¼­ÀÇ ÁÂÇ¥.
+	 *	ì™¼ìª½,ìƒë‹¨ í¬ì¸íŠ¸ì˜ ì¹´ë©”ë¼ plane ìƒì—ì„œì˜ ì¢Œí‘œ.
 	 */
 
 	if ( g_SceneInfo.iSuperSamplingX > 1 && g_SceneInfo.iSuperSamplingY > 1 && bJittering ) {
@@ -1507,7 +1508,7 @@ __global__ void singlePassRayTracingKernel_Coherent_ShadowOff( float* pFrameBuff
 			cuObjectMaterial material;
 			getObjectMaterial( currIsectCheck.objectIndex, material );
 
-			/** texture °¡ Á¸ÀçÇÏ¸é diffuse color ¸¦ texture ³»ÀÇ u, v ¿¡¼­ °è»êµÈ color ·Î ´ëÃ¼ */
+			/** texture ê°€ ì¡´ì¬í•˜ë©´ diffuse color ë¥¼ texture ë‚´ì˜ u, v ì—ì„œ ê³„ì‚°ëœ color ë¡œ ëŒ€ì²´ */
 			float3 diffuse = material.diffuse;
 			calTextureColor( point, material, diffuse );
 
@@ -1578,7 +1579,7 @@ __global__ void singlePassRayTracingKernel_Coherent_ShadowOff( float* pFrameBuff
 
 
 /**
- *	Single Pass ·Î RayTracing À» ¼öÇà.
+ *	Single Pass ë¡œ RayTracing ì„ ìˆ˜í–‰.
  */
 __global__ void singlePassRayTracingKernel_Coherent_ShadowOn( float* pFrameBuffer, 
 													 int maxReflectionDepth, bool bJittering )
@@ -1602,7 +1603,7 @@ __global__ void singlePassRayTracingKernel_Coherent_ShadowOn( float* pFrameBuffe
 		return;
 
 	/**
-	 *	¿ŞÂÊ,»ó´Ü Æ÷ÀÎÆ®ÀÇ Ä«¸Ş¶ó plane »ó¿¡¼­ÀÇ ÁÂÇ¥.
+	 *	ì™¼ìª½,ìƒë‹¨ í¬ì¸íŠ¸ì˜ ì¹´ë©”ë¼ plane ìƒì—ì„œì˜ ì¢Œí‘œ.
 	 */
 
 	if ( g_SceneInfo.iSuperSamplingX > 1 && g_SceneInfo.iSuperSamplingY > 1 && bJittering ) {
@@ -1646,7 +1647,7 @@ __global__ void singlePassRayTracingKernel_Coherent_ShadowOn( float* pFrameBuffe
 			cuObjectMaterial material;
 			getObjectMaterial( currIsectCheck.objectIndex, material );
 
-			/** texture °¡ Á¸ÀçÇÏ¸é diffuse color ¸¦ texture ³»ÀÇ u, v ¿¡¼­ °è»êµÈ color ·Î ´ëÃ¼ */
+			/** texture ê°€ ì¡´ì¬í•˜ë©´ diffuse color ë¥¼ texture ë‚´ì˜ u, v ì—ì„œ ê³„ì‚°ëœ color ë¡œ ëŒ€ì²´ */
 			float3 diffuse = material.diffuse;
 			calTextureColor( point, material, diffuse );
 
@@ -1717,7 +1718,7 @@ __global__ void singlePassRayTracingKernel_Coherent_ShadowOn( float* pFrameBuffe
 
 
 /**
- *	Single Pass ·Î RayTracing À» ¼öÇà.
+ *	Single Pass ë¡œ RayTracing ì„ ìˆ˜í–‰.
  */
 __global__ void fixedOption_singlePassRayTracingKernel_Coherent_ShadowOff( float* pFrameBuffer, 
 																int maxReflectionDepth, bool bJittering )
@@ -1741,7 +1742,7 @@ __global__ void fixedOption_singlePassRayTracingKernel_Coherent_ShadowOff( float
 		return;
 
 	/**
-	 *	¿ŞÂÊ,»ó´Ü Æ÷ÀÎÆ®ÀÇ Ä«¸Ş¶ó plane »ó¿¡¼­ÀÇ ÁÂÇ¥.
+	 *	ì™¼ìª½,ìƒë‹¨ í¬ì¸íŠ¸ì˜ ì¹´ë©”ë¼ plane ìƒì—ì„œì˜ ì¢Œí‘œ.
 	 */
 
 	if ( g_SceneInfo.iSuperSamplingX > 1 && g_SceneInfo.iSuperSamplingY > 1 && bJittering ) {
@@ -1785,7 +1786,7 @@ __global__ void fixedOption_singlePassRayTracingKernel_Coherent_ShadowOff( float
 			cuObjectMaterial material;
 			getObjectMaterial( currIsectCheck.objectIndex, material );
 
-			/** texture °¡ Á¸ÀçÇÏ¸é diffuse color ¸¦ texture ³»ÀÇ u, v ¿¡¼­ °è»êµÈ color ·Î ´ëÃ¼ */
+			/** texture ê°€ ì¡´ì¬í•˜ë©´ diffuse color ë¥¼ texture ë‚´ì˜ u, v ì—ì„œ ê³„ì‚°ëœ color ë¡œ ëŒ€ì²´ */
 			float3 diffuse = material.diffuse;
 			calTextureColor( point, material, diffuse );
 
@@ -1856,7 +1857,7 @@ __global__ void fixedOption_singlePassRayTracingKernel_Coherent_ShadowOff( float
 
 
 /**
- *	Single Pass ·Î RayTracing À» ¼öÇà.
+ *	Single Pass ë¡œ RayTracing ì„ ìˆ˜í–‰.
  */
 __global__ void fixedOption_singlePassRayTracingKernel_Coherent_ShadowOn( float* pFrameBuffer, 
 													 int maxReflectionDepth, bool bJittering )
@@ -1880,7 +1881,7 @@ __global__ void fixedOption_singlePassRayTracingKernel_Coherent_ShadowOn( float*
 		return;
 
 	/**
-	 *	¿ŞÂÊ,»ó´Ü Æ÷ÀÎÆ®ÀÇ Ä«¸Ş¶ó plane »ó¿¡¼­ÀÇ ÁÂÇ¥.
+	 *	ì™¼ìª½,ìƒë‹¨ í¬ì¸íŠ¸ì˜ ì¹´ë©”ë¼ plane ìƒì—ì„œì˜ ì¢Œí‘œ.
 	 */
 
 	if ( g_SceneInfo.iSuperSamplingX > 1 && g_SceneInfo.iSuperSamplingY > 1 && bJittering ) {
@@ -1924,7 +1925,7 @@ __global__ void fixedOption_singlePassRayTracingKernel_Coherent_ShadowOn( float*
 			cuObjectMaterial material;
 			getObjectMaterial( currIsectCheck.objectIndex, material );
 
-			/** texture °¡ Á¸ÀçÇÏ¸é diffuse color ¸¦ texture ³»ÀÇ u, v ¿¡¼­ °è»êµÈ color ·Î ´ëÃ¼ */
+			/** texture ê°€ ì¡´ì¬í•˜ë©´ diffuse color ë¥¼ texture ë‚´ì˜ u, v ì—ì„œ ê³„ì‚°ëœ color ë¡œ ëŒ€ì²´ */
 			float3 diffuse = material.diffuse;
 			calTextureColor( point, material, diffuse );
 
@@ -1994,7 +1995,7 @@ __global__ void fixedOption_singlePassRayTracingKernel_Coherent_ShadowOn( float*
 }
 
 /**
- *	Single Pass ·Î RayTracing À» ¼öÇà.
+ *	Single Pass ë¡œ RayTracing ì„ ìˆ˜í–‰.
  */
 __global__ void singlePassRayTracingKernel_1_SamplingKernel_ShadowOff( 
 											cuSamplingMap *pSamplingMap,
@@ -2017,7 +2018,7 @@ __global__ void singlePassRayTracingKernel_1_SamplingKernel_ShadowOff(
 		return;
 
 	/**
-	 *	¿ŞÂÊ,»ó´Ü Æ÷ÀÎÆ®ÀÇ Ä«¸Ş¶ó plane »ó¿¡¼­ÀÇ ÁÂÇ¥.
+	 *	ì™¼ìª½,ìƒë‹¨ í¬ì¸íŠ¸ì˜ ì¹´ë©”ë¼ plane ìƒì—ì„œì˜ ì¢Œí‘œ.
 	 */
 	dir = g_CameraInfo.startPoint + 
 		  g_CameraInfo.u * ((float)x + 0.5f ) * g_CameraInfo.stepX - 
@@ -2033,10 +2034,10 @@ __global__ void singlePassRayTracingKernel_1_SamplingKernel_ShadowOff(
 	point.colorWeight.z = 1.0f;
 
 	/** 
-	 *	ÇöÀçÁöÁ¡ÀÇ sampling info ÃÊ±âÈ­.
-	 *	integer ¸¦ float ·Î int_as_float ½ÄÀ¸·Î ÀúÀå.
+	 *	í˜„ì¬ì§€ì ì˜ sampling info ì´ˆê¸°í™”.
+	 *	integer ë¥¼ float ë¡œ int_as_float_H ì‹ìœ¼ë¡œ ì €ì¥.
 	 *
-	 *	normal Àº ´Ù 1.0 À¸·Î ¼¼ÆÃÇØ¾ß ÇÑ´Ù.
+	 *	normal ì€ ë‹¤ 1.0 ìœ¼ë¡œ ì„¸íŒ…í•´ì•¼ í•œë‹¤.
 	 */
 	pSamplingMap[ rayIndex ].primaryNormal = make_float3( 1.0f, 1.0f, 1.0f );
 	pSamplingMap[ rayIndex ].primaryAttr = MAKE_PIXEL_ATTR_ASFLOAT( OBJECT_MAX_ID, 0, 0, 0 );
@@ -2064,7 +2065,7 @@ __global__ void singlePassRayTracingKernel_1_SamplingKernel_ShadowOff(
 			cuObjectMaterial material;
 			getObjectMaterial( currIsectCheck.objectIndex, material );
 
-			/** texture °¡ Á¸ÀçÇÏ¸é diffuse color ¸¦ texture ³»ÀÇ u, v ¿¡¼­ °è»êµÈ color ·Î ´ëÃ¼ */
+			/** texture ê°€ ì¡´ì¬í•˜ë©´ diffuse color ë¥¼ texture ë‚´ì˜ u, v ì—ì„œ ê³„ì‚°ëœ color ë¡œ ëŒ€ì²´ */
 			float3 diffuse = material.diffuse;
 			calTextureColor( point, material, diffuse );
 
@@ -2073,7 +2074,7 @@ __global__ void singlePassRayTracingKernel_1_SamplingKernel_ShadowOff(
 						* calSinglePassDirectIllumination_ShadowOff( point, material, diffuse );				
 
 			/**
-			 *	reflection depth °¡ ÄÑÁ® ÀÖ´Ù¸é, 1-bounce ¸¸Å­ Ã³¸®.
+			 *	reflection depth ê°€ ì¼œì ¸ ìˆë‹¤ë©´, 1-bounce ë§Œí¼ ì²˜ë¦¬.
 			 */
 			if ( maxReflectionDepth > depth && material.transparency > 0.0f ) {
 
@@ -2105,7 +2106,7 @@ __global__ void singlePassRayTracingKernel_1_SamplingKernel_ShadowOff(
 						MAKE_PIXEL_ATTR_ASFLOAT( (int)point.objectIndex, (int)point.shadowCount, (int)currIsectCheck.bSelected, (int)( point.bTexture ) );
 			}
 
-			/** 2Â÷ ray °¡ intersection ÇÑ°æ¿ì. */
+			/** 2ì°¨ ray ê°€ intersection í•œê²½ìš°. */
 			if ( depth == 1 ) {
 				pSamplingMap[ rayIndex ].secondaryNormal = point.normal;
 				pSamplingMap[ rayIndex ].secondaryAttr = 
@@ -2132,7 +2133,7 @@ __global__ void singlePassRayTracingKernel_1_SamplingKernel_ShadowOff(
 
 
 /**
- *	Single Pass ·Î RayTracing À» ¼öÇà.
+ *	Single Pass ë¡œ RayTracing ì„ ìˆ˜í–‰.
  */
 __global__ void singlePassRayTracingKernel_1_SamplingKernel_ShadowOn( 
 											cuSamplingMap *pSamplingMap,
@@ -2155,7 +2156,7 @@ __global__ void singlePassRayTracingKernel_1_SamplingKernel_ShadowOn(
 		return;
 
 	/**
-	 *	¿ŞÂÊ,»ó´Ü Æ÷ÀÎÆ®ÀÇ Ä«¸Ş¶ó plane »ó¿¡¼­ÀÇ ÁÂÇ¥.
+	 *	ì™¼ìª½,ìƒë‹¨ í¬ì¸íŠ¸ì˜ ì¹´ë©”ë¼ plane ìƒì—ì„œì˜ ì¢Œí‘œ.
 	 */
 	dir = g_CameraInfo.startPoint + g_CameraInfo.u * ((float)x + 0.5f ) * g_CameraInfo.stepX - 
 		  g_CameraInfo.v * ((float)y + 0.5f ) * g_CameraInfo.stepY;
@@ -2170,10 +2171,10 @@ __global__ void singlePassRayTracingKernel_1_SamplingKernel_ShadowOn(
 	point.colorWeight.z = 1.0f;
 
 	/** 
-	 *	ÇöÀçÁöÁ¡ÀÇ sampling info ÃÊ±âÈ­.
-	 *	integer ¸¦ float ·Î int_as_float ½ÄÀ¸·Î ÀúÀå.
+	 *	í˜„ì¬ì§€ì ì˜ sampling info ì´ˆê¸°í™”.
+	 *	integer ë¥¼ float ë¡œ int_as_float_H ì‹ìœ¼ë¡œ ì €ì¥.
 	 *
-	 *	normal Àº ´Ù 1.0 À¸·Î ¼¼ÆÃÇØ¾ß ÇÑ´Ù.
+	 *	normal ì€ ë‹¤ 1.0 ìœ¼ë¡œ ì„¸íŒ…í•´ì•¼ í•œë‹¤.
 	 */
 	pSamplingMap[ rayIndex ].primaryNormal = make_float3( 1.0f, 1.0f, 1.0f );
 	pSamplingMap[ rayIndex ].primaryAttr = MAKE_PIXEL_ATTR_ASFLOAT( OBJECT_MAX_ID, 0, 0, 0 );
@@ -2201,7 +2202,7 @@ __global__ void singlePassRayTracingKernel_1_SamplingKernel_ShadowOn(
 			cuObjectMaterial material;
 			getObjectMaterial( currIsectCheck.objectIndex, material );
 
-			/** texture °¡ Á¸ÀçÇÏ¸é diffuse color ¸¦ texture ³»ÀÇ u, v ¿¡¼­ °è»êµÈ color ·Î ´ëÃ¼ */
+			/** texture ê°€ ì¡´ì¬í•˜ë©´ diffuse color ë¥¼ texture ë‚´ì˜ u, v ì—ì„œ ê³„ì‚°ëœ color ë¡œ ëŒ€ì²´ */
 			float3 diffuse = material.diffuse;
 			calTextureColor( point, material, diffuse );
 
@@ -2210,7 +2211,7 @@ __global__ void singlePassRayTracingKernel_1_SamplingKernel_ShadowOn(
 						* calSinglePassDirectIllumination_ShadowOn( point, material, diffuse );				
 
 			/**
-			 *	reflection depth °¡ ÄÑÁ® ÀÖ´Ù¸é, 1-bounce ¸¸Å­ Ã³¸®.
+			 *	reflection depth ê°€ ì¼œì ¸ ìˆë‹¤ë©´, 1-bounce ë§Œí¼ ì²˜ë¦¬.
 			 */
 			if ( maxReflectionDepth > depth && material.transparency > 0.0f ) {
 
@@ -2242,7 +2243,7 @@ __global__ void singlePassRayTracingKernel_1_SamplingKernel_ShadowOn(
 						MAKE_PIXEL_ATTR_ASFLOAT( (int)point.objectIndex, (int)point.shadowCount, (int)currIsectCheck.bSelected, (int)( point.bTexture ) );
 			}
 
-			/** 2Â÷ ray °¡ intersection ÇÑ°æ¿ì. */
+			/** 2ì°¨ ray ê°€ intersection í•œê²½ìš°. */
 			if ( depth == 1 ) {
 				pSamplingMap[ rayIndex ].secondaryNormal = point.normal;
 				pSamplingMap[ rayIndex ].secondaryAttr = 
@@ -2268,7 +2269,7 @@ __global__ void singlePassRayTracingKernel_1_SamplingKernel_ShadowOn(
 }
 
 /**
- *	Sobel Method ·Î ÇöÀç Pixel ÀÇ difference value ¸¦ »ı¼º.
+ *	Sobel Method ë¡œ í˜„ì¬ Pixel ì˜ difference value ë¥¼ ìƒì„±.
  */
 __global__ void colorDifferenceMapGenerationKernel_SobelMethod( float* pFrameBuffer2 )
 {
@@ -2283,7 +2284,7 @@ __global__ void colorDifferenceMapGenerationKernel_SobelMethod( float* pFrameBuf
 	if ( x >= g_SceneInfo.iResolutionX || y >= g_SceneInfo.iResolutionY )
 		return;
 	
-	/** sobel method Àû¿ë */
+	/** sobel method ì ìš© */
 	for ( int j = -1; j <= 1; ++j ) {
 		for ( int i = -1; i <= 1; ++i ) {
 			if ( x + i >= 0 && x + i < g_SceneInfo.iResolutionX && 
@@ -2298,7 +2299,7 @@ __global__ void colorDifferenceMapGenerationKernel_SobelMethod( float* pFrameBuf
 		}
 	}
 	
-	/** »óÇÏ°¡ ¹Ù²î¾î ÀÖÀ¸¹Ç·Î framebuffer2 ¿¡´Â µÚÁı¾î¼­ ÀúÀå */
+	/** ìƒí•˜ê°€ ë°”ë€Œì–´ ìˆìœ¼ë¯€ë¡œ framebuffer2 ì—ëŠ” ë’¤ì§‘ì–´ì„œ ì €ì¥ */
 	index = ( ( g_SceneInfo.iResolutionY - y - 1 ) * g_SceneInfo.iResolutionX + x );
 	pFrameBuffer2[ index ] = fmin( 1.0f, fabs( xvalue ) + fabs( yvalue ) );
 
@@ -2335,16 +2336,16 @@ __global__ void laplacianOfGaussianKernel9x9( float* pFrameBuffer2 )
 		}
 	}
 
-	/** »óÇÏ°¡ ¹Ù²î¾î ÀÖÀ¸¹Ç·Î framebuffer2 ¿¡´Â µÚÁı¾î¼­ ÀúÀå */
+	/** ìƒí•˜ê°€ ë°”ë€Œì–´ ìˆìœ¼ë¯€ë¡œ framebuffer2 ì—ëŠ” ë’¤ì§‘ì–´ì„œ ì €ì¥ */
 	index = y * g_SceneInfo.iResolutionX + x;
 	pFrameBuffer2[ index ] = edgevalue;
 }
 
 
 /**
- *	¾î´ÀÁöÁ¡¿¡ ´ëÇØ¼­ SuperSampling À» ¼öÇàÇÒÁö¸¦ °áÁ¤ÇÑ´Ù.
- *	°¢ thread ´Â ÇÑÇÈ¼¿ÀÇ 4x4 ¸¦ ÂÉ°µ ÇÏ³ª¾¿¿¡ ´ëÀÀµÈ´Ù. Áï ÃÑ4°³ÀÇ ¾²·¹µå°¡ ÇÏ³ªÀÇ
- *	ÇÈ¼¿¿¡¼­ °¢ ¸ğÅüÀÌ¸¦ »ùÇÃ¸µÇÒÁö ¿©ºÎ¸¦ °áÁ¤.
+ *	ì–´ëŠì§€ì ì— ëŒ€í•´ì„œ SuperSampling ì„ ìˆ˜í–‰í• ì§€ë¥¼ ê²°ì •í•œë‹¤.
+ *	ê° thread ëŠ” í•œí”½ì…€ì˜ 4x4 ë¥¼ ìª¼ê°  í•˜ë‚˜ì”©ì— ëŒ€ì‘ëœë‹¤. ì¦‰ ì´4ê°œì˜ ì“°ë ˆë“œê°€ í•˜ë‚˜ì˜
+ *	í”½ì…€ì—ì„œ ê° ëª¨í‰ì´ë¥¼ ìƒ˜í”Œë§í• ì§€ ì—¬ë¶€ë¥¼ ê²°ì •.
  */
 __global__ void singlePassRayTracingKernel_DetectionStage(
 											float* pFrameBuffer,
@@ -2357,13 +2358,13 @@ __global__ void singlePassRayTracingKernel_DetectionStage(
 	int y = ( blockIdx.y * blockDim.y + threadIdx.y ) / 2;
 	int index = 0, index2 = 0;
 
-	/** block ³»ÀÇ ¾²·¹µå ¹øÈ£ */
+	/** block ë‚´ì˜ ì“°ë ˆë“œ ë²ˆí˜¸ */
 	int threadIndex = threadIdx.y * blockDim.x + threadIdx.x;
 
 	int primaryAttr, secondaryAttr;
 	float3 primaryNormal, secondaryNormal;
 
-	// pixel corner number ´Â left-top ºÎÅÍ 0, 1, 2, 3
+	// pixel corner number ëŠ” left-top ë¶€í„° 0, 1, 2, 3
 	int pixelCornerIndex = threadIdx.x % 2 + ( threadIdx.y % 2 ) * 2;	
 	int2 pattern_x_y;
 
@@ -2373,7 +2374,7 @@ __global__ void singlePassRayTracingKernel_DetectionStage(
 	float4 temp, temp2;
 	float3 contrast = make_float3( 0.0f, 0.0f, 0.0f );
 
-	/** active sub-pixel ÀÎÁö¿Í active sub-pixel ÀÌ ¸î °³ÀÎÁö¸¦ À§ÇÑ º¯¼ö ÃÊ±âÈ­ */
+	/** active sub-pixel ì¸ì§€ì™€ active sub-pixel ì´ ëª‡ ê°œì¸ì§€ë¥¼ ìœ„í•œ ë³€ìˆ˜ ì´ˆê¸°í™” */
 	sharedMemory[ threadIndex * 6 + 0 ] = -1.0f;
 	sharedMemory[ threadIndex * 6 + 1 ] = 0.0f;
 	sharedMemory[ threadIndex * 6 + 2 ] = 0.0f;
@@ -2392,9 +2393,9 @@ __global__ void singlePassRayTracingKernel_DetectionStage(
 	secondaryNormal.y = temp.z; secondaryNormal.z = temp.w;
 
 	/**
-	 *  ÇöÀç sub-pixel °ú °ü°èµÈ 4pixel ÀÇ
-	 *	contrast ¸¦ ±¸ÇÔ.
-	 *	temp, temp2 ¸¦ °¢°¢ colormax, colormin À¸·Î »ç¿ë.
+	 *  í˜„ì¬ sub-pixel ê³¼ ê´€ê³„ëœ 4pixel ì˜
+	 *	contrast ë¥¼ êµ¬í•¨.
+	 *	temp, temp2 ë¥¼ ê°ê° colormax, colormin ìœ¼ë¡œ ì‚¬ìš©.
 	 */
 	index2 = 3 * ( ( g_SceneInfo.iResolutionY - y - 1 ) * g_SceneInfo.iResolutionX + x );
 
@@ -2404,8 +2405,8 @@ __global__ void singlePassRayTracingKernel_DetectionStage(
 	temp2 = temp;
 
 	/** 
-	 *	sub-pixel ÀÌ active °¡ ¾Æ´Ò¶§ color ¸¦ °è»êÇÏ±â À§ÇÑ shared memory 
-	 *	Áß½É pixel Àº 9/16 ÀÇ weight ¸¦ °öÇØ¾ß ÇÑ´Ù.
+	 *	sub-pixel ì´ active ê°€ ì•„ë‹ë•Œ color ë¥¼ ê³„ì‚°í•˜ê¸° ìœ„í•œ shared memory 
+	 *	ì¤‘ì‹¬ pixel ì€ 9/16 ì˜ weight ë¥¼ ê³±í•´ì•¼ í•œë‹¤.
 	 */
 	sharedMemory[ threadIndex * 6 + 3 ] = temp.x * 0.5625f;
 	sharedMemory[ threadIndex * 6 + 4 ] = temp.y * 0.5625f;
@@ -2423,8 +2424,8 @@ __global__ void singlePassRayTracingKernel_DetectionStage(
 		index2 = 3 * ( ( g_SceneInfo.iResolutionY - pattern_x_y.y - 1 ) * g_SceneInfo.iResolutionX + pattern_x_y.x );
 
 		/**
-		 *	ÇöÀç sub-pixel °ú °ü°èµÈ 4-pixel ÀÇ presampling Á¤º¸¸¦ ÀÌ¿ëÇØ¼­ interpolation ÇØ¼­ sub-pixel color ¸¦ 
-		 *	°áÁ¤ÇÑ´Ù.
+		 *	í˜„ì¬ sub-pixel ê³¼ ê´€ê³„ëœ 4-pixel ì˜ presampling ì •ë³´ë¥¼ ì´ìš©í•´ì„œ interpolation í•´ì„œ sub-pixel color ë¥¼ 
+		 *	ê²°ì •í•œë‹¤.
 		 */
 		sharedMemory[ threadIndex * 6 + 3 ] += constantPixelWeight[ 3 * pixelCornerIndex + i ] * tex1Dfetch( inFrameBuffer2Texture, index2 + 0 );
 		sharedMemory[ threadIndex * 6 + 4 ] += constantPixelWeight[ 3 * pixelCornerIndex + i ] * tex1Dfetch( inFrameBuffer2Texture, index2 + 1 );
@@ -2442,19 +2443,19 @@ __global__ void singlePassRayTracingKernel_DetectionStage(
 
 	}
 
-	// min, max ¸¦ °¡Áö°í contrast ¸¦ ±¸ÇÑ´Ù.
+	// min, max ë¥¼ ê°€ì§€ê³  contrast ë¥¼ êµ¬í•œë‹¤.
 	if ( temp.x + temp2.x > 0.0f ) contrast.x = ( temp2.x - temp.x ) / ( temp2.x + temp.x );
 	if ( temp.y + temp2.y > 0.0f ) contrast.y = ( temp2.y - temp.y ) / ( temp2.y + temp.y );
 	if ( temp.z + temp2.z > 0.0f ) contrast.z = ( temp2.z - temp.z ) / ( temp2.z + temp.z );
 
-	///** °¢ Thread º°·Î ÇØ´ç sub-pixel À» ÃßÃâÇÏ±â À§ÇÑ °è»ê */
+	///** ê° Thread ë³„ë¡œ í•´ë‹¹ sub-pixel ì„ ì¶”ì¶œí•˜ê¸° ìœ„í•œ ê³„ì‚° */
 	for ( int i = 0; i < 3; ++i ) {
 
 		pattern_x_y.x = constantIndexTablePattern[ 6 * pixelCornerIndex + i * 2 + 0 ] + x;
 		pattern_x_y.y = constantIndexTablePattern[ 6 * pixelCornerIndex + i * 2 + 1 ] + y;
 
 		/**
-		 *	Ã¼Å©ÇÒ ÇÈ¼¿ÀÌ ÀÌ¹ÌÁö¹üÀ§¸¦ ³Ñ¾î¼­¸é continue 
+		 *	ì²´í¬í•  í”½ì…€ì´ ì´ë¯¸ì§€ë²”ìœ„ë¥¼ ë„˜ì–´ì„œë©´ continue 
 		 */
 		if ( pattern_x_y.x < 0 || pattern_x_y.y < 0  || 
 			 pattern_x_y.x >= g_SceneInfo.iResolutionX || pattern_x_y.y >= g_SceneInfo.iResolutionY )
@@ -2465,18 +2466,18 @@ __global__ void singlePassRayTracingKernel_DetectionStage(
 		temp = tex1Dfetch( inSamplingMapTexture, index * 2 + 0 );
 		temp2 = tex1Dfetch( inSamplingMapTexture, index * 2 + 1 );
 
-		/** primary ray °¡ ¸ÂÀº ¹°Ã¼°¡ selection ¿µ¿ªÀÇ °æ°è¶ó¸é ¹«Á¶°Ç supersampling À» ¼öÇàÇÑ´Ù. */
+		/** primary ray ê°€ ë§ì€ ë¬¼ì²´ê°€ selection ì˜ì—­ì˜ ê²½ê³„ë¼ë©´ ë¬´ì¡°ê±´ supersampling ì„ ìˆ˜í–‰í•œë‹¤. */
 		if ( GET_SELECTED_ATTR( primaryAttr ) != GET_SELECTED_ATTR( float_as_int( temp.x ) ) ) {
 			flag = true;
 			break;;
 		}
 		
 
-		/** primary ray °¡ ¸ÂÀº ¹°Ã¼°¡ selection ¿µ¿ªÀÌ ¾Æ´Ï¶ó¸é supersampling ÇÏÁö ¾Ê´Â´Ù. */
+		/** primary ray ê°€ ë§ì€ ë¬¼ì²´ê°€ selection ì˜ì—­ì´ ì•„ë‹ˆë¼ë©´ supersampling í•˜ì§€ ì•ŠëŠ”ë‹¤. */
 		if ( GET_SELECTED_ATTR( primaryAttr ) == 0 && GET_SELECTED_ATTR( float_as_int( temp.x ) ) == 0 ) //&& GET_SELECTED_ATTR( float_as_int( temp2.x ) ) == 0 )
 			continue;
 
-		/** ¿ÀÁ÷ ÇÏ³ªÀÇ threshold ·Î ÀüÃ¼ÀÌ¹ÌÁö¸¦ color ºñ±³ÇÏ´Â°æ¿ì´Â ÀÌ°Í¸¸ ÇÏ°í break */
+		/** ì˜¤ì§ í•˜ë‚˜ì˜ threshold ë¡œ ì „ì²´ì´ë¯¸ì§€ë¥¼ color ë¹„êµí•˜ëŠ”ê²½ìš°ëŠ” ì´ê²ƒë§Œ í•˜ê³  break */
 		if ( ( compareType & 512 ) == 512 ) {
 			if ( contrast.x > CONTRAST_RED_DEFAULT_THRESHOLD * g_ThresholdInfo.onlyColorThreshold ||
 				 contrast.y > CONTRAST_GREEN_DEFAULT_THRESHOLD * g_ThresholdInfo.onlyColorThreshold ||
@@ -2487,7 +2488,7 @@ __global__ void singlePassRayTracingKernel_DetectionStage(
 			break;
 		}
 
-		/** primary oid ¿µ¿ª. */
+		/** primary oid ì˜ì—­. */
 		if ( GET_OID_ATTR( primaryAttr ) != GET_OID_ATTR( float_as_int( temp.x ) ) ) {
 			checkRegion = true;
 			if ( ( compareType & 1 ) == 1 && 
@@ -2583,7 +2584,7 @@ __global__ void singlePassRayTracingKernel_DetectionStage(
 			}
 		}
 
-		/** target ¿µ¿ªÀÌ¿Ü¿¡ ´ëÇØ¼­´Â pixel color ·Î ºñ±³ */
+		/** target ì˜ì—­ì´ì™¸ì— ëŒ€í•´ì„œëŠ” pixel color ë¡œ ë¹„êµ */
 		if ( !checkRegion && ( compareType & 256 ) == 256 && 
 					( contrast.x > CONTRAST_RED_DEFAULT_THRESHOLD * g_ThresholdInfo.etcRegionColorThreshold ||
 					  contrast.y > CONTRAST_GREEN_DEFAULT_THRESHOLD * g_ThresholdInfo.etcRegionColorThreshold ||
@@ -2595,7 +2596,7 @@ __global__ void singlePassRayTracingKernel_DetectionStage(
 	}
 
 	if ( flag ) {
-		/** x,y ÇÈ¼¿ÀÇ ¾î´À¸ğÅüÀÌ ÀÎÁö ±â·Ï */
+		/** x,y í”½ì…€ì˜ ì–´ëŠëª¨í‰ì´ ì¸ì§€ ê¸°ë¡ */
 		sharedMemory[ threadIndex * 6 + 0 ] = pixelCornerIndex;
 		sharedMemory[ threadIndex * 6 + 1 ] = y * g_SceneInfo.iResolutionX + x;
 	}
@@ -2604,8 +2605,8 @@ __global__ void singlePassRayTracingKernel_DetectionStage(
 
 
 	/** 
-	 *	ÇÑÇÈ¼¿À» Ã³¸®ÇÏ´Â thread 4°³Áß Ã¹¹øÂ° ³ğÀÌ ÇöÀç pixel 4±ÍÅüÀÌÁß ¸î°³¸¦ »ùÇÃ¸µÇØ¾ßÇÏ´ÂÁö¸¦
-	 *	°è»êÇØ¼­ super sampling ÇÏÁö ¾Ê´Â ¿µ¿ªÀº 1x1 sampling ÇÑ °á°ú¸¦ weight ¸¦ Áà¼­ ´Ù½Ã ÀúÀåÇÑ´Ù.
+	 *	í•œí”½ì…€ì„ ì²˜ë¦¬í•˜ëŠ” thread 4ê°œì¤‘ ì²«ë²ˆì§¸ ë†ˆì´ í˜„ì¬ pixel 4ê·€í‰ì´ì¤‘ ëª‡ê°œë¥¼ ìƒ˜í”Œë§í•´ì•¼í•˜ëŠ”ì§€ë¥¼
+	 *	ê³„ì‚°í•´ì„œ super sampling í•˜ì§€ ì•ŠëŠ” ì˜ì—­ì€ 1x1 sampling í•œ ê²°ê³¼ë¥¼ weight ë¥¼ ì¤˜ì„œ ë‹¤ì‹œ ì €ì¥í•œë‹¤.
 	 */
 	int count = 0;
 	
@@ -2664,7 +2665,7 @@ __global__ void singlePassRayTracingKernel_DetectionStage(
 
 		}
 
-		/** ÇöÀç pixel ¿¡ ¸î°³ÀÇ active sub-pixel ÀÌ ÀÖ´ÂÁö ÀúÀåÇØµĞ´Ù. */
+		/** í˜„ì¬ pixel ì— ëª‡ê°œì˜ active sub-pixel ì´ ìˆëŠ”ì§€ ì €ì¥í•´ë‘”ë‹¤. */
 		sharedMemory[ threadIndex * 6 + 2 ] = count;
 
 	}
@@ -2672,8 +2673,8 @@ __global__ void singlePassRayTracingKernel_DetectionStage(
 	__syncthreads();
 
 	/** 
-	 *	ÇÑÁÙÀÇ µ¥ÀÌÅÍ¸¦ ÇÑ¹ø¿¡ Ã³¸® atomicAdd ¸¦ ¸Å¹øºÎ¸£¸é ºñÈ¿À²ÀûÀÌ°í,
-	 *	image »óÀÇ ÇÑ block ÀÇ locallity ¸¦ ÃÖ´ëÇÑ »ì¸®±â À§ÇØ¼­.
+	 *	í•œì¤„ì˜ ë°ì´í„°ë¥¼ í•œë²ˆì— ì²˜ë¦¬ atomicAdd ë¥¼ ë§¤ë²ˆë¶€ë¥´ë©´ ë¹„íš¨ìœ¨ì ì´ê³ ,
+	 *	image ìƒì˜ í•œ block ì˜ locallity ë¥¼ ìµœëŒ€í•œ ì‚´ë¦¬ê¸° ìœ„í•´ì„œ.
 	 */
 	count = 0;
 	if ( threadIdx.x == 0 && threadIdx.y == 0 ) {
@@ -2683,18 +2684,18 @@ __global__ void singlePassRayTracingKernel_DetectionStage(
 		}
 
 		/** 
-		 *	´ÙÀ½ Ä¿³Î¿¡¼­ µ¹¸±¶§ ÇÑ pixel ¿¡ ´õÇØÁú subpixel µéÀÇ color ¸¦ sum ÇÒ¶§, global memory ¸¦
-		 *	ÀÌ¿ëÇÏ¸é ¼Óµµ°¡ ´À¸®¹Ç·Î, shared memory ¸¦ »ç¿ëÇÏ±â À§ÇÑ ±¸Á¶°¡ µÉ¼ö ÀÖ°Ô ÇØ¾ßÇÑ´Ù.
-		 *	 µû¶ó¼­ ´ÙÀ½Ä¿³Î¿¡¼­ ÇÑ pixel ÀÇ subpixel µéÀº ¹İµå½Ã °°Àº block ¾È¿¡ µé¾î°¡°Ô ÇØ¾ß ÇÑ´Ù.
-		 *	 ±×·¯±â À§ÇØ¼­ ´ÙÀ½Ä¿³ÎÀÇ block ¾ÈÀÇ thread °³¼ö¸¦ °í·ÁÇØ¼­ ¾Æ·¡¿Í °°Àº ±¸Á¶¸¦ ¸¸µç´Ù.
-		 *  ÇÑ sub-pixel Àº ´Ù½Ã 4°³ÀÇ ray ·Î ±¸¼ºµÇ°í ÀÌ °¢°¢ÀÇ ray ¿¡´Â ÇÏ³ª¾¿ thread °¡ ÇÒ´çµÇ¹Ç·Î
-		 *	´ÙÀ½Ä¿³ÎÀÇ ºí¶ô¾È¿¡´Â threads / 4 °³ÀÇ sub-pixel ÀÌ µé¾î°¥¼ö ÀÖ´Ù. µû¶ó¼­ °æ¿ì¿¡ µû¶ó 
-		 *	ÇÑ pixel À» ±¸¼ºÇÏ´Â sub-pixel µéÀÌ ¼­·Î ´Ù¸¥ block À¸·Î ³ª´µ¾îÁú¼ö ÀÖ´Ù. µû¶ó¼­ °æ°èºÎºĞ¿¡¼­
-		 *	sub-pixel ÀÌ ³ª´µ¾îÁú°Í °°À¸¸é Ã¹¹øÂ° block ¿¡ µé¾î°¥ ÀÚ¸®¸¦ ¹«È¿È­ Ç¥½Ã¸¦ ÇÏ°í ´ÙÀ½ block ¿¡
-		 *  ÇÑ pixel À» ±¸¼ºÇÏ´Â sub-pixel µéÀ» ´Ù ³Ö¾î¾ß ÇÑ´Ù. µ¿±âÈ­ ÇÔ¼ö¸¦ ½á¾ß ÇÏ¹Ç·Î ½±Áö´Â ¾Ê´Ù.
-		 *	ÀÚ¼¼ÇÑ ¼³¸íÀº ¾ÕÀ¸·Î¾µ ³í¹®À» ÂüÁ¶ÇÏ¶ó.
+		 *	ë‹¤ìŒ ì»¤ë„ì—ì„œ ëŒë¦´ë•Œ í•œ pixel ì— ë”í•´ì§ˆ subpixel ë“¤ì˜ color ë¥¼ sum í• ë•Œ, global memory ë¥¼
+		 *	ì´ìš©í•˜ë©´ ì†ë„ê°€ ëŠë¦¬ë¯€ë¡œ, shared memory ë¥¼ ì‚¬ìš©í•˜ê¸° ìœ„í•œ êµ¬ì¡°ê°€ ë ìˆ˜ ìˆê²Œ í•´ì•¼í•œë‹¤.
+		 *	 ë”°ë¼ì„œ ë‹¤ìŒì»¤ë„ì—ì„œ í•œ pixel ì˜ subpixel ë“¤ì€ ë°˜ë“œì‹œ ê°™ì€ block ì•ˆì— ë“¤ì–´ê°€ê²Œ í•´ì•¼ í•œë‹¤.
+		 *	 ê·¸ëŸ¬ê¸° ìœ„í•´ì„œ ë‹¤ìŒì»¤ë„ì˜ block ì•ˆì˜ thread ê°œìˆ˜ë¥¼ ê³ ë ¤í•´ì„œ ì•„ë˜ì™€ ê°™ì€ êµ¬ì¡°ë¥¼ ë§Œë“ ë‹¤.
+		 *  í•œ sub-pixel ì€ ë‹¤ì‹œ 4ê°œì˜ ray ë¡œ êµ¬ì„±ë˜ê³  ì´ ê°ê°ì˜ ray ì—ëŠ” í•˜ë‚˜ì”© thread ê°€ í• ë‹¹ë˜ë¯€ë¡œ
+		 *	ë‹¤ìŒì»¤ë„ì˜ ë¸”ë½ì•ˆì—ëŠ” threads / 4 ê°œì˜ sub-pixel ì´ ë“¤ì–´ê°ˆìˆ˜ ìˆë‹¤. ë”°ë¼ì„œ ê²½ìš°ì— ë”°ë¼ 
+		 *	í•œ pixel ì„ êµ¬ì„±í•˜ëŠ” sub-pixel ë“¤ì´ ì„œë¡œ ë‹¤ë¥¸ block ìœ¼ë¡œ ë‚˜ë‰˜ì–´ì§ˆìˆ˜ ìˆë‹¤. ë”°ë¼ì„œ ê²½ê³„ë¶€ë¶„ì—ì„œ
+		 *	sub-pixel ì´ ë‚˜ë‰˜ì–´ì§ˆê²ƒ ê°™ìœ¼ë©´ ì²«ë²ˆì§¸ block ì— ë“¤ì–´ê°ˆ ìë¦¬ë¥¼ ë¬´íš¨í™” í‘œì‹œë¥¼ í•˜ê³  ë‹¤ìŒ block ì—
+		 *  í•œ pixel ì„ êµ¬ì„±í•˜ëŠ” sub-pixel ë“¤ì„ ë‹¤ ë„£ì–´ì•¼ í•œë‹¤. ë™ê¸°í™” í•¨ìˆ˜ë¥¼ ì¨ì•¼ í•˜ë¯€ë¡œ ì‰½ì§€ëŠ” ì•Šë‹¤.
+		 *	ìì„¸í•œ ì„¤ëª…ì€ ì•ìœ¼ë¡œì“¸ ë…¼ë¬¸ì„ ì°¸ì¡°í•˜ë¼.
 		 *
-		 *	°¢ active sub-pixel Áß °¡Àå Ã¹¹øÂ° °ÍÀ» master ·Î Ç¥½ÃÇÏ±â À§ÇØ¼­ corner ³Ñ¹ö¿¡ 10 À» ´õÇÑ´Ù.
+		 *	ê° active sub-pixel ì¤‘ ê°€ì¥ ì²«ë²ˆì§¸ ê²ƒì„ master ë¡œ í‘œì‹œí•˜ê¸° ìœ„í•´ì„œ corner ë„˜ë²„ì— 10 ì„ ë”í•œë‹¤.
 		 */
 		if ( count > 0 ) {
 			
@@ -2704,37 +2705,37 @@ __global__ void singlePassRayTracingKernel_DetectionStage(
 
 			index = atomicAdd( atomicVariable, count );
 
-			/** °¢ pixel ¼ø¼­·Î sub-pixel µéÀ» Ã¼Å©ÇÏ±â À§ÇØ¼­ */
+			/** ê° pixel ìˆœì„œë¡œ sub-pixel ë“¤ì„ ì²´í¬í•˜ê¸° ìœ„í•´ì„œ */
 			for ( int j = 0; j < blockDim.y; j += 2 ) {
 			for ( int i = 0; i < blockDim.x; i += 2 ) {
 
 				/** 
-				 *	´ÙÀ½ pixel ÀÇ sub-pixel µéÀ» buffer ¿¡ ³Ö±â Àü¿¡, ¾²·¹µå block ÀÇ °æ°è¸¦ ³Ñ¾î¼­´ÂÁö¸¦
-				 *	Ã¼Å©ÇØ¼­ ³Ñ¾î¼±´Ù¸é, ºñ¿öµÎ°í °æ°èÀÌÈÄºÎÅÍ Ã¤¿î´Ù. ÇÑ ¾²·¹µå block ÀÌ 256 °³·Î ±¸¼ºµÉ¶§
-				 *	ÀÌ ¾È¿¡ 64°³ÀÇ sub-pixel ÀÌ µé¾î°¥¼ö ÀÖÀ¸¹Ç·Î 64À» Ã¼Å©. 128 °³¶ó¸é 32 °³
+				 *	ë‹¤ìŒ pixel ì˜ sub-pixel ë“¤ì„ buffer ì— ë„£ê¸° ì „ì—, ì“°ë ˆë“œ block ì˜ ê²½ê³„ë¥¼ ë„˜ì–´ì„œëŠ”ì§€ë¥¼
+				 *	ì²´í¬í•´ì„œ ë„˜ì–´ì„ ë‹¤ë©´, ë¹„ì›Œë‘ê³  ê²½ê³„ì´í›„ë¶€í„° ì±„ìš´ë‹¤. í•œ ì“°ë ˆë“œ block ì´ 256 ê°œë¡œ êµ¬ì„±ë ë•Œ
+				 *	ì´ ì•ˆì— 64ê°œì˜ sub-pixel ì´ ë“¤ì–´ê°ˆìˆ˜ ìˆìœ¼ë¯€ë¡œ 64ì„ ì²´í¬. 128 ê°œë¼ë©´ 32 ê°œ
 				 */
 				subpixels = sharedMemory[ ( j * blockDim.x + i ) * 6 + 2 ];
 
 				while( subpixels > 0 ) {
 
 					if ( count >= subpixels && ( index % SUBPIXEL_CAPABILITY ) + subpixels > SUBPIXEL_CAPABILITY ) {
-						masterCheck = SUBPIXEL_CAPABILITY - ( index % SUBPIXEL_CAPABILITY );		// ÀÓ½Ã·Î masterCheck º¯¼ö »ç¿ë.
+						masterCheck = SUBPIXEL_CAPABILITY - ( index % SUBPIXEL_CAPABILITY );		// ì„ì‹œë¡œ masterCheck ë³€ìˆ˜ ì‚¬ìš©.
 						for ( int loop = 0; loop < masterCheck; ++loop ) {
-							pASBuffer[ index++ ] = -1;							// buffer ÀÇ °ø°£¿¡ ¹«È¿ÇÏ´Ù´Â°ÍÀ» ¼¼ÆÃ.
+							pASBuffer[ index++ ] = -1;							// buffer ì˜ ê³µê°„ì— ë¬´íš¨í•˜ë‹¤ëŠ”ê²ƒì„ ì„¸íŒ….
 							count--;
-							moreRequireIndex++;									// ÇÒ´çµÈ buffer º¸´Ù ³ªÁß¿¡ ´õ Àâ¾Æ¾ßÇÒ °³¼ö.
+							moreRequireIndex++;									// í• ë‹¹ëœ buffer ë³´ë‹¤ ë‚˜ì¤‘ì— ë” ì¡ì•„ì•¼í•  ê°œìˆ˜.
 						}
 					}
 
 					/** 
-					 *	³²¾ÆÀÖ´Â buffer °¡ ¸ğÀÚ¶õ´Ù¸é, ´õ ÇÊ¿äÇÑ °³¼ö¸¦ ÇÒ´ç´Âµ¥, ³²¾ÆÀÖ´Â buffer ´Â
-					 *	´Ù½Ã ¹«È¿È­¸¦ Ã¼Å©ÇÏ°í »õ·Î ÇÊ¿äÇÑ ¸¸Å­ buffer ¸¦ ÇÒ´ç¹ŞÀº´ÙÀ½¿¡ ´Ù½Ã align À» Ã¼Å©ÇÑ´Ù.
+					 *	ë‚¨ì•„ìˆëŠ” buffer ê°€ ëª¨ìë€ë‹¤ë©´, ë” í•„ìš”í•œ ê°œìˆ˜ë¥¼ í• ë‹¹ëŠ”ë°, ë‚¨ì•„ìˆëŠ” buffer ëŠ”
+					 *	ë‹¤ì‹œ ë¬´íš¨í™”ë¥¼ ì²´í¬í•˜ê³  ìƒˆë¡œ í•„ìš”í•œ ë§Œí¼ buffer ë¥¼ í• ë‹¹ë°›ì€ë‹¤ìŒì— ë‹¤ì‹œ align ì„ ì²´í¬í•œë‹¤.
 					 */
 					if ( count < subpixels ) {
 
 						for ( int loop = 0; loop < count; ++loop ) {
-							pASBuffer[ index++ ] = -1;						// buffer ÀÇ °ø°£¿¡ ¹«È¿ÇÏ´Ù´Â°ÍÀ» ¼¼ÆÃ.
-							moreRequireIndex++;								// ÇÒ´çµÈ buffer º¸´Ù ³ªÁß¿¡ ´õ Àâ¾Æ¾ßÇÒ °³¼ö.
+							pASBuffer[ index++ ] = -1;						// buffer ì˜ ê³µê°„ì— ë¬´íš¨í•˜ë‹¤ëŠ”ê²ƒì„ ì„¸íŒ….
+							moreRequireIndex++;								// í• ë‹¹ëœ buffer ë³´ë‹¤ ë‚˜ì¤‘ì— ë” ì¡ì•„ì•¼í•  ê°œìˆ˜.
 						}
 
 						index = atomicAdd( atomicVariable, moreRequireIndex );
@@ -2747,7 +2748,7 @@ __global__ void singlePassRayTracingKernel_DetectionStage(
 
 						for ( int k = 0; k < 4; ++k ) {
 
-							x = i + ( k % 2 ); y = j + ( k / 2 );	// ÇÈ¼¿ x, y °¡ ¾Æ´Ï¶ó 2Â÷¿ø»ó¿¡¼­ÀÇ ¾²·¹µå ÁÂÇ¥.
+							x = i + ( k % 2 ); y = j + ( k / 2 );	// í”½ì…€ x, y ê°€ ì•„ë‹ˆë¼ 2ì°¨ì›ìƒì—ì„œì˜ ì“°ë ˆë“œ ì¢Œí‘œ.
 							threadIndex = y * blockDim.x + x;
 
 							if ( sharedMemory[ threadIndex * 6 ] >= 0.0f ) {
@@ -2775,9 +2776,9 @@ __global__ void singlePassRayTracingKernel_DetectionStage(
 
 
 /**
- *	¾î´ÀÁöÁ¡¿¡ ´ëÇØ¼­ SuperSampling À» ¼öÇàÇÒÁö¸¦ °áÁ¤ÇÑ´Ù.
- *	°¢ thread ´Â ÇÑÇÈ¼¿ÀÇ 4x4 ¸¦ ÂÉ°µ ÇÏ³ª¾¿¿¡ ´ëÀÀµÈ´Ù. Áï ÃÑ4°³ÀÇ ¾²·¹µå°¡ ÇÏ³ªÀÇ
- *	ÇÈ¼¿¿¡¼­ °¢ ¸ğÅüÀÌ¸¦ »ùÇÃ¸µÇÒÁö ¿©ºÎ¸¦ °áÁ¤.
+ *	ì–´ëŠì§€ì ì— ëŒ€í•´ì„œ SuperSampling ì„ ìˆ˜í–‰í• ì§€ë¥¼ ê²°ì •í•œë‹¤.
+ *	ê° thread ëŠ” í•œí”½ì…€ì˜ 4x4 ë¥¼ ìª¼ê°  í•˜ë‚˜ì”©ì— ëŒ€ì‘ëœë‹¤. ì¦‰ ì´4ê°œì˜ ì“°ë ˆë“œê°€ í•˜ë‚˜ì˜
+ *	í”½ì…€ì—ì„œ ê° ëª¨í‰ì´ë¥¼ ìƒ˜í”Œë§í• ì§€ ì—¬ë¶€ë¥¼ ê²°ì •.
  */
 __global__ void singlePassRayTracingKernel_DetectionStage_ForSelective(
 											float* pFrameBuffer,
@@ -2790,13 +2791,13 @@ __global__ void singlePassRayTracingKernel_DetectionStage_ForSelective(
 	int y = ( blockIdx.y * blockDim.y + threadIdx.y ) / 2;
 	int index = 0, index2 = 0;
 
-	/** block ³»ÀÇ ¾²·¹µå ¹øÈ£ */
+	/** block ë‚´ì˜ ì“°ë ˆë“œ ë²ˆí˜¸ */
 	int threadIndex = threadIdx.y * blockDim.x + threadIdx.x;
 
 	int primaryAttr, secondaryAttr;
 	float3 primaryNormal, secondaryNormal;
 
-	// pixel corner number ´Â left-top ºÎÅÍ 0, 1, 2, 3
+	// pixel corner number ëŠ” left-top ë¶€í„° 0, 1, 2, 3
 	int pixelCornerIndex = threadIdx.x % 2 + ( threadIdx.y % 2 ) * 2;	
 	int2 pattern_x_y;
 
@@ -2806,7 +2807,7 @@ __global__ void singlePassRayTracingKernel_DetectionStage_ForSelective(
 	float4 temp, temp2;
 	float3 contrast = make_float3( 0.0f, 0.0f, 0.0f );
 
-	/** active sub-pixel ÀÎÁö¿Í active sub-pixel ÀÌ ¸î °³ÀÎÁö¸¦ À§ÇÑ º¯¼ö ÃÊ±âÈ­ */
+	/** active sub-pixel ì¸ì§€ì™€ active sub-pixel ì´ ëª‡ ê°œì¸ì§€ë¥¼ ìœ„í•œ ë³€ìˆ˜ ì´ˆê¸°í™” */
 	sharedMemory[ threadIndex * 6 + 0 ] = -1.0f;
 	sharedMemory[ threadIndex * 6 + 1 ] = 0.0f;
 	sharedMemory[ threadIndex * 6 + 2 ] = 0.0f;
@@ -2825,9 +2826,9 @@ __global__ void singlePassRayTracingKernel_DetectionStage_ForSelective(
 	secondaryNormal.y = temp.z; secondaryNormal.z = temp.w;
 
 	/**
-	 *  ÇöÀç sub-pixel °ú °ü°èµÈ 4pixel ÀÇ
-	 *	contrast ¸¦ ±¸ÇÔ.
-	 *	temp, temp2 ¸¦ °¢°¢ colormax, colormin À¸·Î »ç¿ë.
+	 *  í˜„ì¬ sub-pixel ê³¼ ê´€ê³„ëœ 4pixel ì˜
+	 *	contrast ë¥¼ êµ¬í•¨.
+	 *	temp, temp2 ë¥¼ ê°ê° colormax, colormin ìœ¼ë¡œ ì‚¬ìš©.
 	 */
 	index2 = 3 * ( ( g_SceneInfo.iResolutionY - y - 1 ) * g_SceneInfo.iResolutionX + x );
 
@@ -2857,13 +2858,13 @@ __global__ void singlePassRayTracingKernel_DetectionStage_ForSelective(
 
 	}
 
-	// min, max ¸¦ °¡Áö°í contrast ¸¦ ±¸ÇÑ´Ù.
+	// min, max ë¥¼ ê°€ì§€ê³  contrast ë¥¼ êµ¬í•œë‹¤.
 	if ( temp.x + temp2.x > 0.0f ) contrast.x = ( temp2.x - temp.x ) / ( temp2.x + temp.x );
 	if ( temp.y + temp2.y > 0.0f ) contrast.y = ( temp2.y - temp.y ) / ( temp2.y + temp.y );
 	if ( temp.z + temp2.z > 0.0f ) contrast.z = ( temp2.z - temp.z ) / ( temp2.z + temp.z );
 
 	/**
-	 *	selective ÇÑ ¹°Ã¼¿¡ ´ëÇØ¼­´Â 9pixel °æ°è¸¦ ´Ù ºñ±³ÇÑ´Ù.
+	 *	selective í•œ ë¬¼ì²´ì— ëŒ€í•´ì„œëŠ” 9pixel ê²½ê³„ë¥¼ ë‹¤ ë¹„êµí•œë‹¤.
 	 */
 	bool boundary = false;
 
@@ -2874,7 +2875,7 @@ __global__ void singlePassRayTracingKernel_DetectionStage_ForSelective(
 			pattern_x_y.y = j + y;
 
 			/**
-			 *	Ã¼Å©ÇÒ ÇÈ¼¿ÀÌ ÀÌ¹ÌÁö¹üÀ§¸¦ ³Ñ¾î¼­¸é continue 
+			 *	ì²´í¬í•  í”½ì…€ì´ ì´ë¯¸ì§€ë²”ìœ„ë¥¼ ë„˜ì–´ì„œë©´ continue 
 			 */
 			if ( pattern_x_y.x < 0 || pattern_x_y.y < 0  || 
 				 pattern_x_y.x >= g_SceneInfo.iResolutionX || pattern_x_y.y >= g_SceneInfo.iResolutionY )
@@ -2884,7 +2885,7 @@ __global__ void singlePassRayTracingKernel_DetectionStage_ForSelective(
 
 			temp = tex1Dfetch( inSamplingMapTexture, index * 2 + 0 );
 
-			/** primary ray °¡ ¸ÂÀº ¹°Ã¼°¡ selection ¿µ¿ªÀÇ °æ°è¶ó¸é ¹«Á¶°Ç supersampling À» ¼öÇàÇÑ´Ù. */
+			/** primary ray ê°€ ë§ì€ ë¬¼ì²´ê°€ selection ì˜ì—­ì˜ ê²½ê³„ë¼ë©´ ë¬´ì¡°ê±´ supersampling ì„ ìˆ˜í–‰í•œë‹¤. */
 			if ( GET_SELECTED_ATTR( primaryAttr ) != GET_SELECTED_ATTR( float_as_int( temp.x ) ) ) {
 				boundary = true;
 				break;
@@ -2892,14 +2893,14 @@ __global__ void singlePassRayTracingKernel_DetectionStage_ForSelective(
 		}
 	}
 
-	///** °¢ Thread º°·Î ÇØ´ç sub-pixel À» ÃßÃâÇÏ±â À§ÇÑ °è»ê */
+	///** ê° Thread ë³„ë¡œ í•´ë‹¹ sub-pixel ì„ ì¶”ì¶œí•˜ê¸° ìœ„í•œ ê³„ì‚° */
 	for ( int i = 0; i < 3; ++i ) {
 
 		pattern_x_y.x = constantIndexTablePattern[ 6 * pixelCornerIndex + i * 2 + 0 ] + x;
 		pattern_x_y.y = constantIndexTablePattern[ 6 * pixelCornerIndex + i * 2 + 1 ] + y;
 
 		/**
-		 *	Ã¼Å©ÇÒ ÇÈ¼¿ÀÌ ÀÌ¹ÌÁö¹üÀ§¸¦ ³Ñ¾î¼­¸é continue 
+		 *	ì²´í¬í•  í”½ì…€ì´ ì´ë¯¸ì§€ë²”ìœ„ë¥¼ ë„˜ì–´ì„œë©´ continue 
 		 */
 		if ( pattern_x_y.x < 0 || pattern_x_y.y < 0  || 
 			 pattern_x_y.x >= g_SceneInfo.iResolutionX || pattern_x_y.y >= g_SceneInfo.iResolutionY )
@@ -2911,17 +2912,17 @@ __global__ void singlePassRayTracingKernel_DetectionStage_ForSelective(
 		temp2 = tex1Dfetch( inSamplingMapTexture, index * 2 + 1 );
 
 
-		/** primary ray °¡ ¸ÂÀº ¹°Ã¼°¡ selection ¿µ¿ªÀÌ ¾Æ´Ï¶ó¸é supersampling ÇÏÁö ¾Ê´Â´Ù. */
+		/** primary ray ê°€ ë§ì€ ë¬¼ì²´ê°€ selection ì˜ì—­ì´ ì•„ë‹ˆë¼ë©´ supersampling í•˜ì§€ ì•ŠëŠ”ë‹¤. */
 		if ( boundary ) {
 			flag = true;
 			break;
 		}
 
-		/** primary ray °¡ ¸ÂÀº ¹°Ã¼°¡ selection ¿µ¿ªÀÌ ¾Æ´Ï¶ó¸é supersampling ÇÏÁö ¾Ê´Â´Ù. */
+		/** primary ray ê°€ ë§ì€ ë¬¼ì²´ê°€ selection ì˜ì—­ì´ ì•„ë‹ˆë¼ë©´ supersampling í•˜ì§€ ì•ŠëŠ”ë‹¤. */
 		if ( GET_SELECTED_ATTR( primaryAttr ) == 0 && GET_SELECTED_ATTR( float_as_int( temp.x ) ) == 0 ) //&& GET_SELECTED_ATTR( float_as_int( temp2.x ) ) == 0 )
 			continue;
 
-		/** ¿ÀÁ÷ ÇÏ³ªÀÇ threshold ·Î ÀüÃ¼ÀÌ¹ÌÁö¸¦ color ºñ±³ÇÏ´Â°æ¿ì´Â ÀÌ°Í¸¸ ÇÏ°í break */
+		/** ì˜¤ì§ í•˜ë‚˜ì˜ threshold ë¡œ ì „ì²´ì´ë¯¸ì§€ë¥¼ color ë¹„êµí•˜ëŠ”ê²½ìš°ëŠ” ì´ê²ƒë§Œ í•˜ê³  break */
 		if ( ( compareType & 512 ) == 512 ) {
 			if ( contrast.x > CONTRAST_RED_DEFAULT_THRESHOLD * g_ThresholdInfo.onlyColorThreshold ||
 				 contrast.y > CONTRAST_GREEN_DEFAULT_THRESHOLD * g_ThresholdInfo.onlyColorThreshold ||
@@ -2932,7 +2933,7 @@ __global__ void singlePassRayTracingKernel_DetectionStage_ForSelective(
 			break;
 		}
 
-		/** primary oid ¿µ¿ª. */
+		/** primary oid ì˜ì—­. */
 		if ( GET_OID_ATTR( primaryAttr ) != GET_OID_ATTR( float_as_int( temp.x ) ) ) {
 			checkRegion = true;
 			if ( ( compareType & 1 ) == 1 && 
@@ -3028,7 +3029,7 @@ __global__ void singlePassRayTracingKernel_DetectionStage_ForSelective(
 			}
 		}
 
-		/** target ¿µ¿ªÀÌ¿Ü¿¡ ´ëÇØ¼­´Â pixel color ·Î ºñ±³ */
+		/** target ì˜ì—­ì´ì™¸ì— ëŒ€í•´ì„œëŠ” pixel color ë¡œ ë¹„êµ */
 		if ( !checkRegion && ( compareType & 256 ) == 256 && 
 					( contrast.x > CONTRAST_RED_DEFAULT_THRESHOLD * g_ThresholdInfo.etcRegionColorThreshold ||
 					  contrast.y > CONTRAST_GREEN_DEFAULT_THRESHOLD * g_ThresholdInfo.etcRegionColorThreshold ||
@@ -3041,7 +3042,7 @@ __global__ void singlePassRayTracingKernel_DetectionStage_ForSelective(
 
 	if ( flag ) {
 
-		/** x,y ÇÈ¼¿ÀÇ ¾î´À¸ğÅüÀÌ ÀÎÁö ±â·Ï */
+		/** x,y í”½ì…€ì˜ ì–´ëŠëª¨í‰ì´ ì¸ì§€ ê¸°ë¡ */
 		sharedMemory[ threadIndex * 6 + 0 ] = pixelCornerIndex;
 		sharedMemory[ threadIndex * 6 + 1 ] = y * g_SceneInfo.iResolutionX + x;
 
@@ -3066,8 +3067,8 @@ __global__ void singlePassRayTracingKernel_DetectionStage_ForSelective(
 	__syncthreads();
 
 	/** 
-	 *	ÇÑÇÈ¼¿À» Ã³¸®ÇÏ´Â thread 4°³Áß Ã¹¹øÂ° ³ğÀÌ ÇöÀç pixel 4±ÍÅüÀÌÁß ¸î°³¸¦ »ùÇÃ¸µÇØ¾ßÇÏ´ÂÁö¸¦
-	 *	°è»êÇØ¼­ super sampling ÇÏÁö ¾Ê´Â ¿µ¿ªÀº 1x1 sampling ÇÑ °á°ú¸¦ weight ¸¦ Áà¼­ ´Ù½Ã ÀúÀåÇÑ´Ù.
+	 *	í•œí”½ì…€ì„ ì²˜ë¦¬í•˜ëŠ” thread 4ê°œì¤‘ ì²«ë²ˆì§¸ ë†ˆì´ í˜„ì¬ pixel 4ê·€í‰ì´ì¤‘ ëª‡ê°œë¥¼ ìƒ˜í”Œë§í•´ì•¼í•˜ëŠ”ì§€ë¥¼
+	 *	ê³„ì‚°í•´ì„œ super sampling í•˜ì§€ ì•ŠëŠ” ì˜ì—­ì€ 1x1 sampling í•œ ê²°ê³¼ë¥¼ weight ë¥¼ ì¤˜ì„œ ë‹¤ì‹œ ì €ì¥í•œë‹¤.
 	 */
 	int count = 0;
 	
@@ -3094,7 +3095,7 @@ __global__ void singlePassRayTracingKernel_DetectionStage_ForSelective(
 			if ( count == 4 ) {	pFrameBuffer[ index + 0 ] = 1.0f; pFrameBuffer[ index + 1 ] = 1.0f;	pFrameBuffer[ index + 2 ] = 1.0f; }
 		}
 
-		/** ÇöÀç pixel ¿¡ ¸î°³ÀÇ À¯È¿ÇÑ sub-pixel ÀÌ ÀÖ´ÂÁö ÀúÀåÇØµĞ´Ù. */
+		/** í˜„ì¬ pixel ì— ëª‡ê°œì˜ ìœ íš¨í•œ sub-pixel ì´ ìˆëŠ”ì§€ ì €ì¥í•´ë‘”ë‹¤. */
 		sharedMemory[ threadIndex * 6 + 2 ] = count;
 
 	}
@@ -3102,8 +3103,8 @@ __global__ void singlePassRayTracingKernel_DetectionStage_ForSelective(
 	__syncthreads();
 
 	/** 
-	 *	ÇÑÁÙÀÇ µ¥ÀÌÅÍ¸¦ ÇÑ¹ø¿¡ Ã³¸® atomicAdd ¸¦ ¸Å¹øºÎ¸£¸é ºñÈ¿À²ÀûÀÌ°í,
-	 *	image »óÀÇ ÇÑ block ÀÇ locallity ¸¦ ÃÖ´ëÇÑ »ì¸®±â À§ÇØ¼­.
+	 *	í•œì¤„ì˜ ë°ì´í„°ë¥¼ í•œë²ˆì— ì²˜ë¦¬ atomicAdd ë¥¼ ë§¤ë²ˆë¶€ë¥´ë©´ ë¹„íš¨ìœ¨ì ì´ê³ ,
+	 *	image ìƒì˜ í•œ block ì˜ locallity ë¥¼ ìµœëŒ€í•œ ì‚´ë¦¬ê¸° ìœ„í•´ì„œ.
 	 */
 	count = 0;
 	if ( threadIdx.x == 0 && threadIdx.y == 0 ) {
@@ -3113,18 +3114,18 @@ __global__ void singlePassRayTracingKernel_DetectionStage_ForSelective(
 		}
 
 		/** 
-		 *	´ÙÀ½ Ä¿³Î¿¡¼­ µ¹¸±¶§ ÇÑ pixel ¿¡ ´õÇØÁú subpixel µéÀÇ color ¸¦ sum ÇÒ¶§, global memory ¸¦
-		 *	ÀÌ¿ëÇÏ¸é ¼Óµµ°¡ ´À¸®¹Ç·Î, shared memory ¸¦ »ç¿ëÇÏ±â À§ÇÑ ±¸Á¶°¡ µÉ¼ö ÀÖ°Ô ÇØ¾ßÇÑ´Ù.
-		 *	 µû¶ó¼­ ´ÙÀ½Ä¿³Î¿¡¼­ ÇÑ pixel ÀÇ subpixel µéÀº ¹İµå½Ã °°Àº block ¾È¿¡ µé¾î°¡°Ô ÇØ¾ß ÇÑ´Ù.
-		 *	 ±×·¯±â À§ÇØ¼­ ´ÙÀ½Ä¿³ÎÀÇ block ¾ÈÀÇ thread °³¼ö¸¦ °í·ÁÇØ¼­ ¾Æ·¡¿Í °°Àº ±¸Á¶¸¦ ¸¸µç´Ù.
-		 *  ÇÑ sub-pixel Àº ´Ù½Ã 4°³ÀÇ ray ·Î ±¸¼ºµÇ°í ÀÌ °¢°¢ÀÇ ray ¿¡´Â ÇÏ³ª¾¿ thread °¡ ÇÒ´çµÇ¹Ç·Î
-		 *	´ÙÀ½Ä¿³ÎÀÇ ºí¶ô¾È¿¡´Â threads / 4 °³ÀÇ sub-pixel ÀÌ µé¾î°¥¼ö ÀÖ´Ù. µû¶ó¼­ °æ¿ì¿¡ µû¶ó 
-		 *	ÇÑ pixel À» ±¸¼ºÇÏ´Â sub-pixel µéÀÌ ¼­·Î ´Ù¸¥ block À¸·Î ³ª´µ¾îÁú¼ö ÀÖ´Ù. µû¶ó¼­ °æ°èºÎºĞ¿¡¼­
-		 *	sub-pixel ÀÌ ³ª´µ¾îÁú°Í °°À¸¸é Ã¹¹øÂ° block ¿¡ µé¾î°¥ ÀÚ¸®¸¦ ¹«È¿È­ Ç¥½Ã¸¦ ÇÏ°í ´ÙÀ½ block ¿¡
-		 *  ÇÑ pixel À» ±¸¼ºÇÏ´Â sub-pixel µéÀ» ´Ù ³Ö¾î¾ß ÇÑ´Ù. µ¿±âÈ­ ÇÔ¼ö¸¦ ½á¾ß ÇÏ¹Ç·Î ½±Áö´Â ¾Ê´Ù.
-		 *	ÀÚ¼¼ÇÑ ¼³¸íÀº ¾ÕÀ¸·Î¾µ ³í¹®À» ÂüÁ¶ÇÏ¶ó.
+		 *	ë‹¤ìŒ ì»¤ë„ì—ì„œ ëŒë¦´ë•Œ í•œ pixel ì— ë”í•´ì§ˆ subpixel ë“¤ì˜ color ë¥¼ sum í• ë•Œ, global memory ë¥¼
+		 *	ì´ìš©í•˜ë©´ ì†ë„ê°€ ëŠë¦¬ë¯€ë¡œ, shared memory ë¥¼ ì‚¬ìš©í•˜ê¸° ìœ„í•œ êµ¬ì¡°ê°€ ë ìˆ˜ ìˆê²Œ í•´ì•¼í•œë‹¤.
+		 *	 ë”°ë¼ì„œ ë‹¤ìŒì»¤ë„ì—ì„œ í•œ pixel ì˜ subpixel ë“¤ì€ ë°˜ë“œì‹œ ê°™ì€ block ì•ˆì— ë“¤ì–´ê°€ê²Œ í•´ì•¼ í•œë‹¤.
+		 *	 ê·¸ëŸ¬ê¸° ìœ„í•´ì„œ ë‹¤ìŒì»¤ë„ì˜ block ì•ˆì˜ thread ê°œìˆ˜ë¥¼ ê³ ë ¤í•´ì„œ ì•„ë˜ì™€ ê°™ì€ êµ¬ì¡°ë¥¼ ë§Œë“ ë‹¤.
+		 *  í•œ sub-pixel ì€ ë‹¤ì‹œ 4ê°œì˜ ray ë¡œ êµ¬ì„±ë˜ê³  ì´ ê°ê°ì˜ ray ì—ëŠ” í•˜ë‚˜ì”© thread ê°€ í• ë‹¹ë˜ë¯€ë¡œ
+		 *	ë‹¤ìŒì»¤ë„ì˜ ë¸”ë½ì•ˆì—ëŠ” threads / 4 ê°œì˜ sub-pixel ì´ ë“¤ì–´ê°ˆìˆ˜ ìˆë‹¤. ë”°ë¼ì„œ ê²½ìš°ì— ë”°ë¼ 
+		 *	í•œ pixel ì„ êµ¬ì„±í•˜ëŠ” sub-pixel ë“¤ì´ ì„œë¡œ ë‹¤ë¥¸ block ìœ¼ë¡œ ë‚˜ë‰˜ì–´ì§ˆìˆ˜ ìˆë‹¤. ë”°ë¼ì„œ ê²½ê³„ë¶€ë¶„ì—ì„œ
+		 *	sub-pixel ì´ ë‚˜ë‰˜ì–´ì§ˆê²ƒ ê°™ìœ¼ë©´ ì²«ë²ˆì§¸ block ì— ë“¤ì–´ê°ˆ ìë¦¬ë¥¼ ë¬´íš¨í™” í‘œì‹œë¥¼ í•˜ê³  ë‹¤ìŒ block ì—
+		 *  í•œ pixel ì„ êµ¬ì„±í•˜ëŠ” sub-pixel ë“¤ì„ ë‹¤ ë„£ì–´ì•¼ í•œë‹¤. ë™ê¸°í™” í•¨ìˆ˜ë¥¼ ì¨ì•¼ í•˜ë¯€ë¡œ ì‰½ì§€ëŠ” ì•Šë‹¤.
+		 *	ìì„¸í•œ ì„¤ëª…ì€ ì•ìœ¼ë¡œì“¸ ë…¼ë¬¸ì„ ì°¸ì¡°í•˜ë¼.
 		 *
-		 *	°¢ active sub-pixel Áß °¡Àå Ã¹¹øÂ° °ÍÀ» master ·Î Ç¥½ÃÇÏ±â À§ÇØ¼­ corner ³Ñ¹ö¿¡ 10 À» ´õÇÑ´Ù.
+		 *	ê° active sub-pixel ì¤‘ ê°€ì¥ ì²«ë²ˆì§¸ ê²ƒì„ master ë¡œ í‘œì‹œí•˜ê¸° ìœ„í•´ì„œ corner ë„˜ë²„ì— 10 ì„ ë”í•œë‹¤.
 		 */
 		if ( count > 0 ) {
 			
@@ -3134,37 +3135,37 @@ __global__ void singlePassRayTracingKernel_DetectionStage_ForSelective(
 
 			index = atomicAdd( atomicVariable, count );
 
-			/** °¢ pixel ¼ø¼­·Î sub-pixel µéÀ» Ã¼Å©ÇÏ±â À§ÇØ¼­ */
+			/** ê° pixel ìˆœì„œë¡œ sub-pixel ë“¤ì„ ì²´í¬í•˜ê¸° ìœ„í•´ì„œ */
 			for ( int j = 0; j < blockDim.y; j += 2 ) {
 			for ( int i = 0; i < blockDim.x; i += 2 ) {
 
 				/** 
-				 *	´ÙÀ½ pixel ÀÇ sub-pixel µéÀ» buffer ¿¡ ³Ö±â Àü¿¡, ¾²·¹µå block ÀÇ °æ°è¸¦ ³Ñ¾î¼­´ÂÁö¸¦
-				 *	Ã¼Å©ÇØ¼­ ³Ñ¾î¼±´Ù¸é, ºñ¿öµÎ°í °æ°èÀÌÈÄºÎÅÍ Ã¤¿î´Ù. ÇÑ ¾²·¹µå block ÀÌ 256 °³·Î ±¸¼ºµÉ¶§
-				 *	ÀÌ ¾È¿¡ 64°³ÀÇ sub-pixel ÀÌ µé¾î°¥¼ö ÀÖÀ¸¹Ç·Î 64À» Ã¼Å©. 128 °³¶ó¸é 32 °³
+				 *	ë‹¤ìŒ pixel ì˜ sub-pixel ë“¤ì„ buffer ì— ë„£ê¸° ì „ì—, ì“°ë ˆë“œ block ì˜ ê²½ê³„ë¥¼ ë„˜ì–´ì„œëŠ”ì§€ë¥¼
+				 *	ì²´í¬í•´ì„œ ë„˜ì–´ì„ ë‹¤ë©´, ë¹„ì›Œë‘ê³  ê²½ê³„ì´í›„ë¶€í„° ì±„ìš´ë‹¤. í•œ ì“°ë ˆë“œ block ì´ 256 ê°œë¡œ êµ¬ì„±ë ë•Œ
+				 *	ì´ ì•ˆì— 64ê°œì˜ sub-pixel ì´ ë“¤ì–´ê°ˆìˆ˜ ìˆìœ¼ë¯€ë¡œ 64ì„ ì²´í¬. 128 ê°œë¼ë©´ 32 ê°œ
 				 */
 				subpixels = sharedMemory[ ( j * blockDim.x + i ) * 6 + 2 ];
 
 				while( subpixels > 0 ) {
 
 					if ( count >= subpixels && ( index % SUBPIXEL_CAPABILITY ) + subpixels > SUBPIXEL_CAPABILITY ) {
-						masterCheck = SUBPIXEL_CAPABILITY - ( index % SUBPIXEL_CAPABILITY );		// ÀÓ½Ã·Î masterCheck º¯¼ö »ç¿ë.
+						masterCheck = SUBPIXEL_CAPABILITY - ( index % SUBPIXEL_CAPABILITY );		// ì„ì‹œë¡œ masterCheck ë³€ìˆ˜ ì‚¬ìš©.
 						for ( int loop = 0; loop < masterCheck; ++loop ) {
-							pASBuffer[ index++ ] = -1;							// buffer ÀÇ °ø°£¿¡ ¹«È¿ÇÏ´Ù´Â°ÍÀ» ¼¼ÆÃ.
+							pASBuffer[ index++ ] = -1;							// buffer ì˜ ê³µê°„ì— ë¬´íš¨í•˜ë‹¤ëŠ”ê²ƒì„ ì„¸íŒ….
 							count--;
-							moreRequireIndex++;									// ÇÒ´çµÈ buffer º¸´Ù ³ªÁß¿¡ ´õ Àâ¾Æ¾ßÇÒ °³¼ö.
+							moreRequireIndex++;									// í• ë‹¹ëœ buffer ë³´ë‹¤ ë‚˜ì¤‘ì— ë” ì¡ì•„ì•¼í•  ê°œìˆ˜.
 						}
 					}
 
 					/** 
-					 *	³²¾ÆÀÖ´Â buffer °¡ ¸ğÀÚ¶õ´Ù¸é, ´õ ÇÊ¿äÇÑ °³¼ö¸¦ ÇÒ´ç´Âµ¥, ³²¾ÆÀÖ´Â buffer ´Â
-					 *	´Ù½Ã ¹«È¿È­¸¦ Ã¼Å©ÇÏ°í »õ·Î ÇÊ¿äÇÑ ¸¸Å­ buffer ¸¦ ÇÒ´ç¹ŞÀº´ÙÀ½¿¡ ´Ù½Ã align À» Ã¼Å©ÇÑ´Ù.
+					 *	ë‚¨ì•„ìˆëŠ” buffer ê°€ ëª¨ìë€ë‹¤ë©´, ë” í•„ìš”í•œ ê°œìˆ˜ë¥¼ í• ë‹¹ëŠ”ë°, ë‚¨ì•„ìˆëŠ” buffer ëŠ”
+					 *	ë‹¤ì‹œ ë¬´íš¨í™”ë¥¼ ì²´í¬í•˜ê³  ìƒˆë¡œ í•„ìš”í•œ ë§Œí¼ buffer ë¥¼ í• ë‹¹ë°›ì€ë‹¤ìŒì— ë‹¤ì‹œ align ì„ ì²´í¬í•œë‹¤.
 					 */
 					if ( count < subpixels ) {
 
 						for ( int loop = 0; loop < count; ++loop ) {
-							pASBuffer[ index++ ] = -1;						// buffer ÀÇ °ø°£¿¡ ¹«È¿ÇÏ´Ù´Â°ÍÀ» ¼¼ÆÃ.
-							moreRequireIndex++;								// ÇÒ´çµÈ buffer º¸´Ù ³ªÁß¿¡ ´õ Àâ¾Æ¾ßÇÒ °³¼ö.
+							pASBuffer[ index++ ] = -1;						// buffer ì˜ ê³µê°„ì— ë¬´íš¨í•˜ë‹¤ëŠ”ê²ƒì„ ì„¸íŒ….
+							moreRequireIndex++;								// í• ë‹¹ëœ buffer ë³´ë‹¤ ë‚˜ì¤‘ì— ë” ì¡ì•„ì•¼í•  ê°œìˆ˜.
 						}
 
 						index = atomicAdd( atomicVariable, moreRequireIndex );
@@ -3177,7 +3178,7 @@ __global__ void singlePassRayTracingKernel_DetectionStage_ForSelective(
 
 						for ( int k = 0; k < 4; ++k ) {
 
-							x = i + ( k % 2 ); y = j + ( k / 2 );	// ÇÈ¼¿ x, y °¡ ¾Æ´Ï¶ó 2Â÷¿ø»ó¿¡¼­ÀÇ ¾²·¹µå ÁÂÇ¥.
+							x = i + ( k % 2 ); y = j + ( k / 2 );	// í”½ì…€ x, y ê°€ ì•„ë‹ˆë¼ 2ì°¨ì›ìƒì—ì„œì˜ ì“°ë ˆë“œ ì¢Œí‘œ.
 							threadIndex = y * blockDim.x + x;
 
 							if ( sharedMemory[ threadIndex * 6 ] >= 0.0f ) {
@@ -3203,7 +3204,7 @@ __global__ void singlePassRayTracingKernel_DetectionStage_ForSelective(
 }
 
 /**
- *	Single Pass ·Î RayTracing À» ¼öÇà.
+ *	Single Pass ë¡œ RayTracing ì„ ìˆ˜í–‰.
  */
 __global__ void singlePassRayTracingKernel_SuperSamplingStage_ShadowOn( 
 											float* pFrameBuffer,
@@ -3226,18 +3227,18 @@ __global__ void singlePassRayTracingKernel_SuperSamplingStage_ShadowOn(
 	int samplingIndex = ( blockIdx.x * blockDim.x + threadIdx.x ) % 4;
 
 	/**
-	 *	index ¹üÀ§¾È¿¡ Æ÷ÇÔµÇÁö ¾ÊÀº thread ¶óµµ return ½ÃÅ°¸é ¾ÈµÈ´Ù. 
-	 *	ÀÌ thread ¿¡ ÇÒ´çµÉ shared memory ¸¦ ´Ù¸¥ thread °¡ »ç¿ëÇÏ¹Ç·Î,
-	 *	ÀÌ thread µµ sharedmemory ¸¦ ÃÊ±âÈ­ ÇØ¾ßÇÏ¹Ç·Î.
+	 *	index ë²”ìœ„ì•ˆì— í¬í•¨ë˜ì§€ ì•Šì€ thread ë¼ë„ return ì‹œí‚¤ë©´ ì•ˆëœë‹¤. 
+	 *	ì´ thread ì— í• ë‹¹ë  shared memory ë¥¼ ë‹¤ë¥¸ thread ê°€ ì‚¬ìš©í•˜ë¯€ë¡œ,
+	 *	ì´ thread ë„ sharedmemory ë¥¼ ì´ˆê¸°í™” í•´ì•¼í•˜ë¯€ë¡œ.
 	 */
 	if ( index < count ) {
 		data = tex1Dfetch( inASBufferTexture, index );
 	}
 
 	/** 
-	 *	¹«È¿ÇÑ sub-pixel ÀÌ ¾Æ´Ò¶§¸¸ Ã³¸®. 
-	 *	ÀÌ·± ¹æ½Ä¸»°í if ( cornerNumber >= 0 ) return; Ã³·³ ¿©±â¼­ return ½ÃÅ°¸é ¾ÈµÇ°í!! ¹İµå½Ã ÀÌ·¸°Ô Á¶°Ç¹®À» »ç¿ë 
-	 *	¾Æ·¡¿¡¼­ ÇÕ»êÇÒ¶§ cornerNumber < 0 ÀÎ °æ¿ìÀÇ sharedMemory °ªÀ» ÂüÁ¶ÇØ¾ß ÇÏ¹Ç·Î. sharedMemory ÃÊ±âÈ­ ºÎºĞÀÌ ¼öÇàµÇ¾î¾ß ÇÑ´Ù.
+	 *	ë¬´íš¨í•œ sub-pixel ì´ ì•„ë‹ë•Œë§Œ ì²˜ë¦¬. 
+	 *	ì´ëŸ° ë°©ì‹ë§ê³  if ( cornerNumber >= 0 ) return; ì²˜ëŸ¼ ì—¬ê¸°ì„œ return ì‹œí‚¤ë©´ ì•ˆë˜ê³ !! ë°˜ë“œì‹œ ì´ë ‡ê²Œ ì¡°ê±´ë¬¸ì„ ì‚¬ìš© 
+	 *	ì•„ë˜ì—ì„œ í•©ì‚°í• ë•Œ cornerNumber < 0 ì¸ ê²½ìš°ì˜ sharedMemory ê°’ì„ ì°¸ì¡°í•´ì•¼ í•˜ë¯€ë¡œ. sharedMemory ì´ˆê¸°í™” ë¶€ë¶„ì´ ìˆ˜í–‰ë˜ì–´ì•¼ í•œë‹¤.
 	 */
 	if ( data >= 0 ) {
 
@@ -3252,18 +3253,18 @@ __global__ void singlePassRayTracingKernel_SuperSamplingStage_ShadowOn(
 		}
 
 		/** 
-		 *	¾î¶² corner ÀÎÁö¿¡ µû¶ó¼­ »ùÇÃ¸µ ±¸°£ÀÇÀ§Ä¡ °áÁ¤
-		 *	( cornerNumber / 2 ) * 2 ´Â 2 ·Î ³ª´­¶§ int ·Î round-off µÇ°í * 2¸¦ ÇÏ´Â°Í.
+		 *	ì–´ë–¤ corner ì¸ì§€ì— ë”°ë¼ì„œ ìƒ˜í”Œë§ êµ¬ê°„ì˜ìœ„ì¹˜ ê²°ì •
+		 *	( cornerNumber / 2 ) * 2 ëŠ” 2 ë¡œ ë‚˜ëˆŒë•Œ int ë¡œ round-off ë˜ê³  * 2ë¥¼ í•˜ëŠ”ê²ƒ.
 		 */
 		int samplingX = ( cornerNumber % 2 ) * 2 + ( samplingIndex % 2 );
 		int samplingY = ( cornerNumber / 2 ) * 2 + ( samplingIndex / 2 );
 
 		/**
-		 *	¿ŞÂÊ,»ó´Ü Æ÷ÀÎÆ®ÀÇ Ä«¸Ş¶ó plane »ó¿¡¼­ÀÇ ÁÂÇ¥.
+		 *	ì™¼ìª½,ìƒë‹¨ í¬ì¸íŠ¸ì˜ ì¹´ë©”ë¼ plane ìƒì—ì„œì˜ ì¢Œí‘œ.
 		 */
 		pos = g_CameraInfo.eye;
 
-		/** °¡»óÀ¸·Î 4 by 4 ¸¦ ÇßÀ»¶§ÀÇ °¢ »ùÇÃ¸µÁöÁ¡À» ±¸ÇÑ´Ù. */
+		/** ê°€ìƒìœ¼ë¡œ 4 by 4 ë¥¼ í–ˆì„ë•Œì˜ ê° ìƒ˜í”Œë§ì§€ì ì„ êµ¬í•œë‹¤. */
 		sx = (float) x + ( (float) samplingX + radicalInverse( x << 8 + samplingX, 3 ) ) * 0.25f;
 		sy = (float) y + ( (float) samplingY + radicalInverse( y << 8 + samplingY, 5 ) ) * 0.25f;
 
@@ -3295,7 +3296,7 @@ __global__ void singlePassRayTracingKernel_SuperSamplingStage_ShadowOn(
 				cuObjectMaterial material;
 				getObjectMaterial( currIsectCheck.objectIndex, material );
 				
-				/** texture °¡ Á¸ÀçÇÏ¸é diffuse color ¸¦ texture ³»ÀÇ u, v ¿¡¼­ °è»êµÈ color ·Î ´ëÃ¼ */
+				/** texture ê°€ ì¡´ì¬í•˜ë©´ diffuse color ë¥¼ texture ë‚´ì˜ u, v ì—ì„œ ê³„ì‚°ëœ color ë¡œ ëŒ€ì²´ */
 				float3 diffuse = material.diffuse;
 				calTextureColor( point, material, diffuse );
 
@@ -3304,7 +3305,7 @@ __global__ void singlePassRayTracingKernel_SuperSamplingStage_ShadowOn(
 						calSinglePassDirectIllumination_ShadowOn( point, material, diffuse );
 
 				/**
-				 *	reflection depth °¡ ÄÑÁ® ÀÖ´Ù¸é, 1-bounce ¸¸Å­ Ã³¸®.
+				 *	reflection depth ê°€ ì¼œì ¸ ìˆë‹¤ë©´, 1-bounce ë§Œí¼ ì²˜ë¦¬.
 				 */
 				if ( maxReflectionDepth > depth && material.transparency > 0.0f ) {
 
@@ -3339,20 +3340,20 @@ __global__ void singlePassRayTracingKernel_SuperSamplingStage_ShadowOn(
 	}
 
 	/**
-	 *	À§¿¡¼­ ray ÃßÀûÀ»ÇÒ¶§µµ shared memory ¸¦ »ç¿ëÇÏ¹Ç·Î ¹İµå½Ã ¿©±â±îÁö µ¿±âÈ­¸¦ ÇÑ¹øÇÑ´ÙÀ½¿¡
-	 *	À§¿¡¼­ »ç¿ëÇÑ shared memory ¸¦ color ´©ÀûÇÏ´Â buffer ·Î »ç¿ëÇØ¾ß ÇÑ´Ù.
+	 *	ìœ„ì—ì„œ ray ì¶”ì ì„í• ë•Œë„ shared memory ë¥¼ ì‚¬ìš©í•˜ë¯€ë¡œ ë°˜ë“œì‹œ ì—¬ê¸°ê¹Œì§€ ë™ê¸°í™”ë¥¼ í•œë²ˆí•œë‹¤ìŒì—
+	 *	ìœ„ì—ì„œ ì‚¬ìš©í•œ shared memory ë¥¼ color ëˆ„ì í•˜ëŠ” buffer ë¡œ ì‚¬ìš©í•´ì•¼ í•œë‹¤.
 	 */
 	__syncthreads();
 
 	/** 
-	 *	¹İµå½Ã ÀÌ sharedMemory ´Â ray ¸¦ ÃßÀûÇÒ¶§ »ç¿ëµÇ´Â stack À» À§ÇÑ shared memory 
-	 *	»çÀÌÁîÀÌ³» ¿¡¼­ »ç¿ëÇØ¾ß ÇÑ´Ù. 
-	 *	 °°Àº pixel ¿¡ ´ëÇØ¼­ »ùÇÃ¸µÇÑ °á°ú¸¦ Æò±Õ³»¼­ framebuffer ¿¡ Ä¥ÇÏ±â À§ÇØ¼­ ÀÏ´Ü °¢ÀÚÀÇ
-	 *	µ¥ÀÌÅÍ¸¦ shared memory ¿¡ ÀúÀåÇÏ°í³ª¼­, ´ëÇ¥thread µéÀÌ ÇÕ»êÇØ¼­ frame buffer ¿¡ ÀúÀåÇÑ´Ù.
+	 *	ë°˜ë“œì‹œ ì´ sharedMemory ëŠ” ray ë¥¼ ì¶”ì í• ë•Œ ì‚¬ìš©ë˜ëŠ” stack ì„ ìœ„í•œ shared memory 
+	 *	ì‚¬ì´ì¦ˆì´ë‚´ ì—ì„œ ì‚¬ìš©í•´ì•¼ í•œë‹¤. 
+	 *	 ê°™ì€ pixel ì— ëŒ€í•´ì„œ ìƒ˜í”Œë§í•œ ê²°ê³¼ë¥¼ í‰ê· ë‚´ì„œ framebuffer ì— ì¹ í•˜ê¸° ìœ„í•´ì„œ ì¼ë‹¨ ê°ìì˜
+	 *	ë°ì´í„°ë¥¼ shared memory ì— ì €ì¥í•˜ê³ ë‚˜ì„œ, ëŒ€í‘œthread ë“¤ì´ í•©ì‚°í•´ì„œ frame buffer ì— ì €ì¥í•œë‹¤.
 	 */
 	/** 
-	 *	°¢ ray ´Â ÃµÃ¼ÇÈ¼¿¿¡ 1/16 ¸¸Å­¸¸ weighted µÈ´Ù. 
-	 *	shared memory ´Â ray ¸¦ ÃßÀûÇÒ¶§ stack À¸·Îµµ »ç¿ëµÇ¹Ç·Î ray ÃßÀûÀÌ ³¡³­ÈÄ¿¡ ¹İµå½Ã ¿©±â¼­ ÃÊ±âÈ­ÈÄ »ç¿ëÇØ¾ß ÇÑ´Ù. 
+	 *	ê° ray ëŠ” ì²œì²´í”½ì…€ì— 1/16 ë§Œí¼ë§Œ weighted ëœë‹¤. 
+	 *	shared memory ëŠ” ray ë¥¼ ì¶”ì í• ë•Œ stack ìœ¼ë¡œë„ ì‚¬ìš©ë˜ë¯€ë¡œ ray ì¶”ì ì´ ëë‚œí›„ì— ë°˜ë“œì‹œ ì—¬ê¸°ì„œ ì´ˆê¸°í™”í›„ ì‚¬ìš©í•´ì•¼ í•œë‹¤. 
 	 */
 	sharedMemory[ threadIdx.x * 4 + 0 ] = color.x * 0.0625f;
 	sharedMemory[ threadIdx.x * 4 + 1 ] = color.y * 0.0625f;
@@ -3361,7 +3362,7 @@ __global__ void singlePassRayTracingKernel_SuperSamplingStage_ShadowOn(
 
 	__syncthreads();
 
-	/** °¢ sub-pixel ÀÇ Ã¹¹øÂ° thread °¡ ÇØ´ç sub-pixel ÀÇ color ¸¦ ´©Àû °è»êÇÑ´Ù. */
+	/** ê° sub-pixel ì˜ ì²«ë²ˆì§¸ thread ê°€ í•´ë‹¹ sub-pixel ì˜ color ë¥¼ ëˆ„ì  ê³„ì‚°í•œë‹¤. */
 	if ( samplingIndex != 0 ) 
 		return;
 
@@ -3376,14 +3377,14 @@ __global__ void singlePassRayTracingKernel_SuperSamplingStage_ShadowOn(
 	__syncthreads();
 
 	/** 
-	 *	°¢ pixel ÀÇ master sub-pixel ÀÇ Ã¹¹øÂ° thread °¡ ÇØ´ç pixel ¿¡ Ä¥ÇØÁú color ¸¦ ´©ÀûÇÑ´Ù. 
-	 *	ÇÑ pixel À» ±¸¼ºÇÏ´Â sub pixel µéÀº thread index °¡ Áõ°¡ÇÏ´Â¼øÀ¸·Î ºÙ¾îÀÖ°í ÃÖ´ë 4°³¸¸ Á¸ÀçÇÏ¹Ç·Î
-	 *  ÇöÀç master thread ·Î ºÎÅÍ ÃÖ´ë 4 sub-pixel ÀÇ Ã¹¹øÂ° thread ¸¸ Ã¼Å©ÇÏ¸é µÈ´Ù.
+	 *	ê° pixel ì˜ master sub-pixel ì˜ ì²«ë²ˆì§¸ thread ê°€ í•´ë‹¹ pixel ì— ì¹ í•´ì§ˆ color ë¥¼ ëˆ„ì í•œë‹¤. 
+	 *	í•œ pixel ì„ êµ¬ì„±í•˜ëŠ” sub pixel ë“¤ì€ thread index ê°€ ì¦ê°€í•˜ëŠ”ìˆœìœ¼ë¡œ ë¶™ì–´ìˆê³  ìµœëŒ€ 4ê°œë§Œ ì¡´ì¬í•˜ë¯€ë¡œ
+	 *  í˜„ì¬ master thread ë¡œ ë¶€í„° ìµœëŒ€ 4 sub-pixel ì˜ ì²«ë²ˆì§¸ thread ë§Œ ì²´í¬í•˜ë©´ ëœë‹¤.
 	 */
 	if ( !master ) return;
 
 	for ( int i = 4; i <= 12; i += 4 ) {
-		/** °°Àº pixel À» ±¸¼ºÇÏ´Â sub-pixel ÀÏ¶§¸¸ ´©Àû */
+		/** ê°™ì€ pixel ì„ êµ¬ì„±í•˜ëŠ” sub-pixel ì¼ë•Œë§Œ ëˆ„ì  */
 		if ( threadIdx.x + i < blockDim.x && 
 			sharedMemory[ ( threadIdx.x + i ) * 4 + 3 ] == pixelIndex ) {
 			sharedMemory[ threadIdx.x * 4 + 0 ] += sharedMemory[ ( threadIdx.x + i ) * 4 + 0 ];
@@ -3402,7 +3403,7 @@ __global__ void singlePassRayTracingKernel_SuperSamplingStage_ShadowOn(
 
 
 /**
- *	Single Pass ·Î RayTracing À» ¼öÇà.
+ *	Single Pass ë¡œ RayTracing ì„ ìˆ˜í–‰.
  */
 __global__ void singlePassRayTracingKernel_SuperSamplingStage_ShadowOff( 
 											float* pFrameBuffer,
@@ -3425,18 +3426,18 @@ __global__ void singlePassRayTracingKernel_SuperSamplingStage_ShadowOff(
 	int samplingIndex = ( blockIdx.x * blockDim.x + threadIdx.x ) % 4;
 
 	/**
-	 *	index ¹üÀ§¾È¿¡ Æ÷ÇÔµÇÁö ¾ÊÀº thread ¶óµµ return ½ÃÅ°¸é ¾ÈµÈ´Ù. 
-	 *	ÀÌ thread ¿¡ ÇÒ´çµÉ shared memory ¸¦ ´Ù¸¥ thread °¡ »ç¿ëÇÏ¹Ç·Î,
-	 *	ÀÌ thread µµ sharedmemory ¸¦ ÃÊ±âÈ­ ÇØ¾ßÇÏ¹Ç·Î.
+	 *	index ë²”ìœ„ì•ˆì— í¬í•¨ë˜ì§€ ì•Šì€ thread ë¼ë„ return ì‹œí‚¤ë©´ ì•ˆëœë‹¤. 
+	 *	ì´ thread ì— í• ë‹¹ë  shared memory ë¥¼ ë‹¤ë¥¸ thread ê°€ ì‚¬ìš©í•˜ë¯€ë¡œ,
+	 *	ì´ thread ë„ sharedmemory ë¥¼ ì´ˆê¸°í™” í•´ì•¼í•˜ë¯€ë¡œ.
 	 */
 	if ( index < count ) {
 		data = tex1Dfetch( inASBufferTexture, index );
 	}
 
 	/** 
-	 *	¹«È¿ÇÑ sub-pixel ÀÌ ¾Æ´Ò¶§¸¸ Ã³¸®. 
-	 *	ÀÌ·± ¹æ½Ä¸»°í if ( cornerNumber >= 0 ) return; Ã³·³ ¿©±â¼­ return ½ÃÅ°¸é ¾ÈµÇ°í!! ¹İµå½Ã ÀÌ·¸°Ô Á¶°Ç¹®À» »ç¿ë 
-	 *	¾Æ·¡¿¡¼­ ÇÕ»êÇÒ¶§ cornerNumber < 0 ÀÎ °æ¿ìÀÇ sharedMemory °ªÀ» ÂüÁ¶ÇØ¾ß ÇÏ¹Ç·Î. sharedMemory ÃÊ±âÈ­ ºÎºĞÀÌ ¼öÇàµÇ¾î¾ß ÇÑ´Ù.
+	 *	ë¬´íš¨í•œ sub-pixel ì´ ì•„ë‹ë•Œë§Œ ì²˜ë¦¬. 
+	 *	ì´ëŸ° ë°©ì‹ë§ê³  if ( cornerNumber >= 0 ) return; ì²˜ëŸ¼ ì—¬ê¸°ì„œ return ì‹œí‚¤ë©´ ì•ˆë˜ê³ !! ë°˜ë“œì‹œ ì´ë ‡ê²Œ ì¡°ê±´ë¬¸ì„ ì‚¬ìš© 
+	 *	ì•„ë˜ì—ì„œ í•©ì‚°í• ë•Œ cornerNumber < 0 ì¸ ê²½ìš°ì˜ sharedMemory ê°’ì„ ì°¸ì¡°í•´ì•¼ í•˜ë¯€ë¡œ. sharedMemory ì´ˆê¸°í™” ë¶€ë¶„ì´ ìˆ˜í–‰ë˜ì–´ì•¼ í•œë‹¤.
 	 */
 	if ( data >= 0 ) {
 
@@ -3451,18 +3452,18 @@ __global__ void singlePassRayTracingKernel_SuperSamplingStage_ShadowOff(
 		}
 
 		/** 
-		 *	¾î¶² corner ÀÎÁö¿¡ µû¶ó¼­ »ùÇÃ¸µ ±¸°£ÀÇÀ§Ä¡ °áÁ¤
-		 *	( cornerNumber / 2 ) * 2 ´Â 2 ·Î ³ª´­¶§ int ·Î round-off µÇ°í * 2¸¦ ÇÏ´Â°Í.
+		 *	ì–´ë–¤ corner ì¸ì§€ì— ë”°ë¼ì„œ ìƒ˜í”Œë§ êµ¬ê°„ì˜ìœ„ì¹˜ ê²°ì •
+		 *	( cornerNumber / 2 ) * 2 ëŠ” 2 ë¡œ ë‚˜ëˆŒë•Œ int ë¡œ round-off ë˜ê³  * 2ë¥¼ í•˜ëŠ”ê²ƒ.
 		 */
 		int samplingX = ( cornerNumber % 2 ) * 2 + ( samplingIndex % 2 );
 		int samplingY = ( cornerNumber / 2 ) * 2 + ( samplingIndex / 2 );
 
 		/**
-		 *	¿ŞÂÊ,»ó´Ü Æ÷ÀÎÆ®ÀÇ Ä«¸Ş¶ó plane »ó¿¡¼­ÀÇ ÁÂÇ¥.
+		 *	ì™¼ìª½,ìƒë‹¨ í¬ì¸íŠ¸ì˜ ì¹´ë©”ë¼ plane ìƒì—ì„œì˜ ì¢Œí‘œ.
 		 */
 		pos = g_CameraInfo.eye;
 
-		/** °¡»óÀ¸·Î 4 by 4 ¸¦ ÇßÀ»¶§ÀÇ °¢ »ùÇÃ¸µÁöÁ¡À» ±¸ÇÑ´Ù. */
+		/** ê°€ìƒìœ¼ë¡œ 4 by 4 ë¥¼ í–ˆì„ë•Œì˜ ê° ìƒ˜í”Œë§ì§€ì ì„ êµ¬í•œë‹¤. */
 		sx = (float) x + ( (float) samplingX + radicalInverse( x << 8 + samplingX, 3 ) ) * 0.25f;
 		sy = (float) y + ( (float) samplingY + radicalInverse( y << 8 + samplingY, 5 ) ) * 0.25f;
 
@@ -3494,7 +3495,7 @@ __global__ void singlePassRayTracingKernel_SuperSamplingStage_ShadowOff(
 				cuObjectMaterial material;
 				getObjectMaterial( currIsectCheck.objectIndex, material );
 				
-				/** texture °¡ Á¸ÀçÇÏ¸é diffuse color ¸¦ texture ³»ÀÇ u, v ¿¡¼­ °è»êµÈ color ·Î ´ëÃ¼ */
+				/** texture ê°€ ì¡´ì¬í•˜ë©´ diffuse color ë¥¼ texture ë‚´ì˜ u, v ì—ì„œ ê³„ì‚°ëœ color ë¡œ ëŒ€ì²´ */
 				float3 diffuse = material.diffuse;
 				calTextureColor( point, material, diffuse );
 
@@ -3503,7 +3504,7 @@ __global__ void singlePassRayTracingKernel_SuperSamplingStage_ShadowOff(
 						calSinglePassDirectIllumination_ShadowOff( point, material, diffuse );
 
 				/**
-				 *	reflection depth °¡ ÄÑÁ® ÀÖ´Ù¸é, 1-bounce ¸¸Å­ Ã³¸®.
+				 *	reflection depth ê°€ ì¼œì ¸ ìˆë‹¤ë©´, 1-bounce ë§Œí¼ ì²˜ë¦¬.
 				 */
 				if ( maxReflectionDepth > depth && material.transparency > 0.0f ) {
 
@@ -3538,20 +3539,20 @@ __global__ void singlePassRayTracingKernel_SuperSamplingStage_ShadowOff(
 	}
 
 	/**
-	 *	À§¿¡¼­ ray ÃßÀûÀ»ÇÒ¶§µµ shared memory ¸¦ »ç¿ëÇÏ¹Ç·Î ¹İµå½Ã ¿©±â±îÁö µ¿±âÈ­¸¦ ÇÑ¹øÇÑ´ÙÀ½¿¡
-	 *	À§¿¡¼­ »ç¿ëÇÑ shared memory ¸¦ color ´©ÀûÇÏ´Â buffer ·Î »ç¿ëÇØ¾ß ÇÑ´Ù.
+	 *	ìœ„ì—ì„œ ray ì¶”ì ì„í• ë•Œë„ shared memory ë¥¼ ì‚¬ìš©í•˜ë¯€ë¡œ ë°˜ë“œì‹œ ì—¬ê¸°ê¹Œì§€ ë™ê¸°í™”ë¥¼ í•œë²ˆí•œë‹¤ìŒì—
+	 *	ìœ„ì—ì„œ ì‚¬ìš©í•œ shared memory ë¥¼ color ëˆ„ì í•˜ëŠ” buffer ë¡œ ì‚¬ìš©í•´ì•¼ í•œë‹¤.
 	 */
 	__syncthreads();
 
 	/** 
-	 *	¹İµå½Ã ÀÌ sharedMemory ´Â ray ¸¦ ÃßÀûÇÒ¶§ »ç¿ëµÇ´Â stack À» À§ÇÑ shared memory 
-	 *	»çÀÌÁîÀÌ³» ¿¡¼­ »ç¿ëÇØ¾ß ÇÑ´Ù. 
-	 *	 °°Àº pixel ¿¡ ´ëÇØ¼­ »ùÇÃ¸µÇÑ °á°ú¸¦ Æò±Õ³»¼­ framebuffer ¿¡ Ä¥ÇÏ±â À§ÇØ¼­ ÀÏ´Ü °¢ÀÚÀÇ
-	 *	µ¥ÀÌÅÍ¸¦ shared memory ¿¡ ÀúÀåÇÏ°í³ª¼­, ´ëÇ¥thread µéÀÌ ÇÕ»êÇØ¼­ frame buffer ¿¡ ÀúÀåÇÑ´Ù.
+	 *	ë°˜ë“œì‹œ ì´ sharedMemory ëŠ” ray ë¥¼ ì¶”ì í• ë•Œ ì‚¬ìš©ë˜ëŠ” stack ì„ ìœ„í•œ shared memory 
+	 *	ì‚¬ì´ì¦ˆì´ë‚´ ì—ì„œ ì‚¬ìš©í•´ì•¼ í•œë‹¤. 
+	 *	 ê°™ì€ pixel ì— ëŒ€í•´ì„œ ìƒ˜í”Œë§í•œ ê²°ê³¼ë¥¼ í‰ê· ë‚´ì„œ framebuffer ì— ì¹ í•˜ê¸° ìœ„í•´ì„œ ì¼ë‹¨ ê°ìì˜
+	 *	ë°ì´í„°ë¥¼ shared memory ì— ì €ì¥í•˜ê³ ë‚˜ì„œ, ëŒ€í‘œthread ë“¤ì´ í•©ì‚°í•´ì„œ frame buffer ì— ì €ì¥í•œë‹¤.
 	 */
 	/** 
-	 *	°¢ ray ´Â ÃµÃ¼ÇÈ¼¿¿¡ 1/16 ¸¸Å­¸¸ weighted µÈ´Ù. 
-	 *	shared memory ´Â ray ¸¦ ÃßÀûÇÒ¶§ stack À¸·Îµµ »ç¿ëµÇ¹Ç·Î ray ÃßÀûÀÌ ³¡³­ÈÄ¿¡ ¹İµå½Ã ¿©±â¼­ ÃÊ±âÈ­ÈÄ »ç¿ëÇØ¾ß ÇÑ´Ù. 
+	 *	ê° ray ëŠ” ì²œì²´í”½ì…€ì— 1/16 ë§Œí¼ë§Œ weighted ëœë‹¤. 
+	 *	shared memory ëŠ” ray ë¥¼ ì¶”ì í• ë•Œ stack ìœ¼ë¡œë„ ì‚¬ìš©ë˜ë¯€ë¡œ ray ì¶”ì ì´ ëë‚œí›„ì— ë°˜ë“œì‹œ ì—¬ê¸°ì„œ ì´ˆê¸°í™”í›„ ì‚¬ìš©í•´ì•¼ í•œë‹¤. 
 	 */
 	sharedMemory[ threadIdx.x * 4 + 0 ] = color.x * 0.0625f;
 	sharedMemory[ threadIdx.x * 4 + 1 ] = color.y * 0.0625f;
@@ -3560,7 +3561,7 @@ __global__ void singlePassRayTracingKernel_SuperSamplingStage_ShadowOff(
 
 	__syncthreads();
 
-	/** °¢ sub-pixel ÀÇ Ã¹¹øÂ° thread °¡ ÇØ´ç sub-pixel ÀÇ color ¸¦ ´©Àû °è»êÇÑ´Ù. */
+	/** ê° sub-pixel ì˜ ì²«ë²ˆì§¸ thread ê°€ í•´ë‹¹ sub-pixel ì˜ color ë¥¼ ëˆ„ì  ê³„ì‚°í•œë‹¤. */
 	if ( samplingIndex != 0 ) 
 		return;
 
@@ -3575,14 +3576,14 @@ __global__ void singlePassRayTracingKernel_SuperSamplingStage_ShadowOff(
 	__syncthreads();
 
 	/** 
-	 *	°¢ pixel ÀÇ master sub-pixel ÀÇ Ã¹¹øÂ° thread °¡ ÇØ´ç pixel ¿¡ Ä¥ÇØÁú color ¸¦ ´©ÀûÇÑ´Ù. 
-	 *	ÇÑ pixel À» ±¸¼ºÇÏ´Â sub pixel µéÀº thread index °¡ Áõ°¡ÇÏ´Â¼øÀ¸·Î ºÙ¾îÀÖ°í ÃÖ´ë 4°³¸¸ Á¸ÀçÇÏ¹Ç·Î
-	 *  ÇöÀç master thread ·Î ºÎÅÍ ÃÖ´ë 4 sub-pixel ÀÇ Ã¹¹øÂ° thread ¸¸ Ã¼Å©ÇÏ¸é µÈ´Ù.
+	 *	ê° pixel ì˜ master sub-pixel ì˜ ì²«ë²ˆì§¸ thread ê°€ í•´ë‹¹ pixel ì— ì¹ í•´ì§ˆ color ë¥¼ ëˆ„ì í•œë‹¤. 
+	 *	í•œ pixel ì„ êµ¬ì„±í•˜ëŠ” sub pixel ë“¤ì€ thread index ê°€ ì¦ê°€í•˜ëŠ”ìˆœìœ¼ë¡œ ë¶™ì–´ìˆê³  ìµœëŒ€ 4ê°œë§Œ ì¡´ì¬í•˜ë¯€ë¡œ
+	 *  í˜„ì¬ master thread ë¡œ ë¶€í„° ìµœëŒ€ 4 sub-pixel ì˜ ì²«ë²ˆì§¸ thread ë§Œ ì²´í¬í•˜ë©´ ëœë‹¤.
 	 */
 	if ( !master ) return;
 
 	for ( int i = 4; i <= 12; i += 4 ) {
-		/** °°Àº pixel À» ±¸¼ºÇÏ´Â sub-pixel ÀÏ¶§¸¸ ´©Àû */
+		/** ê°™ì€ pixel ì„ êµ¬ì„±í•˜ëŠ” sub-pixel ì¼ë•Œë§Œ ëˆ„ì  */
 		if ( threadIdx.x + i < blockDim.x && 
 			sharedMemory[ ( threadIdx.x + i ) * 4 + 3 ] == pixelIndex ) {
 			sharedMemory[ threadIdx.x * 4 + 0 ] += sharedMemory[ ( threadIdx.x + i ) * 4 + 0 ];
@@ -3600,7 +3601,7 @@ __global__ void singlePassRayTracingKernel_SuperSamplingStage_ShadowOff(
 
 
 /**
- *	Single Pass ·Î RayTracing À» ¼öÇà.
+ *	Single Pass ë¡œ RayTracing ì„ ìˆ˜í–‰.
  */
 __global__ void fixedOption_singlePassRayTracingKernel_SuperSamplingStage_ShadowOn( 
 											float* pFrameBuffer,
@@ -3624,18 +3625,18 @@ __global__ void fixedOption_singlePassRayTracingKernel_SuperSamplingStage_Shadow
 	int samplingIndex = ( blockIdx.x * blockDim.x + threadIdx.x ) % 4;
 
 	/**
-	 *	index ¹üÀ§¾È¿¡ Æ÷ÇÔµÇÁö ¾ÊÀº thread ¶óµµ return ½ÃÅ°¸é ¾ÈµÈ´Ù. 
-	 *	ÀÌ thread ¿¡ ÇÒ´çµÉ shared memory ¸¦ ´Ù¸¥ thread °¡ »ç¿ëÇÏ¹Ç·Î,
-	 *	ÀÌ thread µµ sharedmemory ¸¦ ÃÊ±âÈ­ ÇØ¾ßÇÏ¹Ç·Î.
+	 *	index ë²”ìœ„ì•ˆì— í¬í•¨ë˜ì§€ ì•Šì€ thread ë¼ë„ return ì‹œí‚¤ë©´ ì•ˆëœë‹¤. 
+	 *	ì´ thread ì— í• ë‹¹ë  shared memory ë¥¼ ë‹¤ë¥¸ thread ê°€ ì‚¬ìš©í•˜ë¯€ë¡œ,
+	 *	ì´ thread ë„ sharedmemory ë¥¼ ì´ˆê¸°í™” í•´ì•¼í•˜ë¯€ë¡œ.
 	 */
 	if ( index < count ) {
 		data = tex1Dfetch( inASBufferTexture, index );
 	}
 
 	/** 
-	 *	¹«È¿ÇÑ sub-pixel ÀÌ ¾Æ´Ò¶§¸¸ Ã³¸®. 
-	 *	ÀÌ·± ¹æ½Ä¸»°í if ( cornerNumber >= 0 ) return; Ã³·³ ¿©±â¼­ return ½ÃÅ°¸é ¾ÈµÇ°í!! ¹İµå½Ã ÀÌ·¸°Ô Á¶°Ç¹®À» »ç¿ë 
-	 *	¾Æ·¡¿¡¼­ ÇÕ»êÇÒ¶§ cornerNumber < 0 ÀÎ °æ¿ìÀÇ sharedMemory °ªÀ» ÂüÁ¶ÇØ¾ß ÇÏ¹Ç·Î. sharedMemory ÃÊ±âÈ­ ºÎºĞÀÌ ¼öÇàµÇ¾î¾ß ÇÑ´Ù.
+	 *	ë¬´íš¨í•œ sub-pixel ì´ ì•„ë‹ë•Œë§Œ ì²˜ë¦¬. 
+	 *	ì´ëŸ° ë°©ì‹ë§ê³  if ( cornerNumber >= 0 ) return; ì²˜ëŸ¼ ì—¬ê¸°ì„œ return ì‹œí‚¤ë©´ ì•ˆë˜ê³ !! ë°˜ë“œì‹œ ì´ë ‡ê²Œ ì¡°ê±´ë¬¸ì„ ì‚¬ìš© 
+	 *	ì•„ë˜ì—ì„œ í•©ì‚°í• ë•Œ cornerNumber < 0 ì¸ ê²½ìš°ì˜ sharedMemory ê°’ì„ ì°¸ì¡°í•´ì•¼ í•˜ë¯€ë¡œ. sharedMemory ì´ˆê¸°í™” ë¶€ë¶„ì´ ìˆ˜í–‰ë˜ì–´ì•¼ í•œë‹¤.
 	 */
 	if ( data >= 0 ) {
 
@@ -3650,18 +3651,18 @@ __global__ void fixedOption_singlePassRayTracingKernel_SuperSamplingStage_Shadow
 		}
 
 		/** 
-		 *	¾î¶² corner ÀÎÁö¿¡ µû¶ó¼­ »ùÇÃ¸µ ±¸°£ÀÇÀ§Ä¡ °áÁ¤
-		 *	( cornerNumber / 2 ) * 2 ´Â 2 ·Î ³ª´­¶§ int ·Î round-off µÇ°í * 2¸¦ ÇÏ´Â°Í.
+		 *	ì–´ë–¤ corner ì¸ì§€ì— ë”°ë¼ì„œ ìƒ˜í”Œë§ êµ¬ê°„ì˜ìœ„ì¹˜ ê²°ì •
+		 *	( cornerNumber / 2 ) * 2 ëŠ” 2 ë¡œ ë‚˜ëˆŒë•Œ int ë¡œ round-off ë˜ê³  * 2ë¥¼ í•˜ëŠ”ê²ƒ.
 		 */
 		int samplingX = ( cornerNumber % 2 ) * 2 + ( samplingIndex % 2 );
 		int samplingY = ( cornerNumber / 2 ) * 2 + ( samplingIndex / 2 );
 
 		/**
-		 *	¿ŞÂÊ,»ó´Ü Æ÷ÀÎÆ®ÀÇ Ä«¸Ş¶ó plane »ó¿¡¼­ÀÇ ÁÂÇ¥.
+		 *	ì™¼ìª½,ìƒë‹¨ í¬ì¸íŠ¸ì˜ ì¹´ë©”ë¼ plane ìƒì—ì„œì˜ ì¢Œí‘œ.
 		 */
 		pos = g_CameraInfo.eye;
 
-		/** °¡»óÀ¸·Î 4 by 4 ¸¦ ÇßÀ»¶§ÀÇ °¢ »ùÇÃ¸µÁöÁ¡À» ±¸ÇÑ´Ù. */
+		/** ê°€ìƒìœ¼ë¡œ 4 by 4 ë¥¼ í–ˆì„ë•Œì˜ ê° ìƒ˜í”Œë§ì§€ì ì„ êµ¬í•œë‹¤. */
 		sx = (float) x + ( (float) samplingX + radicalInverse( x << 8 + samplingX, 3 ) ) * 0.25f;
 		sy = (float) y + ( (float) samplingY + radicalInverse( y << 8 + samplingY, 5 ) ) * 0.25f;
 
@@ -3693,7 +3694,7 @@ __global__ void fixedOption_singlePassRayTracingKernel_SuperSamplingStage_Shadow
 				cuObjectMaterial material;
 				getObjectMaterial( currIsectCheck.objectIndex, material );
 				
-				/** texture °¡ Á¸ÀçÇÏ¸é diffuse color ¸¦ texture ³»ÀÇ u, v ¿¡¼­ °è»êµÈ color ·Î ´ëÃ¼ */
+				/** texture ê°€ ì¡´ì¬í•˜ë©´ diffuse color ë¥¼ texture ë‚´ì˜ u, v ì—ì„œ ê³„ì‚°ëœ color ë¡œ ëŒ€ì²´ */
 				float3 diffuse = material.diffuse;
 				calTextureColor( point, material, diffuse );
 
@@ -3702,7 +3703,7 @@ __global__ void fixedOption_singlePassRayTracingKernel_SuperSamplingStage_Shadow
 						fixedOption_calSinglePassDirectIllumination_ShadowOn( point, material, diffuse );
 
 				/**
-				 *	reflection depth °¡ ÄÑÁ® ÀÖ´Ù¸é, 1-bounce ¸¸Å­ Ã³¸®.
+				 *	reflection depth ê°€ ì¼œì ¸ ìˆë‹¤ë©´, 1-bounce ë§Œí¼ ì²˜ë¦¬.
 				 */
 				if ( maxReflectionDepth > depth && material.transparency > 0.0f ) {
 
@@ -3737,20 +3738,20 @@ __global__ void fixedOption_singlePassRayTracingKernel_SuperSamplingStage_Shadow
 	}
 
 	/**
-	 *	À§¿¡¼­ ray ÃßÀûÀ»ÇÒ¶§µµ shared memory ¸¦ »ç¿ëÇÏ¹Ç·Î ¹İµå½Ã ¿©±â±îÁö µ¿±âÈ­¸¦ ÇÑ¹øÇÑ´ÙÀ½¿¡
-	 *	À§¿¡¼­ »ç¿ëÇÑ shared memory ¸¦ color ´©ÀûÇÏ´Â buffer ·Î »ç¿ëÇØ¾ß ÇÑ´Ù.
+	 *	ìœ„ì—ì„œ ray ì¶”ì ì„í• ë•Œë„ shared memory ë¥¼ ì‚¬ìš©í•˜ë¯€ë¡œ ë°˜ë“œì‹œ ì—¬ê¸°ê¹Œì§€ ë™ê¸°í™”ë¥¼ í•œë²ˆí•œë‹¤ìŒì—
+	 *	ìœ„ì—ì„œ ì‚¬ìš©í•œ shared memory ë¥¼ color ëˆ„ì í•˜ëŠ” buffer ë¡œ ì‚¬ìš©í•´ì•¼ í•œë‹¤.
 	 */
 	__syncthreads();
 
 	/** 
-	 *	¹İµå½Ã ÀÌ sharedMemory ´Â ray ¸¦ ÃßÀûÇÒ¶§ »ç¿ëµÇ´Â stack À» À§ÇÑ shared memory 
-	 *	»çÀÌÁîÀÌ³» ¿¡¼­ »ç¿ëÇØ¾ß ÇÑ´Ù. 
-	 *	 °°Àº pixel ¿¡ ´ëÇØ¼­ »ùÇÃ¸µÇÑ °á°ú¸¦ Æò±Õ³»¼­ framebuffer ¿¡ Ä¥ÇÏ±â À§ÇØ¼­ ÀÏ´Ü °¢ÀÚÀÇ
-	 *	µ¥ÀÌÅÍ¸¦ shared memory ¿¡ ÀúÀåÇÏ°í³ª¼­, ´ëÇ¥thread µéÀÌ ÇÕ»êÇØ¼­ frame buffer ¿¡ ÀúÀåÇÑ´Ù.
+	 *	ë°˜ë“œì‹œ ì´ sharedMemory ëŠ” ray ë¥¼ ì¶”ì í• ë•Œ ì‚¬ìš©ë˜ëŠ” stack ì„ ìœ„í•œ shared memory 
+	 *	ì‚¬ì´ì¦ˆì´ë‚´ ì—ì„œ ì‚¬ìš©í•´ì•¼ í•œë‹¤. 
+	 *	 ê°™ì€ pixel ì— ëŒ€í•´ì„œ ìƒ˜í”Œë§í•œ ê²°ê³¼ë¥¼ í‰ê· ë‚´ì„œ framebuffer ì— ì¹ í•˜ê¸° ìœ„í•´ì„œ ì¼ë‹¨ ê°ìì˜
+	 *	ë°ì´í„°ë¥¼ shared memory ì— ì €ì¥í•˜ê³ ë‚˜ì„œ, ëŒ€í‘œthread ë“¤ì´ í•©ì‚°í•´ì„œ frame buffer ì— ì €ì¥í•œë‹¤.
 	 */
 	/** 
-	 *	°¢ ray ´Â ÃµÃ¼ÇÈ¼¿¿¡ 1/16 ¸¸Å­¸¸ weighted µÈ´Ù. 
-	 *	shared memory ´Â ray ¸¦ ÃßÀûÇÒ¶§ stack À¸·Îµµ »ç¿ëµÇ¹Ç·Î ray ÃßÀûÀÌ ³¡³­ÈÄ¿¡ ¹İµå½Ã ¿©±â¼­ ÃÊ±âÈ­ÈÄ »ç¿ëÇØ¾ß ÇÑ´Ù. 
+	 *	ê° ray ëŠ” ì²œì²´í”½ì…€ì— 1/16 ë§Œí¼ë§Œ weighted ëœë‹¤. 
+	 *	shared memory ëŠ” ray ë¥¼ ì¶”ì í• ë•Œ stack ìœ¼ë¡œë„ ì‚¬ìš©ë˜ë¯€ë¡œ ray ì¶”ì ì´ ëë‚œí›„ì— ë°˜ë“œì‹œ ì—¬ê¸°ì„œ ì´ˆê¸°í™”í›„ ì‚¬ìš©í•´ì•¼ í•œë‹¤. 
 	 */
 	sharedMemory[ threadIdx.x * 4 + 0 ] = color.x * 0.0625f;
 	sharedMemory[ threadIdx.x * 4 + 1 ] = color.y * 0.0625f;
@@ -3759,7 +3760,7 @@ __global__ void fixedOption_singlePassRayTracingKernel_SuperSamplingStage_Shadow
 
 	__syncthreads();
 
-	/** °¢ sub-pixel ÀÇ Ã¹¹øÂ° thread °¡ ÇØ´ç sub-pixel ÀÇ color ¸¦ ´©Àû °è»êÇÑ´Ù. */
+	/** ê° sub-pixel ì˜ ì²«ë²ˆì§¸ thread ê°€ í•´ë‹¹ sub-pixel ì˜ color ë¥¼ ëˆ„ì  ê³„ì‚°í•œë‹¤. */
 	if ( samplingIndex != 0 ) 
 		return;
 
@@ -3774,14 +3775,14 @@ __global__ void fixedOption_singlePassRayTracingKernel_SuperSamplingStage_Shadow
 	__syncthreads();
 
 	/** 
-	 *	°¢ pixel ÀÇ master sub-pixel ÀÇ Ã¹¹øÂ° thread °¡ ÇØ´ç pixel ¿¡ Ä¥ÇØÁú color ¸¦ ´©ÀûÇÑ´Ù. 
-	 *	ÇÑ pixel À» ±¸¼ºÇÏ´Â sub pixel µéÀº thread index °¡ Áõ°¡ÇÏ´Â¼øÀ¸·Î ºÙ¾îÀÖ°í ÃÖ´ë 4°³¸¸ Á¸ÀçÇÏ¹Ç·Î
-	 *  ÇöÀç master thread ·Î ºÎÅÍ ÃÖ´ë 4 sub-pixel ÀÇ Ã¹¹øÂ° thread ¸¸ Ã¼Å©ÇÏ¸é µÈ´Ù.
+	 *	ê° pixel ì˜ master sub-pixel ì˜ ì²«ë²ˆì§¸ thread ê°€ í•´ë‹¹ pixel ì— ì¹ í•´ì§ˆ color ë¥¼ ëˆ„ì í•œë‹¤. 
+	 *	í•œ pixel ì„ êµ¬ì„±í•˜ëŠ” sub pixel ë“¤ì€ thread index ê°€ ì¦ê°€í•˜ëŠ”ìˆœìœ¼ë¡œ ë¶™ì–´ìˆê³  ìµœëŒ€ 4ê°œë§Œ ì¡´ì¬í•˜ë¯€ë¡œ
+	 *  í˜„ì¬ master thread ë¡œ ë¶€í„° ìµœëŒ€ 4 sub-pixel ì˜ ì²«ë²ˆì§¸ thread ë§Œ ì²´í¬í•˜ë©´ ëœë‹¤.
 	 */
 	if ( !master ) return;
 
 	for ( int i = 4; i <= 12; i += 4 ) {
-		/** °°Àº pixel À» ±¸¼ºÇÏ´Â sub-pixel ÀÏ¶§¸¸ ´©Àû */
+		/** ê°™ì€ pixel ì„ êµ¬ì„±í•˜ëŠ” sub-pixel ì¼ë•Œë§Œ ëˆ„ì  */
 		if ( threadIdx.x + i < blockDim.x && 
 			sharedMemory[ ( threadIdx.x + i ) * 4 + 3 ] == pixelIndex ) {
 			sharedMemory[ threadIdx.x * 4 + 0 ] += sharedMemory[ ( threadIdx.x + i ) * 4 + 0 ];
@@ -3800,7 +3801,7 @@ __global__ void fixedOption_singlePassRayTracingKernel_SuperSamplingStage_Shadow
 
 
 /**
- *	Single Pass ·Î RayTracing À» ¼öÇà.
+ *	Single Pass ë¡œ RayTracing ì„ ìˆ˜í–‰.
  */
 __global__ void fixedOption_singlePassRayTracingKernel_SuperSamplingStage_ShadowOff( 
 											float* pFrameBuffer,
@@ -3824,18 +3825,18 @@ __global__ void fixedOption_singlePassRayTracingKernel_SuperSamplingStage_Shadow
 	int samplingIndex = ( blockIdx.x * blockDim.x + threadIdx.x ) % 4;
 
 	/**
-	 *	index ¹üÀ§¾È¿¡ Æ÷ÇÔµÇÁö ¾ÊÀº thread ¶óµµ return ½ÃÅ°¸é ¾ÈµÈ´Ù. 
-	 *	ÀÌ thread ¿¡ ÇÒ´çµÉ shared memory ¸¦ ´Ù¸¥ thread °¡ »ç¿ëÇÏ¹Ç·Î,
-	 *	ÀÌ thread µµ sharedmemory ¸¦ ÃÊ±âÈ­ ÇØ¾ßÇÏ¹Ç·Î.
+	 *	index ë²”ìœ„ì•ˆì— í¬í•¨ë˜ì§€ ì•Šì€ thread ë¼ë„ return ì‹œí‚¤ë©´ ì•ˆëœë‹¤. 
+	 *	ì´ thread ì— í• ë‹¹ë  shared memory ë¥¼ ë‹¤ë¥¸ thread ê°€ ì‚¬ìš©í•˜ë¯€ë¡œ,
+	 *	ì´ thread ë„ sharedmemory ë¥¼ ì´ˆê¸°í™” í•´ì•¼í•˜ë¯€ë¡œ.
 	 */
 	if ( index < count ) {
 		data = tex1Dfetch( inASBufferTexture, index );
 	}
 
 	/** 
-	 *	¹«È¿ÇÑ sub-pixel ÀÌ ¾Æ´Ò¶§¸¸ Ã³¸®. 
-	 *	ÀÌ·± ¹æ½Ä¸»°í if ( cornerNumber >= 0 ) return; Ã³·³ ¿©±â¼­ return ½ÃÅ°¸é ¾ÈµÇ°í!! ¹İµå½Ã ÀÌ·¸°Ô Á¶°Ç¹®À» »ç¿ë 
-	 *	¾Æ·¡¿¡¼­ ÇÕ»êÇÒ¶§ cornerNumber < 0 ÀÎ °æ¿ìÀÇ sharedMemory °ªÀ» ÂüÁ¶ÇØ¾ß ÇÏ¹Ç·Î. sharedMemory ÃÊ±âÈ­ ºÎºĞÀÌ ¼öÇàµÇ¾î¾ß ÇÑ´Ù.
+	 *	ë¬´íš¨í•œ sub-pixel ì´ ì•„ë‹ë•Œë§Œ ì²˜ë¦¬. 
+	 *	ì´ëŸ° ë°©ì‹ë§ê³  if ( cornerNumber >= 0 ) return; ì²˜ëŸ¼ ì—¬ê¸°ì„œ return ì‹œí‚¤ë©´ ì•ˆë˜ê³ !! ë°˜ë“œì‹œ ì´ë ‡ê²Œ ì¡°ê±´ë¬¸ì„ ì‚¬ìš© 
+	 *	ì•„ë˜ì—ì„œ í•©ì‚°í• ë•Œ cornerNumber < 0 ì¸ ê²½ìš°ì˜ sharedMemory ê°’ì„ ì°¸ì¡°í•´ì•¼ í•˜ë¯€ë¡œ. sharedMemory ì´ˆê¸°í™” ë¶€ë¶„ì´ ìˆ˜í–‰ë˜ì–´ì•¼ í•œë‹¤.
 	 */
 	if ( data >= 0 ) {
 
@@ -3850,18 +3851,18 @@ __global__ void fixedOption_singlePassRayTracingKernel_SuperSamplingStage_Shadow
 		}
 
 		/** 
-		 *	¾î¶² corner ÀÎÁö¿¡ µû¶ó¼­ »ùÇÃ¸µ ±¸°£ÀÇÀ§Ä¡ °áÁ¤
-		 *	( cornerNumber / 2 ) * 2 ´Â 2 ·Î ³ª´­¶§ int ·Î round-off µÇ°í * 2¸¦ ÇÏ´Â°Í.
+		 *	ì–´ë–¤ corner ì¸ì§€ì— ë”°ë¼ì„œ ìƒ˜í”Œë§ êµ¬ê°„ì˜ìœ„ì¹˜ ê²°ì •
+		 *	( cornerNumber / 2 ) * 2 ëŠ” 2 ë¡œ ë‚˜ëˆŒë•Œ int ë¡œ round-off ë˜ê³  * 2ë¥¼ í•˜ëŠ”ê²ƒ.
 		 */
 		int samplingX = ( cornerNumber % 2 ) * 2 + ( samplingIndex % 2 );
 		int samplingY = ( cornerNumber / 2 ) * 2 + ( samplingIndex / 2 );
 
 		/**
-		 *	¿ŞÂÊ,»ó´Ü Æ÷ÀÎÆ®ÀÇ Ä«¸Ş¶ó plane »ó¿¡¼­ÀÇ ÁÂÇ¥.
+		 *	ì™¼ìª½,ìƒë‹¨ í¬ì¸íŠ¸ì˜ ì¹´ë©”ë¼ plane ìƒì—ì„œì˜ ì¢Œí‘œ.
 		 */
 		pos = g_CameraInfo.eye;
 
-		/** °¡»óÀ¸·Î 4 by 4 ¸¦ ÇßÀ»¶§ÀÇ °¢ »ùÇÃ¸µÁöÁ¡À» ±¸ÇÑ´Ù. */
+		/** ê°€ìƒìœ¼ë¡œ 4 by 4 ë¥¼ í–ˆì„ë•Œì˜ ê° ìƒ˜í”Œë§ì§€ì ì„ êµ¬í•œë‹¤. */
 		sx = (float) x + ( (float) samplingX + radicalInverse( x << 8 + samplingX, 3 ) ) * 0.25f;
 		sy = (float) y + ( (float) samplingY + radicalInverse( y << 8 + samplingY, 5 ) ) * 0.25f;
 
@@ -3893,7 +3894,7 @@ __global__ void fixedOption_singlePassRayTracingKernel_SuperSamplingStage_Shadow
 				cuObjectMaterial material;
 				getObjectMaterial( currIsectCheck.objectIndex, material );
 				
-				/** texture °¡ Á¸ÀçÇÏ¸é diffuse color ¸¦ texture ³»ÀÇ u, v ¿¡¼­ °è»êµÈ color ·Î ´ëÃ¼ */
+				/** texture ê°€ ì¡´ì¬í•˜ë©´ diffuse color ë¥¼ texture ë‚´ì˜ u, v ì—ì„œ ê³„ì‚°ëœ color ë¡œ ëŒ€ì²´ */
 				float3 diffuse = material.diffuse;
 				calTextureColor( point, material, diffuse );
 
@@ -3902,7 +3903,7 @@ __global__ void fixedOption_singlePassRayTracingKernel_SuperSamplingStage_Shadow
 						fixedOption_calSinglePassDirectIllumination_ShadowOff( point, material, diffuse );
 
 				/**
-				 *	reflection depth °¡ ÄÑÁ® ÀÖ´Ù¸é, 1-bounce ¸¸Å­ Ã³¸®.
+				 *	reflection depth ê°€ ì¼œì ¸ ìˆë‹¤ë©´, 1-bounce ë§Œí¼ ì²˜ë¦¬.
 				 */
 				if ( maxReflectionDepth > depth && material.transparency > 0.0f ) {
 
@@ -3937,20 +3938,20 @@ __global__ void fixedOption_singlePassRayTracingKernel_SuperSamplingStage_Shadow
 	}
 
 	/**
-	 *	À§¿¡¼­ ray ÃßÀûÀ»ÇÒ¶§µµ shared memory ¸¦ »ç¿ëÇÏ¹Ç·Î ¹İµå½Ã ¿©±â±îÁö µ¿±âÈ­¸¦ ÇÑ¹øÇÑ´ÙÀ½¿¡
-	 *	À§¿¡¼­ »ç¿ëÇÑ shared memory ¸¦ color ´©ÀûÇÏ´Â buffer ·Î »ç¿ëÇØ¾ß ÇÑ´Ù.
+	 *	ìœ„ì—ì„œ ray ì¶”ì ì„í• ë•Œë„ shared memory ë¥¼ ì‚¬ìš©í•˜ë¯€ë¡œ ë°˜ë“œì‹œ ì—¬ê¸°ê¹Œì§€ ë™ê¸°í™”ë¥¼ í•œë²ˆí•œë‹¤ìŒì—
+	 *	ìœ„ì—ì„œ ì‚¬ìš©í•œ shared memory ë¥¼ color ëˆ„ì í•˜ëŠ” buffer ë¡œ ì‚¬ìš©í•´ì•¼ í•œë‹¤.
 	 */
 	__syncthreads();
 
 	/** 
-	 *	¹İµå½Ã ÀÌ sharedMemory ´Â ray ¸¦ ÃßÀûÇÒ¶§ »ç¿ëµÇ´Â stack À» À§ÇÑ shared memory 
-	 *	»çÀÌÁîÀÌ³» ¿¡¼­ »ç¿ëÇØ¾ß ÇÑ´Ù. 
-	 *	 °°Àº pixel ¿¡ ´ëÇØ¼­ »ùÇÃ¸µÇÑ °á°ú¸¦ Æò±Õ³»¼­ framebuffer ¿¡ Ä¥ÇÏ±â À§ÇØ¼­ ÀÏ´Ü °¢ÀÚÀÇ
-	 *	µ¥ÀÌÅÍ¸¦ shared memory ¿¡ ÀúÀåÇÏ°í³ª¼­, ´ëÇ¥thread µéÀÌ ÇÕ»êÇØ¼­ frame buffer ¿¡ ÀúÀåÇÑ´Ù.
+	 *	ë°˜ë“œì‹œ ì´ sharedMemory ëŠ” ray ë¥¼ ì¶”ì í• ë•Œ ì‚¬ìš©ë˜ëŠ” stack ì„ ìœ„í•œ shared memory 
+	 *	ì‚¬ì´ì¦ˆì´ë‚´ ì—ì„œ ì‚¬ìš©í•´ì•¼ í•œë‹¤. 
+	 *	 ê°™ì€ pixel ì— ëŒ€í•´ì„œ ìƒ˜í”Œë§í•œ ê²°ê³¼ë¥¼ í‰ê· ë‚´ì„œ framebuffer ì— ì¹ í•˜ê¸° ìœ„í•´ì„œ ì¼ë‹¨ ê°ìì˜
+	 *	ë°ì´í„°ë¥¼ shared memory ì— ì €ì¥í•˜ê³ ë‚˜ì„œ, ëŒ€í‘œthread ë“¤ì´ í•©ì‚°í•´ì„œ frame buffer ì— ì €ì¥í•œë‹¤.
 	 */
 	/** 
-	 *	°¢ ray ´Â ÃµÃ¼ÇÈ¼¿¿¡ 1/16 ¸¸Å­¸¸ weighted µÈ´Ù. 
-	 *	shared memory ´Â ray ¸¦ ÃßÀûÇÒ¶§ stack À¸·Îµµ »ç¿ëµÇ¹Ç·Î ray ÃßÀûÀÌ ³¡³­ÈÄ¿¡ ¹İµå½Ã ¿©±â¼­ ÃÊ±âÈ­ÈÄ »ç¿ëÇØ¾ß ÇÑ´Ù. 
+	 *	ê° ray ëŠ” ì²œì²´í”½ì…€ì— 1/16 ë§Œí¼ë§Œ weighted ëœë‹¤. 
+	 *	shared memory ëŠ” ray ë¥¼ ì¶”ì í• ë•Œ stack ìœ¼ë¡œë„ ì‚¬ìš©ë˜ë¯€ë¡œ ray ì¶”ì ì´ ëë‚œí›„ì— ë°˜ë“œì‹œ ì—¬ê¸°ì„œ ì´ˆê¸°í™”í›„ ì‚¬ìš©í•´ì•¼ í•œë‹¤. 
 	 */
 	sharedMemory[ threadIdx.x * 4 + 0 ] = color.x * 0.0625f;
 	sharedMemory[ threadIdx.x * 4 + 1 ] = color.y * 0.0625f;
@@ -3959,7 +3960,7 @@ __global__ void fixedOption_singlePassRayTracingKernel_SuperSamplingStage_Shadow
 
 	__syncthreads();
 
-	/** °¢ sub-pixel ÀÇ Ã¹¹øÂ° thread °¡ ÇØ´ç sub-pixel ÀÇ color ¸¦ ´©Àû °è»êÇÑ´Ù. */
+	/** ê° sub-pixel ì˜ ì²«ë²ˆì§¸ thread ê°€ í•´ë‹¹ sub-pixel ì˜ color ë¥¼ ëˆ„ì  ê³„ì‚°í•œë‹¤. */
 	if ( samplingIndex != 0 ) 
 		return;
 
@@ -3974,14 +3975,14 @@ __global__ void fixedOption_singlePassRayTracingKernel_SuperSamplingStage_Shadow
 	__syncthreads();
 
 	/** 
-	 *	°¢ pixel ÀÇ master sub-pixel ÀÇ Ã¹¹øÂ° thread °¡ ÇØ´ç pixel ¿¡ Ä¥ÇØÁú color ¸¦ ´©ÀûÇÑ´Ù. 
-	 *	ÇÑ pixel À» ±¸¼ºÇÏ´Â sub pixel µéÀº thread index °¡ Áõ°¡ÇÏ´Â¼øÀ¸·Î ºÙ¾îÀÖ°í ÃÖ´ë 4°³¸¸ Á¸ÀçÇÏ¹Ç·Î
-	 *  ÇöÀç master thread ·Î ºÎÅÍ ÃÖ´ë 4 sub-pixel ÀÇ Ã¹¹øÂ° thread ¸¸ Ã¼Å©ÇÏ¸é µÈ´Ù.
+	 *	ê° pixel ì˜ master sub-pixel ì˜ ì²«ë²ˆì§¸ thread ê°€ í•´ë‹¹ pixel ì— ì¹ í•´ì§ˆ color ë¥¼ ëˆ„ì í•œë‹¤. 
+	 *	í•œ pixel ì„ êµ¬ì„±í•˜ëŠ” sub pixel ë“¤ì€ thread index ê°€ ì¦ê°€í•˜ëŠ”ìˆœìœ¼ë¡œ ë¶™ì–´ìˆê³  ìµœëŒ€ 4ê°œë§Œ ì¡´ì¬í•˜ë¯€ë¡œ
+	 *  í˜„ì¬ master thread ë¡œ ë¶€í„° ìµœëŒ€ 4 sub-pixel ì˜ ì²«ë²ˆì§¸ thread ë§Œ ì²´í¬í•˜ë©´ ëœë‹¤.
 	 */
 	if ( !master ) return;
 
 	for ( int i = 4; i <= 12; i += 4 ) {
-		/** °°Àº pixel À» ±¸¼ºÇÏ´Â sub-pixel ÀÏ¶§¸¸ ´©Àû */
+		/** ê°™ì€ pixel ì„ êµ¬ì„±í•˜ëŠ” sub-pixel ì¼ë•Œë§Œ ëˆ„ì  */
 		if ( threadIdx.x + i < blockDim.x && 
 			sharedMemory[ ( threadIdx.x + i ) * 4 + 3 ] == pixelIndex ) {
 			sharedMemory[ threadIdx.x * 4 + 0 ] += sharedMemory[ ( threadIdx.x + i ) * 4 + 0 ];
@@ -4002,10 +4003,10 @@ __global__ void fixedOption_singlePassRayTracingKernel_SuperSamplingStage_Shadow
 //
 //
 //
-//	Option À» Fix ÇÑ ¹öÀü.
+//	Option ì„ Fix í•œ ë²„ì „.
 //
 //	Max Reflection Bounce = 1
-//	±¤¿ø ÃÖ´ë 2°³.
+//	ê´‘ì› ìµœëŒ€ 2ê°œ.
 //
 //
 //
@@ -4013,7 +4014,7 @@ __global__ void fixedOption_singlePassRayTracingKernel_SuperSamplingStage_Shadow
 
 
 /**
- *	fixed option ¹öÀü. 
+ *	fixed option ë²„ì „. 
  */
 __global__ void fixedOption_singlePassRayTracingKernel_1_SamplingKernel_ShadowOff( 
 												cuSamplingMap *pSamplingMap,
@@ -4037,7 +4038,7 @@ __global__ void fixedOption_singlePassRayTracingKernel_1_SamplingKernel_ShadowOf
 		return;
 
 	/**
-	 *	¿ŞÂÊ,»ó´Ü Æ÷ÀÎÆ®ÀÇ Ä«¸Ş¶ó plane »ó¿¡¼­ÀÇ ÁÂÇ¥.
+	 *	ì™¼ìª½,ìƒë‹¨ í¬ì¸íŠ¸ì˜ ì¹´ë©”ë¼ plane ìƒì—ì„œì˜ ì¢Œí‘œ.
 	 */
 	dir = g_CameraInfo.startPoint + g_CameraInfo.u * ((float)x + 0.5f ) * g_CameraInfo.stepX - 
 		  g_CameraInfo.v * ((float)y + 0.5f ) * g_CameraInfo.stepY;
@@ -4052,10 +4053,10 @@ __global__ void fixedOption_singlePassRayTracingKernel_1_SamplingKernel_ShadowOf
 	point.colorWeight.z = 1.0f;
 
 	/** 
-	 *	ÇöÀçÁöÁ¡ÀÇ sampling info ÃÊ±âÈ­.
-	 *	integer ¸¦ float ·Î int_as_float ½ÄÀ¸·Î ÀúÀå.
+	 *	í˜„ì¬ì§€ì ì˜ sampling info ì´ˆê¸°í™”.
+	 *	integer ë¥¼ float ë¡œ int_as_float_H ì‹ìœ¼ë¡œ ì €ì¥.
 	 *
-	 *	normal Àº ´Ù 1.0 À¸·Î ¼¼ÆÃÇØ¾ß ÇÑ´Ù.
+	 *	normal ì€ ë‹¤ 1.0 ìœ¼ë¡œ ì„¸íŒ…í•´ì•¼ í•œë‹¤.
 	 */
 	pSamplingMap[ rayIndex ].primaryNormal = make_float3( 1.0f, 1.0f, 1.0f );
 	pSamplingMap[ rayIndex ].primaryAttr = MAKE_PIXEL_ATTR_ASFLOAT( OBJECT_MAX_ID, 0, 0, 0 );
@@ -4083,7 +4084,7 @@ __global__ void fixedOption_singlePassRayTracingKernel_1_SamplingKernel_ShadowOf
 			cuObjectMaterial material;
 			getObjectMaterial( currIsectCheck.objectIndex, material );
 
-			/** texture °¡ Á¸ÀçÇÏ¸é diffuse color ¸¦ texture ³»ÀÇ u, v ¿¡¼­ °è»êµÈ color ·Î ´ëÃ¼ */
+			/** texture ê°€ ì¡´ì¬í•˜ë©´ diffuse color ë¥¼ texture ë‚´ì˜ u, v ì—ì„œ ê³„ì‚°ëœ color ë¡œ ëŒ€ì²´ */
 			float3 diffuse = material.diffuse;
 			calTextureColor( point, material, diffuse );
 
@@ -4092,7 +4093,7 @@ __global__ void fixedOption_singlePassRayTracingKernel_1_SamplingKernel_ShadowOf
 						* fixedOption_calSinglePassDirectIllumination_ShadowOff( point, material, diffuse );				
 
 			/**
-			 *	reflection depth °¡ ÄÑÁ® ÀÖ´Ù¸é, 1-bounce ¸¸Å­ Ã³¸®.
+			 *	reflection depth ê°€ ì¼œì ¸ ìˆë‹¤ë©´, 1-bounce ë§Œí¼ ì²˜ë¦¬.
 			 */
 			if ( maxReflectionDepth > depth && material.transparency > 0.0f ) {
 
@@ -4124,7 +4125,7 @@ __global__ void fixedOption_singlePassRayTracingKernel_1_SamplingKernel_ShadowOf
 						MAKE_PIXEL_ATTR_ASFLOAT( (int)point.objectIndex, (int)point.shadowCount, (int)currIsectCheck.bSelected, (int)( point.bTexture ) );
 			}
 
-			/** 2Â÷ ray °¡ intersection ÇÑ°æ¿ì. */
+			/** 2ì°¨ ray ê°€ intersection í•œê²½ìš°. */
 			if ( depth == 1 ) {
 				pSamplingMap[ rayIndex ].secondaryNormal = point.normal;
 				pSamplingMap[ rayIndex ].secondaryAttr = 
@@ -4156,7 +4157,7 @@ __global__ void fixedOption_singlePassRayTracingKernel_1_SamplingKernel_ShadowOf
 
 
 /**
- *	Single Pass ·Î RayTracing À» ¼öÇà.
+ *	Single Pass ë¡œ RayTracing ì„ ìˆ˜í–‰.
  */
 __global__ void fixedOption_singlePassRayTracingKernel_1_SamplingKernel_ShadowOn( 
 											cuSamplingMap *pSamplingMap,
@@ -4179,7 +4180,7 @@ __global__ void fixedOption_singlePassRayTracingKernel_1_SamplingKernel_ShadowOn
 		return;
 
 	/**
-	 *	¿ŞÂÊ,»ó´Ü Æ÷ÀÎÆ®ÀÇ Ä«¸Ş¶ó plane »ó¿¡¼­ÀÇ ÁÂÇ¥.
+	 *	ì™¼ìª½,ìƒë‹¨ í¬ì¸íŠ¸ì˜ ì¹´ë©”ë¼ plane ìƒì—ì„œì˜ ì¢Œí‘œ.
 	 */
 	dir = g_CameraInfo.startPoint + g_CameraInfo.u * ((float)x + 0.5f ) * g_CameraInfo.stepX - 
 		  g_CameraInfo.v * ((float)y + 0.5f ) * g_CameraInfo.stepY;
@@ -4194,10 +4195,10 @@ __global__ void fixedOption_singlePassRayTracingKernel_1_SamplingKernel_ShadowOn
 	point.colorWeight.z = 1.0f;
 
 	/** 
-	 *	ÇöÀçÁöÁ¡ÀÇ sampling info ÃÊ±âÈ­.
-	 *	integer ¸¦ float ·Î int_as_float ½ÄÀ¸·Î ÀúÀå.
+	 *	í˜„ì¬ì§€ì ì˜ sampling info ì´ˆê¸°í™”.
+	 *	integer ë¥¼ float ë¡œ int_as_float_H ì‹ìœ¼ë¡œ ì €ì¥.
 	 *
-	 *	normal Àº ´Ù 1.0 À¸·Î ¼¼ÆÃÇØ¾ß ÇÑ´Ù.
+	 *	normal ì€ ë‹¤ 1.0 ìœ¼ë¡œ ì„¸íŒ…í•´ì•¼ í•œë‹¤.
 	 */
 	pSamplingMap[ rayIndex ].primaryNormal = make_float3( 1.0f, 1.0f, 1.0f );
 	pSamplingMap[ rayIndex ].primaryAttr = MAKE_PIXEL_ATTR_ASFLOAT( OBJECT_MAX_ID, 0, 0, 0 );
@@ -4225,7 +4226,7 @@ __global__ void fixedOption_singlePassRayTracingKernel_1_SamplingKernel_ShadowOn
 			cuObjectMaterial material;
 			getObjectMaterial( currIsectCheck.objectIndex, material );
 
-			/** texture °¡ Á¸ÀçÇÏ¸é diffuse color ¸¦ texture ³»ÀÇ u, v ¿¡¼­ °è»êµÈ color ·Î ´ëÃ¼ */
+			/** texture ê°€ ì¡´ì¬í•˜ë©´ diffuse color ë¥¼ texture ë‚´ì˜ u, v ì—ì„œ ê³„ì‚°ëœ color ë¡œ ëŒ€ì²´ */
 			float3 diffuse = material.diffuse;
 			calTextureColor( point, material, diffuse );
 
@@ -4234,7 +4235,7 @@ __global__ void fixedOption_singlePassRayTracingKernel_1_SamplingKernel_ShadowOn
 						* fixedOption_calSinglePassDirectIllumination_ShadowOn_ForSelective( point, material, diffuse );				
 
 			/**
-			 *	reflection depth °¡ ÄÑÁ® ÀÖ´Ù¸é, 1-bounce ¸¸Å­ Ã³¸®.
+			 *	reflection depth ê°€ ì¼œì ¸ ìˆë‹¤ë©´, 1-bounce ë§Œí¼ ì²˜ë¦¬.
 			 */
 			if ( maxReflectionDepth > depth && material.transparency > 0.0f ) {
 
@@ -4266,7 +4267,7 @@ __global__ void fixedOption_singlePassRayTracingKernel_1_SamplingKernel_ShadowOn
 						MAKE_PIXEL_ATTR_ASFLOAT( (int)point.objectIndex, (int)point.shadowCount, (int)currIsectCheck.bSelected, (int)( point.bTexture ) );
 			}
 
-			/** 2Â÷ ray °¡ intersection ÇÑ°æ¿ì. */
+			/** 2ì°¨ ray ê°€ intersection í•œê²½ìš°. */
 			if ( depth == 1 ) {
 				pSamplingMap[ rayIndex ].secondaryNormal = point.normal;
 				pSamplingMap[ rayIndex ].secondaryAttr = 

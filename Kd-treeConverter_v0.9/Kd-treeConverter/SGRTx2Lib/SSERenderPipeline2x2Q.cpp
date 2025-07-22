@@ -86,10 +86,10 @@ void SSERenderPipeline::IsectPacket2x2( const KdTreeNode *node, int nIdx )
 		// Mailbox
 		// ---------------------------------------------------------------
 		if (m_Mailbox[triID] == rp->RayId) { continue; }
-		else { m_Mailbox[triID] = rp->RayId; }	// ¹«Á¶°Ç isect ¾ÈµÇµµ ½ÇÇà µÇ¾î¾ß ÇÔ
+		else { m_Mailbox[triID] = rp->RayId; }	// ë¬´ì¡°ê±´ isect ì•ˆë˜ë„ ì‹¤í–‰ ë˜ì–´ì•¼ í•¨
 
 		// ---------------------------------------------------------------
-		// Backface Culling : Åõ¸íÇÏÁö ¾Ê´Â ¹°Ã¼¸¸ ÇØ´ç
+		// Backface Culling : íˆ¬ëª…í•˜ì§€ ì•ŠëŠ” ë¬¼ì²´ë§Œ í•´ë‹¹
 		// ---------------------------------------------------------------
 		if (acc.isTransparent || !m_Scene->isBackFaceCulling()) {
 			Mask_Hit = rm->mask4;
@@ -296,10 +296,10 @@ void SSERenderPipeline::IsectShadowPacket2x2( const KdTreeNode *node )
 		// Mailbox
 		// ---------------------------------------------------------------
 		if (m_Mailbox[triID] == rp->RayId) { continue; }
-		else { m_Mailbox[triID] = rp->RayId; }	// ¹«Á¶°Ç isect ¾ÈµÇµµ ½ÇÇà µÇ¾î¾ß ÇÔ
+		else { m_Mailbox[triID] = rp->RayId; }	// ë¬´ì¡°ê±´ isect ì•ˆë˜ë„ ì‹¤í–‰ ë˜ì–´ì•¼ í•¨
 
 		// ---------------------------------------------------------------
-		// Åõ¸íÇÑ ¹°Ã¼´Â Åõ°ú
+		// íˆ¬ëª…í•œ ë¬¼ì²´ëŠ” íˆ¬ê³¼
 		// ---------------------------------------------------------------
 		if (acc.isTransparent) continue;
 
@@ -467,7 +467,7 @@ void SSERenderPipeline::checkVisibility2x2(const GPoint* lightPos, const __m128 
 	InitShadowPacket2x2();
 
 	unsigned int i, b;
-	// coherence Ã¼Å© °â ray dir °áÁ¤ (q = 8¹æÇâÁßÇÏ³ª)
+	// coherence ì²´í¬ ê²¸ ray dir ê²°ì • (q = 8ë°©í–¥ì¤‘í•˜ë‚˜)
 	if (shadow_rp->IsCoherent()) {
 		shadow_rp->RayWay = (shadow_rp->xmask & 1) + (shadow_rp->ymask & 2) + (shadow_rp->zmask & 4);
 		shadow_rm->mask4 = shadingmask;
@@ -585,7 +585,7 @@ void SSERenderPipeline::shading2x2 (int nIdx) {
 		ishadingmask = _mm_cmpgt_epi32(is->tacc4, _mm_setzero_si128());
 		shadingmask  = _mm_and_ps(shadingmask, rm->mask4);
 
-		// Shading ¿¡¼­, Åõ¸íÇÑ ¹°Ã¼ÀÏ¶§, Normal °ú dir ÀÇ dot ÀÌ < 0 ÀÌ¶ó¸é normal À» µÚÂ¤´Â´Ù.
+		// Shading ì—ì„œ, íˆ¬ëª…í•œ ë¬¼ì²´ì¼ë•Œ, Normal ê³¼ dir ì˜ dot ì´ < 0 ì´ë¼ë©´ normal ì„ ë’¤ì§šëŠ”ë‹¤.
 		__m128 mask = _mm_and_ps(
 				_mm_cmpgt_ps(mat_fRefr.v4, _mm_setzero_ps()),
 				_mm_cmpgt_ps(sse_vdot(is->n, rp->d), _mm_setzero_ps()));
@@ -605,7 +605,7 @@ void SSERenderPipeline::shading2x2 (int nIdx) {
 	// Diffuse & Specular color
 	const vector<GLight*>* pLightList = m_Scene->getLightList();
 	for ( int lx = 0; lx < (int) pLightList->size(); ++lx ) {	GLight* pLight = (*pLightList)[ lx ];
-		// Point Light ¸¸ ÀÏ´Ü Áö¿ø
+		// Point Light ë§Œ ì¼ë‹¨ ì§€ì›
 		if ( pLight->getLightType() != typePointLight )  continue;
 
 		GColor   lightColor = pLight->getLightColor();
@@ -613,21 +613,21 @@ void SSERenderPipeline::shading2x2 (int nIdx) {
 		GPoint   lightPos   = pLight->getPosition();
 		_sse_vec lPos       = sse_vset1(lightPos.x, lightPos.y, lightPos.z);
 
-		// ±¤¿ø ÀÚ±âÀÚ½ÅÀÎ °æ¿ì
+		// ê´‘ì› ìê¸°ìì‹ ì¸ ê²½ìš°
 		iislightmask = _mm_cmpeq_epi32(obj_num.v4, _mm_set1_epi32(pLight->getObjectNumber()));
 		oColor = sse_vupdate(sse_vadd(oColor, sse_vmul(lColor, sse_vset1(pLight->getIntensity()))), oColor, _mm_and_ps(islightmask, shadingmask));
 
 
-		// ±×¸²ÀÚ È®ÀÎ
+		// ê·¸ë¦¼ì í™•ì¸
 		if ( m_Scene->isEnableShadow() ) {
 			checkVisibility2x2(&lightPos, shadingmask);
 
 			{
 				__m128 lDist = sse_vlength(sse_vsub(lPos, hit_p));
 
-				// shadow °ü·Ã visible Á¶°Ç
-				// 1) shadingmask           : ¹°Ã¼¿Í ±³Á¡ÀÖ´Â °Í
-				// 2) shadow_is->tacc4 > 0  : shadow ray °¡ ±³Â÷Á¡ÀÌ µÚ¿¡ Á¸ÀçÇÏ°Å³ª ¾Æ´Ï¸é °Å¸®°¡ °ÅÀÇ °¡±õ°Å³ª
+				// shadow ê´€ë ¨ visible ì¡°ê±´
+				// 1) shadingmask           : ë¬¼ì²´ì™€ êµì ìˆëŠ” ê²ƒ
+				// 2) shadow_is->tacc4 > 0  : shadow ray ê°€ êµì°¨ì ì´ ë’¤ì— ì¡´ì¬í•˜ê±°ë‚˜ ì•„ë‹ˆë©´ ê±°ë¦¬ê°€ ê±°ì˜ ê°€ê¹ê±°ë‚˜
 				iisisectmask = _mm_cmpgt_epi32(shadow_is->tacc4, _mm_setzero_si128());
 				inoisectmask = _mm_cmpeq_epi32(shadow_is->tacc4, _mm_setzero_si128());
 
@@ -906,14 +906,14 @@ test_ty = ty;
 
 				jpos = tpos;
 
-				// Ray packet À» ¼ÂÆÃ - ½ÃÀÛÁ¡(ox4, oy4, oz4) ~ ³¡Á¡(tpos)
+				// Ray packet ì„ ì…‹íŒ… - ì‹œì‘ì (ox4, oy4, oz4) ~ ëì (tpos)
 				rp->d.x4 = _mm_sub_ps( jpos.d.x4, ox4 );
 				rp->d.y4 = _mm_sub_ps( jpos.d.y4, oy4 );
 				rp->d.z4 = _mm_sub_ps( jpos.d.z4, oz4 );
 
-				InitPacket2x2( 0 );	// direction vector normalize µî
+				InitPacket2x2( 0 );	// direction vector normalize ë“±
 
-				// coherence Ã¼Å© °â ray dir °áÁ¤ (q = 8¹æÇâÁßÇÏ³ª)
+				// coherence ì²´í¬ ê²¸ ray dir ê²°ì • (q = 8ë°©í–¥ì¤‘í•˜ë‚˜)
 				if (rp->IsCoherent()) {
 					rp->RayWay = (rp->xmask & 1) + (rp->ymask & 2) + (rp->zmask & 4);
 					RenderPacket2x2( 0 );
@@ -953,7 +953,7 @@ test_ty = ty;
 				m_Dest[3*(is->addr[i])+2] = o_color[i].b;// * fSampWeight;
 			}
 
-			// Render tile (tpos) ÀÇ À§Ä¡¸¦ ÀÌµ¿
+			// Render tile (tpos) ì˜ ìœ„ì¹˜ë¥¼ ì´ë™
 			tpos.d.x4 = _mm_add_ps( tpos.d.x4, delta4.d.x4 );
 			tpos.d.y4 = _mm_add_ps( tpos.d.y4, delta4.d.y4 );
 			tpos.d.z4 = _mm_add_ps( tpos.d.z4, delta4.d.z4 );

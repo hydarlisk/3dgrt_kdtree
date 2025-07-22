@@ -2,7 +2,9 @@
 #define G_TIMER_H_
 
 #ifdef WIN32
+	#define _SAL_VERSION 0
 	#include <windows.h>
+	#include <sal.h>
 #elif USE_LINUX
 	#include <sys/time.h>
 	#include <time.h>
@@ -10,7 +12,7 @@
 #endif
 
 /**
- *	À©µµ¿ì/¸®´ª½º Time Check Routine
+ *	ìœˆë„ìš°/ë¦¬ëˆ…ìŠ¤ Time Check Routine
  *
  *	by graphicsian.
  */

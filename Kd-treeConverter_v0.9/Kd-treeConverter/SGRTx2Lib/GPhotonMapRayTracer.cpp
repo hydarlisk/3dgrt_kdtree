@@ -23,7 +23,7 @@ GPhotonMapRayTracer::GPhotonMapRayTracer( GPhotonMappingOption *pOption )
 	m_iRandomSeed = 1;
 
 	/** 
-	 *	�ɼǰ��� 
+	 *	옵션결정 
 	 */
 	m_Option = (*pOption);
 	
@@ -36,7 +36,7 @@ GPhotonMapRayTracer::GPhotonMapRayTracer( GPhotonMappingOption *pOption )
 	m_fOnePhotonPower = m_fSceneLightPowerPerIteration / (float) m_Option.m_iEmitPhotonPerIteration;
 
 	/** 
-	 *	�ѹ��� iteration ����� �ִ� photon �������. buffer�� ���ؼ� 
+	 *	한번의 iteration 수행시 최대 photon 갯수계산. buffer를 위해서 
 	 */
 	m_iMaxPhotonSize = m_Option.m_iMaxBound * m_Option.m_iEmitPhotonPerIteration;
 
@@ -76,7 +76,7 @@ void GPhotonMapRayTracer::uninitialize()
 }
 
 /**
- *	scene ������ �籸���ؾ��Ҷ� �ʱ�ȭ�Ѵ�.
+ *	scene 정보를 재구성해야할때 초기화한다.
  */
 GError GPhotonMapRayTracer::initialize( GScene *pScene )
 {
@@ -84,9 +84,9 @@ GError GPhotonMapRayTracer::initialize( GScene *pScene )
 	m_pScene = pScene;
 
 	/**
-	 *	iteration �� 1���� �ƴ϶�� 
-	 *	���� rendering �ÿ� ����� photon tracing ������ ������ �� �����Ƿ�
-	 *  ������ tracing �� �����ؾ� �Ѵ�.
+	 *	iteration 이 1번이 아니라면 
+	 *	이전 rendering 시에 사용한 photon tracing 정보를 재사용할 수 없으므로
+	 *  무조건 tracing 을 수행해야 한다.
 	 */
 	m_bRunTracing = ( m_Option.m_iIteration != 1 );
 
@@ -101,7 +101,7 @@ GError GPhotonMapRayTracer::initialize( GScene *pScene )
 			delete m_pCudaPhotonMapping;
 		}
 
-		/**  photon tracing �� �ؾ����� ����. */
+		/**  photon tracing 을 해야할지 여부. */
 		m_bRunTracing = true;
 
 		cuScene cuSceneInfo;
@@ -115,7 +115,7 @@ GError GPhotonMapRayTracer::initialize( GScene *pScene )
 		cuSceneInfo.bEnableShadow = pScene->isEnableShadow();
 		cuSceneInfo.iShadowRay = 1;
 
-		/** ray tracing ray �� total photon emit ������ ū�ɷ� ray ������ �Ҵ� */
+		/** ray tracing ray 와 total photon emit 개수중 큰걸로 ray 공간을 할당 */
 		int maxRay = cuSceneInfo.iResolutionX * cuSceneInfo.iResolutionY * 
 					 cuSceneInfo.iSuperSamplingX * cuSceneInfo.iSuperSamplingY;
 
@@ -129,8 +129,8 @@ GError GPhotonMapRayTracer::initialize( GScene *pScene )
 		GLogManager::logging( LOG_DEBUG, "cuPMIntersectionPointcuPMIntersectionPoint %d", sizeof( cuPMIntersectionPoint ) );
 
 		/**
-		 *	Light ���� ����. light intensity �� ���� photon �� �󸶳�
-		 *	�Ѹ��� ����. ������ �ʿ�����Ƿ� ����.
+		 *	Light 정보 세팅. light intensity 에 따라서 photon 을 얼마나
+		 *	뿌릴지 결정. 세팅후 필요없으므로 삭제.
 		 */
 		int lightCount = 0;
 		cuLight* pLight = GRenderCommon::makeCudaLightInfo( pScene, &lightCount, m_pCudaRenderPipeline );
@@ -146,17 +146,17 @@ GError GPhotonMapRayTracer::initialize( GScene *pScene )
 		}
 
 		/**---------------------------------------------------------------------------------------------
-		 *	photon mapping cuda �� �ʱ�ȭ�Ѵ�.
+		 *	photon mapping cuda 를 초기화한다.
 		----------------------------------------------------------------------------------------------*/
 		GBoundingBox bbox = pScene->getKDTreeStructure()->getBoundingBox();
 		GVector length = bbox.m_Max - bbox.m_Min;
 
 		/**
-		 *	scene �� ũ��� ���ڷ� �־��� grid length �� ����
-		 *	grid box �� ������ ��û�������� �����Ƿ�
-		 *	�ϴ� �ִ�� Grid �ڽ��� �����Ҽ� �ִ� �ּ����� gridLength �� ���ϰ�,
-		 *	���ڷ� �־��� gridUnitLength �� radius �� �� �ִ밪�� �Ѵ��� üũ�ؼ� 
-		 *	������ grid box �� �����Ѵ�.
+		 *	scene 의 크기와 인자로 주어진 grid length 에 따라서
+		 *	grid box 의 개수가 엄청많아질수 있으므로
+		 *	일단 최대로 Grid 박스를 구성할수 있는 최소한의 gridLength 를 구하고,
+		 *	인자로 주어진 gridUnitLength 및 radius 가 이 최대값을 넘는지 체크해서 
+		 *	적당한 grid box 를 제안한다.
 		 */
 		float gridLength = max( length.x / (float) MAX_GRID_COUNT, 
 								max( length.y / (float) MAX_GRID_COUNT, length.z / (float) MAX_GRID_COUNT ) );
@@ -187,7 +187,7 @@ GError GPhotonMapRayTracer::initialize( GScene *pScene )
 		}
 
 		/**
-		 *	light ������ ���ε��Ѵ�.
+		 *	light 정보를 업로드한다.
 		 */
 		error = m_pCudaRenderPipeline->setLightInfo( pLight, lightCount );
 		free( pLight );
@@ -195,19 +195,19 @@ GError GPhotonMapRayTracer::initialize( GScene *pScene )
 			return error;
 
 		/** 
-		 *	�� ���������, kdtree ������ �̷��� �ؼ� cuda �� �ѱ�. 
+		 *	좀 어색하지만, kdtree 정보를 이렇게 해서 cuda 로 넘김. 
 		 */ 
 		error = pScene->getKDTreeStructure()->makeCudaRenderStructureInfo( m_pCudaRenderPipeline );
 		if ( error != errorNo )
 			return error;
 		
 		/**
-		 *	intersection point map �ʱ�ȭ.
+		 *	intersection point map 초기화.
 		 */
 		m_pIntersectionPointMap = new GIntersectionPointMap( 
 			pScene->getResolution(), pScene->getSuperSampling(), pScene->getMaxReflectionDepth() + 1 );
 
-		/** blooming ȿ���� �����ϱ⸦ ���Ѵٸ� �ʱ�ȭ �ص�.*/
+		/** blooming 효과를 적용하기를 원한다면 초기화 해둠.*/
 		if ( m_pScene->isBloomingFilter() ) {
 			error = m_pCudaRenderPipeline->initBloomingFilter( m_pScene->getBloomingRadius(),
 															   m_pScene->getBloomingWeight() );
@@ -220,7 +220,7 @@ GError GPhotonMapRayTracer::initialize( GScene *pScene )
 	}
 
 	/**
-	 *	���� Renderer �� ó���� Scene �� ����Ѵ�.
+	 *	현재 Renderer 가 처리한 Scene 을 기억한다.
 	 */
 	m_iOldSceneNumber = pScene->getSceneNumber();
 	m_iSceneTimestamp = pScene->getGeometryChangeTimestamp();
@@ -236,8 +236,8 @@ GError GPhotonMapRayTracer::constructPhotonEmitLightInfo( cuLight* plightList, i
 	float intensitySum = 0.0f;
 
 	/**
-	 *	��ü light �߿��� �� light �� intensity �� �����ϴ� ������ŭ 
-	 *	�� light �� �Ѹ� photon �� ������ ����Ѵ�. 
+	 *	전체 light 중에서 각 light 의 intensity 가 차지하는 비율만큼 
+	 *	각 light 가 뿌릴 photon 의 개수를 배분한다. 
 	 */
 	for ( int i = 0; i < lightCount; ++i ) {
 		if ( plightList[ i ].bUsePhoton == 0 )
@@ -247,15 +247,15 @@ GError GPhotonMapRayTracer::constructPhotonEmitLightInfo( cuLight* plightList, i
 	}
 
 	/**
-	 *	photon �� ���������� �߸��Ƿ� �� light �� emitPhoton ���� ���ڷ� �־��� emitPhoton �� 
-	 *	1 ������ ���̰� ����� �ִ�. ���� ������ light ���� ���� photon �� �� �ش�.
+	 *	photon 은 정수형으로 잘리므로 각 light 의 emitPhoton 합이 인자로 주어진 emitPhoton 과 
+	 *	1 개정도 차이가 생길수 있다. 따라서 마지막 light 에는 남은 photon 을 다 준다.
 	 */
 	for ( int i = 0; i < lightCount; ++i ) {
 
 		if ( plightList[ i ].bUsePhoton == 0 )
 			continue;
 
-		/** photon �� emit ��Ű�� ������ light �϶� */
+		/** photon 을 emit 시키는 마지막 light 일때 */
 		if ( processPhotonLightCount == totalPhotonLightCount - 1 ) {
 			plightList[ i ].iPhotonStartIndex = photonSum;
 			plightList[ i ].iEmitPhoton = m_Option.m_iEmitPhotonPerIteration - photonSum;
@@ -286,8 +286,8 @@ GError GPhotonMapRayTracer::rendering( GScene *pScene, bool isDebug )
 	int atLeastOneRay = 0;
 
 	/** 
-	 *	Scene �� ���� geometry ���¿��� ���Ѱ� �ִ��� üũ�ؼ� �ִٸ�
-	 *	SpatialStructure �� �籸���Ѵ�.
+	 *	Scene 이 이전 geometry 상태에서 변한게 있는지 체크해서 있다면
+	 *	SpatialStructure 를 재구성한다.
 	 */
 	error = initialize( pScene );
 	if ( error != errorNo ) {
@@ -295,7 +295,7 @@ GError GPhotonMapRayTracer::rendering( GScene *pScene, bool isDebug )
 		return error;
 	}
 
-	/** rendering option ���� */
+	/** rendering option 세팅 */
 	m_pCudaRenderPipeline->renderingOption( isEnableShadow(), pScene->isUseTexture() );
 	cuScene cuSceneInfo;
 	cuSceneInfo.globalAmbient = make_float3( pScene->getGlobalAmbient().r, 
@@ -315,7 +315,7 @@ GError GPhotonMapRayTracer::rendering( GScene *pScene, bool isDebug )
 	m_pCudaRenderPipeline->setSceneInfo( cuSceneInfo );
 
 	/**
-	 *	cuda ���� intersection point �� ����Ʈ ������ �ʱ�ȭ �Ѵ�.
+	 *	cuda 안의 intersection point 를 디폴트 값으로 초기화 한다.
 	 */
 	error = m_pCudaRenderPipeline->clearIntersectionResult();
 	if ( error != errorNo ) {
@@ -336,8 +336,8 @@ GError GPhotonMapRayTracer::rendering( GScene *pScene, bool isDebug )
 	}
 
 	/**
-	 *	reflection �̳� refraction �� ������ �ִ� max depth ����
-	 *	�����ؼ� intersection point �� m_pIntersectionPointMap �� �׾� �ִ´�.
+	 *	reflection 이나 refraction 이 있으면 최대 max depth 까지
+	 *	추적해서 intersection point 를 m_pIntersectionPointMap 에 쌓아 넣는다.
 	 */
 	int count = 0;
 
@@ -350,15 +350,15 @@ GError GPhotonMapRayTracer::rendering( GScene *pScene, bool isDebug )
 		if ( error != errorNo )	break;
 
 		/** 
-		 *	intersection ������ �����ͼ� intersection map �� ������ �д�.
-		 *	�̰� �ӵ� ���� �ʿ�. �̺κж����� fps �� ������ �ش�.
+		 *	intersection 정보를 가져와서 intersection map 에 복사해 둔다.
+		 *	이거 속도 개선 필요. 이부분때문에 fps 가 반절로 준다.
 		 */
 		error = backupIntersectionResult( generatedRayCount );
 		if ( error != errorNo ) break;
 
 		/**
-		 *	photon map ���� direct illumination �� ó���Ѵٸ�
-		 *	ray tracing ���� direct illum ó�� ����.
+		 *	photon map 으로 direct illumination 을 처리한다면
+		 *	ray tracing 으로 direct illum 처리 안함.
 		 */
 		if ( !m_Option.m_bDirectIllumByPhotonMap ) {
 			error = m_pCudaRenderPipeline->calDirectIllumination( m_iMaxDepth );
@@ -382,18 +382,18 @@ GError GPhotonMapRayTracer::rendering( GScene *pScene, bool isDebug )
 	GLogManager::logging( LOG_DEBUG, "Intersection Point Count = %d", m_pIntersectionPointMap->getSize() );
 
 	/**-----------------------------------------------------------------------------------------------
-	 **	scene �� direct, indirect, �׸��� �ջ��� image buffer �� ����.
+	 **	scene 의 direct, indirect, 그리고 합산한 image buffer 를 구성.
 	 **----------------------------------------------------------------------------------------------*/
 
 	/**
-	 * ray tracing ���� ����� direct illum �� �����ؿ´�.
+	 * ray tracing 으로 계산한 direct illum 을 복사해온다.
 	 */
 	GImageBuffer *pImageBuffer = m_pScene->getImageBuffer();
 	GImageBuffer *pDirectIllm = m_pScene->getDirectIllumImageBuffer();
 	GImageBuffer *pInDirectIllum = m_pScene->getIndirectIllumImageBuffer();
 
 	/**
-	 *	photon mapping ���� indirect illumination �� ����ؿ�.
+	 *	photon mapping 으로 indirect illumination 만 계산해옴.
 	 */
 	pInDirectIllum->clear();
 
@@ -407,13 +407,13 @@ GLogManager::logging( LOG_INFO, "start photon" );
 	timer.end();
 
 	/** 
-	 *	direct �� indirect illum �� �ջ��ؼ� ���� �̹����� �����Ѵ�.
+	 *	direct 와 indirect illum 을 합산해서 최종 이미지에 저장한다.
 	 */
 	/**
-	 *	photon map ���� direct illumination �� ó���Ѵٸ�
-	 *	ray tracing ���� direct illum ��������.
-	 *  indirect illum �� photon map ���� direct ���� ����� ����� �����Ƿ�
-	 *	�װ͸� ����.
+	 *	photon map 으로 direct illumination 을 처리한다면
+	 *	ray tracing 으로 direct illum 누적안함.
+	 *  indirect illum 에 photon map 으로 direct 까지 계산한 결과가 있으므로
+	 *	그것만 복사.
 	 */
 	if ( !m_Option.m_bDirectIllumByPhotonMap ) {
 		m_pCudaRenderPipeline->getFrameBuffer( pDirectIllm->getBuffer() );
@@ -423,7 +423,7 @@ GLogManager::logging( LOG_INFO, "start photon" );
 		pImageBuffer->copy( pInDirectIllum->getBuffer() );
 	}
 
-	/** blooming ȿ���� �����ϱ⸦ ���Ѵٸ� framebuffer �� �÷��� ó���ϰ� �ٽ� �����´�. */
+	/** blooming 효과를 적용하기를 원한다면 framebuffer 에 올려서 처리하고 다시 가져온다. */
 	if ( m_pScene->isBloomingFilter() ) {
 		m_pCudaRenderPipeline->setFrameBuffer( pImageBuffer->getBuffer() );
 		m_pCudaRenderPipeline->bloomingFiltering();
@@ -439,9 +439,9 @@ GLogManager::logging( LOG_INFO, "start photon" );
 }
 
 /**
- *	����� ����� image buffer �� ������Ų��.
- *	�ܺο����� ȣ��� �� �����Ƿ�, ���� ���� Ŭ����������
- *	�Ժη� �����ϴ� ������ ���� �ȵȴ�.
+ *	계산한 결과를 image buffer 에 누적시킨다.
+ *	외부에서도 호출될 수 있으므로, 절대 내부 클래스변수를
+ *	함부로 수정하는 연산이 들어가면 안된다.
  */
 void GPhotonMapRayTracer::accumulateRadiance ( 
 					GImageBuffer *pInDirectIllumImageBuffer,
@@ -480,7 +480,7 @@ GError GPhotonMapRayTracer::backupIntersectionResult( int count )
 		return errorResultError;
 
 	/**
-	*	gpu �󿡼��� intersection ����� hit �Ȱ͸� point map �� insert �Ѵ�.
+	*	gpu 상에서의 intersection 결과중 hit 된것만 point map 에 insert 한다.
 	*/
 	for ( int i = 0; i < count; ++i ) {
 		if ( pIntersectionPoints[ i ].isHit() ) {
@@ -495,7 +495,7 @@ GError GPhotonMapRayTracer::backupIntersectionResult( int count )
 
 
 /**
- *	CUDA ���� Primary ray �� ������Ų��.
+ *	CUDA 에서 Primary ray 를 생성시킨다.
  */
 GError GPhotonMapRayTracer::makePrimaryRaySet_BlockGrouping( GScene *pScene, int *generatedCount, int currentSampleX, int currentSampleY )
 {
@@ -527,7 +527,7 @@ GError GPhotonMapRayTracer::makePrimaryRaySet_BlockGrouping( GScene *pScene, int
 }
 
 /**
- *	CUDA ���� Primary ray �� ������Ų��.
+ *	CUDA 에서 Primary ray 를 생성시킨다.
  */
 GError GPhotonMapRayTracer::makePrimaryRaySet( GScene *pScene, int *generatedRayCount, int currentSampleX, int currentSampleY )
 {
@@ -559,8 +559,8 @@ GError GPhotonMapRayTracer::makePrimaryRaySet( GScene *pScene, int *generatedRay
 }
 
 /**
- *	CUDA �� �̿��ؼ� Photon Tracing �� Gathering Iteration �� �����Ѵ�.
- *	����� direct illumination �� �ջ��ؼ� imageBuffer ������Ѵ�.
+ *	CUDA 를 이용해서 Photon Tracing 과 Gathering Iteration 을 수행한다.
+ *	결과를 direct illumination 과 합산해서 imageBuffer 에기록한다.
  */
 GError GPhotonMapRayTracer::photonMapIteration( bool bRunTracing, int iteration, 
 												GImageBuffer *pInDirectIllumImageBuffer )
@@ -571,7 +571,7 @@ GError GPhotonMapRayTracer::photonMapIteration( bool bRunTracing, int iteration,
 	totalTimer.start();
 
 	/**-------------------------------------------------------------------------------------------
-	 **	��� iteration �� ���õ� ����ڷ� �ʱ�ȭ.
+	 **	모든 iteration 에 관련된 통계자료 초기화.
 	 **------------------------------------------------------------------------------------------*/
 	m_iLogTotalTracedPhoton = 0;
 	m_iLogTotalIsectGridMakingTime = 0.0f;
@@ -584,7 +584,7 @@ GError GPhotonMapRayTracer::photonMapIteration( bool bRunTracing, int iteration,
 	m_iLogTotalPhotonMappingTime = 0.0f;
 
 	/**-------------------------------------------------------------------------------------------
-	 **	intersection point �� ���� grid ������ �ϰ� cuda �� ���ε�.
+	 **	intersection point 를 위한 grid 구성을 하고 cuda 에 업로드.
 	 **------------------------------------------------------------------------------------------*/
 	ipointTimer.start();
 
@@ -601,11 +601,11 @@ GError GPhotonMapRayTracer::photonMapIteration( bool bRunTracing, int iteration,
 	ipointTimer.end();
 
 	/**-------------------------------------------------------------------------------------------
-	 **	density �� �����ϱ� ���ؼ� �� ipoint �� ����� Area �� ���Ѵ�.
+	 **	density 를 추정하기 위해서 각 ipoint 가 사용할 Area 를 구한다.
 	 **------------------------------------------------------------------------------------------*/
 	areaTimer.start();
 
-	/** projected circle �Ǵ� area photon ���. */
+	/** projected circle 또는 area photon 사용. */
 	error = estimateDensityArea( m_pIPointGridBox, m_Option.m_eDensityMethod );
 	if ( error != errorNo )
 		return errorNo;
@@ -613,7 +613,7 @@ GError GPhotonMapRayTracer::photonMapIteration( bool bRunTracing, int iteration,
 	areaTimer.end();
 
 	/**-------------------------------------------------------------------------------------------
-	 **	PHOTON TRACING �� GATHERING �� �����Ѵ�. 
+	 **	PHOTON TRACING 과 GATHERING 을 수행한다. 
 	 **------------------------------------------------------------------------------------------*/
 	int randomSeed = m_iRandomSeed;
 
@@ -624,7 +624,7 @@ GError GPhotonMapRayTracer::photonMapIteration( bool bRunTracing, int iteration,
 			return error;
 
 		/**
-		 *	������ photon �� �Ѹ����� random ���� ���� seed ��
+		 *	다음번 photon 을 뿌릴때의 random 값을 위한 seed 값
 		 */
 		randomSeed += m_Option.m_iEmitPhotonPerIteration;
 		if ( randomSeed > 1000000000 )
@@ -635,8 +635,8 @@ GError GPhotonMapRayTracer::photonMapIteration( bool bRunTracing, int iteration,
 	totalTimer.end();
 
 	/**-------------------------------------------------------------------------------------------
-	 **	��ü iteration �� ������ ���� �� ipoint �� radiance �� indirect image buffer ��
-	 ** ������Ų��.
+	 **	전체 iteration 이 끝나고 계산된 각 ipoint 의 radiance 를 indirect image buffer 에
+	 ** 누적시킨다.
 	 **------------------------------------------------------------------------------------------*/
 	accumulateTimer.start();
 
@@ -647,7 +647,7 @@ GError GPhotonMapRayTracer::photonMapIteration( bool bRunTracing, int iteration,
 	m_iLogTotalAccumulateTime = accumulateTimer.getElapsedTime();
 
 	/**-------------------------------------------------------------------------------------------
-	 **	INFO MATION ���. 
+	 **	INFO MATION 출력. 
 	 **------------------------------------------------------------------------------------------*/
 	m_iLogTotalIsectGridMakingTime = ipointTimer.getElapsedTime();
 	m_iLogTotalIsectAreaDensityTime = areaTimer.getElapsedTime();
@@ -684,9 +684,9 @@ GError GPhotonMapRayTracer::photonMapIteration( bool bRunTracing, int iteration,
 }
 
 /**
- *	CUDA �� �̿��ؼ� Photon Tracing �� Gathering �� Iteration �� �����Ѵ�.
- *	Scene structure �� ������ �ʾҴٸ� tracing �� �ٽ� ������ �ʿ�� ����
- *	������ bRunTracing ���ڷ� �����Ѵ�.
+ *	CUDA 를 이용해서 Photon Tracing 과 Gathering 한 Iteration 을 수행한다.
+ *	Scene structure 가 변하지 않았다면 tracing 을 다시 수행할 필요는 없기
+ *	때문에 bRunTracing 인자로 조절한다.
  */
 GError GPhotonMapRayTracer::photonMapOneIteration( int randomSeed,
 					GGridBox<cuIntersectionPoint, cuPMIntersectionPoint> *pIPointGridBox,				
@@ -703,7 +703,7 @@ GError GPhotonMapRayTracer::photonMapOneIteration( int randomSeed,
 
 	//-----------------------------------------------------------------------------------------//
 	/** 
-	 *	debug option �϶� ���� rendering ���� �߰��� debug photon option �� �����Ѵ�. 
+	 *	debug option 일때 이전 rendering 에서 추가한 debug photon option 을 삭제한다. 
 	 */
 	if ( m_bDebug && bRunTracing ) {
 		char name[1024] = { 0x00, };
@@ -712,16 +712,16 @@ GError GPhotonMapRayTracer::photonMapOneIteration( int randomSeed,
 	}
 
 	/**
-	 *	Tracing �� ������ �ʿ䰡 ��������. iteration �� 1���̰� 
-	 *	scene ������ ������ �ʾҴٸ� ������ tracing �� photon ������
-	 *	����Ѵ�. iteration �� �������̶�� �Ź� map �� �ٲ�Ƿ� ������ �� ����.
+	 *	Tracing 을 수행할 필요가 있을때만. iteration 이 1번이고 
+	 *	scene 구조가 변하지 않았다면 이전에 tracing 한 photon 정보를
+	 *	사용한다. iteration 이 여러번이라면 매번 map 이 바뀌므로 재사용할 수 없다.
 	 */
 	if ( bRunTracing ) {
 
 		tracingTimer.start();
 
 		/**
-		*	photon tracing �� �����Ѵ�.
+		*	photon tracing 을 수행한다.
 		*/
 		int iTracedPhotonSize = 0, iTracedBound = 0;
 		error = m_pCudaPhotonMapping->photonTracing( 
@@ -742,9 +742,9 @@ GError GPhotonMapRayTracer::photonMapOneIteration( int randomSeed,
 		photonGridTimer.start();
 
 		/**
-		*	�̸� ���ε��س��� intersection point �� tracing �� photon �� ������
-		*	intersectionPoint �ֺ��� photon �� gathering �Ѵ�.
-		*	���� tracing �� photon �� grid box ���� �����Ѵ�.
+		*	미리 업로드해놓은 intersection point 와 tracing 된 photon 을 가지고
+		*	intersectionPoint 주변의 photon 을 gathering 한다.
+		*	먼저 tracing 된 photon 을 grid box 에서 정렬한다.
 		*/
 		if ( m_pGlobalPhotonGridBox ) {
 			delete m_pGlobalPhotonGridBox;
@@ -758,7 +758,7 @@ GError GPhotonMapRayTracer::photonMapOneIteration( int randomSeed,
 
 	}
 
-	/** ipoint �� photon �� �������踸��. */
+	/** ipoint 와 photon 의 연관관계만듬. */
 	indexGridTimer.start();
 	int photonIndexCount = 0;
 	cuPhotonIndex *pPhotonIndex = makeIPointVsPhotonIndexData( 
@@ -769,7 +769,7 @@ GError GPhotonMapRayTracer::photonMapOneIteration( int randomSeed,
 	gatheringTimer.start();
 
 	/**
-	 *	ipoint �ֺ��� photon �� ��������
+	 *	ipoint 주변에 photon 이 있을때만
 	 */
 	if ( pPhotonIndex != NULL ) {
 		error = m_pCudaPhotonMapping->photonGathering( pIPointGridBox->m_pData2, pIPointGridBox->m_iTotalCount,
@@ -781,8 +781,8 @@ GError GPhotonMapRayTracer::photonMapOneIteration( int randomSeed,
 	gatheringTimer.end();
 
 	/** 
-	 *	debug option �϶� rendering ���� ������ photon ������ object ���� scene �� �߰��Ѵ�. 
-	 *	data �� �ʹ� ������ �ȵǹǷ� iterationid �� 0 �ΰ͸� ����.
+	 *	debug option 일때 rendering 에서 생성한 photon 정보를 object 만들어서 scene 에 추가한다. 
+	 *	data 가 너무 많으면 안되므로 iterationid 가 0 인것만 만듬.
 	 */
 	if ( m_bDebug && bRunTracing && iterationId == 0 ) {
 		
@@ -805,8 +805,8 @@ GError GPhotonMapRayTracer::photonMapOneIteration( int randomSeed,
 			vertexArray[ i * 3 + 1 ] = pPhoton->pos.y;
 			vertexArray[ i * 3 + 2 ] = pPhoton->pos.z;
 
-			// debug ȭ�鼼�� photon ������ �����ٶ�
-			// photon �� power �� �ʹ� �۱⶧���� �Ŀ��� Ű���.
+			// debug 화면세서 photon 정보를 보여줄때
+			// photon 의 power 가 너무 작기때문에 파워를 키운다.
 			maxpower = max( pPhoton->power.x, max( pPhoton->power.y, pPhoton->power.z ) );
 			if ( maxpower > 0.0f )
 				scale = 1.0 / maxpower;
@@ -867,7 +867,7 @@ GError GPhotonMapRayTracer::photonMapOneIteration( int randomSeed,
 }
 
 /**
- *	ray �����͸� �̿��ؼ� Ray Grid Box �� �����.
+ *	ray 데이터를 이용해서 Ray Grid Box 를 만든다.
  */
 GGridBox<cuIntersectionPoint, cuPMIntersectionPoint>*
 		GPhotonMapRayTracer::makeIPointGridBox( GIntersectionPointMap *pIntersectionPointMap )
@@ -879,7 +879,7 @@ GGridBox<cuIntersectionPoint, cuPMIntersectionPoint>*
 							( sceneBBox, m_Option.m_fGridUnitLength, m_Option.m_fGridUnitLength, m_Option.m_fGridUnitLength );
 
 	/**
-	 *	�� Cell �� �� ray counting.
+	 *	각 Cell 에 들어갈 ray counting.
 	 */
 	const cuIntersectionPoint* pPoint = NULL;
 	int pointSize = pIntersectionPointMap->getSize();
@@ -892,7 +892,7 @@ GGridBox<cuIntersectionPoint, cuPMIntersectionPoint>*
 	pIGridBox->allocate();
 
 	/**
-	 *	�� Cell �� ray ������ insert.
+	 *	각 Cell 에 ray 정보를 insert.
 	 */
 	int rayNumber = 0;
 	cuIntersectionPoint iPoint;
@@ -903,7 +903,7 @@ GGridBox<cuIntersectionPoint, cuPMIntersectionPoint>*
 		pPoint = pIntersectionPointMap->getIntersectionPoint( i );
 		memcpy( &iPoint, pPoint, sizeof( cuIntersectionPoint ) );
 
-		// power �� 0.0f ���� �� �ʱ�ȭ �ؾ���.
+		// power 는 0.0f 으로 다 초기화 해야함.
 		pmiPoint.power[0] = 0.0f; pmiPoint.power[1] = 0.0f; pmiPoint.power[2] = 0.0f;
 		pmiPoint.photonIndexOffset = 0;
 		pmiPoint.photonIndexCount = 0;
@@ -921,7 +921,7 @@ GGridBox<cuIntersectionPoint, cuPMIntersectionPoint>*
 
 
 /**
- *	area photon �����͸� �̿��ؼ� Area Photon Grid Box �� �����.
+ *	area photon 데이터를 이용해서 Area Photon Grid Box 를 만든다.
  */
 GGridBox<cuPhoton, char> *GPhotonMapRayTracer::makeAreaPhotonGridBox( const vector<cuPhoton*> &list )
 {
@@ -932,7 +932,7 @@ GGridBox<cuPhoton, char> *GPhotonMapRayTracer::makeAreaPhotonGridBox( const vect
 			( m_pScene->getKDTreeStructure()->getBoundingBox(), m_Option.m_fGridUnitLength, m_Option.m_fGridUnitLength, m_Option.m_fGridUnitLength );
 
 	/**
-	 *	�� Cell �� �� photon counting.
+	 *	각 Cell 에 들어갈 photon counting.
 	 */
 	for ( int i = 0; i < photonCount; ++i ) {
 		pAreaPhotonGridBox->counting( list[ i ]->pos.x, list[ i ]->pos.y,	list[ i ]->pos.z );
@@ -940,14 +940,14 @@ GGridBox<cuPhoton, char> *GPhotonMapRayTracer::makeAreaPhotonGridBox( const vect
 	pAreaPhotonGridBox->allocate();
 
 	/**
-	 *	�� Cell �� photon insert.
+	 *	각 Cell 에 photon insert.
 	 */
 	for ( int i = 0; i < photonCount; ++i ) {
 
 		photonInfo.pos = list[ i ]->pos;
 		photonInfo.normal = list[ i ]->normal;
 
-		// area ������ �������.
+		// area 정보가 들어있음.
 		photonInfo.power = list[ i ]->power;
 
 		pAreaPhotonGridBox->insertData( 
@@ -978,7 +978,7 @@ GError GPhotonMapRayTracer::estimateAreaByAreaPhoton(
 	GTriangleWrapperList *triangleList = m_pScene->getKDTreeStructure()->getTriangleWrapperList();
 
 	/** 
-	 *	���ø������� ������ iteration �Ѵ�. 
+	 *	샘플링갯수가 많으면 iteration 한다. 
 	 */
 	GAreaDensityEstimate estimate( 500000 );
 	totalSize = triangleList->size();
@@ -1004,13 +1004,13 @@ GError GPhotonMapRayTracer::estimateAreaByAreaPhoton(
 				photons->size(), triangleIndex, timer1.getElapsedTime() );
 
 		/**
-		 *	intersection point �� ������ grid �ڽ��� �����ؼ� cuda �� ����.
+		 *	intersection point 와 연관된 grid 박스를 구성해서 cuda 로 수행.
 		 */
 		GGridBox<cuPhoton, char> *pPhotonGridBox = makeAreaPhotonGridBox( *photons );
 		cuPhotonIndex *pPhotonIndex = makeIPointVsPhotonIndexData( pIPointGridBox, pPhotonGridBox, &indexCount );
 
 		/**
-		 *	ipoint �ֺ��� photon �� ��������
+		 *	ipoint 주변에 photon 이 있을때만
 		 */
 		if ( pPhotonIndex != NULL ) {
 			error = m_pCudaPhotonMapping->calDensityArea( 
@@ -1032,7 +1032,7 @@ GError GPhotonMapRayTracer::estimateAreaByAreaPhoton(
 	timer.end();
 
 	/** 
-	 *	�������� area �� ���� area �� 0 �̰ų� projected circle area ���� ũ�� projected circle area �� �����. 
+	 *	최종적인 area 를 봐서 area 가 0 이거나 projected circle area 보다 크면 projected circle area 로 만든다. 
 	 */
 	for ( int i = 0; i < pIPointGridBox->m_iTotalCount; ++i ) {
 		if ( pIPointGridBox->m_pData2[ i ].area <= 0.0f ) {
@@ -1056,20 +1056,20 @@ GError GPhotonMapRayTracer::estimateAreaByAreaPhoton(
 }
 
 /**
- *	���� ray texture �� area photon �� �̿��ؼ� 
- *	Photon Gathering �� ����� ���� ����� ������ ������
- *	ray texture �� area ������ �����ϱ� ���ؼ� texture �� �ٽ� �ø���.
+ *	현재 ray texture 와 area photon 을 이용해서 
+ *	Photon Gathering 시 사용할 면적 계산을 수행한 다음에
+ *	ray texture 에 area 정보를 갱신하기 위해서 texture 를 다시 올린다.
  */
 GError GPhotonMapRayTracer::estimateDensityArea( 
 							GGridBox<cuIntersectionPoint, cuPMIntersectionPoint> *pIPointGridBox,
 							enumDensityMethod method )
 {
 	/** 
-	 *	area photon �� ����ؼ� �����Ѵ�. 
-	 *	�����Ѵ����� area �� �����ϰ�, cuda �� ray geometry �� ��ε����Ѿ��Ѵ�.
+	 *	area photon 을 사용해서 측정한다. 
+	 *	측정한다음에 area 를 갱신하고, cuda 의 ray geometry 를 재로딩시켜야한다.
 	 */
 	/** 
-	 *	���� search �ݰ��� 0.1 ���� �۴ٸ� �׳� circle �� �Ѵ�. 
+	 *	만약 search 반경이 0.1 보다 작다면 그냥 circle 로 한다. 
 	 */
 
 	if ( m_Option.m_fSearchRadius > 0.1f && method == densityAreaPhoton ) {
@@ -1083,7 +1083,7 @@ GError GPhotonMapRayTracer::estimateDensityArea(
 		}
 
 		/**
-		 *	area �� projected circle �� ����.
+		 *	area 를 projected circle 로 만듬.
 		 */
 		for ( int i = 0; i < pIPointGridBox->m_iTotalCount; ++i ) {
 			pIPointGridBox->m_pData2[ i ].area =
@@ -1100,8 +1100,8 @@ cuPhotonIndex* GPhotonMapRayTracer::makeIPointVsPhotonIndexData(
 						GGridBox<cuPhoton, char> *pPhotonGridBox, int *pIndexCount )
 {
 	/**
-	 *	�� Ray Cell �ֺ��� Photon Cell �ȿ� ����ִ� Photon Data
-	 *	������ ����ؿ´�.
+	 *	각 Ray Cell 주변의 Photon Cell 안에 들어있는 Photon Data
+	 *	개수를 계산해온다.
 	 */
 	CellInfo *rayCellInfo = NULL;
 	CellInfo *photonCellInfo = NULL;
@@ -1118,12 +1118,12 @@ cuPhotonIndex* GPhotonMapRayTracer::makeIPointVsPhotonIndexData(
 				rayCellInfo = pIPointGridBox->getCellInfo( x, y, z );
 				
 				/**
-				 *	ray �� �����ϴ� Cell��.
+				 *	ray 가 존재하는 Cell만.
 				 */
 				if ( rayCellInfo->dataCount > 0 ) {
 					/** 
-					 *	photon grid ���� ray cell �ֺ��� 27 neighbor cell �� �����Ͱ� �ִ�����
-					 *	üũ�ؼ� ���� ray cell �� ã�ƾ��� �ֺ� cell �� ������� ����Ѵ�.
+					 *	photon grid 에서 ray cell 주변의 27 neighbor cell 에 데이터가 있는지를
+					 *	체크해서 현재 ray cell 이 찾아야할 주변 cell 이 몇개인지를 계산한다.
 					 */
 					neighborPhotonCellCount = 0;
 					for ( int k = z - 1; k <= z + 1; ++k ) {
@@ -1138,8 +1138,8 @@ cuPhotonIndex* GPhotonMapRayTracer::makeIPointVsPhotonIndexData(
 					}
 
 					/** 
-					 *	���� ray cell �ȿ� �����ϴ� ��� ray �����Ϳ� �̿� photon cell �� index ��
-					 *	������ memory �� offset �� index ������ ����Ѵ�.
+					 *	현재 ray cell 안에 존재하는 모든 ray 데이터에 이웃 photon cell 의 index 를
+					 *	저장할 memory 의 offset 과 index 개수를 기록한다.
 					 */
 					cuPMIntersectionPoint *pPMPoint = pIPointGridBox->getData2( rayCellInfo );
 					for ( int k = 0; k < rayCellInfo->dataCount; ++k ) {
@@ -1159,7 +1159,7 @@ cuPhotonIndex* GPhotonMapRayTracer::makeIPointVsPhotonIndexData(
 		totalNeighborPhotonCellCount, validRayCellCount );
 
 	/**
-	 *	Memory �Ҵ�.
+	 *	Memory 할당.
 	 */
 	(*pIndexCount) = totalNeighborPhotonCellCount;
 	if ( (*pIndexCount) == 0 ) {
@@ -1170,7 +1170,7 @@ cuPhotonIndex* GPhotonMapRayTracer::makeIPointVsPhotonIndexData(
 	memset( pPhotonIndex, 0x00, sizeof( cuPhotonIndex ) * (*pIndexCount) );
 
 	/**
-	 *	�ٽ� ���鼭 ������ ���� ray cell �� ������ �ֺ� photon cell ������ ����Ѵ�.
+	 *	다시 돌면서 실제로 현재 ray cell 과 연관된 주변 photon cell 정보를 기록한다.
 	 */
 	for ( int z = 0; z < pIPointGridBox->m_iCellZCount; ++z ) {
 		for ( int y = 0; y < pIPointGridBox->m_iCellYCount; ++y ) {
@@ -1179,17 +1179,17 @@ cuPhotonIndex* GPhotonMapRayTracer::makeIPointVsPhotonIndexData(
 				rayCellInfo = pIPointGridBox->getCellInfo( x, y, z );
 				
 				/**
-				 *	ray �� �����ϴ� Cell��. cell ���� ù��° ray ������ �����ͼ�
-				 *	�� cell �� ������ neighbor photon �� ���� index �� ��� ���������� �����Ѵ�.
+				 *	ray 가 존재하는 Cell만. cell 안의 첫번째 ray 정보를 가져와서
+				 *	이 cell 과 연관된 neighbor photon 을 위한 index 를 어디에 저장할지를 결정한다.
 				 */
 				if ( rayCellInfo->dataCount > 0 ) {
 					
 					cuPMIntersectionPoint *pPMPoint = pIPointGridBox->getData2( rayCellInfo );
 
 					/** 
-					 *	photon grid ���� ray cell �ֺ��� 27 neighbor cell �� �����Ͱ� �ִ�����
-					 *	üũ�ؼ� ���� ray cell �� ã�ƾ��� �ֺ� cell �� photon �� ���� offset �� count ��
-					 *	index ������ �����Ѵ�.
+					 *	photon grid 에서 ray cell 주변의 27 neighbor cell 에 데이터가 있는지를
+					 *	체크해서 현재 ray cell 이 찾아야할 주변 cell 의 photon 에 대한 offset 과 count 를
+					 *	index 정보로 저장한다.
 					 */
 					index = 0;
 
@@ -1217,8 +1217,8 @@ cuPhotonIndex* GPhotonMapRayTracer::makeIPointVsPhotonIndexData(
 }
 
 /**
- *	photon �����͸� �̿��ؼ� Photon Grid Box �� �����.
- *	pIntersectionPoints �������� isHit() �� �ƴѰ��� �����ؾ� �Ѵ�.
+ *	photon 데이터를 이용해서 Photon Grid Box 를 만든다.
+ *	pIntersectionPoints 정보에서 isHit() 가 아닌것은 제외해야 한다.
  */
 GGridBox<cuPhoton, char> *GPhotonMapRayTracer::makePhotonGridBox( cuPhoton *pPhotons, int size )
 {
@@ -1228,8 +1228,8 @@ GGridBox<cuPhoton, char> *GPhotonMapRayTracer::makePhotonGridBox( cuPhoton *pPho
 		( m_pScene->getKDTreeStructure()->getBoundingBox(), m_Option.m_fGridUnitLength, m_Option.m_fGridUnitLength, m_Option.m_fGridUnitLength );
 
 	/**
-	 *	�� Cell �� �� photon counting.
-	 *	cuPhoton �������� dir �� ��� 0.0f �ΰ��� ������ photon �̹Ƿ� ����.
+	 *	각 Cell 에 들어갈 photon counting.
+	 *	cuPhoton 정보에서 dir 이 모두 0.0f 인것은 쓰레기 photon 이므로 제외.
 	 */
 	for ( int i = 0; i < size; ++i ) {
 		if ( pPhotons[ i ].dir.x == 0.0f && 
@@ -1239,12 +1239,12 @@ GGridBox<cuPhoton, char> *GPhotonMapRayTracer::makePhotonGridBox( cuPhoton *pPho
 	}
 
 	/**
-	 *	Grid ������ �����ϱ� ���ؼ� �޸� allocation.
+	 *	Grid 정보를 구성하기 위해서 메모리 allocation.
 	 */
 	pPhotonGridBox->allocate();
 
 	/**
-	 *	�� Cell �� photon insert.
+	 *	각 Cell 에 photon insert.
 	 */
 	for ( int i = 0; i < size; ++i ) {
 

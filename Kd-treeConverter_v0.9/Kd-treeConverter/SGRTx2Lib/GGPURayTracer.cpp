@@ -26,7 +26,7 @@ void GGPURayTracer::uninitialize()
 }
 
 /**
- *	scene ������ �籸���ؾ��Ҷ� �ʱ�ȭ�Ѵ�.
+ *	scene 정보를 재구성해야할때 초기화한다.
  */
 GError GGPURayTracer::initialize( GScene *pScene )
 {
@@ -63,7 +63,7 @@ GError GGPURayTracer::initialize( GScene *pScene )
 			return error; 
 
 		/**
-		 *	Light ���� ����. ������ �ʿ�����Ƿ� ����.
+		 *	Light 정보 세팅. 세팅후 필요없으므로 삭제.
 		 */
 		int lightCount = 0;
 		cuLight* pLight = GRenderCommon::makeCudaLightInfo( pScene, &lightCount, m_pCudaRenderPipeline );
@@ -74,13 +74,13 @@ GError GGPURayTracer::initialize( GScene *pScene )
 			return error;
 
 		/** 
-		 *	�� ���������, kdtree ������ �̷��� �ؼ� cuda �� �ѱ�. 
+		 *	좀 어색하지만, kdtree 정보를 이렇게 해서 cuda 로 넘김. 
 		 */ 
 		error = pScene->getKDTreeStructure()->makeCudaRenderStructureInfo( m_pCudaRenderPipeline );
 		if ( error != errorNo )
 			return error;
 
-		/** blooming ȿ���� �����ϱ⸦ ���Ѵٸ� �ʱ�ȭ �ص�.*/
+		/** blooming 효과를 적용하기를 원한다면 초기화 해둠.*/
 		error = m_pCudaRenderPipeline->initBloomingFilter( m_pScene->getBloomingRadius(),
 														   m_pScene->getBloomingWeight() );
 		if ( error != errorNo )
@@ -90,7 +90,7 @@ GError GGPURayTracer::initialize( GScene *pScene )
 	}
 
 	/**
-	 *	���� Renderer �� ó���� Scene �� ����Ѵ�.
+	 *	현재 Renderer 가 처리한 Scene 을 기억한다.
 	 */
 	m_iOldSceneNumber = pScene->getSceneNumber();
 	m_iSceneTimestamp = pScene->getGeometryChangeTimestamp();
@@ -104,8 +104,8 @@ GError GGPURayTracer::initialize( GScene *pScene )
 //	GError error;
 //
 //	/** 
-//	 *	Scene �� ���� geometry ���¿��� ���Ѱ� �ִ��� üũ�ؼ� �ִٸ�
-//	 *	SpatialStructure �� �籸���Ѵ�.
+//	 *	Scene 이 이전 geometry 상태에서 변한게 있는지 체크해서 있다면
+//	 *	SpatialStructure 를 재구성한다.
 //	 */
 //	error = initialize( pScene );
 //	if ( error != errorNo ) {
@@ -113,7 +113,7 @@ GError GGPURayTracer::initialize( GScene *pScene )
 //		return error;
 //	}
 //
-//	/** rendering option ���� */
+//	/** rendering option 세팅 */
 //	m_pCudaRenderPipeline->renderingOption( m_bEnableShadow, pScene->isUseTexture() );
 //
 //	GImageBuffer *pImageBuffer = pScene->getImageBuffer();
@@ -126,7 +126,7 @@ GError GGPURayTracer::initialize( GScene *pScene )
 //	timer1.start();
 //
 //	/**
-//	 *	cuda ���� intersection point �� ����Ʈ ������ �ʱ�ȭ �Ѵ�.
+//	 *	cuda 안의 intersection point 를 디폴트 값으로 초기화 한다.
 //	 */
 //	error = m_pCudaRenderPipeline->clearIntersectionResult();
 //	if ( error != errorNo ) {
@@ -147,8 +147,8 @@ GError GGPURayTracer::initialize( GScene *pScene )
 //	}
 //
 //	/**
-//	 *	reflection �̳� refraction �� ������ �ִ� max depth ����
-//	 *	�����Ѵ�.
+//	 *	reflection 이나 refraction 이 있으면 최대 max depth 까지
+//	 *	추적한다.
 //	 */
 //	do {
 //		error = m_pCudaRenderPipeline->doRayCasting( 0, generatedRayCount, 
@@ -171,7 +171,7 @@ GError GGPURayTracer::initialize( GScene *pScene )
 //		return errorNo;
 //	}
 //
-//	/** blooming ȿ���� �����ϱ⸦ ���Ѵٸ� */
+//	/** blooming 효과를 적용하기를 원한다면 */
 //	GTimer bloomingtimer;
 //	bloomingtimer.start();
 //
@@ -201,8 +201,8 @@ GError GGPURayTracer::rendering( GScene *pScene, bool isDebug )
 	GError error;
 
 	/** 
-	 *	Scene �� ���� geometry ���¿��� ���Ѱ� �ִ��� üũ�ؼ� �ִٸ�
-	 *	SpatialStructure �� �籸���Ѵ�.
+	 *	Scene 이 이전 geometry 상태에서 변한게 있는지 체크해서 있다면
+	 *	SpatialStructure 를 재구성한다.
 	 */
 	error = initialize( pScene );
 	if ( error != errorNo ) {
@@ -210,7 +210,7 @@ GError GGPURayTracer::rendering( GScene *pScene, bool isDebug )
 		return error;
 	}
 
-	/** rendering option ���� */
+	/** rendering option 세팅 */
 	cuScene cuSceneInfo;
 	cuSceneInfo.globalAmbient = make_float3( pScene->getGlobalAmbient().r, 
 											 pScene->getGlobalAmbient().g,
@@ -235,7 +235,7 @@ GError GGPURayTracer::rendering( GScene *pScene, bool isDebug )
 	int atLeastOneRay = 0;
 
 	/**
-	 *	cuda ���� intersection point �� ����Ʈ ������ �ʱ�ȭ �Ѵ�.
+	 *	cuda 안의 intersection point 를 디폴트 값으로 초기화 한다.
 	 */
 	error = m_pCudaRenderPipeline->clearIntersectionResult();
 	if ( error != errorNo ) {
@@ -263,8 +263,8 @@ GError GGPURayTracer::rendering( GScene *pScene, bool isDebug )
 			}
 
 			/**
-			 *	reflection �̳� refraction �� ������ �ִ� max depth ����
-			 *	�����Ѵ�.
+			 *	reflection 이나 refraction 이 있으면 최대 max depth 까지
+			 *	추적한다.
 			 */
 			depth = 0;
 			atLeastOneRay = 0;
@@ -293,7 +293,7 @@ GError GGPURayTracer::rendering( GScene *pScene, bool isDebug )
 		return errorNo;
 	}
 
-	/** blooming ȿ���� �����ϱ⸦ ���Ѵٸ� */
+	/** blooming 효과를 적용하기를 원한다면 */
 	GTimer bloomingtimer;
 	bloomingtimer.start();
 
@@ -359,7 +359,7 @@ cuCamera GGPURayTracer::calCameraInfo( GScene *pScene )
 }
 
 /**
- *	CUDA ���� Primary ray �� ������Ų��.
+ *	CUDA 에서 Primary ray 를 생성시킨다.
  */
 GError GGPURayTracer::makePrimaryRaySet( GScene *pScene, int *generatedCount, int currentSampleX, int currentSampleY )
 {
@@ -391,7 +391,7 @@ GError GGPURayTracer::makePrimaryRaySet( GScene *pScene, int *generatedCount, in
 
 
 /**
- *	CUDA ���� Primary ray �� ������Ų��.
+ *	CUDA 에서 Primary ray 를 생성시킨다.
  */
 GError GGPURayTracer::makePrimaryRaySet_BlockGrouping( GScene *pScene, int *generatedCount, int currentSampleX, int currentSampleY )
 {
@@ -423,16 +423,16 @@ GError GGPURayTracer::makePrimaryRaySet_BlockGrouping( GScene *pScene, int *gene
 }
 
 /**
- *	���� scene ������ ������� ray index �� �ش��ϴ� ray ��
- *	image ���� �� pixel �� �ش������� ����Ѵ�.
+ *	현재 scene 정보를 기반으로 ray index 에 해당하는 ray 가
+ *	image 상의 몇 pixel 에 해당할지를 계산한다.
  */
 int GGPURayTracer::toImageIndex( GScene *pScene, int rayIndex, int *x, int *y )
 {
-	/** ray index �� x,y ��ǥ�� ��ȯ */
+	/** ray index 를 x,y 좌표로 변환 */
 	(*x) = rayIndex % ( pScene->getResolution().x );
 	(*y) = rayIndex / ( pScene->getResolution().x );
 	
-	/** �ٽ� image index �� ��ȯ */
+	/** 다시 image index 로 변환 */
 	return (*y) * pScene->getResolution().x + (*x);
 }
 

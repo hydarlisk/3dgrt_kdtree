@@ -10,7 +10,7 @@ typedef struct _cell_info {
 } CellInfo;
 
 /**
- *	Grid ÇüÅÂ·Î µ¥ÀÌÅÍ¸¦ °ü¸®ÇÏ´Â Å¬·¡½º.
+ *	Grid í˜•íƒœë¡œ ë°ì´í„°ë¥¼ ê´€ë¦¬í•˜ëŠ” í´ëž˜ìŠ¤.
  *	
  *	by graphicsian.
  */
@@ -26,7 +26,7 @@ public:
 	GVector m_BoundMin, m_BoundMax;
 
 	/**
-	 *	grid ÀÇ °¢ cell À» À§ÇÑ Á¤º¸.
+	 *	grid ì˜ ê° cell ì„ ìœ„í•œ ì •ë³´.
 	 */
 	CellInfo *m_pCellInfo;
 
@@ -42,7 +42,7 @@ public:
 public:
 	GGridBox( GBoundingBox bbox, float xunit, float yunit, float zunit ) {
 	
-		/** ¼öÄ¡Àû ¿ÀÂ÷°¡ ÀÖÀ»¼ö ÀÖ±â ¶§¹®¿¡ bounding box ¸¦ ¾à°£ ºÒ¸°´Ù. */
+		/** ìˆ˜ì¹˜ì  ì˜¤ì°¨ê°€ ìžˆì„ìˆ˜ ìžˆê¸° ë•Œë¬¸ì— bounding box ë¥¼ ì•½ê°„ ë¶ˆë¦°ë‹¤. */
 		m_BoundMin.x = bbox.m_Min.x - 0.001f;
 		m_BoundMin.y = bbox.m_Min.y - 0.001f;
 		m_BoundMin.z = bbox.m_Min.z - 0.001f;
@@ -75,7 +75,7 @@ public:
 	}
 	
 	/**
-	 *	Cell ¿¡ µé¾î°¥ data °³¼ö¸¦ °è»êÇÏ±â À§ÇÔ.
+	 *	Cell ì— ë“¤ì–´ê°ˆ data ê°œìˆ˜ë¥¼ ê³„ì‚°í•˜ê¸° ìœ„í•¨.
 	 */
 	inline void counting( float x, float y, float z ) {
 		
@@ -84,7 +84,7 @@ public:
 		int zIndex = (int) ( ( z - m_BoundMin.z ) / m_fZUnitLength );
 
 		/**
-		 *	grid ¾È¿¡ µé¾î°£ ÁÂÇ¥ÀÎÁö Ã¼Å©.
+		 *	grid ì•ˆì— ë“¤ì–´ê°„ ì¢Œí‘œì¸ì§€ ì²´í¬.
 		 */
 		if ( xIndex >= 0 && xIndex < m_iCellXCount &&
 			 yIndex >= 0 && yIndex < m_iCellYCount &&
@@ -98,7 +98,7 @@ public:
 	}
 
 	/**
-	 *	µ¥ÀÌÅÍ¸¦ Cell ¿¡ Ãß°¡.
+	 *	ë°ì´í„°ë¥¼ Cell ì— ì¶”ê°€.
 	 */
 	inline void insertData( float x, float y, float z, T *data, T2 *data2 ) {
 		
@@ -139,9 +139,9 @@ public:
 	}
 
 	/**
-	 *	°¢ Cell ¿¡ µé¾î°¥ data ¸¦ À§ÇÑ ÀüÃ¼ linear ÇÑ memory ¸¦ ÇÒ´çÇÏ°í,
-	 *	°¢ Cell ¿¡ µé¾î°¥ data °¡ memory »óÀÇ ¾îµð¿¡ Á¸ÀçÇØ¾ß ÇÏ´ÂÁö
-	 *	offset À» °è»êÇÑ´Ù.
+	 *	ê° Cell ì— ë“¤ì–´ê°ˆ data ë¥¼ ìœ„í•œ ì „ì²´ linear í•œ memory ë¥¼ í• ë‹¹í•˜ê³ ,
+	 *	ê° Cell ì— ë“¤ì–´ê°ˆ data ê°€ memory ìƒì˜ ì–´ë””ì— ì¡´ìž¬í•´ì•¼ í•˜ëŠ”ì§€
+	 *	offset ì„ ê³„ì‚°í•œë‹¤.
 	 */
 	void allocate() {
 

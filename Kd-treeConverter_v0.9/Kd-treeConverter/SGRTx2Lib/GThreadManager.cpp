@@ -2,7 +2,7 @@
 #include "GThread.h"
 
 /**
- *	GThread Manager °¡ »ç¿ëÇÒ Àü¿ªº¯¼öµé.
+ *	GThread Manager ê°€ ì‚¬ìš©í•  ì „ì—­ë³€ìˆ˜ë“¤.
  */
 DWORD GThreadManager::g_dwTlsIndex = 0;
 GThreadContext *GThreadManager::g_pMainThreadContext = NULL;
@@ -10,29 +10,29 @@ vector<GThread*> GThreadManager::g_vecSgrtThreadPool;
 int GThreadManager::m_iCurrentWorkers = 0;
 
 /**
- *	»ı¼ºÀÚ
+ *	ìƒì„±ì
  */
 GThreadManager::GThreadManager(void)
 {
 }
 
 /**
- *	¼Ò¸êÀÚ
+ *	ì†Œë©¸ì
  */
 GThreadManager::~GThreadManager(void)
 {
 }
 
 /**
- *	ÇÁ·Î±×·¥¿¡¼­ ÇÊ¿äÇÑ ¾²·¹µåµéÀ» ¹Ì¸® »ı¼ºÇØ µĞ´Ù.
- *	 ¶ÇÇÑ »ı¼ºµÉ ¾²·¹µåµéÀÇ ThreadContext ¸¦ ÀúÀåÇÒ TLS °ø°£À» ÃÊ±âÈ­ ÇÑ´Ù.
- *	±×¸®°í µğÆúÆ®·Î ÀÌ¹Ì Main Thread °¡ Process ¿¡ Á¸ÀçÇÏ¹Ç·Î, 
- *	ÀÏ°ü¼ºÀ» ¸ÂÃß±â À§ÇØ¼­ Main Thread ¸¦ À§ÇÑ ThreadContext °ø°£µµ »ı¼ºÇØµĞ´Ù.
+ *	í”„ë¡œê·¸ë¨ì—ì„œ í•„ìš”í•œ ì“°ë ˆë“œë“¤ì„ ë¯¸ë¦¬ ìƒì„±í•´ ë‘”ë‹¤.
+ *	 ë˜í•œ ìƒì„±ë  ì“°ë ˆë“œë“¤ì˜ ThreadContext ë¥¼ ì €ì¥í•  TLS ê³µê°„ì„ ì´ˆê¸°í™” í•œë‹¤.
+ *	ê·¸ë¦¬ê³  ë””í´íŠ¸ë¡œ ì´ë¯¸ Main Thread ê°€ Process ì— ì¡´ì¬í•˜ë¯€ë¡œ, 
+ *	ì¼ê´€ì„±ì„ ë§ì¶”ê¸° ìœ„í•´ì„œ Main Thread ë¥¼ ìœ„í•œ ThreadContext ê³µê°„ë„ ìƒì„±í•´ë‘”ë‹¤.
  */
 bool GThreadManager::initThreadManager( int maxThread )
 {
 	/**
-	 *	ÇÊ¿äÇÑ ¾²·¹µå¸¦ »ı¼ºÇÏ±â Àü¿¡ ¹İµå½Ã ÀÌ ºÎºĞÀÌ ¸ÕÀú ¼öÇàµÇ¾î¾ß ÇÑ´Ù.
+	 *	í•„ìš”í•œ ì“°ë ˆë“œë¥¼ ìƒì„±í•˜ê¸° ì „ì— ë°˜ë“œì‹œ ì´ ë¶€ë¶„ì´ ë¨¼ì € ìˆ˜í–‰ë˜ì–´ì•¼ í•œë‹¤.
 	 */
 	if ( ( g_dwTlsIndex = TlsAlloc() ) == TLS_OUT_OF_INDEXES ) {
 	  printf( "ThreadManager init error ( fail tls alloc )\n" );
@@ -42,14 +42,14 @@ bool GThreadManager::initThreadManager( int maxThread )
 	printf( "ThreadManager init. \n" );
 	
 	/**
-	 *	Main Thread ¸¦ À§ÇÑ ThreadContext ÇÒ´ç. ÀÌ ÇÔ¼ö¸¦ È£ÃâÇÏ´Â ¾²·¹µå´Â
-	 *	¸ŞÀÎ ¾²·¹µåÀÌ´Ù.
+	 *	Main Thread ë¥¼ ìœ„í•œ ThreadContext í• ë‹¹. ì´ í•¨ìˆ˜ë¥¼ í˜¸ì¶œí•˜ëŠ” ì“°ë ˆë“œëŠ”
+	 *	ë©”ì¸ ì“°ë ˆë“œì´ë‹¤.
 	 */
 	g_pMainThreadContext = new GThreadContext( ::GetCurrentThreadId() );
 	makeThreadContext( g_pMainThreadContext );
 
 	/**
-	 *	ÇÁ·Î±×·¥ ¿¡¼­ ÇÊ¿äÇÑ ¾²·¹µå¸¦ ¹Ì¸® »ı¼ºÇØ µĞ´Ù.
+	 *	í”„ë¡œê·¸ë¨ ì—ì„œ í•„ìš”í•œ ì“°ë ˆë“œë¥¼ ë¯¸ë¦¬ ìƒì„±í•´ ë‘”ë‹¤.
 	 */
 	for ( int i = 0; i < maxThread; ++i ) {
 		GThread *pThread = new GThread();
@@ -61,14 +61,14 @@ bool GThreadManager::initThreadManager( int maxThread )
 }
 
 /**
- *	TLS ¸¦ ÇØÁ¦ÇÑ´Ù.
- *	Main Thread ¸¦ À§ÇØ¼­ »ı¼ºÇØ ³õÀº °ø°£µµ Á¦°ÅÇÑ´Ù.
+ *	TLS ë¥¼ í•´ì œí•œë‹¤.
+ *	Main Thread ë¥¼ ìœ„í•´ì„œ ìƒì„±í•´ ë†“ì€ ê³µê°„ë„ ì œê±°í•œë‹¤.
  */
 void GThreadManager::uninitThreadManager()
 {
 	/**
-	 *	GThread µé¿¡°Ô Á¾·á¸í·ÉÀ» ³»¸®°í, °¢ thread °¡ ¿ÏÀüÈ÷
-	 *	Á¾·áµÉ¶§±îÁö ´ë±âÇÑ´Ù.
+	 *	GThread ë“¤ì—ê²Œ ì¢…ë£Œëª…ë ¹ì„ ë‚´ë¦¬ê³ , ê° thread ê°€ ì™„ì „íˆ
+	 *	ì¢…ë£Œë ë•Œê¹Œì§€ ëŒ€ê¸°í•œë‹¤.
 	 */
 	printf( "wait for all thread termination.\n" );
 	for ( int i = 0; i < (int)g_vecSgrtThreadPool.size(); ++i ) {
@@ -81,15 +81,15 @@ void GThreadManager::uninitThreadManager()
 	g_vecSgrtThreadPool.clear();
 
 	/**
-	 *	ÀÌ ÇÔ¼ö¸¦ È£ÃâÇÏ´Â ¾²·¹µå´Â	¸ŞÀÎ ¾²·¹µåÀÌ¹Ç·Î ¾Æ·¡ freeThreadContext ´Â
-	 *	È£ÃâÇÏ¸é ¸ŞÀÎ¾²·¹µåÀÇ ThreadContext °¡ Á¦°ÅµÉ °ÍÀÌ´Ù.
+	 *	ì´ í•¨ìˆ˜ë¥¼ í˜¸ì¶œí•˜ëŠ” ì“°ë ˆë“œëŠ”	ë©”ì¸ ì“°ë ˆë“œì´ë¯€ë¡œ ì•„ë˜ freeThreadContext ëŠ”
+	 *	í˜¸ì¶œí•˜ë©´ ë©”ì¸ì“°ë ˆë“œì˜ ThreadContext ê°€ ì œê±°ë  ê²ƒì´ë‹¤.
 	 */
 	freeThreadContext();
 
 	delete g_pMainThreadContext;
 
 	/** 
-	 *	ÀÌºÎºĞÀº Ç×»ó °¡Àå ¸¶Áö¸·¿¡ È£ÃâµÇ¾î¾ß ÇÑ´Ù. 
+	 *	ì´ë¶€ë¶„ì€ í•­ìƒ ê°€ì¥ ë§ˆì§€ë§‰ì— í˜¸ì¶œë˜ì–´ì•¼ í•œë‹¤. 
 	 */
 	if ( g_dwTlsIndex != 0 )
 		::TlsFree( g_dwTlsIndex );
@@ -97,9 +97,9 @@ void GThreadManager::uninitThreadManager()
 }
 
 /**
- *	TLS ¿¡¼­ ÇöÀç ¾²·¹µå¿Í °ü·ÃµÈ GThreadContext °´Ã¼ Æ÷ÀÎÅÍ¸¦
- *	¸®ÅÏÇÑ´Ù.( ÀÌ ÇÔ¼ö¸¦ È£ÃâÇÑ ¾²·¹µåÀÇ ThreadContext ¸®ÅÏ )
- *	³»ºÎÀûÀ¸·Î µ¿±âÈ­ µÉ°ÍÀÌ¹Ç·Î µû·Î µ¿±âÈ­ ÇÏÁö ¾Ê¾Æµµ µÈ´Ù.
+ *	TLS ì—ì„œ í˜„ì¬ ì“°ë ˆë“œì™€ ê´€ë ¨ëœ GThreadContext ê°ì²´ í¬ì¸í„°ë¥¼
+ *	ë¦¬í„´í•œë‹¤.( ì´ í•¨ìˆ˜ë¥¼ í˜¸ì¶œí•œ ì“°ë ˆë“œì˜ ThreadContext ë¦¬í„´ )
+ *	ë‚´ë¶€ì ìœ¼ë¡œ ë™ê¸°í™” ë ê²ƒì´ë¯€ë¡œ ë”°ë¡œ ë™ê¸°í™” í•˜ì§€ ì•Šì•„ë„ ëœë‹¤.
  */
 GThreadContext* GThreadManager::getThreadContext()
 {
@@ -113,9 +113,9 @@ GThreadContext* GThreadManager::getThreadContext()
 }
 
 /**
- *	ÇöÀç ¾²·¹µåÀÇ GThreadContext Æ÷ÀÎÅÍ¸¦ 
- *	TLS ¿¡ ÀúÀåÇÏ±â À§ÇØ¼­ °ø°£À» »ı¼ºÇÑ´Ù.
- *	( ÀÌ ÇÔ¼ö¸¦ È£ÃâÇÑ ¾²·¹µåÀÇ ThreadContext µî·Ï )
+ *	í˜„ì¬ ì“°ë ˆë“œì˜ GThreadContext í¬ì¸í„°ë¥¼ 
+ *	TLS ì— ì €ì¥í•˜ê¸° ìœ„í•´ì„œ ê³µê°„ì„ ìƒì„±í•œë‹¤.
+ *	( ì´ í•¨ìˆ˜ë¥¼ í˜¸ì¶œí•œ ì“°ë ˆë“œì˜ ThreadContext ë“±ë¡ )
  */
 bool GThreadManager::makeThreadContext( GThreadContext *pThread )
 {
@@ -127,8 +127,8 @@ bool GThreadManager::makeThreadContext( GThreadContext *pThread )
 }
 
 /**
- *	ÇöÀç ¾²·¹µå¸¦ À§ÇØ¼­ ÇÒ´çÇÑ Context °ø°£À» ÇØÁ¦ÇÑ´Ù.
- *  ( ÀÌ ÇÔ¼ö¸¦ È£ÃâÇÑ ¾²·¹µåÀÇ ThreadContext Á¦°Å )
+ *	í˜„ì¬ ì“°ë ˆë“œë¥¼ ìœ„í•´ì„œ í• ë‹¹í•œ Context ê³µê°„ì„ í•´ì œí•œë‹¤.
+ *  ( ì´ í•¨ìˆ˜ë¥¼ í˜¸ì¶œí•œ ì“°ë ˆë“œì˜ ThreadContext ì œê±° )
  */
 void GThreadManager::freeThreadContext()
 {
@@ -139,11 +139,11 @@ void GThreadManager::freeThreadContext()
 }
 
 /**
- *	¾²·¹µå·Î ±¸µ¿½ÃÅ³ ÀÛ¾÷µéÀ» ¼öÇà½ÃÅ²´Ù.
- *	ÀÌ ÇÔ¼ö´Â ÀÌÀü¿¡ ±¸µ¿½ÃÅ² ¾²·¹µå ÀÛ¾÷µéÀÌ ¿Ï·áµÇ¾úÀ½À» °¡Á¤ÇÑ´Ù.
- *	 µû¶ó¼­, ÀÌ ÇÔ¼ö¸¦ È£ÃâÇÏ±â Àü¿¡ ±âÁ¸ÀÇ ÀÛ¾÷À» ¿Ïº®È÷ Á¾·á½ÃÄÑ¾ß ÇÑ´Ù.
- *	ÀÌ¸¦ À§ÇØ¼­ ¹İµå½Ã waitThreadWork ¸¦ È£ÃâÇØ¼­ ¾²·¹µå ÀÛ¾÷ÀÌ ´Ù ³¡³¯¶§±îÁö 
- *	±â´Ù·Á¾ß ÇÑ´Ù. Áï ´ÙÀ½°ú °°Àº ¼öÇà¼ø¼­¸¦ °¡Á®¾ßÇÑ´Ù.
+ *	ì“°ë ˆë“œë¡œ êµ¬ë™ì‹œí‚¬ ì‘ì—…ë“¤ì„ ìˆ˜í–‰ì‹œí‚¨ë‹¤.
+ *	ì´ í•¨ìˆ˜ëŠ” ì´ì „ì— êµ¬ë™ì‹œí‚¨ ì“°ë ˆë“œ ì‘ì—…ë“¤ì´ ì™„ë£Œë˜ì—ˆìŒì„ ê°€ì •í•œë‹¤.
+ *	 ë”°ë¼ì„œ, ì´ í•¨ìˆ˜ë¥¼ í˜¸ì¶œí•˜ê¸° ì „ì— ê¸°ì¡´ì˜ ì‘ì—…ì„ ì™„ë²½íˆ ì¢…ë£Œì‹œì¼œì•¼ í•œë‹¤.
+ *	ì´ë¥¼ ìœ„í•´ì„œ ë°˜ë“œì‹œ waitThreadWork ë¥¼ í˜¸ì¶œí•´ì„œ ì“°ë ˆë“œ ì‘ì—…ì´ ë‹¤ ëë‚ ë•Œê¹Œì§€ 
+ *	ê¸°ë‹¤ë ¤ì•¼ í•œë‹¤. ì¦‰ ë‹¤ìŒê³¼ ê°™ì€ ìˆ˜í–‰ìˆœì„œë¥¼ ê°€ì ¸ì•¼í•œë‹¤.
  *
  *	startTheadWork( irradianceMapWork, 5 );
  *	waitThreadWork();
@@ -155,16 +155,16 @@ void GThreadManager::freeThreadContext()
  *	waitThreadWork();
  *
  *
- *	@param pWork ¾²·¹µå·Î ±¸µ¿½ÃÅ³ ÀÛ¾÷
- *	@param threadCount ¾²·¹µå °¹¼ö. ( threadPool ¿¡ ÀÖ´Â ¾²·¹µå °¹¼ö°¡ ÃÖ´ë )
+ *	@param pWork ì“°ë ˆë“œë¡œ êµ¬ë™ì‹œí‚¬ ì‘ì—…
+ *	@param threadCount ì“°ë ˆë“œ ê°¯ìˆ˜. ( threadPool ì— ìˆëŠ” ì“°ë ˆë“œ ê°¯ìˆ˜ê°€ ìµœëŒ€ )
  *
- *	@return ½ÇÁ¦ ±¸µ¿µÈ ¾²·¹µå °¹¼ö.
+ *	@return ì‹¤ì œ êµ¬ë™ëœ ì“°ë ˆë“œ ê°¯ìˆ˜.
  */
 int GThreadManager::startThreadWork( GThreadWork *pWork, int threadCount )
 {
 	/**
-	 *	threadCount( ÃÖ´ëthreadpool°¹¼ö ) ¸¸Å­ 
-	 *	¾²·¹µå ÀÛ¾÷À» ¼öÇà½ÃÅ²´Ù.
+	 *	threadCount( ìµœëŒ€threadpoolê°¯ìˆ˜ ) ë§Œí¼ 
+	 *	ì“°ë ˆë“œ ì‘ì—…ì„ ìˆ˜í–‰ì‹œí‚¨ë‹¤.
 	 */
 	m_iCurrentWorkers = 0;
 	for ( int i = 0; i < threadCount && i < (int) g_vecSgrtThreadPool.size(); ++i ) {
@@ -178,7 +178,7 @@ int GThreadManager::startThreadWork( GThreadWork *pWork, int threadCount )
 }
 
 /**
- *	¾²·¹µåµé¿¡°Ô ¼öÇà½ÃÅ² ¸ğµç ÀÛ¾÷ÀÌ Á¾·áµÉ¶§±îÁö ±â´Ù¸°´Ù.
+ *	ì“°ë ˆë“œë“¤ì—ê²Œ ìˆ˜í–‰ì‹œí‚¨ ëª¨ë“  ì‘ì—…ì´ ì¢…ë£Œë ë•Œê¹Œì§€ ê¸°ë‹¤ë¦°ë‹¤.
  */
 void GThreadManager::waitThreadWork()
 {
@@ -189,7 +189,7 @@ void GThreadManager::waitThreadWork()
 }
 
 /**
- *	ÃÖ´ë ¾²·¹µå °¹¼ö¸¦ ¹İÈ¯ÇÑ´Ù.
+ *	ìµœëŒ€ ì“°ë ˆë“œ ê°¯ìˆ˜ë¥¼ ë°˜í™˜í•œë‹¤.
  */
 int GThreadManager::getMaxThreadCount()
 {
@@ -197,7 +197,7 @@ int GThreadManager::getMaxThreadCount()
 }
 
 /**
- *	ÃÖ´ë ¾²·¹µå °¹¼ö¸¦ ¹İÈ¯ÇÑ´Ù.
+ *	ìµœëŒ€ ì“°ë ˆë“œ ê°¯ìˆ˜ë¥¼ ë°˜í™˜í•œë‹¤.
  */
 int GThreadManager::getCurrentWorkers()
 {

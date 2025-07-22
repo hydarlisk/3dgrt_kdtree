@@ -1,8 +1,8 @@
 //--------------------------------------------------------------------------//
 //																			//
-//	�������� ���� Type ����													//
+//	여러가지 변수 Type 선언													//
 //																			//
-//	Copyright (c) 2005  ������	( sonagi21@naver.com )						//
+//	Copyright (c) 2005  진봉준	( sonagi21@naver.com )						//
 //																			//
 //--------------------------------------------------------------------------//
 
@@ -14,10 +14,12 @@
 #include <float.h>
 
 /**
- *	�����쿡���� Ŭ����Lib �� ����ϱ� ���ؼ�.
+ *	윈도우에서는 클래스Lib 를 사용하기 위해서.
  */
 #ifdef WIN32
+	#define _SAL_VERSION 0
 	#include <windows.h>
+	#include <sal.h>
 	#define FILE_SEPARATOR	'\\'
 #else
 	#define FILE_SEPARATOR	'/'

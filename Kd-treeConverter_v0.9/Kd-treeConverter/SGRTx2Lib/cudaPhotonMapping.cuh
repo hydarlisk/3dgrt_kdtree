@@ -2,26 +2,26 @@
 #define _CUDAPHOTONMAPPING_H_
 
 /**
- *	[°æ°í] 
+ *	[ê²½ê³ ] 
  *
- *	Àı´ë float3, float2 ¸¦ ÇÑ ±¸Á¶Ã¼³»¿¡¼­ È¥ÇÕÇØ¼­ »ç¿ëÇÏÁö ¸¶¶ó !! 
- *	float3 ´Â align ±ÔÄ¢ÀÌ Àû¿ëµÇÁö ¾ÊÀ¸³ª float2 ´Â 8bytes align ±ÔÄ¢ÀÌ »ç¿ëµÇ±â ¶§¹®¿¡
- *	NVCC ÄÄÆÄÀÌ·¯¿¡¼­´Â ¶æÇÏÁö ¾Ê´Â padding ÀÌ ÀÏ¾î³¯ ¼ö ÀÖ´Ù. cuda ³»ºÎ ÄÚµå¿¡ float2,4 ¼±¾ğÀÌ
- *	±×·¸°Ô µÇ¾î ÀÖÀ½.
+ *	ì ˆëŒ€ float3, float2 ë¥¼ í•œ êµ¬ì¡°ì²´ë‚´ì—ì„œ í˜¼í•©í•´ì„œ ì‚¬ìš©í•˜ì§€ ë§ˆë¼ !! 
+ *	float3 ëŠ” align ê·œì¹™ì´ ì ìš©ë˜ì§€ ì•Šìœ¼ë‚˜ float2 ëŠ” 8bytes align ê·œì¹™ì´ ì‚¬ìš©ë˜ê¸° ë•Œë¬¸ì—
+ *	NVCC ì»´íŒŒì´ëŸ¬ì—ì„œëŠ” ëœ»í•˜ì§€ ì•ŠëŠ” padding ì´ ì¼ì–´ë‚  ìˆ˜ ìˆë‹¤. cuda ë‚´ë¶€ ì½”ë“œì— float2,4 ì„ ì–¸ì´
+ *	ê·¸ë ‡ê²Œ ë˜ì–´ ìˆìŒ.
  *
- *	ÀÌ·¸°Ô ÄÄÆÄÀÏµÈ °Í°ú Visual C++ µî ½Ã½ºÅÛ ÄÄÆÄÀÏ·¯¿¡¼­ ÄÄÆÄÀÏµÈ ±¸Á¶Ã¼ÀÇ ÇüÅÂ°¡
- *	Æ²¸®¹Ç·Î »¶ÀÌ ³¯ ¼ö ÀÖ´Ù. !!!!!
+ *	ì´ë ‡ê²Œ ì»´íŒŒì¼ëœ ê²ƒê³¼ Visual C++ ë“± ì‹œìŠ¤í…œ ì»´íŒŒì¼ëŸ¬ì—ì„œ ì»´íŒŒì¼ëœ êµ¬ì¡°ì²´ì˜ í˜•íƒœê°€
+ *	í‹€ë¦¬ë¯€ë¡œ ë»‘ì´ ë‚  ìˆ˜ ìˆë‹¤. !!!!!
  *
- *	µû¶ó¼­ ¹İµå½Ã float3 ´Â float ÇÏ°í¸¸ ¾²°í float4 ´Â float2 ÇÏ°í¸¸ ¾²¶ó.
- *	Àı´ë float3, float2 ÀÌ³ª float4, float3 ¸¦ È¥¿ëÇØ¼­ ¾²Áö ¸¶¶ó.
- *	CUDA ³»¿¡¼­¸¸ »ç¿ëÇÏ´Â ±¸Á¶Ã¼´Â »ó°üÀÌ ¾øÀ¸³ª ½Ã½ºÅÛ ÄÄÆÄÀÏ·¯·Î ÄÄÆÄÀÏÇÑ ¼Ò½º¿Í
- *	°°ÀÌ È¥¿ëÇØ¼­ ±¸Á¶Ã¼¸¦ °øÀ¯ÇÏ´Â °æ¿ì´Â ¹İµå½Ã ÁöÄÑ¾ß ÇÑ´Ù. !!!!
- *  ÀÌ´Â int ³ª uint µî ´Ù¸¥ type µµ °°´Ù. ¸¸¾à ¾îÂ¿¼ö ¾øÀÌ bytes ¸¦ ¸ÂÃß¾î¾ß ÇÏ´Â °æ¿ì´Â
- *	±×³É float ¹è¿­À» ¾²¶ó. float[2], float[3] ÀÌ°Å´Â align ¿É¼ÇÀÌ ¾øÀ¸¹Ç·Î µÎ ÄÄÆÄÀÏ·¯°¡
- *	°°Àº Çü½ÄÀ¸·Î ±¸Á¶Ã¼¸¦ ¸¸µç´Ù.
+ *	ë”°ë¼ì„œ ë°˜ë“œì‹œ float3 ëŠ” float í•˜ê³ ë§Œ ì“°ê³  float4 ëŠ” float2 í•˜ê³ ë§Œ ì“°ë¼.
+ *	ì ˆëŒ€ float3, float2 ì´ë‚˜ float4, float3 ë¥¼ í˜¼ìš©í•´ì„œ ì“°ì§€ ë§ˆë¼.
+ *	CUDA ë‚´ì—ì„œë§Œ ì‚¬ìš©í•˜ëŠ” êµ¬ì¡°ì²´ëŠ” ìƒê´€ì´ ì—†ìœ¼ë‚˜ ì‹œìŠ¤í…œ ì»´íŒŒì¼ëŸ¬ë¡œ ì»´íŒŒì¼í•œ ì†ŒìŠ¤ì™€
+ *	ê°™ì´ í˜¼ìš©í•´ì„œ êµ¬ì¡°ì²´ë¥¼ ê³µìœ í•˜ëŠ” ê²½ìš°ëŠ” ë°˜ë“œì‹œ ì§€ì¼œì•¼ í•œë‹¤. !!!!
+ *  ì´ëŠ” int ë‚˜ uint ë“± ë‹¤ë¥¸ type ë„ ê°™ë‹¤. ë§Œì•½ ì–´ì©”ìˆ˜ ì—†ì´ bytes ë¥¼ ë§ì¶”ì–´ì•¼ í•˜ëŠ” ê²½ìš°ëŠ”
+ *	ê·¸ëƒ¥ float ë°°ì—´ì„ ì“°ë¼. float[2], float[3] ì´ê±°ëŠ” align ì˜µì…˜ì´ ì—†ìœ¼ë¯€ë¡œ ë‘ ì»´íŒŒì¼ëŸ¬ê°€
+ *	ê°™ì€ í˜•ì‹ìœ¼ë¡œ êµ¬ì¡°ì²´ë¥¼ ë§Œë“ ë‹¤.
  *
  *
- *	±×·¸Áö ¾Ê¾ÒÀ»¶§. ¹«¾ó»ó»óÇÏµç ±× ÀÌ»óÀÇ »ğÁúÀÌ °è¼ÓµÉ °ÍÀÌ´Ù.
+ *	ê·¸ë ‡ì§€ ì•Šì•˜ì„ë•Œ. ë¬´ì–¼ìƒìƒí•˜ë“  ê·¸ ì´ìƒì˜ ì‚½ì§ˆì´ ê³„ì†ë  ê²ƒì´ë‹¤.
  *	
  *	by graphicsian.
  */
@@ -31,9 +31,9 @@
 #include <cuda_runtime.h>
 
 /**
- *	Global Photon map. cuda ¿Í °øÀ¯.
- *	¹İµå½Ã element ¼ø¼­´Â ¾Æ·¡¿Í °°ÀÌ ÇØ¾ß ÇÏ°í,
- *	ÇÔºÎ·Î element ¸¦ Ãß°¡ÇÏÁö ¸»°Í!!
+ *	Global Photon map. cuda ì™€ ê³µìœ .
+ *	ë°˜ë“œì‹œ element ìˆœì„œëŠ” ì•„ë˜ì™€ ê°™ì´ í•´ì•¼ í•˜ê³ ,
+ *	í•¨ë¶€ë¡œ element ë¥¼ ì¶”ê°€í•˜ì§€ ë§ê²ƒ!!
  */
 typedef struct _cu_photon_ {
 	float3 pos;
@@ -43,28 +43,28 @@ typedef struct _cu_photon_ {
 } cuPhoton;
 
 /**
- *	Photon mapping À» À§ÇÑ intersection point Ãß°¡ Á¤º¸.
- *	intersection point ¿Í ¾î¶² photon µé°ú °è»êÀ» ÇØ¾ßÇÏ´ÂÁö Á¤º¸¿Í
+ *	Photon mapping ì„ ìœ„í•œ intersection point ì¶”ê°€ ì •ë³´.
+ *	intersection point ì™€ ì–´ë–¤ photon ë“¤ê³¼ ê³„ì‚°ì„ í•´ì•¼í•˜ëŠ”ì§€ ì •ë³´ì™€
  *	density area.
- *	( intersection point °¡ ¼ÓÇÑ grid ÁÖº¯ÀÇ photon µé )
+ *	( intersection point ê°€ ì†í•œ grid ì£¼ë³€ì˜ photon ë“¤ )
  */
 typedef struct _cuPMIntersectionPoint_ {
 
-	float area;						//	ÇöÀç intersection point ÀÇ density °è»êÀ» À§ÇÑ ¸éÀû.
-	int photonIndexOffset;			//	ÇöÀç intersection point ÁÖº¯ÀÇ cell À» °¡¸®Å³ index Á¤º¸¸¦ °¡Áö°í ÀÖ´Â ¸Ş¸ğ¸®ÀÇ offset
-	int photonIndexCount;			//	ÁÖº¯ÀÇ Å½»öÇØ¾ßÇÒ photon À» °¡¸®Å°´Â Á¤º¸´Â photonOffset + photonCount.
+	float area;						//	í˜„ì¬ intersection point ì˜ density ê³„ì‚°ì„ ìœ„í•œ ë©´ì .
+	int photonIndexOffset;			//	í˜„ì¬ intersection point ì£¼ë³€ì˜ cell ì„ ê°€ë¦¬í‚¬ index ì •ë³´ë¥¼ ê°€ì§€ê³  ìˆëŠ” ë©”ëª¨ë¦¬ì˜ offset
+	int photonIndexCount;			//	ì£¼ë³€ì˜ íƒìƒ‰í•´ì•¼í•  photon ì„ ê°€ë¦¬í‚¤ëŠ” ì •ë³´ëŠ” photonOffset + photonCount.
 
 	float power[3];
 	
-	/** µğ¹ö±ëÀ» À§ÇÑ µ¥ÀÌÅÍ */
-	int totalPhotonCount;			//	Áö±İ ray ¸¦ °è»êÇÒ¶§ Å½»öÇÑ ÃÑ photon °³¼ö.
-	int usedPhotonCount;			//	Áö±İ ray ¸¦ °è»êÇÒ¶§ ½ÇÁ¦·Î »ç¿ëµÈ photon °³¼ö.
+	/** ë””ë²„ê¹…ì„ ìœ„í•œ ë°ì´í„° */
+	int totalPhotonCount;			//	ì§€ê¸ˆ ray ë¥¼ ê³„ì‚°í• ë•Œ íƒìƒ‰í•œ ì´ photon ê°œìˆ˜.
+	int usedPhotonCount;			//	ì§€ê¸ˆ ray ë¥¼ ê³„ì‚°í• ë•Œ ì‹¤ì œë¡œ ì‚¬ìš©ëœ photon ê°œìˆ˜.
 
 } cuPMIntersectionPoint;
 
 /**
- *	photon info ÀÇ À§Ä¡¸¦ °¡¸®Å³ index. ray ¿¡¼­
- *	ÀÚ±â¿Í ¿¬°áµÈ photon À§Ä¡¸¦ °¡¸®Å³¶§ »ç¿ëÇÑ´Ù.
+ *	photon info ì˜ ìœ„ì¹˜ë¥¼ ê°€ë¦¬í‚¬ index. ray ì—ì„œ
+ *	ìê¸°ì™€ ì—°ê²°ëœ photon ìœ„ì¹˜ë¥¼ ê°€ë¦¬í‚¬ë•Œ ì‚¬ìš©í•œë‹¤.
  */
 typedef struct _photon_index_ {
 	int offset;
@@ -72,24 +72,24 @@ typedef struct _photon_index_ {
 } cuPhotonIndex;
 
 /**
- *	cuda ·Î photon mapping À» ¼öÇàÇÏ´Â °É Ã³¸®ÇÏ´Â
- *	Å¬·¡½º.
+ *	cuda ë¡œ photon mapping ì„ ìˆ˜í–‰í•˜ëŠ” ê±¸ ì²˜ë¦¬í•˜ëŠ”
+ *	í´ë˜ìŠ¤.
  *
  *	by graphicsian.
  */
 class cudaPhotonMapping {
 
 private:
-	int m_iMaxPhotonSize;								// photon ÀÇ ÃÖ´ë°³¼ö. pDevicePhoton memory ´Â ÀÌ Å©±â¸¸Å­ ÀâÈù´Ù.
+	int m_iMaxPhotonSize;								// photon ì˜ ìµœëŒ€ê°œìˆ˜. pDevicePhoton memory ëŠ” ì´ í¬ê¸°ë§Œí¼ ì¡íŒë‹¤.
 									
-	cuPhoton *m_pDevicePhotonMem;						// device ¿¡¼­ photon À» ÀúÀåÇÒ global memory.
-	int *m_pDeviceIntResult;							// device ·ÎºÎÅÍ int °á°ú 1°³¸¦ ¹ŞÀ» global memory.
+	cuPhoton *m_pDevicePhotonMem;						// device ì—ì„œ photon ì„ ì €ì¥í•  global memory.
+	int *m_pDeviceIntResult;							// device ë¡œë¶€í„° int ê²°ê³¼ 1ê°œë¥¼ ë°›ì„ global memory.
 	
-	/** gathering °ü·Ã */
+	/** gathering ê´€ë ¨ */
 	
-	cuIntersectionPoint *m_pDeviceIsectPointMem;		// intersection point ¿Í gathering µÈ photon Á¤º¸¸¦ À§ÇÑ ¸Ş¸ğ¸®.	
-	cuPMIntersectionPoint *m_pDevicePMIsectPointMem;	// intersection point ¿Í gathering µÈ photon Á¤º¸¸¦ À§ÇÑ ¸Ş¸ğ¸®.	
-	int m_iMaxIntersectionPoint;						// intersection point ¸¦ À§ÇÑ °ø°£.
+	cuIntersectionPoint *m_pDeviceIsectPointMem;		// intersection point ì™€ gathering ëœ photon ì •ë³´ë¥¼ ìœ„í•œ ë©”ëª¨ë¦¬.	
+	cuPMIntersectionPoint *m_pDevicePMIsectPointMem;	// intersection point ì™€ gathering ëœ photon ì •ë³´ë¥¼ ìœ„í•œ ë©”ëª¨ë¦¬.	
+	int m_iMaxIntersectionPoint;						// intersection point ë¥¼ ìœ„í•œ ê³µê°„.
 
 public:
 	cudaPhotonMapping();

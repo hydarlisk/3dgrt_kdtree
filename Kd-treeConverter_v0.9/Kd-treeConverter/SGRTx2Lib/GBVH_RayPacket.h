@@ -57,7 +57,7 @@ public:
 
 	// FOR RAY - AABB 
 	// An Efficient and Robust Ray-Box Intersection Algorithm
-	// ÇöÀç ¾È ¾²ÀÌ°í ÀÖÀ½.
+	// í˜„ì¬ ì•ˆ ì“°ì´ê³  ìˆìŒ.
 	int sign[3][PACKET_SIZE];
 	float inv_direction_x[PACKET_SIZE];
 	float inv_direction_y[PACKET_SIZE];
@@ -68,7 +68,7 @@ public:
 	GVector d[4]; // corner ray direction
 	GVector n[4]; // corner ray normal
 	GVector o;    // corner ray origin
-	float b[4]; // Æò¸é °Å¸®.
+	float b[4]; // í‰ë©´ ê±°ë¦¬.
 
 };
 

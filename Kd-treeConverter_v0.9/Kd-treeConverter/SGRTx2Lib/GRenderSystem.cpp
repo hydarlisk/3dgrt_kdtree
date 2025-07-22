@@ -45,11 +45,11 @@ GRenderSystem::~GRenderSystem(void)
 }
 
 /**
- *	System ÃÊ±âÈ­
+ *	System ì´ˆê¸°í™”
  */
 GError GRenderSystem::initialize( int argc, char ***argv )
 {
-	/** image Ã³¸®¸¦ À§ÇÑ freeimage library ÃÊ±âÈ­ */
+	/** image ì²˜ë¦¬ë¥¼ ìœ„í•œ freeimage library ì´ˆê¸°í™” */
 	FreeImage_Initialise();
 
 	GError error;
@@ -63,7 +63,7 @@ GError GRenderSystem::initialize( int argc, char ***argv )
 	MPI_Comm_rank( MPI_COMM_WORLD, &g_RenderSystem->m_iProcessID );
 	MPI_Comm_size( MPI_COMM_WORLD, &g_RenderSystem->m_iProcessCount );
 
-	// logger ¿¡ process id °¡ ³ª¿À°Ô ¼¼ÆÃÇØµÒ.
+	// logger ì— process id ê°€ ë‚˜ì˜¤ê²Œ ì„¸íŒ…í•´ë‘ .
 	GLogManager::setProcessID( g_RenderSystem->m_iProcessID );
 
 	if ( g_RenderSystem->m_iProcessID == JEDI_MPI_ROOT ) {
@@ -73,7 +73,7 @@ GError GRenderSystem::initialize( int argc, char ***argv )
 	}
 
 	//------------------------------------------------------------------
-	//	¾²·¹µå ±â´É ÃÊ±âÈ­
+	//	ì“°ë ˆë“œ ê¸°ëŠ¥ ì´ˆê¸°í™”
 	//------------------------------------------------------------------
 	if ( GThreadManager::getMaxThreadCount() == 0) {
 		if ( !GThreadManager::initThreadManager( MAX_THREADING ) ) {
@@ -87,15 +87,15 @@ GError GRenderSystem::initialize( int argc, char ***argv )
 
 void GRenderSystem::uninitialize()
 {
-	/** image Ã³¸®¸¦ À§ÇÑ freeimage library ÇØÁ¦ */
+	/** image ì²˜ë¦¬ë¥¼ ìœ„í•œ freeimage library í•´ì œ */
 	FreeImage_DeInitialise();
 
 	//------------------------------------------------------------------
-	//	¾²·¹µå ±â´É ÇØÁ¦
+	//	ì“°ë ˆë“œ ê¸°ëŠ¥ í•´ì œ
 	//------------------------------------------------------------------
 	GThreadManager::uninitThreadManager();
 
-	/** ¸ğµç node ¿¡°Ô Á¾·áÇÏ¶ó´Â ¸Ş½ÃÁö¸¦ º¸³½´Ù. */
+	/** ëª¨ë“  node ì—ê²Œ ì¢…ë£Œí•˜ë¼ëŠ” ë©”ì‹œì§€ë¥¼ ë³´ë‚¸ë‹¤. */
 	if ( g_RenderSystem->m_iProcessID == JEDI_MPI_ROOT ) {
 		g_RenderSystem->sendRootMessageToNode( JEDI_TERMINATION_MESSAGE );
 	}
@@ -149,7 +149,7 @@ bool GRenderSystem::isSlaveProcess()
 
 GError GRenderSystem::createRenderer( rendererType type, const GRenderOption *option )
 {
-	/** ÀÌÀü renderer °¡ ÀÖ´Ù¸é Á¦°ÅÇÑ´Ù. */
+	/** ì´ì „ renderer ê°€ ìˆë‹¤ë©´ ì œê±°í•œë‹¤. */
 	if ( m_pRenderer )
 		delete m_pRenderer;
 	m_pRenderer = NULL;
@@ -206,7 +206,7 @@ GError GRenderSystem::createRenderer( rendererType type, const GRenderOption *op
 }
 
 /**
- *	¸ğµç MPI NODE ¿¡°Ô Scene À» ·ÎµåÇÏ°Ô ¸í·ÉÀ» ³»¸°´Ù. ( master µµ Æ÷ÇÔ )
+ *	ëª¨ë“  MPI NODE ì—ê²Œ Scene ì„ ë¡œë“œí•˜ê²Œ ëª…ë ¹ì„ ë‚´ë¦°ë‹¤. ( master ë„ í¬í•¨ )
  */
 GError GRenderSystem::loadScene( const char *fileName )
 {
@@ -215,30 +215,30 @@ GError GRenderSystem::loadScene( const char *fileName )
 	char szFileName[ 512 ] = { 0x00, };
 
 	/**
-	 *	master ¸¦ Á¦¿ÜÇÑ ³ª¸ÓÁö node ´Â messageDispatch() ÇÔ¼ö¾È¿¡¼­
-	 *	¸Ş½ÃÁö°¡ ¿À±â¸¦ ±â´Ù¸®°í ÀÖÀ¸¹Ç·Î master °¡ scene À» ·ÎµåÇÏ¶ó´Â
-	 *	¸Ş½ÃÁö¸¦ º¸³»¼­ ÀÌ ÇÔ¼ö ¾ÈÀ¸·Î µé¾î¿À°Ô ÇÑ´Ù.
+	 *	master ë¥¼ ì œì™¸í•œ ë‚˜ë¨¸ì§€ node ëŠ” messageDispatch() í•¨ìˆ˜ì•ˆì—ì„œ
+	 *	ë©”ì‹œì§€ê°€ ì˜¤ê¸°ë¥¼ ê¸°ë‹¤ë¦¬ê³  ìˆìœ¼ë¯€ë¡œ master ê°€ scene ì„ ë¡œë“œí•˜ë¼ëŠ”
+	 *	ë©”ì‹œì§€ë¥¼ ë³´ë‚´ì„œ ì´ í•¨ìˆ˜ ì•ˆìœ¼ë¡œ ë“¤ì–´ì˜¤ê²Œ í•œë‹¤.
 	 */
 	if ( m_iProcessID == JEDI_MPI_ROOT ) {
 		sendRootMessageToNode( JEDI_SCENE_LOAD_MESSAGE );
 	}
 
 	/** 
-	 *	¸ğµç node °¡ ¿©±â·Î µé¾î¿Ã¶§±îÁö ´ë±â 
+	 *	ëª¨ë“  node ê°€ ì—¬ê¸°ë¡œ ë“¤ì–´ì˜¬ë•Œê¹Œì§€ ëŒ€ê¸° 
 	 */
 	MPI_Barrier( MPI_COMM_WORLD );
 
 	/**
-	 *	ÀÌÀü scene ÀÖ´Ù¸é Á¦°ÅÇÑ´Ù.
+	 *	ì´ì „ scene ìˆë‹¤ë©´ ì œê±°í•œë‹¤.
 	 */
 	if ( m_pScene )
 		delete m_pScene;
 	m_pScene = NULL;
 
 	/**
-	 *	ÇöÀç root °¡ °¢ node ¿¡°Ô scene À» ·ÎµåÇÏ¶ó´Â ¸í·ÉÀ» ³»¸°´Ù. file ÀÌ¸§À» Àü¼Û.
-	 *	root ´Â loadScene ÇÔ¼ö·Î µé¾î¿À´Â fileName ÀÎÀÚ¸¦ ±¸¼ºÇØ¼­ °¢ node ¿¡°Ô ¾Ë¸®°í
-	 *	°¢ node ´Â fileName Àº ¹«½ÃÇÏ°í root ·ÎºÎÅÍ ³Ñ¾î¿Â ÆÄÀÏÀÌ¸§À» »ç¿ëÇØ¾ß ÇÑ´Ù.
+	 *	í˜„ì¬ root ê°€ ê° node ì—ê²Œ scene ì„ ë¡œë“œí•˜ë¼ëŠ” ëª…ë ¹ì„ ë‚´ë¦°ë‹¤. file ì´ë¦„ì„ ì „ì†¡.
+	 *	root ëŠ” loadScene í•¨ìˆ˜ë¡œ ë“¤ì–´ì˜¤ëŠ” fileName ì¸ìë¥¼ êµ¬ì„±í•´ì„œ ê° node ì—ê²Œ ì•Œë¦¬ê³ 
+	 *	ê° node ëŠ” fileName ì€ ë¬´ì‹œí•˜ê³  root ë¡œë¶€í„° ë„˜ì–´ì˜¨ íŒŒì¼ì´ë¦„ì„ ì‚¬ìš©í•´ì•¼ í•œë‹¤.
 	 */
 	if ( m_iProcessID == JEDI_MPI_ROOT ) {
 		strncpy( szFileName, fileName, 510 );
@@ -250,7 +250,7 @@ GError GRenderSystem::loadScene( const char *fileName )
 		return error;
 
 	/**
-	 *	Scene À» Load ÇÑ´Ù. load ¿¡ ½ÇÆĞÇÏ¸é ºó scene À» »ı¼º.
+	 *	Scene ì„ Load í•œë‹¤. load ì— ì‹¤íŒ¨í•˜ë©´ ë¹ˆ scene ì„ ìƒì„±.
 	 */
 	GSceneManager sceneManager;
 	error = sceneManager.loadScene( szFileName, &m_pScene );
@@ -262,8 +262,8 @@ GError GRenderSystem::loadScene( const char *fileName )
 	}
 
 	/**
-	 *	root °¡ °¢ node ÀÇ °á°ú¸¦ ÃëÇÕÇØ¼­ ´Ù ¿¡·¯ ¾øÀÌ scene À» ·ÎµåÇß´ÂÁö¸¦ Ã¼Å©ÇÑ´Ù.
-	 *	°ª¿¡´Â error ¹øÈ£°¡ ±â·ÏµÇ¾î ÀÖÀ» °ÍÀÌ´Ù.
+	 *	root ê°€ ê° node ì˜ ê²°ê³¼ë¥¼ ì·¨í•©í•´ì„œ ë‹¤ ì—ëŸ¬ ì—†ì´ scene ì„ ë¡œë“œí–ˆëŠ”ì§€ë¥¼ ì²´í¬í•œë‹¤.
+	 *	ê°’ì—ëŠ” error ë²ˆí˜¸ê°€ ê¸°ë¡ë˜ì–´ ìˆì„ ê²ƒì´ë‹¤.
 	 */
 	int *pErrorList = (int*) malloc( sizeof( int ) * m_iProcessCount );
 	int errorData = error;
@@ -298,9 +298,9 @@ GError GRenderSystem::rendering()
 GError GRenderSystem::rendering( GCamera *pCamera )
 {
 	/** 
-	 *	ÇöÀç »ı¼ºµÈ renderer °¡ distributed È¯°æÀ» Áö¿øÇÑ´Ù¸é
-	 *	slave node µé°ú °°ÀÌ ¼öÇàÇÏµµ·Ï ÇÏ°í, ¾Æ´Ï¶ó¸é È¥ÀÚ¸¸ ¼öÇàÇÏ°Ô
-	 *	È¯°æÀ» ±¸¼ºÇÑ´Ù.
+	 *	í˜„ì¬ ìƒì„±ëœ renderer ê°€ distributed í™˜ê²½ì„ ì§€ì›í•œë‹¤ë©´
+	 *	slave node ë“¤ê³¼ ê°™ì´ ìˆ˜í–‰í•˜ë„ë¡ í•˜ê³ , ì•„ë‹ˆë¼ë©´ í˜¼ìë§Œ ìˆ˜í–‰í•˜ê²Œ
+	 *	í™˜ê²½ì„ êµ¬ì„±í•œë‹¤.
 	 */
 	if ( m_pRenderer == NULL )
 		return errorNoRenderer;
@@ -313,10 +313,10 @@ GError GRenderSystem::rendering( GCamera *pCamera )
 }
 
 /**
- *	·»´õ¸µÀ» ¼öÇà½ÃÅ²´Ù. master °¡ ÀÌÇÔ¼ö¾ÈÀ¸·Î µé¾î¿ÔÀ»¶§
- *	slave node µéÀº messageDispatch()
- *	ÇÔ¼ö¾È¿¡¼­ µ¹°í ÀÖÀ¸¹Ç·Î, master °¡ RENDERING ¸Ş½ÃÁö¸¦ º¸³»¼­
- *	ÀÌ ÇÔ¼ö ¾ÈÀ¸·Î µé¾î¿À°Ô ÇÑ´Ù. 
+ *	ë Œë”ë§ì„ ìˆ˜í–‰ì‹œí‚¨ë‹¤. master ê°€ ì´í•¨ìˆ˜ì•ˆìœ¼ë¡œ ë“¤ì–´ì™”ì„ë•Œ
+ *	slave node ë“¤ì€ messageDispatch()
+ *	í•¨ìˆ˜ì•ˆì—ì„œ ëŒê³  ìˆìœ¼ë¯€ë¡œ, master ê°€ RENDERING ë©”ì‹œì§€ë¥¼ ë³´ë‚´ì„œ
+ *	ì´ í•¨ìˆ˜ ì•ˆìœ¼ë¡œ ë“¤ì–´ì˜¤ê²Œ í•œë‹¤. 
  */
 GError GRenderSystem::distributedRendering( GCamera *pCamera )
 {
@@ -332,10 +332,10 @@ GError GRenderSystem::distributedRendering( GCamera *pCamera )
 		m_pScene->setRenderCamera( pCamera );
 
 	/**
-	 *	master ¸¦ Á¦¿ÜÇÑ ³ª¸ÓÁö node ´Â messageDispatch() ÇÔ¼ö¾È¿¡¼­
-	 *	¸Ş½ÃÁö°¡ ¿À±â¸¦ ±â´Ù¸®°í ÀÖÀ¸¹Ç·Î master °¡ scene À» ·ÎµåÇÏ¶ó´Â
-	 *	¸Ş½ÃÁö¸¦ º¸³»¼­ ÀÌ ÇÔ¼ö ¾ÈÀ¸·Î µé¾î¿À°Ô ÇÏ°í ¸ğµç node °¡ µé¾î¿Ã¶§±îÁö
-	 *	±â´Ù¸°´Ù.
+	 *	master ë¥¼ ì œì™¸í•œ ë‚˜ë¨¸ì§€ node ëŠ” messageDispatch() í•¨ìˆ˜ì•ˆì—ì„œ
+	 *	ë©”ì‹œì§€ê°€ ì˜¤ê¸°ë¥¼ ê¸°ë‹¤ë¦¬ê³  ìˆìœ¼ë¯€ë¡œ master ê°€ scene ì„ ë¡œë“œí•˜ë¼ëŠ”
+	 *	ë©”ì‹œì§€ë¥¼ ë³´ë‚´ì„œ ì´ í•¨ìˆ˜ ì•ˆìœ¼ë¡œ ë“¤ì–´ì˜¤ê²Œ í•˜ê³  ëª¨ë“  node ê°€ ë“¤ì–´ì˜¬ë•Œê¹Œì§€
+	 *	ê¸°ë‹¤ë¦°ë‹¤.
 	 */
 	if ( m_iProcessID == JEDI_MPI_ROOT ) {
 		sendRootMessageToNode( JEDI_SCENE_RENDERING_MESSAGE );
@@ -343,15 +343,15 @@ GError GRenderSystem::distributedRendering( GCamera *pCamera )
 	MPI_Barrier( MPI_COMM_WORLD );
 
 	/**
-	 *	·»´õ¸µÀ» ¼öÇàÇÏ±â À§ÇØ Scene ÀÇ ÃÊ±âÈ­ ÀÛ¾÷À» ¼öÇàÇÑ´Ù.
-	 *	Object ÀÇ matrix ¸¦ ¸ğµÎ Àû¿ëÇØ¼­ ¸ğµç µ¥ÀÌÅÍ¸¦ World ÁÂÇ¥°è·Î
-	 *	º¯È¯ÇØ µĞ´Ù. ³»ºÎÀûÀ¸·Î geometry ÀÇ º¯È­°¡ ÀÖÀ»¶§¸¸ ¼öÇàµÉ °ÍÀÌ´Ù.
+	 *	ë Œë”ë§ì„ ìˆ˜í–‰í•˜ê¸° ìœ„í•´ Scene ì˜ ì´ˆê¸°í™” ì‘ì—…ì„ ìˆ˜í–‰í•œë‹¤.
+	 *	Object ì˜ matrix ë¥¼ ëª¨ë‘ ì ìš©í•´ì„œ ëª¨ë“  ë°ì´í„°ë¥¼ World ì¢Œí‘œê³„ë¡œ
+	 *	ë³€í™˜í•´ ë‘”ë‹¤. ë‚´ë¶€ì ìœ¼ë¡œ geometry ì˜ ë³€í™”ê°€ ìˆì„ë•Œë§Œ ìˆ˜í–‰ë  ê²ƒì´ë‹¤.
 	 */
 	if ( ( error = m_pScene->convertRenderScene() ) != errorNo ) {
 		return error;
 	}
 
-	/** rendering option ¼³Á¤ */
+	/** rendering option ì„¤ì • */
 	m_pRenderer->enableShadow( m_pScene->isEnableShadow() );
 
 	return m_pRenderer->rendering( m_pScene, m_bDebugMode );
@@ -359,10 +359,10 @@ GError GRenderSystem::distributedRendering( GCamera *pCamera )
 }
 
 /**
- *	·»´õ¸µÀ» ¼öÇà½ÃÅ²´Ù. master °¡ ÀÌÇÔ¼ö¾ÈÀ¸·Î µé¾î¿ÔÀ»¶§
- *	slave node µéÀº messageDispatch()
- *	ÇÔ¼ö¾È¿¡¼­ µ¹°í ÀÖÀ¸¹Ç·Î, master °¡ RENDERING ¸Ş½ÃÁö¸¦ º¸³»¼­
- *	ÀÌ ÇÔ¼ö ¾ÈÀ¸·Î µé¾î¿À°Ô ÇÑ´Ù. 
+ *	ë Œë”ë§ì„ ìˆ˜í–‰ì‹œí‚¨ë‹¤. master ê°€ ì´í•¨ìˆ˜ì•ˆìœ¼ë¡œ ë“¤ì–´ì™”ì„ë•Œ
+ *	slave node ë“¤ì€ messageDispatch()
+ *	í•¨ìˆ˜ì•ˆì—ì„œ ëŒê³  ìˆìœ¼ë¯€ë¡œ, master ê°€ RENDERING ë©”ì‹œì§€ë¥¼ ë³´ë‚´ì„œ
+ *	ì´ í•¨ìˆ˜ ì•ˆìœ¼ë¡œ ë“¤ì–´ì˜¤ê²Œ í•œë‹¤. 
  */
 GError GRenderSystem::standaloneRendering( GCamera *pCamera )
 {
@@ -378,15 +378,15 @@ GError GRenderSystem::standaloneRendering( GCamera *pCamera )
 		m_pScene->setRenderCamera( pCamera );
 
 	/**
-	 *	·»´õ¸µÀ» ¼öÇàÇÏ±â À§ÇØ Scene ÀÇ ÃÊ±âÈ­ ÀÛ¾÷À» ¼öÇàÇÑ´Ù.
-	 *	Object ÀÇ matrix ¸¦ ¸ğµÎ Àû¿ëÇØ¼­ ¸ğµç µ¥ÀÌÅÍ¸¦ World ÁÂÇ¥°è·Î
-	 *	º¯È¯ÇØ µĞ´Ù. ³»ºÎÀûÀ¸·Î geometry ÀÇ º¯È­°¡ ÀÖÀ»¶§¸¸ ¼öÇàµÉ °ÍÀÌ´Ù.
+	 *	ë Œë”ë§ì„ ìˆ˜í–‰í•˜ê¸° ìœ„í•´ Scene ì˜ ì´ˆê¸°í™” ì‘ì—…ì„ ìˆ˜í–‰í•œë‹¤.
+	 *	Object ì˜ matrix ë¥¼ ëª¨ë‘ ì ìš©í•´ì„œ ëª¨ë“  ë°ì´í„°ë¥¼ World ì¢Œí‘œê³„ë¡œ
+	 *	ë³€í™˜í•´ ë‘”ë‹¤. ë‚´ë¶€ì ìœ¼ë¡œ geometry ì˜ ë³€í™”ê°€ ìˆì„ë•Œë§Œ ìˆ˜í–‰ë  ê²ƒì´ë‹¤.
 	 */
 	if ( ( error = m_pScene->convertRenderScene() ) != errorNo ) {
 		return error;
 	}
 
-	/** rendering option ¼³Á¤ */
+	/** rendering option ì„¤ì • */
 	m_pRenderer->enableShadow( m_pScene->isEnableShadow() );
 
 	return m_pRenderer->rendering( m_pScene, m_bDebugMode );
@@ -394,8 +394,8 @@ GError GRenderSystem::standaloneRendering( GCamera *pCamera )
 }
 
 /**
- *	slave render node µéÀÇ main loop.
- *	master ·ÎºÎÅÍ message ¹Ş¾Æ¼­ Ã³¸®.
+ *	slave render node ë“¤ì˜ main loop.
+ *	master ë¡œë¶€í„° message ë°›ì•„ì„œ ì²˜ë¦¬.
  */
 GError GRenderSystem::slaveRenderNode()
 {
@@ -416,10 +416,10 @@ GError GRenderSystem::slaveRenderNode()
 
 		switch( message ) {
 			case JEDI_SCENE_LOAD_MESSAGE:
-				loadScene( "" );	// ÆÄÀÏÀÌ¸§Àº loadScene ÇÔ¼ö¾È¿¡¼­ °¡Á®¿Ã °ÍÀÌ´Ù.
+				loadScene( "" );	// íŒŒì¼ì´ë¦„ì€ loadScene í•¨ìˆ˜ì•ˆì—ì„œ ê°€ì ¸ì˜¬ ê²ƒì´ë‹¤.
 				break;
 			case JEDI_SCENE_RENDERING_MESSAGE:
-				rendering( NULL );	// ÇÔ¼ö¾ÈÀ¸·Î µé¾î°¡¸é rendering Á¤º¸°¡ master ·ÎºÎÅÍ °Ç³Ê¿Í ¼¼ÆÃµÉ °ÍÀÌ´Ù.
+				rendering( NULL );	// í•¨ìˆ˜ì•ˆìœ¼ë¡œ ë“¤ì–´ê°€ë©´ rendering ì •ë³´ê°€ master ë¡œë¶€í„° ê±´ë„ˆì™€ ì„¸íŒ…ë  ê²ƒì´ë‹¤.
 				break;
 		}
 	}
@@ -430,7 +430,7 @@ GError GRenderSystem::slaveRenderNode()
 }
 
 /**
- *	master render node °¡ ³ª¸ÓÁö ¸ğµç node ¿¡°Ô message ¸¦ º¸³½´Ù.
+ *	master render node ê°€ ë‚˜ë¨¸ì§€ ëª¨ë“  node ì—ê²Œ message ë¥¼ ë³´ë‚¸ë‹¤.
  */
 void GRenderSystem::sendRootMessageToNode( int message )
 {

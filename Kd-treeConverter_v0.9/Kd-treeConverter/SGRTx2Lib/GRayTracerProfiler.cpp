@@ -5,8 +5,9 @@
 #include <fstream>
 #include <vector>
 using namespace std;
-
+#define _SAL_VERSION 0
 #include <windows.h>
+#include <sal.h>
 
 namespace GRayTracerProfiler
 {

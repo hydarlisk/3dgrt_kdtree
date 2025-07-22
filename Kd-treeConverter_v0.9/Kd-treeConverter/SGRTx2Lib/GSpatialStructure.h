@@ -3,8 +3,8 @@
 #include "GBase.h"
 
 /**
- *	ray ¿Í Object ÀÇ intersection À»
- *	À§ÇÑ °ø°£ÀÚ·á±¸Á¶ Å¬·¡½º.
+ *	ray ì™€ Object ì˜ intersection ì„
+ *	ìœ„í•œ ê³µê°„ìë£Œêµ¬ì¡° í´ë˜ìŠ¤.
  *	
  *	by graphicsian.
  */
@@ -16,9 +16,9 @@ public:
 	virtual GError initialize() = 0;
 
 	/**
-	 *	rayCount °³¼ö¸¸Å­ÀÇ ray ¿Í °ø°£»óÀÇ Object ¿ÍÀÇ ±³Á¡À» Ã¼Å©ÇØ¼­
-	 *	pResult ¿¡ ´ã¾Æµ¹·ÁÁØ´Ù. pResult ´Â rayCount ¸¸Å­ÀÇ °ø°£À» Àâ¾Æ¼­
-	 *	ÀÎÀÚ·Î ³Ö¾îÁÖ¾î¾ß ÇÑ´Ù.
+	 *	rayCount ê°œìˆ˜ë§Œí¼ì˜ ray ì™€ ê³µê°„ìƒì˜ Object ì™€ì˜ êµì ì„ ì²´í¬í•´ì„œ
+	 *	pResult ì— ë‹´ì•„ëŒë ¤ì¤€ë‹¤. pResult ëŠ” rayCount ë§Œí¼ì˜ ê³µê°„ì„ ì¡ì•„ì„œ
+	 *	ì¸ìë¡œ ë„£ì–´ì£¼ì–´ì•¼ í•œë‹¤.
 	 */
 	//virtual GError intersect( GRayInfo *pRay, GIntersection *pResult, int rayCount ) = 0;
 

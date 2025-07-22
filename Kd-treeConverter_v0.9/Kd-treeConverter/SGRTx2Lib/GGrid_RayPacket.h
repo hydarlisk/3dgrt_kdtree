@@ -38,8 +38,8 @@ public:
 
 private:
 	GVector m_r[packetSize][packetSize];	
-	float m_rayIncrease[2][2][2]; //[0]¿¡ u, [1]¿¡ v.
-	float m_rayPacket[2][2][2]; //[0]¿¡ u, [1]¿¡ v.
+	float m_rayIncrease[2][2][2]; //[0]ì— u, [1]ì— v.
+	float m_rayPacket[2][2][2]; //[0]ì— u, [1]ì— v.
 	int m_kVector;//k vector.
 	int m_packetId;
 };

@@ -36,17 +36,17 @@ GSceneManager::~GSceneManager(void)
 
 
 /**
- *	Data ÆÄÀÏÀ» ·ÎµåÇØ¼­ Scene À» ¸¸µé¾î¼­ ¸®ÅÏÇÑ´Ù.
+ *	Data íŒŒì¼ì„ ë¡œë“œí•´ì„œ Scene ì„ ë§Œë“¤ì–´ì„œ ë¦¬í„´í•œë‹¤.
  */
 GError GSceneManager::loadScene( const char* szFileName, GScene** ppScene )
 {
-	/** parent path ¸¦ °¡Á®¿Â´Ù. */
+	/** parent path ë¥¼ ê°€ì ¸ì˜¨ë‹¤. */
 	GUtil::getParentPath( szFileName, m_SceneBasePath );
 	GLogManager::logging( LOG_INFO, " > Loading Scene File ( %s )", szFileName );
 
 	/** 
-	 *	TODO: ³ªÁß¿¡ GTextureManager ¸¦ Scene ¾ÈÀ¸·Î ÅëÇÕÇØ³ÖÀÚ 
-	 *	Scene ÀÌ ¹Ù²ğ¶§, Texture ¸¦ ÃÊ±âÈ­ ÇØ¾ß ÇÏ¹Ç·Î.
+	 *	TODO: ë‚˜ì¤‘ì— GTextureManager ë¥¼ Scene ì•ˆìœ¼ë¡œ í†µí•©í•´ë„£ì 
+	 *	Scene ì´ ë°”ë€”ë•Œ, Texture ë¥¼ ì´ˆê¸°í™” í•´ì•¼ í•˜ë¯€ë¡œ.
 	 */
 	GTextureManager::getInstance()->clear();
 
@@ -68,7 +68,7 @@ GError GSceneManager::loadScene( const char* szFileName, GScene** ppScene )
 }
 
 /**
- *	Text Çü½ÄÀÇ 914 File À» ·ÎµåÇÑ´Ù.
+ *	Text í˜•ì‹ì˜ 914 File ì„ ë¡œë“œí•œë‹¤.
  */
 GError GSceneManager::load914File( const char* szFileName, GScene* pScene )
 {
@@ -86,62 +86,62 @@ GError GSceneManager::load914File( const char* szFileName, GScene* pScene )
 		if ( !readLine( data, 2048, fp ) ) 
 			break;
 	
-		/** ¸¶Áö¸·Àº close_tag ·Î ³¡³ª¾ß Á¤»ó. */
+		/** ë§ˆì§€ë§‰ì€ close_tag ë¡œ ëë‚˜ì•¼ ì •ìƒ. */
 		if ( _stricmp( data, CLOSE_TAG ) == 0 ) {
 			error = errorNo;
 			break;
 		}
 
-		/** VERSION Á¤º¸ */
+		/** VERSION ì •ë³´ */
 		if ( _stricmp( data, VERSION_TAG ) == 0 ) {
 			if ( !readVersion( data, 2048, fp, pScene ) ) {
 				error = errorFileInvalidVersion;
 				break;
 			}
 
-		/** SCENE Á¤º¸	*/
+		/** SCENE ì •ë³´	*/
 		} else if ( _stricmp( data, SCENEINFO_TAG ) == 0 ) {
 			if ( !readSceneInfo( data, 2048, fp, pScene ) ) {
 				error = errorFileInvalidSceneInfo;
 				break;
 			}
 
-		/** CAMERA Á¤º¸ */
+		/** CAMERA ì •ë³´ */
 		} else if ( _stricmp( data, CAMERA_TAG ) == 0 ) {
 			if ( !readCamera( data, 2048, fp, pScene ) ) {
 				error = errorFileInvalidCamera;
 				break;
 			}
 
-		/** LIGHT Á¤º¸ */
+		/** LIGHT ì •ë³´ */
 		} else if ( _stricmp( data, LIGHT_TAG ) == 0 ) {
 			if ( !readLight( data, 2048, fp, pScene ) ) {
 				error = errorFileInvalidLight;
 				break;
 			}
 
-		/** PHOTON MAPPING OPTION Á¤º¸ */
+		/** PHOTON MAPPING OPTION ì •ë³´ */
 		} else if ( _stricmp( data, PHOTONMAPPING_TAG ) == 0 ) {
 			if ( !readPhotonMappingOption( data, 2048, fp, pScene ) ) {
 				error = errorFileDataError;
 				break;
 			}
 
-		/** OBJECT Á¤º¸ */
+		/** OBJECT ì •ë³´ */
 		} else if ( _stricmp( data, OBJECT_TAG ) == 0 ) {
 			if ( !readTriangleObject( data, 2048, fp, pScene ) ) {
 				error = errorFileInvalidObject;
 				break;
 			}
 
-		/** OBJECT FILE µ¥ÀÌÅÍ */
+		/** OBJECT FILE ë°ì´í„° */
 		} else if ( _stricmp( data, OBJECTFILE_TAG ) == 0 ) {
 			if ( !readImportObject( data, 2048, fp, pScene ) ) {
 				error = errorFileInvalidObject;
 				break;
 			}
 
-		/** GLOBAL Á¤º¸ */
+		/** GLOBAL ì •ë³´ */
 		} else if ( _stricmp( data, GLOBAL_TAG ) == 0 ) {
 			if ( !readGlobal( data, 2048, fp, pScene ) ) {
 				error = errorFileInvalidGlobal;
@@ -175,7 +175,7 @@ bool GSceneManager::readVersion( char *data, int size, FILE *fp, GScene* pScene 
 			break;
 
 		/**
-		 *	¸¶Áö¸· CLOSE_TAG Á¤º¸°¡ ¿Í¾ß Á¤»óÀûÀ¸·Î ³¡³ª´Â°Í.
+		 *	ë§ˆì§€ë§‰ CLOSE_TAG ì •ë³´ê°€ ì™€ì•¼ ì •ìƒì ìœ¼ë¡œ ëë‚˜ëŠ”ê²ƒ.
 		 */
 		if ( _stricmp( data, CLOSE_TAG ) == 0 )
 			return true;
@@ -205,7 +205,7 @@ bool GSceneManager::readSceneInfo( char *data, int size, FILE *fp, GScene* pScen
 			break;
 
 		/**
-		 *	¸¶Áö¸· CLOSE_TAG Á¤º¸°¡ ¿Í¾ß Á¤»óÀûÀ¸·Î ³¡³ª´Â°Í.
+		 *	ë§ˆì§€ë§‰ CLOSE_TAG ì •ë³´ê°€ ì™€ì•¼ ì •ìƒì ìœ¼ë¡œ ëë‚˜ëŠ”ê²ƒ.
 		 */
 		if ( _stricmp( data, CLOSE_TAG ) == 0 )
 			return true;
@@ -307,7 +307,7 @@ bool GSceneManager::readCamera( char *data, int size, FILE *fp, GScene* pScene )
 			break;
 
 		/**
-		 *	¸¶Áö¸· CLOSE_TAG Á¤º¸°¡ ¿Í¾ß Á¤»óÀûÀ¸·Î ³¡³ª´Â°Í.
+		 *	ë§ˆì§€ë§‰ CLOSE_TAG ì •ë³´ê°€ ì™€ì•¼ ì •ìƒì ìœ¼ë¡œ ëë‚˜ëŠ”ê²ƒ.
 		 */
 		if ( _stricmp( data, CLOSE_TAG ) == 0 ) {
 			camera->setCameraPos( eye, view, up );
@@ -377,7 +377,7 @@ bool GSceneManager::readGlobal( char *data, int size, FILE *fp, GScene* pScene )
 			break;
 
 		/**
-		 *	¸¶Áö¸· CLOSE_TAG Á¤º¸°¡ ¿Í¾ß Á¤»óÀûÀ¸·Î ³¡³ª´Â°Í.
+		 *	ë§ˆì§€ë§‰ CLOSE_TAG ì •ë³´ê°€ ì™€ì•¼ ì •ìƒì ìœ¼ë¡œ ëë‚˜ëŠ”ê²ƒ.
 		 */
 		if ( _stricmp( data, CLOSE_TAG ) == 0 ) {
 			return true;
@@ -414,7 +414,7 @@ bool GSceneManager::readPhotonMappingOption( char *data, int size, FILE *fp, GSc
 			break;
 
 		/**
-		 *	¸¶Áö¸· CLOSE_TAG Á¤º¸°¡ ¿Í¾ß Á¤»óÀûÀ¸·Î ³¡³ª´Â°Í.
+		 *	ë§ˆì§€ë§‰ CLOSE_TAG ì •ë³´ê°€ ì™€ì•¼ ì •ìƒì ìœ¼ë¡œ ëë‚˜ëŠ”ê²ƒ.
 		 */
 		if ( _stricmp( data, CLOSE_TAG ) == 0 ) {
 			pScene->setPhotonMappingOption( photonMappingOption );
@@ -487,7 +487,7 @@ bool GSceneManager::readLight( char *data, int size, FILE *fp, GScene* pScene )
 	if( !readLine( data, 2048, fp ) ) 
 		return false;
 
-	/** Ã³À½¿¡ ¹İµå½Ã type ÀÌ ³ª¿Í¾ß ÇÑ´Ù. */
+	/** ì²˜ìŒì— ë°˜ë“œì‹œ type ì´ ë‚˜ì™€ì•¼ í•œë‹¤. */
 	GUtil::getKeyValue( data, &key, &value );
 
 	if ( _stricmp( key, "type" ) == 0 ) {
@@ -522,7 +522,7 @@ bool GSceneManager::readPointLight( char *data, int size, FILE *fp, GScene* pSce
 			break;
 
 		/**
-		 *	¸¶Áö¸· CLOSE_TAG Á¤º¸°¡ ¿Í¾ß Á¤»óÀûÀ¸·Î ³¡³ª´Â°Í.
+		 *	ë§ˆì§€ë§‰ CLOSE_TAG ì •ë³´ê°€ ì™€ì•¼ ì •ìƒì ìœ¼ë¡œ ëë‚˜ëŠ”ê²ƒ.
 		 */
 		if ( _stricmp( data, CLOSE_TAG ) == 0 ) {
 			pointLight->setPolygonType( typePolygonNone );
@@ -570,7 +570,7 @@ bool GSceneManager::readPointLight( char *data, int size, FILE *fp, GScene* pSce
 
 /**
  *	RaySet LIGHT Parsing.
- *	ray sample µ¥ÀÌÅÍ·Î ±¸¼ºµÈ light.
+ *	ray sample ë°ì´í„°ë¡œ êµ¬ì„±ëœ light.
  */
 bool GSceneManager::readRaySetLight( char *data, int size, FILE *fp, GScene* pScene )
 {
@@ -584,8 +584,8 @@ bool GSceneManager::readRaySetLight( char *data, int size, FILE *fp, GScene* pSc
 			break;
 
 		/**
-		 *	¸¶Áö¸· CLOSE_TAG Á¤º¸°¡ ¿Í¾ß Á¤»óÀûÀ¸·Î ³¡³ª´Â°Í.
-		 *	¸¸¾à ray set data °¡ ¾ø´Ù¸é ¿¡·¯.
+		 *	ë§ˆì§€ë§‰ CLOSE_TAG ì •ë³´ê°€ ì™€ì•¼ ì •ìƒì ìœ¼ë¡œ ëë‚˜ëŠ”ê²ƒ.
+		 *	ë§Œì•½ ray set data ê°€ ì—†ë‹¤ë©´ ì—ëŸ¬.
 		 */
 		if ( _stricmp( data, CLOSE_TAG ) == 0 ) {
 			if ( raySetLight->getRaySetData() == NULL ) {
@@ -599,7 +599,7 @@ bool GSceneManager::readRaySetLight( char *data, int size, FILE *fp, GScene* pSc
 
 		GUtil::getKeyValue( data, &key, &value );
 
-		/** rayset datafile À» ÀĞ¾îµéÀÎ´Ù. */
+		/** rayset datafile ì„ ì½ì–´ë“¤ì¸ë‹¤. */
 		if ( _stricmp( key, "datafile" ) == 0 ) {
 			char temppath[ 2048 ] = { 0x00, };
 			sprintf( temppath, "%s%c%s", m_SceneBasePath, FILE_SEPARATOR, value );
@@ -609,7 +609,7 @@ bool GSceneManager::readRaySetLight( char *data, int size, FILE *fp, GScene* pSc
 			}
 		}
 
-		/** rayset ÀÇ hit ¸¦ Ã¼Å©ÇÏ±â À§ÇÑ object data ÀÖ´Ù¸é ÀĞ¾îµéÀÎ´Ù. */
+		/** rayset ì˜ hit ë¥¼ ì²´í¬í•˜ê¸° ìœ„í•œ object data ìˆë‹¤ë©´ ì½ì–´ë“¤ì¸ë‹¤. */
 		if ( _stricmp( key, "meshfile" ) == 0 ) {
 			char temppath[ 2048 ] = { 0x00, };
 			sprintf( temppath, "%s%c%s", m_SceneBasePath, FILE_SEPARATOR, value );
@@ -699,7 +699,7 @@ bool GSceneManager::readRaySetLight( char *data, int size, FILE *fp, GScene* pSc
 		}
 
 		/**
-		 *	Translate ÀÏ¶§.
+		 *	Translate ì¼ë•Œ.
 		 */
 		if ( _stricmp( key, "Translate" ) == 0 ) {
 			GUtil::getValueList( value, valueList );
@@ -709,7 +709,7 @@ bool GSceneManager::readRaySetLight( char *data, int size, FILE *fp, GScene* pSc
 				GPoint( (float)atof( valueList[0] ), (float)atof( valueList[1] ), (float)atof( valueList[2] ) ) );
 		}
 		/**
-		 *	Rotate ÀÏ¶§.
+		 *	Rotate ì¼ë•Œ.
 		 */
 		if ( _stricmp( key, "Rotate" ) == 0 ) {
 			GUtil::getValueList( value, valueList );
@@ -719,7 +719,7 @@ bool GSceneManager::readRaySetLight( char *data, int size, FILE *fp, GScene* pSc
 				GPoint( (float)atof( valueList[0] ), (float)atof( valueList[1] ), (float)atof( valueList[2] ) ) );
 		}
 		/**
-		 *	Scale ÀÏ¶§.
+		 *	Scale ì¼ë•Œ.
 		 */
 		if ( _stricmp( key, "Scale" ) == 0 ) {
 			GUtil::getValueList( value, valueList );
@@ -739,7 +739,7 @@ bool GSceneManager::readRaySetLight( char *data, int size, FILE *fp, GScene* pSc
 
 /**
  *	RaySet LIGHT Parsing.
- *	ray sample µ¥ÀÌÅÍ·Î ±¸¼ºµÈ light.
+ *	ray sample ë°ì´í„°ë¡œ êµ¬ì„±ëœ light.
  */
 bool GSceneManager::readVirtualLight( char *data, int size, FILE *fp, GScene* pScene )
 {
@@ -753,8 +753,8 @@ bool GSceneManager::readVirtualLight( char *data, int size, FILE *fp, GScene* pS
 			break;
 
 		/**
-		 *	¸¶Áö¸· CLOSE_TAG Á¤º¸°¡ ¿Í¾ß Á¤»óÀûÀ¸·Î ³¡³ª´Â°Í.
-		 *	¸¸¾à ray set data °¡ ¾ø´Ù¸é ¿¡·¯.
+		 *	ë§ˆì§€ë§‰ CLOSE_TAG ì •ë³´ê°€ ì™€ì•¼ ì •ìƒì ìœ¼ë¡œ ëë‚˜ëŠ”ê²ƒ.
+		 *	ë§Œì•½ ray set data ê°€ ì—†ë‹¤ë©´ ì—ëŸ¬.
 		 */
 		if ( _stricmp( data, CLOSE_TAG ) == 0 ) {
 			virtualLight->convertToWorldObject();
@@ -764,7 +764,7 @@ bool GSceneManager::readVirtualLight( char *data, int size, FILE *fp, GScene* pS
 
 		GUtil::getKeyValue( data, &key, &value );
 
-		/** rayset ÀÇ hit ¸¦ Ã¼Å©ÇÏ±â À§ÇÑ object data ÀÖ´Ù¸é ÀĞ¾îµéÀÎ´Ù. */
+		/** rayset ì˜ hit ë¥¼ ì²´í¬í•˜ê¸° ìœ„í•œ object data ìˆë‹¤ë©´ ì½ì–´ë“¤ì¸ë‹¤. */
 		if ( _stricmp( key, "meshfile" ) == 0 ) {
 			char temppath[ 2048 ] = { 0x00, };
 			sprintf( temppath, "%s%c%s", m_SceneBasePath, FILE_SEPARATOR, value );
@@ -807,7 +807,7 @@ bool GSceneManager::readVirtualLight( char *data, int size, FILE *fp, GScene* pS
 		}
 
 		/**
-		 *	Translate ÀÏ¶§.
+		 *	Translate ì¼ë•Œ.
 		 */
 		if ( _stricmp( key, "Translate" ) == 0 ) {
 			GUtil::getValueList( value, valueList );
@@ -817,7 +817,7 @@ bool GSceneManager::readVirtualLight( char *data, int size, FILE *fp, GScene* pS
 				GPoint( (float)atof( valueList[0] ), (float)atof( valueList[1] ), (float)atof( valueList[2] ) ) );
 		}
 		/**
-		 *	Rotate ÀÏ¶§.
+		 *	Rotate ì¼ë•Œ.
 		 */
 		if ( _stricmp( key, "Rotate" ) == 0 ) {
 			GUtil::getValueList( value, valueList );
@@ -827,7 +827,7 @@ bool GSceneManager::readVirtualLight( char *data, int size, FILE *fp, GScene* pS
 				GPoint( (float)atof( valueList[0] ), (float)atof( valueList[1] ), (float)atof( valueList[2] ) ) );
 		}
 		/**
-		 *	Scale ÀÏ¶§.
+		 *	Scale ì¼ë•Œ.
 		 */
 		if ( _stricmp( key, "Scale" ) == 0 ) {
 			GUtil::getValueList( value, valueList );
@@ -869,8 +869,8 @@ bool GSceneManager::loadRaySetDataFile( GRaySetLight *pRaySetLight, const char *
 												&( pRaySet[ i ].power ) );
 
 			/**
-			 *	dir Àº normalize µÇ¾î¾ß ÇÏ´Âµ¥, µ¥ÀÌÅÍ°¡ È¤½Ã³ª
-			 *	normalize ¾ÈµÇ¾î ÀÖÀ»¼ö ÀÖÀ¸¹Ç·Î ¿©±â¼­ normalize ÇÑ´Ù.
+			 *	dir ì€ normalize ë˜ì–´ì•¼ í•˜ëŠ”ë°, ë°ì´í„°ê°€ í˜¹ì‹œë‚˜
+			 *	normalize ì•ˆë˜ì–´ ìˆì„ìˆ˜ ìˆìœ¼ë¯€ë¡œ ì—¬ê¸°ì„œ normalize í•œë‹¤.
 			 */
 			length = sqrtf( pRaySet[ i ].dir[ 0 ] * pRaySet[ i ].dir[ 0 ] +
 						    pRaySet[ i ].dir[ 1 ] * pRaySet[ i ].dir[ 1 ] +
@@ -921,8 +921,8 @@ bool GSceneManager::readImportObject( char *data, int size, FILE *fp, GScene* pS
 			break;
 
 		/**
-		 *	¸¶Áö¸· CLOSE_TAG Á¤º¸°¡ ¿Í¾ß Á¤»óÀûÀ¸·Î ³¡³ª´Â°Í.
-		 *	object ¸¦ import ÇÑ´Ù.
+		 *	ë§ˆì§€ë§‰ CLOSE_TAG ì •ë³´ê°€ ì™€ì•¼ ì •ìƒì ìœ¼ë¡œ ëë‚˜ëŠ”ê²ƒ.
+		 *	object ë¥¼ import í•œë‹¤.
 		 */
 		if ( _stricmp( data, CLOSE_TAG ) == 0 ) {
 
@@ -955,7 +955,7 @@ bool GSceneManager::readImportObject( char *data, int size, FILE *fp, GScene* pS
 				}
 			}
 
-			/** object file ÀÏ¶§ */
+			/** object file ì¼ë•Œ */
 			if ( _stricmp( filetype, "object" ) == 0 ) {
 				char objfile[2048] = { 0x00, };
 				sprintf( objfile, "%s%c%s", m_SceneBasePath, FILE_SEPARATOR, datafile );
@@ -1032,7 +1032,7 @@ bool GSceneManager::readTriangleObject( char *data, int size, FILE *fp, GScene* 
 			break;
 
 		/**
-		 *	¸¶Áö¸· CLOSE_TAG Á¤º¸°¡ ¿Í¾ß Á¤»óÀûÀ¸·Î ³¡³ª´Â°Í.
+		 *	ë§ˆì§€ë§‰ CLOSE_TAG ì •ë³´ê°€ ì™€ì•¼ ì •ìƒì ìœ¼ë¡œ ëë‚˜ëŠ”ê²ƒ.
 		 */
 		if ( _stricmp( data, CLOSE_TAG ) == 0 ) {
 			if ( pTriangleGeometry->getVertexArray() == NULL ) {
@@ -1055,7 +1055,7 @@ bool GSceneManager::readTriangleObject( char *data, int size, FILE *fp, GScene* 
 				pTriangleGeometry->setVisible( false );
 		}
 		/**
-		 *	Scene Option ¿¡ Texture »ç¿ëÀÌ true ÀÏ¶§, Texture full path ¸¦ ÀúÀåÇÑ´Ù.
+		 *	Scene Option ì— Texture ì‚¬ìš©ì´ true ì¼ë•Œ, Texture full path ë¥¼ ì €ì¥í•œë‹¤.
 		 */
 		if ( _stricmp( key, "texture" ) == 0 ) {
 			sprintf( temp, "%s%c%s%c%s", m_SceneBasePath,	FILE_SEPARATOR, 
@@ -1117,7 +1117,7 @@ bool GSceneManager::readTriangleObject( char *data, int size, FILE *fp, GScene* 
 		}
 		
 		/**
-		 *	Translate ÀÏ¶§.
+		 *	Translate ì¼ë•Œ.
 		 */
 		if ( _stricmp( key, "Translate" ) == 0 ) {
 			GUtil::getValueList( value, valueList );
@@ -1127,7 +1127,7 @@ bool GSceneManager::readTriangleObject( char *data, int size, FILE *fp, GScene* 
 				GPoint( (float)atof( valueList[0] ), (float)atof( valueList[1] ), (float)atof( valueList[2] ) ) );
 		}
 		/**
-		 *	Rotate ÀÏ¶§.
+		 *	Rotate ì¼ë•Œ.
 		 */
 		if ( _stricmp( key, "Rotate" ) == 0 ) {
 			GUtil::getValueList( value, valueList );
@@ -1137,7 +1137,7 @@ bool GSceneManager::readTriangleObject( char *data, int size, FILE *fp, GScene* 
 				GPoint( (float)atof( valueList[0] ), (float)atof( valueList[1] ), (float)atof( valueList[2] ) ) );
 		}
 		/**
-		 *	Scale ÀÏ¶§.
+		 *	Scale ì¼ë•Œ.
 		 */
 		if ( _stricmp( key, "Scale" ) == 0 ) {
 			GUtil::getValueList( value, valueList );
@@ -1148,7 +1148,7 @@ bool GSceneManager::readTriangleObject( char *data, int size, FILE *fp, GScene* 
 		}
 
 		/** 
-		 *	vertex data ¸¦ ÀĞ´Â´Ù. value ¿¡´Â vertex °¡ ¸î°³ÀÎÁö Á¤º¸°¡ µé¾îÀÖ´Ù.
+		 *	vertex data ë¥¼ ì½ëŠ”ë‹¤. value ì—ëŠ” vertex ê°€ ëª‡ê°œì¸ì§€ ì •ë³´ê°€ ë“¤ì–´ìˆë‹¤.
 		 */
 		if ( _stricmp( key, "Vertex" ) == 0 ) {
 			GUtil::getValueList( value, valueList );
@@ -1171,7 +1171,7 @@ bool GSceneManager::readTriangleObject( char *data, int size, FILE *fp, GScene* 
 		}
 	}
 
-	/** ¿¡·¯°¡ ÀÖ´Â°ÍÀÌ¹Ç·Î delete ÇÑ´Ù. */
+	/** ì—ëŸ¬ê°€ ìˆëŠ”ê²ƒì´ë¯€ë¡œ delete í•œë‹¤. */
 	GLogManager::logging( LOG_ERROR, "%s object is invalid", pTriangleGeometry->getName() );
 
 	delete pTriangleGeometry;
@@ -1181,7 +1181,7 @@ bool GSceneManager::readTriangleObject( char *data, int size, FILE *fp, GScene* 
 
 
 /**
- *	Vertex ¿Í index Á¤º¸¸¸ ÀÖ´Â Polygon Data ¸¦ ÀĞ¾îµé¿©¼­ pObject ¿¡ ¼¼ÆÃ.
+ *	Vertex ì™€ index ì •ë³´ë§Œ ìˆëŠ” Polygon Data ë¥¼ ì½ì–´ë“¤ì—¬ì„œ pObject ì— ì„¸íŒ….
  */
 bool GSceneManager::loadMeshData( GPolygonObject* pObject, const char* filename )
 {
@@ -1199,7 +1199,7 @@ bool GSceneManager::loadMeshData( GPolygonObject* pObject, const char* filename 
 			break;
 
 		/**
-		 *	¸¶Áö¸· CLOSE_TAG Á¤º¸°¡ ¿Í¾ß Á¤»óÀûÀ¸·Î ³¡³ª´Â°Í.
+		 *	ë§ˆì§€ë§‰ CLOSE_TAG ì •ë³´ê°€ ì™€ì•¼ ì •ìƒì ìœ¼ë¡œ ëë‚˜ëŠ”ê²ƒ.
 		 */
 		if ( _stricmp( data, CLOSE_TAG ) == 0 ) {
 			return true;
@@ -1208,7 +1208,7 @@ bool GSceneManager::loadMeshData( GPolygonObject* pObject, const char* filename 
 		GUtil::getKeyValue( data, &key, &value );
 
 		/**
-		 *	Translate ÀÏ¶§.
+		 *	Translate ì¼ë•Œ.
 		 */
 		if ( _stricmp( key, "Translate" ) == 0 ) {
 			GUtil::getValueList( value, valueList );
@@ -1218,7 +1218,7 @@ bool GSceneManager::loadMeshData( GPolygonObject* pObject, const char* filename 
 				GPoint( (float)atof( valueList[0] ), (float)atof( valueList[1] ), (float)atof( valueList[2] ) ) );
 		}
 		/**
-		 *	Rotate ÀÏ¶§.
+		 *	Rotate ì¼ë•Œ.
 		 */
 		if ( _stricmp( key, "Rotate" ) == 0 ) {
 			GUtil::getValueList( value, valueList );
@@ -1228,7 +1228,7 @@ bool GSceneManager::loadMeshData( GPolygonObject* pObject, const char* filename 
 				GPoint( (float)atof( valueList[0] ), (float)atof( valueList[1] ), (float)atof( valueList[2] ) ) );
 		}
 		/**
-		 *	Scale ÀÏ¶§.
+		 *	Scale ì¼ë•Œ.
 		 */
 		if ( _stricmp( key, "Scale" ) == 0 ) {
 			GUtil::getValueList( value, valueList );
@@ -1239,7 +1239,7 @@ bool GSceneManager::loadMeshData( GPolygonObject* pObject, const char* filename 
 		}
 
 		/** 
-		 *	vertex data ¸¦ ÀĞ´Â´Ù. value ¿¡´Â vertex °¡ ¸î°³ÀÎÁö Á¤º¸°¡ µé¾îÀÖ´Ù.
+		 *	vertex data ë¥¼ ì½ëŠ”ë‹¤. value ì—ëŠ” vertex ê°€ ëª‡ê°œì¸ì§€ ì •ë³´ê°€ ë“¤ì–´ìˆë‹¤.
 		 */
 		if ( _stricmp( key, "Vertex" ) == 0 ) {
 			GUtil::getValueList( value, valueList );
@@ -1266,8 +1266,8 @@ bool GSceneManager::loadMeshData( GPolygonObject* pObject, const char* filename 
 }
 
 /** 
- *	%f %f %f µ¥ÀÌÅÍ·Î ÀÌ·ç¾îÁø line µéÀ» vertex °³¼ö¸¸Å­ ÀĞ¾îµéÀÎ´Ù.
- *	ÀĞ¾îµéÀÏ¶§ BoudingBox Á¤º¸µµ °è»êÇÑ´Ù.
+ *	%f %f %f ë°ì´í„°ë¡œ ì´ë£¨ì–´ì§„ line ë“¤ì„ vertex ê°œìˆ˜ë§Œí¼ ì½ì–´ë“¤ì¸ë‹¤.
+ *	ì½ì–´ë“¤ì¼ë•Œ BoudingBox ì •ë³´ë„ ê³„ì‚°í•œë‹¤.
  */
 bool GSceneManager::readObjectVertex( char *data, int size, FILE *fp, 
 									 GPolygonObject* pObject, int count, bool bUV )
@@ -1281,7 +1281,7 @@ bool GSceneManager::readObjectVertex( char *data, int size, FILE *fp,
 	visibilityArray = (float*) malloc( sizeof( float ) * 3 * count );
 
 	/**
-	 *	µ¥ÀÌÅÍ¿¡ uv ÁÂÇ¥°¡ Á¸ÀçÇÑ´Ù¸é.
+	 *	ë°ì´í„°ì— uv ì¢Œí‘œê°€ ì¡´ì¬í•œë‹¤ë©´.
 	 */
 	if ( bUV ) {
 		uvArray = (float*) malloc( sizeof( float ) * 2 * count );
@@ -1305,8 +1305,8 @@ bool GSceneManager::readObjectVertex( char *data, int size, FILE *fp,
 			*( vertexArray + i * 3 + 2 ) = v2;
 
 			/**
-			 *	normal Àºµ¥ÀÌÅÍ°¡ È¤½Ã³ª
-			 *	normalize ¾ÈµÇ¾î ÀÖÀ»¼ö ÀÖÀ¸¹Ç·Î ¿©±â¼­ normalize ÇÑ´Ù.
+			 *	normal ì€ë°ì´í„°ê°€ í˜¹ì‹œë‚˜
+			 *	normalize ì•ˆë˜ì–´ ìˆì„ìˆ˜ ìˆìœ¼ë¯€ë¡œ ì—¬ê¸°ì„œ normalize í•œë‹¤.
 			 */
 			length = sqrtf( n0 * n0 + n1 * n1 + n2 * n2 );
 			if ( length == 0 ) {
@@ -1322,7 +1322,7 @@ bool GSceneManager::readObjectVertex( char *data, int size, FILE *fp,
 			*( normalArray + i * 3 + 1 ) = n1 / length;
 			*( normalArray + i * 3 + 2 ) = n2 / length;
 
-			/** u, v ´Â 0.0~1.0 À¸·Î normalize ½ÃÅ²´Ù. */
+			/** u, v ëŠ” 0.0~1.0 ìœ¼ë¡œ normalize ì‹œí‚¨ë‹¤. */
 			u = u - (int)u;
 			v = v - (int)v;
 
@@ -1339,8 +1339,8 @@ bool GSceneManager::readObjectVertex( char *data, int size, FILE *fp,
 			*( vertexArray + i * 3 + 2 ) = v2;
 	
 			/**
-			 *	normal Àºµ¥ÀÌÅÍ°¡ È¤½Ã³ª
-			 *	normalize ¾ÈµÇ¾î ÀÖÀ»¼ö ÀÖÀ¸¹Ç·Î ¿©±â¼­ normalize ÇÑ´Ù.
+			 *	normal ì€ë°ì´í„°ê°€ í˜¹ì‹œë‚˜
+			 *	normalize ì•ˆë˜ì–´ ìˆì„ìˆ˜ ìˆìœ¼ë¯€ë¡œ ì—¬ê¸°ì„œ normalize í•œë‹¤.
 			 */
 			length = sqrtf( n0 * n0 + n1 * n1 + n2 * n2 );
 			if ( length == 0 ) {
@@ -1396,10 +1396,10 @@ bool GSceneManager::readObjectVertex( char *data, int size, FILE *fp,
 }
 
 /** 
- *	%d µ¥ÀÌÅÍ·Î ÀÌ·ç¾îÁø line µéÀ» index °³¼ö¸¸Å­ ÀĞ¾îµéÀÎ´Ù.
- *	baseIndex ´Â triangle ÀÌ °¡¸®Å°´Â vertex index ¸¦ 0ºÎÅÍ ½ÃÀÛÇÏ´ÂÁö 1ºÎÅÍ
- *	½ÃÀÛÇÏ´ÂÁö ¿©ºÎ. c¾ğ¾î ¹è¿­»óÀ¸·Î´Â ¹«Á¶°Ç 0 ºÎÅÍ index °¡ ½ÃÀÛ
- *	ÇÏ°Ô ÇØ¾ß ÇÏ¹Ç·Î, ³»ºÎ¿¡¼­ index ¸¦ Á¶Á¤ÇÑ´Ù.
+ *	%d ë°ì´í„°ë¡œ ì´ë£¨ì–´ì§„ line ë“¤ì„ index ê°œìˆ˜ë§Œí¼ ì½ì–´ë“¤ì¸ë‹¤.
+ *	baseIndex ëŠ” triangle ì´ ê°€ë¦¬í‚¤ëŠ” vertex index ë¥¼ 0ë¶€í„° ì‹œì‘í•˜ëŠ”ì§€ 1ë¶€í„°
+ *	ì‹œì‘í•˜ëŠ”ì§€ ì—¬ë¶€. cì–¸ì–´ ë°°ì—´ìƒìœ¼ë¡œëŠ” ë¬´ì¡°ê±´ 0 ë¶€í„° index ê°€ ì‹œì‘
+ *	í•˜ê²Œ í•´ì•¼ í•˜ë¯€ë¡œ, ë‚´ë¶€ì—ì„œ index ë¥¼ ì¡°ì •í•œë‹¤.
  */
 bool GSceneManager::readObjectIndex( char *data, int size, FILE *fp, 
 									 GPolygonObject* pObject, int count, int baseIndex )
@@ -1409,8 +1409,8 @@ bool GSceneManager::readObjectIndex( char *data, int size, FILE *fp,
 	int i;
 
 	/** 
-	 *	index ´Â 1ºÎÅÍ ÀÌÁö¸¸, ¹è¿­»óÀ¸·Î´Â 0 ºÎÅÍ vertex °¡
-	 *	µé¾î°¡ ÀÖÀ¸¹Ç·Î index ¸¦ -1 ¾¿ ÇÑ´Ù.
+	 *	index ëŠ” 1ë¶€í„° ì´ì§€ë§Œ, ë°°ì—´ìƒìœ¼ë¡œëŠ” 0 ë¶€í„° vertex ê°€
+	 *	ë“¤ì–´ê°€ ìˆìœ¼ë¯€ë¡œ index ë¥¼ -1 ì”© í•œë‹¤.
 	 */
 	for ( i = 0; i < count; ++i ) {
 		if ( !readLine( data, 2048, fp ) ) 
@@ -1441,7 +1441,7 @@ bool GSceneManager::readObjectIndex( char *data, int size, FILE *fp,
 }
 
 /**
- *	OBJ File ¸¦ ·ÎµåÇØ¼­ Scene ¿¡ Object ¸¦ Ãß°¡ÇÑ´Ù.
+ *	OBJ File ë¥¼ ë¡œë“œí•´ì„œ Scene ì— Object ë¥¼ ì¶”ê°€í•œë‹¤.
  */
 GError GSceneManager::loadOBJFile( const char* szFileName, GScene* pScene )
 {
@@ -1462,15 +1462,15 @@ GError GSceneManager::loadOBJFile( const char* szFileName, GScene* pScene )
 
 	//objLoader.printObjectInfo();
 
-	/** SGRTx2 Object ·Î º¯È¯ÇÑ´Ù. */
+	/** SGRTx2 Object ë¡œ ë³€í™˜í•œë‹¤. */
 	GLogManager::logging( LOG_INFO, " -> Convert to SGRTx2 Object" );
 	
 	pOBJGeometryData	= objLoader.getGeometryData();
 	objectCount			= objLoader.getObjectCount();
 
 	/** 
-	 *	°°Àº vertex ¸¦ °øÀ¯ÇÏ´Â µ¥ÀÌÅÍÀÇ normal Á¤º¸¸¦ ÇÕÄ¡±â À§ÇØ¼­ »ç¿ëÇÒ ±¸Á¶Ã¼ ÇÒ´ç 
-	 *	vertex ´Â ÃÖ´ë pOBJGeometryData->m_VertexList.size() °³¼ö¸¸Å­¸¸ Á¸Àç.
+	 *	ê°™ì€ vertex ë¥¼ ê³µìœ í•˜ëŠ” ë°ì´í„°ì˜ normal ì •ë³´ë¥¼ í•©ì¹˜ê¸° ìœ„í•´ì„œ ì‚¬ìš©í•  êµ¬ì¡°ì²´ í• ë‹¹ 
+	 *	vertex ëŠ” ìµœëŒ€ pOBJGeometryData->m_VertexList.size() ê°œìˆ˜ë§Œí¼ë§Œ ì¡´ì¬.
 	 */
 	pOBJNormalWeightList     = new vector<GOBJNormalWeight>[ pOBJGeometryData->m_VertexList.size() ];
 	pDestOBJNormalWeightList = new vector<GOBJNormalWeight>[ pOBJGeometryData->m_VertexList.size() ];
@@ -1506,7 +1506,7 @@ GError GSceneManager::loadOBJFile( const char* szFileName, GScene* pScene )
 			}
 		}
 
-		/** bump texture °¡ ÀÖÀ»¶§. map_bump Ç×¸ñ¸¸ »ç¿ë */
+		/** bump texture ê°€ ìˆì„ë•Œ. map_bump í•­ëª©ë§Œ ì‚¬ìš© */
 		if ( pOBJMaterial != NULL ) {
 			if ( pOBJMaterial->pMapBumpPath != NULL ) {
 				sprintf( temp, "%s%c%s%c%s", m_SceneBasePath, FILE_SEPARATOR, 
@@ -1518,11 +1518,11 @@ GError GSceneManager::loadOBJFile( const char* szFileName, GScene* pScene )
 
 		/** geometry convert */
 		/** 
-		 *	object file Àº vertex ¿Í normal texture coord ¸¦ °¢°¢ ¼­·Î µû·Î µû·Î
-		 *	±¸¼ºÇØ¼­ °¢°¢ÀÇ index ¸¦ »ï°¢Çü face °¡ ÁöÁ¤ÇÏÁö¸¸, SGRTx2 ¿¡¼­´Â
-		 *	vertex, normal, texture coord °¡ ÇÑ set ·Î indexing µÇ¹Ç·Î
-		 *	Á» º¹ÀâÇÑ converting À» ¼öÇàÇØ¾ß ÇÑ´Ù. µû¶ó¼­, Áßº¹µÇ´Â vertex °¡ 
-		 *	ÀÖÀ»¼ö ÀÖ¾îµµ face ÀÇ µ¥ÀÌÅÍ °¹¼ö¸¸Å­ vertex, normal, texture µ¥ÀÌÅÍ¸¦ ±×´ë·Î »ı¼ºÇÏÀÚ.
+		 *	object file ì€ vertex ì™€ normal texture coord ë¥¼ ê°ê° ì„œë¡œ ë”°ë¡œ ë”°ë¡œ
+		 *	êµ¬ì„±í•´ì„œ ê°ê°ì˜ index ë¥¼ ì‚¼ê°í˜• face ê°€ ì§€ì •í•˜ì§€ë§Œ, SGRTx2 ì—ì„œëŠ”
+		 *	vertex, normal, texture coord ê°€ í•œ set ë¡œ indexing ë˜ë¯€ë¡œ
+		 *	ì¢€ ë³µì¡í•œ converting ì„ ìˆ˜í–‰í•´ì•¼ í•œë‹¤. ë”°ë¼ì„œ, ì¤‘ë³µë˜ëŠ” vertex ê°€ 
+		 *	ìˆì„ìˆ˜ ìˆì–´ë„ face ì˜ ë°ì´í„° ê°¯ìˆ˜ë§Œí¼ vertex, normal, texture ë°ì´í„°ë¥¼ ê·¸ëŒ€ë¡œ ìƒì„±í•˜ì.
 		 */
 		/** vertex data */
 		int triangleCount = (int) pOBJObject->m_FaceList.size();
@@ -1559,7 +1559,7 @@ GError GSceneManager::loadOBJFile( const char* szFileName, GScene* pScene )
 
 		int index0, index1, index2;
 
-		/** »ï°¢Çü face Á¤º¸¸¦ ±¸¼ºÇÏ¸é¼­ vertex, normal °ú texture coord µµ °°ÀÌ ±¸¼º */
+		/** ì‚¼ê°í˜• face ì •ë³´ë¥¼ êµ¬ì„±í•˜ë©´ì„œ vertex, normal ê³¼ texture coord ë„ ê°™ì´ êµ¬ì„± */
 		for ( int i = 0; i < triangleCount; ++i ) {
 
 			index0 = i * 3 + 0;
@@ -1570,7 +1570,7 @@ GError GSceneManager::loadOBJFile( const char* szFileName, GScene* pScene )
 			indexArray[ index1 ] = index1;
 			indexArray[ index2 ] = index2;
 
-			/** vertex, normal °ú texture ÀÇ index °¡ ¾Æ´Ï¶ó ½ÇÁ¦µ¥ÀÌÅÍ¸¦ ³Ö´Â´Ù. */
+			/** vertex, normal ê³¼ texture ì˜ index ê°€ ì•„ë‹ˆë¼ ì‹¤ì œë°ì´í„°ë¥¼ ë„£ëŠ”ë‹¤. */
 			vertexArray[ index0 * 3 + 0 ] = pOBJGeometryData->m_VertexList[ pOBJObject->m_FaceList[ i ]->v0 ]->x;
 			vertexArray[ index0 * 3 + 1 ] = pOBJGeometryData->m_VertexList[ pOBJObject->m_FaceList[ i ]->v0 ]->y;
 			vertexArray[ index0 * 3 + 2 ] = pOBJGeometryData->m_VertexList[ pOBJObject->m_FaceList[ i ]->v0 ]->z;
@@ -1632,8 +1632,8 @@ GError GSceneManager::loadOBJFile( const char* szFileName, GScene* pScene )
 
 
 		/**
-		 *	normal À» ÇÕÇÑ´Ù. normal À» ÇÕÄ¥¶§, ÇöÀç ±âÁØÀÌ µÇ´Â normal °ú ´Ù¸¥ normal µé°úÀÇ
-		 *	weight ¸¦ °è»êÇØ¼­ ÇöÀç normal ÀÇ »õ·Î¿î ¹æÇâÀ» °è»êÇÏ´Âµ¥ ÀÌ¿ëÇÒÁö¸¦ °áÁ¤ÇØ¼­ Àû¿ëÇÑ´Ù.
+		 *	normal ì„ í•©í•œë‹¤. normal ì„ í•©ì¹ ë•Œ, í˜„ì¬ ê¸°ì¤€ì´ ë˜ëŠ” normal ê³¼ ë‹¤ë¥¸ normal ë“¤ê³¼ì˜
+		 *	weight ë¥¼ ê³„ì‚°í•´ì„œ í˜„ì¬ normal ì˜ ìƒˆë¡œìš´ ë°©í–¥ì„ ê³„ì‚°í•˜ëŠ”ë° ì´ìš©í• ì§€ë¥¼ ê²°ì •í•´ì„œ ì ìš©í•œë‹¤.
 		 */
 		for ( int i = 0; i < (int) pOBJGeometryData->m_VertexList.size(); ++i ) {
 			int normalCount = (int) pOBJNormalWeightList[ i ].size();
@@ -1642,8 +1642,8 @@ GError GSceneManager::loadOBJFile( const char* szFileName, GScene* pScene )
 				for ( int k = 0; k < normalCount; ++k ) {
 					if ( j == k ) continue;
 					/** 
-					 *	µÎ°³ÀÇ normal ÀÇ cos °ªÀÌ 0.5 º¸´Ù Å¬¶§¸¸ ´©Àû½ÃÅ²´Ù. 
-					 *	´©ÀûµÈ °á°ú°¡ ´ÙÀ½ normal µé¿¡°Ô ¿µÇâÀ» ÁÖ¸é ¾ÈµÇ¹Ç·Î, »õ·Î¿î °ø°£¿¡ ´©Àû½ÃÄÑ¾ß ÇÑ´Ù.
+					 *	ë‘ê°œì˜ normal ì˜ cos ê°’ì´ 0.5 ë³´ë‹¤ í´ë•Œë§Œ ëˆ„ì ì‹œí‚¨ë‹¤. 
+					 *	ëˆ„ì ëœ ê²°ê³¼ê°€ ë‹¤ìŒ normal ë“¤ì—ê²Œ ì˜í–¥ì„ ì£¼ë©´ ì•ˆë˜ë¯€ë¡œ, ìƒˆë¡œìš´ ê³µê°„ì— ëˆ„ì ì‹œì¼œì•¼ í•œë‹¤.
 					 */
 					if ( pOBJNormalWeightList[ i ][ j ].normal.innerProduct( pOBJNormalWeightList[ i ][ k ].normal ) > 0.5 ) {
 						data.normal += pOBJNormalWeightList[ i ][ k ].normal;
@@ -1655,7 +1655,7 @@ GError GSceneManager::loadOBJFile( const char* szFileName, GScene* pScene )
 		}
 
 		/**
-		 *	»õ·Î °è»êµÈ object µ¥ÀÌÅÍ¿¡ ¾÷µ¥ÀÌÆ® ½ÃÅ²´Ù.
+		 *	ìƒˆë¡œ ê³„ì‚°ëœ object ë°ì´í„°ì— ì—…ë°ì´íŠ¸ ì‹œí‚¨ë‹¤.
 		 */
 		for ( int i = 0; i < (int) pOBJGeometryData->m_VertexList.size(); ++i ) {
 			int normalCount = (int) pDestOBJNormalWeightList[ i ].size();
@@ -1669,7 +1669,7 @@ GError GSceneManager::loadOBJFile( const char* szFileName, GScene* pScene )
 
 		//float *tempVisibilityArray = new float[pOBJGeometryData->m_VertexList.size()];
 
-		//// Visibility °è»ê
+		//// Visibility ê³„ì‚°
 		//for ( int i = 0; i < pObject->getVertexCount(); ++i )
 		//	visibilityArray[i] = 0.0f;
 		//for ( int i = 0; i < (int)pOBJGeometryData->m_VertexList.size(); ++i )
@@ -1691,7 +1691,7 @@ GError GSceneManager::loadOBJFile( const char* szFileName, GScene* pScene )
 		//		v1[1] = pOBJObject->m_FaceList[i]->v1;
 		//		v1[2] = pOBJObject->m_FaceList[i]->v2;
 
-		//		bool share = false; //!< °øÅëµÈ vertex ¸¦ °¡Áö°í ÀÖ´ÂÁö
+		//		bool share = false; //!< ê³µí†µëœ vertex ë¥¼ ê°€ì§€ê³  ìˆëŠ”ì§€
 		//		for( int i0 = 0; i0 < 3; i0++ )
 		//		{
 		//			for( int j0 = 0; j0 < 3; j0++ )
@@ -1702,7 +1702,7 @@ GError GSceneManager::loadOBJFile( const char* szFileName, GScene* pScene )
 		//		}
 		//		if( share )
 		//		{
-		//			// pObject ¿Í pOBJObject ÀÇ triangle index °¡ °°´Ù°í °¡Á¤
+		//			// pObject ì™€ pOBJObject ì˜ triangle index ê°€ ê°™ë‹¤ê³  ê°€ì •
 		//			GVector center_i = pObject->getCenter( i );
 		//			GVector center_j = pObject->getCenter( j );
 		//			//pList->getTriangleWrapper( i )->visibility += max( getNormal( i ).innerProduct( (center_j - center_i).normalize() ), 0.0 );
@@ -1762,19 +1762,19 @@ GError GSceneManager::loadOBJFile( const char* szFileName, GScene* pScene )
 
 
 /**
- *	DAT ÆÄÀÏ Format À» ÀĞ¾î¼­ polygon µ¥ÀÌÅÍ¸¦ ±¸¼ºÇÑ´Ù.
- *	DAT ´Â 
+ *	DAT íŒŒì¼ Format ì„ ì½ì–´ì„œ polygon ë°ì´í„°ë¥¼ êµ¬ì„±í•œë‹¤.
+ *	DAT ëŠ” 
  *
- *	ÇÏ³ªÀÇ face ¸¦ ±¸¼ºÇÏ´Â vertex ¼ö¿Í µ¥ÀÌÅÍµé·Î ±¸¼ºµÇ¾î ÀÖ´Ù.
- *	face ´Â »ï°¢Çü µ¥ÀÌÅÍ¶ó´Â °ÍÀ» °¡Á¤.
+ *	í•˜ë‚˜ì˜ face ë¥¼ êµ¬ì„±í•˜ëŠ” vertex ìˆ˜ì™€ ë°ì´í„°ë“¤ë¡œ êµ¬ì„±ë˜ì–´ ìˆë‹¤.
+ *	face ëŠ” ì‚¼ê°í˜• ë°ì´í„°ë¼ëŠ” ê²ƒì„ ê°€ì •.
  *
- *	vertex¼ö
+ *	vertexìˆ˜
  *	x y z nx ny nz
- *  vertex¼ö
+ *  vertexìˆ˜
  *	x y z nx ny nz
  *	....
  *
- *	±ŞÇÏ°Ô ¸¸µé¾î¼­ ¹ö±×°¡ ÀÖÀ»¼ö ÀÕÀ½.;; ½Ã°£³¯´ë ´Ù½Ã È®ÀÎ
+ *	ê¸‰í•˜ê²Œ ë§Œë“¤ì–´ì„œ ë²„ê·¸ê°€ ìˆì„ìˆ˜ ì‡ìŒ.;; ì‹œê°„ë‚ ëŒ€ ë‹¤ì‹œ í™•ì¸
  *
  */
 bool GSceneManager::loadDatFile( const char*szFileName, GPolygonObject *pObject )
@@ -1791,8 +1791,8 @@ bool GSceneManager::loadDatFile( const char*szFileName, GPolygonObject *pObject 
 	GLogManager::logging( LOG_INFO, "%s Data File Load Start.", szFileName );
 
 	/** 
-	 *	vertex µ¥ÀÌÅÍ°¡ ¸î°³ÀÎÁö ¸ğ¸£¹Ç·Î ÀÓ½Ã·Î vertex list ¸¦ 
-	 *	ÁÖ¿í ´ã¾ÆµÑ vector
+	 *	vertex ë°ì´í„°ê°€ ëª‡ê°œì¸ì§€ ëª¨ë¥´ë¯€ë¡œ ì„ì‹œë¡œ vertex list ë¥¼ 
+	 *	ì£¼ìš± ë‹´ì•„ë‘˜ vector
 	 */
 	vector<GVertexInfo> m_VertexList;
 	m_VertexList.reserve( 300000 );
@@ -1806,8 +1806,8 @@ bool GSceneManager::loadDatFile( const char*szFileName, GPolygonObject *pObject 
 			break;
 
 		/** 
-		 *	¹İº¹µÇ´Â µ¥ÀÌÅÍÁß ÇÑ face ¸¦ ÀÌ·ç´Â vertex ¼ö 
-		 *	¹«Á¶°Ç 3 ÀÌ¾î¾ß ÇÑ´Ù.
+		 *	ë°˜ë³µë˜ëŠ” ë°ì´í„°ì¤‘ í•œ face ë¥¼ ì´ë£¨ëŠ” vertex ìˆ˜ 
+		 *	ë¬´ì¡°ê±´ 3 ì´ì–´ì•¼ í•œë‹¤.
 		 */
 		sscanf( data, "%d", &faceVertex );
 		if ( faceVertex != 3 ) {
@@ -1837,7 +1837,7 @@ bool GSceneManager::loadDatFile( const char*szFileName, GPolygonObject *pObject 
 		int TriangleCount = (int) m_VertexList.size() / 3;
 
 		/**
-		 *	ÀĞ¾îµéÀÎ µ¥ÀÌÅÍ·Î »ï°¢Çü polygon object ¸¦ ±¸¼ºÇÑ´Ù.
+		 *	ì½ì–´ë“¤ì¸ ë°ì´í„°ë¡œ ì‚¼ê°í˜• polygon object ë¥¼ êµ¬ì„±í•œë‹¤.
 		 */
 		float* vertexArray = (float*) malloc( sizeof( float ) * m_VertexList.size() * 3 );
 		float* normalArray = (float*) malloc( sizeof( float ) * m_VertexList.size() * 3 );
@@ -1852,7 +1852,7 @@ bool GSceneManager::loadDatFile( const char*szFileName, GPolygonObject *pObject 
 			normalArray[ i * 3 + 2 ] = m_VertexList[ i ].normal[ 2 ];
 		}
 
-		/** vertexArray ¼ø¼­´ë·Î */
+		/** vertexArray ìˆœì„œëŒ€ë¡œ */
 		for ( int i = 0; i < TriangleCount; ++i ) {
 			indexArray[ i * 3 + 0 ] = i * 3 + 0;
 			indexArray[ i * 3 + 1 ] = i * 3 + 1;
@@ -1881,14 +1881,14 @@ bool GSceneManager::loadDatFile( const char*szFileName, GPolygonObject *pObject 
 }
 
 /**
- *	ÁÖ¼®, °ø¹éµîÀ» Á¦°ÅÇÑ µ¥ÀÌÅÍ¸¦ ¸¸³¯¶§±îÁö loop ¸¦ µ¹¸é¼­
- *	ÇÑÁÙÀ» ÀĞ¾î¿Â´Ù.
+ *	ì£¼ì„, ê³µë°±ë“±ì„ ì œê±°í•œ ë°ì´í„°ë¥¼ ë§Œë‚ ë•Œê¹Œì§€ loop ë¥¼ ëŒë©´ì„œ
+ *	í•œì¤„ì„ ì½ì–´ì˜¨ë‹¤.
  */
 bool GSceneManager::readLine( char *data, int size, FILE *fp )
 {
 	while( !feof( fp ) ) {
 		/**
-		 *	µ¥ÀÌÅÍ°¡ ¾ø´Ù¸é continue;
+		 *	ë°ì´í„°ê°€ ì—†ë‹¤ë©´ continue;
 		 */
 		if ( fgets( data, 2040, fp ) == NULL )
 			continue;
@@ -1896,12 +1896,12 @@ bool GSceneManager::readLine( char *data, int size, FILE *fp )
 		GUtil::removeCRLF( data );
 
 		/** 
-		 *	ÁÖ¼®ÀÌ³ª °ø¹éÀÏ¶§.
+		 *	ì£¼ì„ì´ë‚˜ ê³µë°±ì¼ë•Œ.
 		 */
 		if ( data[ 0 ] == '#' || data[ 0 ] == 0x00 ) continue;
 	
 		/** 
-		 *	½ÇÁ¦ µ¥ÀÌÅÍ ÀÏ¶§¸¸ ¸®ÅÏ.
+		 *	ì‹¤ì œ ë°ì´í„° ì¼ë•Œë§Œ ë¦¬í„´.
 		 */	
 		return true;
 	}
@@ -1910,7 +1910,7 @@ bool GSceneManager::readLine( char *data, int size, FILE *fp )
 }
 
 /**
- *	Binary Çü½ÄÀÇ File À» ·ÎµåÇÑ´Ù.
+ *	Binary í˜•ì‹ì˜ File ì„ ë¡œë“œí•œë‹¤.
  */
 GError GSceneManager::loadBinaryFile( const char* szFileName, GScene* ppScene )
 {
@@ -1918,7 +1918,7 @@ GError GSceneManager::loadBinaryFile( const char* szFileName, GScene* ppScene )
 }
 
 /**
- *	ÇöÀç Scene À» file ·Î ÀúÀåÇÑ´Ù.
+ *	í˜„ì¬ Scene ì„ file ë¡œ ì €ì¥í•œë‹¤.
  */
 GError GSceneManager::saveScene( const char* szFileName, GScene* pScene )
 {

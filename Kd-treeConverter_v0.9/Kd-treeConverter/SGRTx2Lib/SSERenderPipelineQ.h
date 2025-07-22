@@ -1,9 +1,9 @@
 /**
- *	Cuda ·Î Rendering À» ¼öÇàÇÏ±â À§ÇØ¼­
- *	¿©·¯°¡Áö¸¦ °ü¸®ÇÏ´Â class.
+ *	Cuda ë¡œ Rendering ì„ ìˆ˜í–‰í•˜ê¸° ìœ„í•´ì„œ
+ *	ì—¬ëŸ¬ê°€ì§€ë¥¼ ê´€ë¦¬í•˜ëŠ” class.
  *
  *	light, texture, shading, ray tracing, photon mapping
- *	µîµî.
+ *	ë“±ë“±.
  *	
  *	by graphicsian.
  */
@@ -25,7 +25,7 @@
 class SSERenderPipelineQ : public GThreadWork
 {
 public:
-	// thread work ¸¦ À§ÇÑ ÇÔ¼ö
+	// thread work ë¥¼ ìœ„í•œ í•¨ìˆ˜
 	void work( GThreadContext *pThreadContext );
 	void stop();
 private:
@@ -38,7 +38,7 @@ public:
 
 	GError initialize( void );
 
-	// rendering À» À§ÇÑ ÇÔ¼ö
+	// rendering ì„ ìœ„í•œ í•¨ìˆ˜
 	void PrepareRender( int nMaxWorker );
 
 

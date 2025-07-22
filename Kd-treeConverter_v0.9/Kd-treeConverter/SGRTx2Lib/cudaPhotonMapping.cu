@@ -1,4 +1,4 @@
-#include <windows.h>
+//#include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -15,11 +15,11 @@
 #define PHOTONMAPPING_THREAD			256
 #define PHOTONMAPPING_BOUNDING_THREAD	128
 
-#define GATHERING_MAX_BLOCK_COUNT		1024		// gathering ½Ã ÇÑ¹ø¿¡ µ¹¸± Block °¹¼ö.
+#define GATHERING_MAX_BLOCK_COUNT		1024		// gathering ì‹œ í•œë²ˆì— ëŒë¦´ Block ê°¯ìˆ˜.
 #define GATHERING_THREAD				64
 
 /**
- *	Cuda ·Î Photon Mapping À» ¼öÇà.
+ *	Cuda ë¡œ Photon Mapping ì„ ìˆ˜í–‰.
  *
  *	by graphicsian
  */
@@ -34,8 +34,8 @@ cudaPhotonMapping::~cudaPhotonMapping()
 }
 
 /**
- *	CUDA Global Memory ¿¡ Light µ¥ÀÌÅÍ¸¦ ¾÷·ÎµåÇÏ°í, photon
- *	ÀúÀå°ø°£À» ÇÒ´çÇÑ´Ù. 
+ *	CUDA Global Memory ì— Light ë°ì´í„°ë¥¼ ì—…ë¡œë“œí•˜ê³ , photon
+ *	ì €ì¥ê³µê°„ì„ í• ë‹¹í•œë‹¤. 
  *
  *	@param pContext photon mapping context.
  *	@return GError result
@@ -46,7 +46,7 @@ GError cudaPhotonMapping::initialize( int maxPhotonSize, int maxIntersectionPoin
 	m_iMaxIntersectionPoint = maxIntersectionPoint;
 	
 	/** 
-	 *	device °ø°£¿¡ photon ÀúÀå°ø°£ ÇÒ´ç 
+	 *	device ê³µê°„ì— photon ì €ì¥ê³µê°„ í• ë‹¹ 
 	 */	
 	CUDA_SAFE_CALL( cudaMalloc( (void**) &m_pDevicePhotonMem,
 								sizeof( cuPhoton ) * m_iMaxPhotonSize ) );
@@ -59,7 +59,7 @@ GError cudaPhotonMapping::initialize( int maxPhotonSize, int maxIntersectionPoin
 		return errorCudaPhotonAllocError;
 	
 	/**
-	 *	intersection point °ú °á°ú¸¦ À§ÇÑ °ø°£ ÇÒ´ç.
+	 *	intersection point ê³¼ ê²°ê³¼ë¥¼ ìœ„í•œ ê³µê°„ í• ë‹¹.
 	 */
 	CUDA_SAFE_CALL( cudaMalloc( (void**) &m_pDevicePMIsectPointMem, 
 								sizeof( cuPMIntersectionPoint ) * m_iMaxIntersectionPoint ) );
@@ -75,7 +75,7 @@ GError cudaPhotonMapping::initialize( int maxPhotonSize, int maxIntersectionPoin
 }
 
 /**
- *	photon map À» clear ÇÏ°í ½ÍÀ»¶§.
+ *	photon map ì„ clear í•˜ê³  ì‹¶ì„ë•Œ.
  */
 GError cudaPhotonMapping::photonMapclear()
 {
@@ -89,7 +89,7 @@ GError cudaPhotonMapping::photonMapclear()
 }
 
 /**
- *	ÀÚ¿øÇØÁ¦.
+ *	ìì›í•´ì œ.
  */
 GError cudaPhotonMapping::uninitialize()
 {
@@ -118,15 +118,15 @@ GError cudaPhotonMapping::uninitialize()
 }
 
 /**
- *	°¢ ±¤¿øÀ¸·ÎºÎÅÍ photon À» Ãâ¹ß½ÃÄÑ¼­ bound µÇ´Â photon ±îÁö
- *	¸ğµÎ ÃßÀûÇÑ´ÙÀ½¿¡ °á°ú¸¦ global photon memory ÀúÀåÇÑ´Ù.
- *	photon global memory ´Â °¢ bound ´ç °íÁ¤ ¸Ş¸ğ¸® emitPhoton ¸¸Å­¾¿ »ç¿ëµÉ °ÍÀÌ´Ù. 
- *	µû¶ó¼­ ÇÊ¿äÇÑ ÃÑ ¸Ş¸ğ¸®´Â emitPhoton * m_iMaxBound ¸¸Å­ ÀâÇô ÀÖ¾î¾ß ÇÑ´Ù.
- *	m_iMaxPhotonSize °¡ ±×°Í. 
- *	°á°ú´Â pOutHostMem, pOutPhotonSize, pOutTracedBound ¿¡ ´ã¾Æ¼­ º¸³»ÁØ´Ù.
- *	pOutHostMem Àº ÃÖ¼ÒÇÑ emitPhoton * maxBound ¸¸Å­ ÀâÇôÀÖ¾î¾ß ÇÑ´Ù.
+ *	ê° ê´‘ì›ìœ¼ë¡œë¶€í„° photon ì„ ì¶œë°œì‹œì¼œì„œ bound ë˜ëŠ” photon ê¹Œì§€
+ *	ëª¨ë‘ ì¶”ì í•œë‹¤ìŒì— ê²°ê³¼ë¥¼ global photon memory ì €ì¥í•œë‹¤.
+ *	photon global memory ëŠ” ê° bound ë‹¹ ê³ ì • ë©”ëª¨ë¦¬ emitPhoton ë§Œí¼ì”© ì‚¬ìš©ë  ê²ƒì´ë‹¤. 
+ *	ë”°ë¼ì„œ í•„ìš”í•œ ì´ ë©”ëª¨ë¦¬ëŠ” emitPhoton * m_iMaxBound ë§Œí¼ ì¡í˜€ ìˆì–´ì•¼ í•œë‹¤.
+ *	m_iMaxPhotonSize ê°€ ê·¸ê²ƒ. 
+ *	ê²°ê³¼ëŠ” pOutHostMem, pOutPhotonSize, pOutTracedBound ì— ë‹´ì•„ì„œ ë³´ë‚´ì¤€ë‹¤.
+ *	pOutHostMem ì€ ìµœì†Œí•œ emitPhoton * maxBound ë§Œí¼ ì¡í˜€ìˆì–´ì•¼ í•œë‹¤.
  *
- *	direct photon À» ÀúÀåÇÏÁö ¾Ê´Â ¿É¼ÇÀÌ¶ó¸é bound °¡ 0 ÀÎ°ÍÀº ÀúÀåÇÏÁö ¾Ê´Â´Ù.
+ *	direct photon ì„ ì €ì¥í•˜ì§€ ì•ŠëŠ” ì˜µì…˜ì´ë¼ë©´ bound ê°€ 0 ì¸ê²ƒì€ ì €ì¥í•˜ì§€ ì•ŠëŠ”ë‹¤.
  *
  */
 GError cudaPhotonMapping::photonTracing( int emitPhoton, int maxBound, int randomSeed,
@@ -141,9 +141,9 @@ GError cudaPhotonMapping::photonTracing( int emitPhoton, int maxBound, int rando
 	timer.start();
 
 	/**
-	 *	CUDA RENDER Pipeline class ¿¡¼­ ray ÀúÀå¼Ò¸¦ °¡Á®¿Í¼­ emit photon À» ÃßÀûÇÒ
-	 *	ray Á¤º¸¸¦ ±â·ÏÇÏ°í ray casting À» ¼öÇà½ÃÅ²´Ù. ray °ø°£Àº ÇÑ¹ø¿¡ »Ñ¸±
-	 *	photon ÀÇ °³¼öº¸´Ù Ä¿¾ßÇÑ´Ù.
+	 *	CUDA RENDER Pipeline class ì—ì„œ ray ì €ì¥ì†Œë¥¼ ê°€ì ¸ì™€ì„œ emit photon ì„ ì¶”ì í• 
+	 *	ray ì •ë³´ë¥¼ ê¸°ë¡í•˜ê³  ray casting ì„ ìˆ˜í–‰ì‹œí‚¨ë‹¤. ray ê³µê°„ì€ í•œë²ˆì— ë¿Œë¦´
+	 *	photon ì˜ ê°œìˆ˜ë³´ë‹¤ ì»¤ì•¼í•œë‹¤.
 	 */
 	if ( emitPhoton * maxBound < m_iMaxPhotonSize ) {
 		GLogManager::logging( LOG_ERROR, "overflow max photon size : %d", m_iMaxPhotonSize );
@@ -156,7 +156,7 @@ GError cudaPhotonMapping::photonTracing( int emitPhoton, int maxBound, int rando
 	}
 
 	/**
-	 *	ÇÑ¹ø¿¡ ¼öÇà½ÃÅ³ thread block °³¼ö¸¦ ±¸ÇÑ´Ù.
+	 *	í•œë²ˆì— ìˆ˜í–‰ì‹œí‚¬ thread block ê°œìˆ˜ë¥¼ êµ¬í•œë‹¤.
 	 */
 	int threads = PHOTONMAPPING_THREAD;
 	int block = ( emitPhoton / threads ) + 1;
@@ -168,9 +168,9 @@ GError cudaPhotonMapping::photonTracing( int emitPhoton, int maxBound, int rando
 						block, PHOTONMAPPING_THREAD, block * PHOTONMAPPING_THREAD );
 	
 	/**-----------------------------------------------------------------------------------------------
-	 *	photon À» °¢ ±¤¿øÀ¸·ÎºÎÅÍ emit ½ÃÄÑ¼­ 
-	 *	pContex ´Â host ¸Ş¸ğ¸®»ó¿¡ ÀÖ´Â°ÍÀÌ¹Ç·Î Æ÷ÀÎÅÍ¸¦ ³Ñ±â¸é ¾ÈµÇ°í
-	 *	¹İµå½Ã º¹»çµÇ°Ô²û call by value ·Î ³Ñ°Ü¾ß ÇÑ´Ù.!
+	 *	photon ì„ ê° ê´‘ì›ìœ¼ë¡œë¶€í„° emit ì‹œì¼œì„œ 
+	 *	pContex ëŠ” host ë©”ëª¨ë¦¬ìƒì— ìˆëŠ”ê²ƒì´ë¯€ë¡œ í¬ì¸í„°ë¥¼ ë„˜ê¸°ë©´ ì•ˆë˜ê³ 
+	 *	ë°˜ë“œì‹œ ë³µì‚¬ë˜ê²Œë” call by value ë¡œ ë„˜ê²¨ì•¼ í•œë‹¤.!
 	 **-----------------------------------------------------------------------------------------------*/
 	 
 	cuPhotonEmitKernel<<< block, threads >>>( 
@@ -180,13 +180,13 @@ GError cudaPhotonMapping::photonTracing( int emitPhoton, int maxBound, int rando
 		return errorphotonTracingError;
 
 	/**-----------------------------------------------------------------------------------------------
-	 *	max bound ¿¡ µµ´ŞÇÏ°Å³ª bound µÇ´Â photon ÀÌ ÇÏ³ªµµ ¾øÀ»¶§±îÁö
-	 *	¹İº¹ÇÏ¸é¼­ photon À» global photon memory ¿¡ ÀúÀåÇÑ´Ù. ÇÑ¹ø photon À» »Ñ¸°ÈÄ¿¡´Â
-	 *	photon Á¤º¸°¡ photon memory ¿¡ block ´ÜÀ§·Î ±â·ÏµÈ´Ù. block Å©±â´Â emitPhoton °³¼ö¸¸Å­
+	 *	max bound ì— ë„ë‹¬í•˜ê±°ë‚˜ bound ë˜ëŠ” photon ì´ í•˜ë‚˜ë„ ì—†ì„ë•Œê¹Œì§€
+	 *	ë°˜ë³µí•˜ë©´ì„œ photon ì„ global photon memory ì— ì €ì¥í•œë‹¤. í•œë²ˆ photon ì„ ë¿Œë¦°í›„ì—ëŠ”
+	 *	photon ì •ë³´ê°€ photon memory ì— block ë‹¨ìœ„ë¡œ ê¸°ë¡ëœë‹¤. block í¬ê¸°ëŠ” emitPhoton ê°œìˆ˜ë§Œí¼
 	 *	
-	 *	ray Ã¼Å© cudaRenderPipeline À» »ç¿ëÇÏ´Âµ¥, Ç×»ó »õ·Î ÃßÀûÇÒ ray ´Â
-	 *	ray °ø°£ÀÇ offset 0 ºÎÅÍ emitPhoton °³¸¸Å­ÀúÀåµÇ¾î block ´ÜÀ§·Î ÃßÀûµÈ´Ù.
-	 *	 ÀÌÁß bound µÇÁö ¾Ê¾Æ¼­ ÃßÀûÇÏÁö ¾Ê¾Æµµ	µÇ´Â ray ´Â mint °¡ FLT_MAX·Î ¼¼ÆÃµÇ¾î ÀÖÀ»°ÍÀÌ´Ù. 
+	 *	ray ì²´í¬ cudaRenderPipeline ì„ ì‚¬ìš©í•˜ëŠ”ë°, í•­ìƒ ìƒˆë¡œ ì¶”ì í•  ray ëŠ”
+	 *	ray ê³µê°„ì˜ offset 0 ë¶€í„° emitPhoton ê°œë§Œí¼ì €ì¥ë˜ì–´ block ë‹¨ìœ„ë¡œ ì¶”ì ëœë‹¤.
+	 *	 ì´ì¤‘ bound ë˜ì§€ ì•Šì•„ì„œ ì¶”ì í•˜ì§€ ì•Šì•„ë„	ë˜ëŠ” ray ëŠ” mint ê°€ FLT_MAXë¡œ ì„¸íŒ…ë˜ì–´ ìˆì„ê²ƒì´ë‹¤. 
 	 **-----------------------------------------------------------------------------------------------*/
 
 	int bound = 0;
@@ -194,12 +194,12 @@ GError cudaPhotonMapping::photonTracing( int emitPhoton, int maxBound, int rando
 	
 	do {
 		/**
-		 *	°¢ bound º° photon ray ¸¦ ÃßÀûÈÄ °á°ú´Â device »óÀÇ intersection point memory °ø°£¿¡
-		 *	offset 0 ºÎÅÍ emitPhoton »çÀÌ¿¡ ¸ÅÄ¡µÇ¾î ±â·ÏµÇ°Ô µÈ´Ù.
-		 *  pRenderPipeline->getDeviceRayBuffer() ¿Í pRenderPipeline->getDeviceIntersectionBuffer()
-		 *	ÀÌ °¢°¢ device »óÀÇ ray °ø°£ intersection point °ø°£À» ÀÇ¹Ì.
+		 *	ê° bound ë³„ photon ray ë¥¼ ì¶”ì í›„ ê²°ê³¼ëŠ” device ìƒì˜ intersection point memory ê³µê°„ì—
+		 *	offset 0 ë¶€í„° emitPhoton ì‚¬ì´ì— ë§¤ì¹˜ë˜ì–´ ê¸°ë¡ë˜ê²Œ ëœë‹¤.
+		 *  pRenderPipeline->getDeviceRayBuffer() ì™€ pRenderPipeline->getDeviceIntersectionBuffer()
+		 *	ì´ ê°ê° device ìƒì˜ ray ê³µê°„ intersection point ê³µê°„ì„ ì˜ë¯¸.
 		 *
-		 *	photon À» »Ñ¸±¶§´Â back face culling À» ÇÏÁö ¾Ê´Â´Ù.
+		 *	photon ì„ ë¿Œë¦´ë•ŒëŠ” back face culling ì„ í•˜ì§€ ì•ŠëŠ”ë‹¤.
 		 */
 		error = pRenderPipeline->doRayCastingSequentialData( 0, emitPhoton, faceCCW, false );
 		if ( error != errorNo ) {
@@ -209,7 +209,7 @@ GError cudaPhotonMapping::photonTracing( int emitPhoton, int maxBound, int rando
 		CUDA_SAFE_CALL( cudaMemset( m_pDeviceIntResult, 0x00, sizeof( int ) ) );
 	
 		/** 
-		 *	block °ú thread °³¼ö °öÇÑ°Ô emitPhoton °³¼ö°¡ µÇ´ÂÁö È®ÀÎÇÒ°Í 
+		 *	block ê³¼ thread ê°œìˆ˜ ê³±í•œê²Œ emitPhoton ê°œìˆ˜ê°€ ë˜ëŠ”ì§€ í™•ì¸í• ê²ƒ 
 		 */
 		threads = PHOTONMAPPING_BOUNDING_THREAD;
 		block = ( emitPhoton / threads ) + 1;
@@ -236,7 +236,7 @@ GError cudaPhotonMapping::photonTracing( int emitPhoton, int maxBound, int rando
 	} while( atLeastOne > 0 );
 
 	/**
-	 *	ÃÖÁ¾ÀûÀ¸·Î photon map À» device->host ·Î º¹»çÇØ¿Â´Ù.
+	 *	ìµœì¢…ì ìœ¼ë¡œ photon map ì„ device->host ë¡œ ë³µì‚¬í•´ì˜¨ë‹¤.
 	 */
 	CUDA_SAFE_CALL( cudaMemcpy( pOutHostMem, m_pDevicePhotonMem,
 								sizeof( cuPhoton ) * bound * emitPhoton, cudaMemcpyDeviceToHost ) );
@@ -259,7 +259,7 @@ GError cudaPhotonMapping::photonTracing( int emitPhoton, int maxBound, int rando
 }
 
 /**
- *	Intersection point Á¤º¸¸¦ DEVICE ¿¡ ¿Ã¸°´Ù.
+ *	Intersection point ì •ë³´ë¥¼ DEVICE ì— ì˜¬ë¦°ë‹¤.
  */	
 GError cudaPhotonMapping::uploadIntersectionPoint( cuIntersectionPoint *isectPointData, int iCount )
 {
@@ -269,7 +269,7 @@ GError cudaPhotonMapping::uploadIntersectionPoint( cuIntersectionPoint *isectPoi
 	}
 	
 	/**
-	 *	intersection point Á¤º¸ º¹»ç.
+	 *	intersection point ì •ë³´ ë³µì‚¬.
 	 */	
 	CUDA_SAFE_CALL( cudaMemcpy( m_pDeviceIsectPointMem, isectPointData, 
 					sizeof( cuIntersectionPoint ) * iCount, cudaMemcpyHostToDevice ) );
@@ -282,9 +282,9 @@ GError cudaPhotonMapping::uploadIntersectionPoint( cuIntersectionPoint *isectPoi
 }
 
 /**
- *	area photon À¸·Î density area ¸¦ °è»êÇÑ´Ù.
- *	intersection point ´Â ÀÌ¹Ì ÀÌÀü¿¡ ¿Ã¶ó°¡ ÀÖ¾î¾ß ÇÑ´Ù.
- *	area ¸¦ °è»êÇØ¼­ intersection point device memory ÀÇ area ¸¦ ¾÷µ¥ÀÌÆ® ½ÃÅ²´Ù.
+ *	area photon ìœ¼ë¡œ density area ë¥¼ ê³„ì‚°í•œë‹¤.
+ *	intersection point ëŠ” ì´ë¯¸ ì´ì „ì— ì˜¬ë¼ê°€ ìˆì–´ì•¼ í•œë‹¤.
+ *	area ë¥¼ ê³„ì‚°í•´ì„œ intersection point device memory ì˜ area ë¥¼ ì—…ë°ì´íŠ¸ ì‹œí‚¨ë‹¤.
  */
 GError cudaPhotonMapping::calDensityArea( cuPMIntersectionPoint *pPMIsectPoint, int iCount,
 										  cuPhoton *pPhotonInfo, int photonCount,
@@ -301,7 +301,7 @@ GError cudaPhotonMapping::calDensityArea( cuPMIntersectionPoint *pPMIsectPoint, 
 	}
 	
 	/**
-	 *	photon info¸¦ texture ·Î ¿Ã¸®±â
+	 *	photon infoë¥¼ texture ë¡œ ì˜¬ë¦¬ê¸°
 	 */
 	float *pDeviceAreaPhotonData = NULL;
 
@@ -311,7 +311,7 @@ GError cudaPhotonMapping::calDensityArea( cuPMIntersectionPoint *pPMIsectPoint, 
 	CUDA_SAFE_CALL( cudaBindTexture( 0, areaPhotonTexture, pDeviceAreaPhotonData ) );
 
 	/**
-	 *	photon index ¸¦ texture ·Î ¿Ã¸®±â
+	 *	photon index ë¥¼ texture ë¡œ ì˜¬ë¦¬ê¸°
 	 */
 	int *pDevicePhotonIndexData = NULL;
 
@@ -323,8 +323,8 @@ GError cudaPhotonMapping::calDensityArea( cuPMIntersectionPoint *pPMIsectPoint, 
 	CUDA_SAFE_CALL( cudaBindTexture( 0, photonIndexTexture, pDevicePhotonIndexData ) );
 
 	/**
-	 *	intersection point ¿Í photon ¿¬°ü°ü°è Á¤º¸ º¹»ç.
-	 *	pPMIsectPoint Å©±â´Â context ¾ÈÀÇ iCurrentIntersectionPoint ¿Í °°´Ù.
+	 *	intersection point ì™€ photon ì—°ê´€ê´€ê³„ ì •ë³´ ë³µì‚¬.
+	 *	pPMIsectPoint í¬ê¸°ëŠ” context ì•ˆì˜ iCurrentIntersectionPoint ì™€ ê°™ë‹¤.
 	 */	
 	CUDA_SAFE_CALL( cudaMemcpy( m_pDevicePMIsectPointMem, pPMIsectPoint, 
 						sizeof( cuPMIntersectionPoint ) * iCount, cudaMemcpyHostToDevice ) );
@@ -334,8 +334,8 @@ GError cudaPhotonMapping::calDensityArea( cuPMIntersectionPoint *pPMIsectPoint, 
 	}
 
 	/**
-	 *	ray µ¥ÀÌÅÍ¸¦ cuda ¿¡¼­ Ã³¸®ÇÒ ¼ö ÀÖ´Â ÀÏÁ¤ °³¼ö¸¸Å­
-	 *	Àß¶ó¼­ Ã³¸®½ÃÅ²´Ù.
+	 *	ray ë°ì´í„°ë¥¼ cuda ì—ì„œ ì²˜ë¦¬í•  ìˆ˜ ìˆëŠ” ì¼ì • ê°œìˆ˜ë§Œí¼
+	 *	ì˜ë¼ì„œ ì²˜ë¦¬ì‹œí‚¨ë‹¤.
 	 */
 	while( true ) {
 	
@@ -370,7 +370,7 @@ GError cudaPhotonMapping::calDensityArea( cuPMIntersectionPoint *pPMIsectPoint, 
 	}
 
 	/**
-	 *	°á°ú¸¦ ¹Ş´Â´Ù.
+	 *	ê²°ê³¼ë¥¼ ë°›ëŠ”ë‹¤.
 	 */
 	if ( bSuccess ) {
 	
@@ -430,7 +430,7 @@ GError cudaPhotonMapping::photonGathering( cuPMIntersectionPoint *pPMIsectPoint,
 	//CUDA_SAFE_CALL( cutStartTimer( timer ) );
 
 	/**
-	 *	photon info¸¦ texture ·Î ¿Ã¸®±â
+	 *	photon infoë¥¼ texture ë¡œ ì˜¬ë¦¬ê¸°
 	 */
 	float *pDevicePhotonData = NULL;
 
@@ -441,7 +441,7 @@ GError cudaPhotonMapping::photonGathering( cuPMIntersectionPoint *pPMIsectPoint,
 	CUDA_SAFE_CALL( cudaBindTexture( 0, photonTexture, pDevicePhotonData ) );
 
 	/**
-	 *	photon index ¸¦ texture ·Î ¿Ã¸®±â
+	 *	photon index ë¥¼ texture ë¡œ ì˜¬ë¦¬ê¸°
 	 */
 	int *pDevicePhotonIndexData = NULL;
 
@@ -453,15 +453,15 @@ GError cudaPhotonMapping::photonGathering( cuPMIntersectionPoint *pPMIsectPoint,
 	CUDA_SAFE_CALL( cudaBindTexture( 0, photonIndexTexture, pDevicePhotonIndexData ) );
 	
 	/**
-	 *	intersection point ¿Í photon ¿¬°ü°ü°è Á¤º¸ º¹»ç.
-	 *	pPMIsectPoint Å©±â´Â context ¾ÈÀÇ iCurrentIntersectionPoint ¿Í °°´Ù.
+	 *	intersection point ì™€ photon ì—°ê´€ê´€ê³„ ì •ë³´ ë³µì‚¬.
+	 *	pPMIsectPoint í¬ê¸°ëŠ” context ì•ˆì˜ iCurrentIntersectionPoint ì™€ ê°™ë‹¤.
 	 */	
 	CUDA_SAFE_CALL( cudaMemcpy( m_pDevicePMIsectPointMem, pPMIsectPoint, 
 						sizeof( cuPMIntersectionPoint ) * iCount, cudaMemcpyHostToDevice ) );
 
 	/**
-	 *	ray µ¥ÀÌÅÍ¸¦ cuda ¿¡¼­ Ã³¸®ÇÒ ¼ö ÀÖ´Â ÀÏÁ¤ °³¼ö¸¸Å­
-	 *	Àß¶ó¼­ Ã³¸®½ÃÅ²´Ù.
+	 *	ray ë°ì´í„°ë¥¼ cuda ì—ì„œ ì²˜ë¦¬í•  ìˆ˜ ìˆëŠ” ì¼ì • ê°œìˆ˜ë§Œí¼
+	 *	ì˜ë¼ì„œ ì²˜ë¦¬ì‹œí‚¨ë‹¤.
 	 */
 	while( true ) {
 	
@@ -495,7 +495,7 @@ GError cudaPhotonMapping::photonGathering( cuPMIntersectionPoint *pPMIsectPoint,
 	}
 	
 	/**
-	 *	°á°ú¸¦ ¹Ş´Â´Ù.
+	 *	ê²°ê³¼ë¥¼ ë°›ëŠ”ë‹¤.
 	 */
 	if ( bSuccess ) {
 	

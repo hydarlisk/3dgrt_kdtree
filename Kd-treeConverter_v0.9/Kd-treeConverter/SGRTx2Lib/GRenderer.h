@@ -5,16 +5,16 @@
 #include "GImageBuffer.h"
 
 /**
- * ·»´õ¸µ¿¡ °üÇÑ ¼¼ÆÃÀ» °¢°¢¿¡ ´ëÇÑ º¯¼ö·Î °®Áö ¾Ê°í, flag ·Î °ü¸®ÇÔ.
- * °¢ ¼¼ÆÃÀº ÇÔ¼ö·Î¸¸ Á¢±ÙÇÒ ¼ö ÀÖÀ½.
+ * ë Œë”ë§ì— ê´€í•œ ì„¸íŒ…ì„ ê°ê°ì— ëŒ€í•œ ë³€ìˆ˜ë¡œ ê°–ì§€ ì•Šê³ , flag ë¡œ ê´€ë¦¬í•¨.
+ * ê° ì„¸íŒ…ì€ í•¨ìˆ˜ë¡œë§Œ ì ‘ê·¼í•  ìˆ˜ ìˆìŒ.
 */
 enum RENDER_SETTING { G_LIGHTING = 1, G_SHADOW = 2, G_MATERIAL = 4, G_VERTEX_COLOR = 8, G_INDIRECT_ILLUMINATION = 16, G_DIRECT_ILLUMINATION = 32, G_SCENE_HIDE = 64,  };
 
 /**
- *	·»´õ·¯ ±âº» Å¬·¡½º.
- *	°¢ ·»´õ·¯´Â ¹İµå½Ã ÀÌ Å¬·¡½º¸¦ »ó¼Ó¹Ş¾Æ¾ß ÇÑ´Ù.
- *	rendering option Àº º¸ÆíÀûÀÎ option µé·Î ±¸¼ºµÇ¾úÀ¸¹Ç·Î
- *	Áö¿øÇÏÁö ¾ÊÀ¸¸é ±¸Çö¾ÈÇØµµ µÈ´Ù.
+ *	ë Œë”ëŸ¬ ê¸°ë³¸ í´ë˜ìŠ¤.
+ *	ê° ë Œë”ëŸ¬ëŠ” ë°˜ë“œì‹œ ì´ í´ë˜ìŠ¤ë¥¼ ìƒì†ë°›ì•„ì•¼ í•œë‹¤.
+ *	rendering option ì€ ë³´í¸ì ì¸ option ë“¤ë¡œ êµ¬ì„±ë˜ì—ˆìœ¼ë¯€ë¡œ
+ *	ì§€ì›í•˜ì§€ ì•Šìœ¼ë©´ êµ¬í˜„ì•ˆí•´ë„ ëœë‹¤.
  *
  *	by graphicsian
  */
@@ -22,8 +22,8 @@ class GRenderer
 {
 private:
 	/**
-	 * RENDER_SETTING ÀÇ flag ¸¦ °°´Â º¯¼ö.
-	 * m_bEnableShadow µîÀÇ º¯¼öµéÀÌ »ç¶óÁö°í flag Çü½ÄÀ¸·Î °ü¸®ÇÔ.
+	 * RENDER_SETTING ì˜ flag ë¥¼ ê°™ëŠ” ë³€ìˆ˜.
+	 * m_bEnableShadow ë“±ì˜ ë³€ìˆ˜ë“¤ì´ ì‚¬ë¼ì§€ê³  flag í˜•ì‹ìœ¼ë¡œ ê´€ë¦¬í•¨.
 	*/
 	int m_RenderSetting;
 
@@ -37,7 +37,7 @@ public:
 	virtual GError preRendering( GScene* pScene, bool isDebug ) { return errorNo; };
 	virtual GError postRendering( GScene* pScene, bool isDebug ) { return errorNo; };
 
-	// ÀÌ ÇÔ¼öµéÀº »ç¿ë ¾ÈµÇ´Â °ÍÀÌ ÁÁÀ½.
+	// ì´ í•¨ìˆ˜ë“¤ì€ ì‚¬ìš© ì•ˆë˜ëŠ” ê²ƒì´ ì¢‹ìŒ.
 	//int getRenderSetting() { return m_RenderSetting; }
 	//void setRenderSetting( int setting ) { m_RenderSetting = setting; }
 

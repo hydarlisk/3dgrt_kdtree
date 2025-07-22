@@ -3,7 +3,7 @@
 #include "GKDTreeStructure.h"
 #include "GPointLight.h"
 #include "GRenderCommon.h"
-		#include "SSERenderPipeline.h"				//yet GRenderCommon.h ¿¡ ³ÖÀ»°Í
+		#include "SSERenderPipeline.h"				//yet GRenderCommon.h ì— ë„£ì„ê²ƒ
 #include "math.h"
 
 #include "GThreadManager.h"
@@ -110,7 +110,7 @@ void GSSERayTracerForPaper::uninitialize()
 }
 
 // ------------------------------------------------------------------------------------------------
-// initialize()		: scene Á¤º¸¸¦ Àç±¸¼ºÇØ¾ßÇÒ¶§ ÃÊ±âÈ­ÇÑ´Ù.
+// initialize()		: scene ì •ë³´ë¥¼ ì¬êµ¬ì„±í•´ì•¼í• ë•Œ ì´ˆê¸°í™”í•œë‹¤.
 // ------------------------------------------------------------------------------------------------
 GError GSSERayTracerForPaper::initialize( GScene *pScene )
 {
@@ -125,7 +125,7 @@ GError GSSERayTracerForPaper::initialize( GScene *pScene )
 		 m_oldResolution != pScene->getResolution() ) {
 
 		// ----------------------------------------------------------
-		// KdTree ¹× triangle Á¤º¸¸¦ Æ÷ÀÎÆÃÇÏ´Â °øÀ¯ ±¸Á¶Ã¼ »ı¼º
+		// KdTree ë° triangle ì •ë³´ë¥¼ í¬ì¸íŒ…í•˜ëŠ” ê³µìœ  êµ¬ì¡°ì²´ ìƒì„±
 		// ----------------------------------------------------------
 		if ( m_pSSESceneData ) {
 			delete m_pSSESceneData;
@@ -137,7 +137,7 @@ GError GSSERayTracerForPaper::initialize( GScene *pScene )
 			return error;
 
 		// ----------------------------------------------------------
-		// ÇöÀç Renderer °¡ Ã³¸®ÇÑ Scene À» ±â¾ïÇÑ´Ù.
+		// í˜„ì¬ Renderer ê°€ ì²˜ë¦¬í•œ Scene ì„ ê¸°ì–µí•œë‹¤.
 		// ----------------------------------------------------------
 		m_iOldSceneNumber = pScene->getSceneNumber();
 		m_iSceneTimestamp = pScene->getGeometryChangeTimestamp();
@@ -153,7 +153,7 @@ GError GSSERayTracerForPaper::initialize( GScene *pScene )
 	if (bModifiedScene || bModifiedThread) {
 #if GOThread
 		// ----------------------------------------------------------
-		// Render Pipeline »ı¼º
+		// Render Pipeline ìƒì„±
 		// ----------------------------------------------------------
 		for ( int i = 0; i < (int)m_SSERenderPipelineList.size(); ++i ) {
 			delete m_SSERenderPipelineList[i];
@@ -166,7 +166,7 @@ GError GSSERayTracerForPaper::initialize( GScene *pScene )
 		}
 #else
 		// ----------------------------------------------------------
-		// Render Pipeline »ı¼º
+		// Render Pipeline ìƒì„±
 		// ----------------------------------------------------------
 		if ( m_pSSERenderPipeline ) {
 			delete m_pSSERenderPipeline;
@@ -180,7 +180,7 @@ GError GSSERayTracerForPaper::initialize( GScene *pScene )
 
 
 // ------------------------------------------------------------------------------------------------
-// PrepareRender() : Screen ¹× Ray µî ¼ÂÆÃ
+// PrepareRender() : Screen ë° Ray ë“± ì…‹íŒ…
 // ------------------------------------------------------------------------------------------------
 void GSSERayTracerForPaper::Prepare_Render( void )
 {
@@ -208,7 +208,7 @@ void GSSERayTracerForPaper::Prepare_Render( void )
 }
 
 // ------------------------------------------------------------------------------------------------
-// Execute_Render() : Render-Pipeline ½ÇÇà
+// Execute_Render() : Render-Pipeline ì‹¤í–‰
 // ------------------------------------------------------------------------------------------------
 void GSSERayTracerForPaper::Execute_Render( void )
 {
@@ -265,8 +265,8 @@ GError GSSERayTracerForPaper::rendering( GScene *pScene, bool isDebug )
 	GError error;
 
 	// ----------------------------------------------------------
-	//	Scene ÀÌ ÀÌÀü geometry »óÅÂ¿¡¼­ º¯ÇÑ°Ô ÀÖ´ÂÁö Ã¼Å©ÇØ¼­ ÀÖ´Ù¸é
-	//	SpatialStructure ¸¦ Àç±¸¼ºÇÑ´Ù.
+	//	Scene ì´ ì´ì „ geometry ìƒíƒœì—ì„œ ë³€í•œê²Œ ìˆëŠ”ì§€ ì²´í¬í•´ì„œ ìˆë‹¤ë©´
+	//	SpatialStructure ë¥¼ ì¬êµ¬ì„±í•œë‹¤.
 	// ----------------------------------------------------------
 	error = initialize( pScene );
 	if ( error != errorNo ) {

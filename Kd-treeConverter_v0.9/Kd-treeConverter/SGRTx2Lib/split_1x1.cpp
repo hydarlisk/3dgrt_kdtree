@@ -224,10 +224,10 @@ void SSERenderPipeline::Split_Isect1x1__PriRay( const KdTreeNode *node, int nIdx
 		// Mailbox
 		// ---------------------------------------------------------------
 		if (acc.mbox == rp->RayId) { continue; }
-		else { acc.mbox = rp->RayId; }	// π´¡∂∞« isect æ»µ«µµ Ω««‡ µ«æÓæﬂ «‘
+		else { acc.mbox = rp->RayId; }	// Î¨¥Ï°∞Í±¥ isect ÏïàÎêòÎèÑ Ïã§Ìñâ ÎêòÏñ¥Ïïº Ìï®
 
 		// ---------------------------------------------------------------
-		// Backface Culling : ≈ı∏Ì«œ¡ˆ æ ¥¬ π∞√º∏∏ «ÿ¥Á
+		// Backface Culling : Ìà¨Î™ÖÌïòÏßÄ ÏïäÎäî Î¨ºÏ≤¥Îßå Ìï¥Îãπ
 		// ---------------------------------------------------------------
 		if (!acc.isTransparent && m_bBackFaceCulling) {
 			if (_GVEC_rINNDOT2(rp->d.f, acc.N) < 0) {
@@ -268,10 +268,10 @@ void SSERenderPipeline::Split_Isect1x1__SecRay( const KdTreeNode *node, int nIdx
 		// Mailbox
 		// ---------------------------------------------------------------
 		if (acc.mbox == rp->RayId) { continue; }
-		else { acc.mbox = rp->RayId; }	// π´¡∂∞« isect æ»µ«µµ Ω««‡ µ«æÓæﬂ «‘
+		else { acc.mbox = rp->RayId; }	// Î¨¥Ï°∞Í±¥ isect ÏïàÎêòÎèÑ Ïã§Ìñâ ÎêòÏñ¥Ïïº Ìï®
 
 		// ---------------------------------------------------------------
-		// Backface Culling : ≈ı∏Ì«œ¡ˆ æ ¥¬ π∞√º∏∏ «ÿ¥Á
+		// Backface Culling : Ìà¨Î™ÖÌïòÏßÄ ÏïäÎäî Î¨ºÏ≤¥Îßå Ìï¥Îãπ
 		// ---------------------------------------------------------------
 		if (!acc.isTransparent && m_bBackFaceCulling) {
 			if (_GVEC_rINNDOT2(rp->d.f, acc.N) < 0) {
@@ -311,10 +311,10 @@ void SSERenderPipeline::Split_Isect1x1__ShwRay( const KdTreeNode *node , int tem
 		// Mailbox
 		// ---------------------------------------------------------------
 		if (acc.mbox == rp->RayId) { continue; }
-		else { acc.mbox = rp->RayId; }	// π´¡∂∞« isect æ»µ«µµ Ω««‡ µ«æÓæﬂ «‘
+		else { acc.mbox = rp->RayId; }	// Î¨¥Ï°∞Í±¥ isect ÏïàÎêòÎèÑ Ïã§Ìñâ ÎêòÏñ¥Ïïº Ìï®
 
 		// ---------------------------------------------------------------
-		// ≈ı∏Ì«— π∞√º¥¬ ≈ı∞˙
+		// Ìà¨Î™ÖÌïú Î¨ºÏ≤¥Îäî Ìà¨Í≥º
 		// ---------------------------------------------------------------
 		if (acc.isTransparent) continue;
 
@@ -782,7 +782,7 @@ void SSERenderPipeline::Split_Shading1x1__Setup (const int nIdx,
 	mat_cTex = mat_cDiff;
 	
 
-	// ≈Î∞Ëƒ°
+	// ÌÜµÍ≥ÑÏπò
 	if (m_RunStatics == 1) {
 		if (rp->Depth == 0) {
 			if (b_refl || b_refr)	{ m_pf_Hit_SpecPnt_PR++; } else {
@@ -863,8 +863,8 @@ void SSERenderPipeline::Split_Shading1x1__LocalShading (const int nIdx, _sse_flo
 		shadow_rp->o = hit_p;
 	}
 
-	// Shading ø°º≠, ≈ı∏Ì«— π∞√º¿œ∂ß, Normal ∞˙ dir ¿« dot ¿Ã < 0 ¿Ã∂Û∏È normal ¿ª µ⁄¬§¥¬¥Ÿ.
-	// »Æ¿Œ « ø‰!!
+	// Shading ÏóêÏÑú, Ìà¨Î™ÖÌïú Î¨ºÏ≤¥ÏùºÎïå, Normal Í≥º dir Ïùò dot Ïù¥ < 0 Ïù¥ÎùºÎ©¥ normal ÏùÑ Îí§ÏßöÎäîÎã§.
+	// ÌôïÏù∏ ÌïÑÏöî!!
 	N = GVector(is->n.f);
 	if (mat_fRefr > 0.0f && cpu_fdot(is->n, rp->d) > 0.0f) 	N = -N;
 	const float fdot = _GVEC_rINNDOT(N,rayD) * -2;
@@ -887,13 +887,13 @@ void SSERenderPipeline::Split_Shading1x1__LocalShading (const int nIdx, _sse_flo
 		// Diffuse & Specular color
 		const vector<GLight*>* pLightList = m_Scene->getLightList();
 		for ( int lx = 0; lx < (int) pLightList->size(); ++lx ) {	GLight* pLight = (*pLightList)[ lx ];
-			// Point Light ∏∏ ¿œ¥‹ ¡ˆø¯
+			// Point Light Îßå ÏùºÎã® ÏßÄÏõê
 			if ( pLight->getLightType() != typePointLight || !pLight->isEnabled() )  continue;
 
 			GColor   lightColor = pLight->getLightColor();
 			GPoint   lightPos   = pLight->getPosition();
 
-			// ±§ø¯ ¿⁄±‚¿⁄Ω≈¿Œ ∞ÊøÏ
+			// Í¥ëÏõê ÏûêÍ∏∞ÏûêÏã†Ïù∏ Í≤ΩÏö∞
 			if (obj_num == pLight->m_iObjectNumber) {
 				//oColor = oColor + lightColor * pLight->getIntensity();
 				GColor _tcol_a;
@@ -903,7 +903,7 @@ void SSERenderPipeline::Split_Shading1x1__LocalShading (const int nIdx, _sse_flo
 				continue;
 			}
 
-			// ±◊∏≤¿⁄ »Æ¿Œ
+			// Í∑∏Î¶ºÏûê ÌôïÏù∏
 			if ( m_bIsEnableShadow ) {
 				Split_Shading1x1_RayGeneration_ShwRay(&hitP, &lightPos);
 
@@ -912,9 +912,9 @@ void SSERenderPipeline::Split_Shading1x1__LocalShading (const int nIdx, _sse_flo
 				float lDist = _GVEC_vLENGTH(L);
 				_GVEC_vDIV(L,L,lDist);
 
-				// shadow ∞¸∑√ visible ¡∂∞«
-				//		¡ﬂ∞£ø° shadow ray øÕ ±≥¡°¿Ã æ¯∞≈≥™
-				//		shadow ray ∞° ±≥¬˜¡°¿Ã µ⁄ø° ¡∏¿Á«œ∞≈≥™ æ∆¥œ∏È ∞≈∏Æ∞° ∞≈¿« ∞°±ı∞≈≥™
+				// shadow Í¥ÄÎ†® visible Ï°∞Í±¥
+				//		Ï§ëÍ∞ÑÏóê shadow ray ÏôÄ ÍµêÏ†êÏù¥ ÏóÜÍ±∞ÎÇò
+				//		shadow ray Í∞Ä ÍµêÏ∞®Ï†êÏù¥ Îí§Ïóê Ï°¥Ïû¨ÌïòÍ±∞ÎÇò ÏïÑÎãàÎ©¥ Í±∞Î¶¨Í∞Ä Í±∞Ïùò Í∞ÄÍπùÍ±∞ÎÇò
 				if (shadow_is->tacc == 0 || fabsf(lDist - shadow_is->dist) < 1.f*EPSILON || shadow_is->dist > lDist) {
 					//oColor += mat_cTex  * lightColor * max( 0.0f, _GVEC_rINNDOT(L,N) ) +
 					//		    mat_cSpec * lightColor * pow( max( 0.0f, _GVEC_rINNDOT(R,L) ), mat_fRough);
@@ -1089,7 +1089,7 @@ void SSERenderPipeline::Split_Shading1x1_RayGeneration_ShwRay(const GPoint* obje
 	Split_InitPkt1x1_ShwRay(0);
 	shadow_rp->o = cpu_fadd(oPos, cpu_fmul(shadow_rp->d, RAY_START_EPSILON));
 
-	// ray dir ∞·¡§ (q = 8πÊ«‚¡ﬂ«œ≥™)
+	// ray dir Í≤∞Ï†ï (q = 8Î∞©Ìñ•Ï§ëÌïòÎÇò)
 	int q = (shadow_rp->d.x < 0) + ((shadow_rp->d.y < 0) << 1) + ((shadow_rp->d.z < 0) << 2);
 	Split_Trace1x1__ShwRay(q, 0);
 }
@@ -1147,9 +1147,9 @@ void SSERenderPipeline::Split_Render1x1__PriRay( int nJobID )
 	for ( tx = 0; tx < xTileEnd;  tx++ ) {
 
 		// -----------------------------------------------------------------------
-		// tpos (Ray ∏¶ ΩÚ πÊ«‚¡ˆ¡°) ∞ËªÍ
+		// tpos (Ray Î•º Ïè† Î∞©Ìñ•ÏßÄÏ†ê) Í≥ÑÏÇ∞
 		// -----------------------------------------------------------------------
-		// m_LeftUp : image screen ¿ß¬  øﬁ∆Ì ∏º≠∏Æ¿« pixel ¡ﬂΩ… ¿∏∑Œ ¿ÃπÃ º¬∆√ µ«æÓ ¿÷¿Ω
+		// m_LeftUp : image screen ÏúÑÏ™Ω ÏôºÌé∏ Î™®ÏÑúÎ¶¨Ïùò pixel Ï§ëÏã¨ ÏúºÎ°ú Ïù¥ÎØ∏ ÏÖãÌåÖ ÎêòÏñ¥ ÏûàÏùå
 		//vector3 r = m_LeftUp + (m_DX * (float)tx) - (m_DY * (float)ty);
 		_GVEC_vMUL(_tvec_a, DX, (float)tx);
 		_GVEC_vMUL(_tvec_b, DY, (float)ty);
@@ -1186,12 +1186,12 @@ void SSERenderPipeline::Split_Render1x1__PriRay( int nJobID )
 					}
 				}
 
-				// Ray ∏¶ º¬∆√ - Ω√¿€¡°(rp->o) ~ ≥°¡°(jpos)
+				// Ray Î•º ÏÖãÌåÖ - ÏãúÏûëÏ†ê(rp->o) ~ ÎÅùÏ†ê(jpos)
 				rp->d = cpu_fsub(jpos.d, rp->o);
 				rp->Depth = 0;
-				Split_InitPkt1x1( 0 );	// direction vector normalize µÓ
+				Split_InitPkt1x1( 0 );	// direction vector normalize Îì±
 
-				// ray dir ∞·¡§ (q = 8πÊ«‚¡ﬂ«œ≥™)
+				// ray dir Í≤∞Ï†ï (q = 8Î∞©Ìñ•Ï§ëÌïòÎÇò)
 				int q = (rp->d.x < 0) + ((rp->d.y < 0) << 1) + ((rp->d.z < 0) << 2);
 				Split_Trace1x1__PriRay(q, 0, 0);
 				Split_Shading1x1(0);

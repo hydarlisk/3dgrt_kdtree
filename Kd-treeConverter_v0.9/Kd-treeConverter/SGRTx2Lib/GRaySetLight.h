@@ -5,8 +5,8 @@
 #include "GPoint.h"
 
 /**
- *	ray ¿¡ ´ëÇÑ origin, dir, power sampling ·Î
- *	ÀÌ·ç¾îÁø Light
+ *	ray ì— ëŒ€í•œ origin, dir, power sampling ë¡œ
+ *	ì´ë£¨ì–´ì§„ Light
  */
 typedef struct _rayset_ {
 	float pos[3];
@@ -39,7 +39,7 @@ public:
 	void makeDebugInfoObject();
 
 	/**
-	 *	ÁöÁ¡ pos ¿Í normal À» °¡Áø ÇöÀçÁöÁ¡À¸·Î µé¾î¿À´Â radiance ¸¦ ±¸ÇÑ´Ù.
+	 *	ì§€ì  pos ì™€ normal ì„ ê°€ì§„ í˜„ì¬ì§€ì ìœ¼ë¡œ ë“¤ì–´ì˜¤ëŠ” radiance ë¥¼ êµ¬í•œë‹¤.
 	 */
 	virtual GColor getRadiance( GPoint &pos, GVector &normal );
 

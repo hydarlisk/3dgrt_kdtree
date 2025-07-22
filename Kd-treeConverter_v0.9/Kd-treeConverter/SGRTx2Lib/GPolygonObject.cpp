@@ -40,9 +40,9 @@ GError GPolygonObject::validObject()
 }
 
 /**
- *	ÇöÀç »ï°¢Çü Á¤º¸¿¡ transform matrix ¸¦
- *	Àû¿ëÇØ¼­ µ¥ÀÌÅÍ¸¦ ¿ùµåÁÂÇ¥°è·Î ¸ğµÎ ¿Å±äÈÄ¿¡
- *	transform matrix ´Â identity ·Î ¸¸µç´Ù.
+ *	í˜„ì¬ ì‚¼ê°í˜• ì •ë³´ì— transform matrix ë¥¼
+ *	ì ìš©í•´ì„œ ë°ì´í„°ë¥¼ ì›”ë“œì¢Œí‘œê³„ë¡œ ëª¨ë‘ ì˜®ê¸´í›„ì—
+ *	transform matrix ëŠ” identity ë¡œ ë§Œë“ ë‹¤.
  */
 GError GPolygonObject::convertToWorldObject()
 {
@@ -54,7 +54,7 @@ GError GPolygonObject::convertToWorldObject()
 }
 
 /**
- *	ÇöÀç »ï°¢Çü Á¤º¸¸¦ °¡Áö°í bounding box ¸¦ ´Ù½Ã °è»êÇÑ´Ù.
+ *	í˜„ì¬ ì‚¼ê°í˜• ì •ë³´ë¥¼ ê°€ì§€ê³  bounding box ë¥¼ ë‹¤ì‹œ ê³„ì‚°í•œë‹¤.
  */
 void GPolygonObject::updateBoundingBox()
 {
@@ -80,8 +80,8 @@ void GPolygonObject::updateBoundingBox()
 }
 
 /**
- *	ÇöÀç »ï°¢Çü µ¥ÀÌÅÍ¿¡ transform matrix ¸¦ Àû¿ëÇØ¼­
- *	µ¥ÀÌÅÍ ÀÚÃ¼¸¦ º¯°æÇÑ´Ù.
+ *	í˜„ì¬ ì‚¼ê°í˜• ë°ì´í„°ì— transform matrix ë¥¼ ì ìš©í•´ì„œ
+ *	ë°ì´í„° ìì²´ë¥¼ ë³€ê²½í•œë‹¤.
  */
 void GPolygonObject::applyTransform( GMatrix4 *pTransformMatrix, 
 									  GMatrix4 *pNormalTransformMatrix )
@@ -92,7 +92,7 @@ void GPolygonObject::applyTransform( GMatrix4 *pTransformMatrix,
 	GVector normal;
 
 	/**
-	 *	»ï°¢ÇüÀÇ point, normal À» transform ÇÑ´Ù.
+	 *	ì‚¼ê°í˜•ì˜ point, normal ì„ transform í•œë‹¤.
 	 */
 	for ( int i = 0; i < m_iVertexCount; ++i ) {
 
@@ -123,7 +123,7 @@ void GPolygonObject::setVertexArray( float *array )
 }
 
 /** 
- * vertex ¹è¿­ÀÇ pointer ¸¦ ¸®ÅÏÇÑ´Ù. pCount ¿¡´Â vertex °¹¼ö ¸®ÅÏ 
+ * vertex ë°°ì—´ì˜ pointer ë¥¼ ë¦¬í„´í•œë‹¤. pCount ì—ëŠ” vertex ê°¯ìˆ˜ ë¦¬í„´ 
  */
 const float* GPolygonObject::getVertexArray()
 {
@@ -138,7 +138,7 @@ void GPolygonObject::setNormalArray( float *array )
 }
 
 /** 
- * normal ¹è¿­ÀÇ pointer ¸¦ ¸®ÅÏÇÑ´Ù. count ¿¡´Â normal °¹¼ö ¸®ÅÏ 
+ * normal ë°°ì—´ì˜ pointer ë¥¼ ë¦¬í„´í•œë‹¤. count ì—ëŠ” normal ê°¯ìˆ˜ ë¦¬í„´ 
  */
 const float* GPolygonObject::getNormalArray()
 {
@@ -154,7 +154,7 @@ void GPolygonObject::setIndexArray( int *array )
 }
 
 /** 
- * triangle index ¹è¿­ÀÇ pointer ¸¦ ¸®ÅÏÇÑ´Ù. count ¿¡´Â triangle °¹¼ö ¸®ÅÏ 
+ * triangle index ë°°ì—´ì˜ pointer ë¥¼ ë¦¬í„´í•œë‹¤. count ì—ëŠ” triangle ê°¯ìˆ˜ ë¦¬í„´ 
  */
 const int* GPolygonObject::getIndexArray()
 {
@@ -169,7 +169,7 @@ void GPolygonObject::setUVArray( float *array )
 }
 
 /** 
- * UV µ¥ÀÌÅÍ ¹è¿­ÀÇ pointer ¸¦ ¸®ÅÏÇÑ´Ù. count ¿¡´Â UV °¹¼ö ¸®ÅÏ 
+ * UV ë°ì´í„° ë°°ì—´ì˜ pointer ë¥¼ ë¦¬í„´í•œë‹¤. count ì—ëŠ” UV ê°¯ìˆ˜ ë¦¬í„´ 
  */
 const float* GPolygonObject::getUVArray()
 {
@@ -183,7 +183,7 @@ void GPolygonObject::setColorArray( float *array )
 	m_pColorArray = array;
 }
 /** 
- * Color µ¥ÀÌÅÍ ¹è¿­ÀÇ pointer ¸¦ ¸®ÅÏÇÑ´Ù. count ¿¡´Â UV °¹¼ö ¸®ÅÏ 
+ * Color ë°ì´í„° ë°°ì—´ì˜ pointer ë¥¼ ë¦¬í„´í•œë‹¤. count ì—ëŠ” UV ê°¯ìˆ˜ ë¦¬í„´ 
  */
 const float* GPolygonObject::getColorArray()
 {
@@ -208,18 +208,18 @@ int GPolygonObject::getTriangleCount()
 }
 
 /**  
- *	ÇöÀç Object ÀÇ »ï°¢Çü Á¤º¸¸¦ list ¿¡ ´ã¾Æ¼­ ¸®ÅÏÇÑ´Ù.
- *	baseOffset Àº ÀÌ object ¾ÈÀÇ »ï°¢ÇüÀÌ °¡Áú offset ÀÇ ½ÃÀÛ¹øÈ£.
- *	ÀüÃ¼ Scene ¿¡ °ÉÃÄ¼­ °¢ »ï°¢ÇüÀº °íÀ¯ÇÑ offset À» °¡Á®¾ß ÇÏ±â ¶§¹®¿¡
- *	baseOffset Àº ÀÌÀü »ï°¢ÇüµéÀÌ °¡Áö°í ÀÖ´ø ÃÖ´ë offset ÀÌ´Ù.
+ *	í˜„ì¬ Object ì˜ ì‚¼ê°í˜• ì •ë³´ë¥¼ list ì— ë‹´ì•„ì„œ ë¦¬í„´í•œë‹¤.
+ *	baseOffset ì€ ì´ object ì•ˆì˜ ì‚¼ê°í˜•ì´ ê°€ì§ˆ offset ì˜ ì‹œì‘ë²ˆí˜¸.
+ *	ì „ì²´ Scene ì— ê±¸ì³ì„œ ê° ì‚¼ê°í˜•ì€ ê³ ìœ í•œ offset ì„ ê°€ì ¸ì•¼ í•˜ê¸° ë•Œë¬¸ì—
+ *	baseOffset ì€ ì´ì „ ì‚¼ê°í˜•ë“¤ì´ ê°€ì§€ê³  ìˆë˜ ìµœëŒ€ offset ì´ë‹¤.
  */
 //#define FOR_FAIRY
 
 void GPolygonObject::getTriangleList( GTriangleWrapperList *pList, int objectIndexInScene, int baseIndex )
 {
 	/**
-	 *	TriangleWrapper ¸¦ ±¸¼ºÇØ¼­ °¡Áö°Ô ÇÑ´Ù.
-	 *	index 3°³°¡ »ï°¢Çü ÇÏ³ª¸¦ ÀÌ·ëÀ» ¸í½ÉÇÏ¶ó.
+	 *	TriangleWrapper ë¥¼ êµ¬ì„±í•´ì„œ ê°€ì§€ê²Œ í•œë‹¤.
+	 *	index 3ê°œê°€ ì‚¼ê°í˜• í•˜ë‚˜ë¥¼ ì´ë£¸ì„ ëª…ì‹¬í•˜ë¼.
 	 */
 	GVector bmin, bmax;
 
@@ -261,13 +261,13 @@ void GPolygonObject::getTriangleList( GTriangleWrapperList *pList, int objectInd
 
 		pList->addTriangleWrapper( ptWrapper );
 
-		/******** selection adaptive supersampling À» À§ÇÑ Á¤º¸. ÇöÀç »ï°¢ÇüÀÌ ¼±ÅÃµÇ¾ú´ÂÁö¸¦ Ã¼Å© */
+		/******** selection adaptive supersampling ì„ ìœ„í•œ ì •ë³´. í˜„ì¬ ì‚¼ê°í˜•ì´ ì„ íƒë˜ì—ˆëŠ”ì§€ë¥¼ ì²´í¬ */
 
 #ifdef FOR_FAIRY 
 
 		ptWrapper->bSelected = false;
 
-		/** fairy scene À» À§ÇÑ ÇÏµåÄÚµù ¼¼ÆÃ */
+		/** fairy scene ì„ ìœ„í•œ í•˜ë“œì½”ë”© ì„¸íŒ… */
 			
 		static char name[27][100] = { "wing3in", "wand", "wandballs", "spirals", "skinhand", "skinforearm",
 							   "skintorso", "skinarm", "straps", "bodice", "overskirt",

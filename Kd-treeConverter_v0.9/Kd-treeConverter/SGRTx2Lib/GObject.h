@@ -23,88 +23,88 @@ class  GObject
 {
 public:
 	/**
-	 *	¹°Ã¼¿¡°Ô ºÙ¿©Áú °íÀ¯¹øÈ£. Object °¡ »ı¼ºµÉ¶§
-	 *	ÀÚµ¿À¸·Î ¹øÈ£°¡ ºÙ¿©Áö¸ç, ÇÁ·Î±×·¥½ÇÇà½Ã ¸¶´Ù ¹Ù²ï´Ù.
+	 *	ë¬¼ì²´ì—ê²Œ ë¶™ì—¬ì§ˆ ê³ ìœ ë²ˆí˜¸. Object ê°€ ìƒì„±ë ë•Œ
+	 *	ìë™ìœ¼ë¡œ ë²ˆí˜¸ê°€ ë¶™ì—¬ì§€ë©°, í”„ë¡œê·¸ë¨ì‹¤í–‰ì‹œ ë§ˆë‹¤ ë°”ë€ë‹¤.
 	 */
 	UINT m_iObjectNumber;
 
 protected:
 	/**
-	 * ¹°Ã¼°¡ ¼±ÅÃµÇ¾ú´ÂÁö ¿©ºÎ.
+	 * ë¬¼ì²´ê°€ ì„ íƒë˜ì—ˆëŠ”ì§€ ì—¬ë¶€.
 	 */
 	bool m_bSelected;
 
 	/**
-	 * Object ÀÌ¸§
+	 * Object ì´ë¦„
 	 */
 	char m_szObjectName[255];
 
 	/** 
-     *	¹°Ã¼³»ÀÇ pivot À§Ä¡
+     *	ë¬¼ì²´ë‚´ì˜ pivot ìœ„ì¹˜
 	 */
 	GPoint m_Pivot;
 
 	/**
-	 *	¹°Ã¼ÀÇ Translate À§Ä¡
+	 *	ë¬¼ì²´ì˜ Translate ìœ„ì¹˜
 	 */
 	GPoint m_Translate;
 
 	/**
-	 *	x,y,z ÃàÀ¸·Î È¸ÀüÇÑ °¢ ( degree )
+	 *	x,y,z ì¶•ìœ¼ë¡œ íšŒì „í•œ ê° ( degree )
 	 */
 	GVector m_RotateArc;
 	/**
-	 *	¹°Ã¼ÀÇ x, y, z Ãà scale
+	 *	ë¬¼ì²´ì˜ x, y, z ì¶• scale
 	 */
 	GVector m_Scale;
 
 	/**
-	 *	È¸Àüº¯È¯Çà·Ä
+	 *	íšŒì „ë³€í™˜í–‰ë ¬
 	 */
 	GMatrix4 m_rotateMatrix;
 
 	/**
-	 *	º¯È¯Çà·Ä
+	 *	ë³€í™˜í–‰ë ¬
 	 */
 	GMatrix4 m_Matrix;
 
 	/**
-	 *	Normal º¯È¯Çà·Ä
+	 *	Normal ë³€í™˜í–‰ë ¬
 	 */
 	GMatrix4 m_NormalMatrix;
 
 	/**
-	 *	º¯È¯¿ªÇà·Ä
+	 *	ë³€í™˜ì—­í–‰ë ¬
 	 */
 	GMatrix4 m_InvMatrix;
 
 	/**
-	 *	¹Ù¿îµù ¹Ú½º
+	 *	ë°”ìš´ë”© ë°•ìŠ¤
 	 */
 	GBoundingBox m_BoundingBox;
 
 	/**
-	 *	Material Á¤º¸.
+	 *	Material ì •ë³´.
 	 */
 	GMaterial m_Material;
 
 	/**
-	 *	Texture Á¤º¸.
+	 *	Texture ì •ë³´.
 	 */
 	int m_TextureID;
 	
 	/**
-	 *	Bump Texture Á¤º¸.
+	 *	Bump Texture ì •ë³´.
 	 */
 	int m_BumpTextureID;
 
 	/**
-	 *	DEBUG OBJECT ÀÎÁö ¿©ºÎ.
+	 *	DEBUG OBJECT ì¸ì§€ ì—¬ë¶€.
 	 */
 	bool m_bDebugObject;
 
 	/**
-	 *	intersection test Ã³¸®ÇÒ object ÀÎÁö.
+	 *	intersection test ì²˜ë¦¬í•  object ì¸ì§€.
 	 */
 	bool m_bIntersection;		
 	
@@ -118,36 +118,36 @@ public:
 	virtual ~GObject(void);
 
 	/**
-	 *	Object Valid ¸¦ Ã¼Å©ÇÑ´Ù.
+	 *	Object Valid ë¥¼ ì²´í¬í•œë‹¤.
 	 */
 	virtual GError validObject() = 0;
 	/**
-	 *	ÇöÀç ¼³Á¤µÈ matrix º¯È¯À» object ÀÇ geometry ¿¡ Àû¿ëÇØ¼­
-	 *	¹°Ã¼ ÀÚÃ¼¸¦ world object µ¥ÀÌÅÍ·Î º¯È¯½ÃÅ°°í,
-	 *	matrix ´Â identity ·Î ¸¸µå´Â ±â´ÉÀ» ¼öÇàÇØ¾ß ÇÑ´Ù.
+	 *	í˜„ì¬ ì„¤ì •ëœ matrix ë³€í™˜ì„ object ì˜ geometry ì— ì ìš©í•´ì„œ
+	 *	ë¬¼ì²´ ìì²´ë¥¼ world object ë°ì´í„°ë¡œ ë³€í™˜ì‹œí‚¤ê³ ,
+	 *	matrix ëŠ” identity ë¡œ ë§Œë“œëŠ” ê¸°ëŠ¥ì„ ìˆ˜í–‰í•´ì•¼ í•œë‹¤.
 	 */
 	virtual GError convertToWorldObject() = 0;
 
 	/**
-	 *	Light ÀÎÁö ¿©ºÎ.
+	 *	Light ì¸ì§€ ì—¬ë¶€.
 	 */
 	virtual bool isLight() { return m_bLight; }
 	virtual void setLight( bool flag ) { m_bLight = flag; }
 
 	/**
-	 *	Intersection À» Ã³¸®ÇÒ ¹°Ã¼ÀÏÁö ¿©ºÎ.
+	 *	Intersection ì„ ì²˜ë¦¬í•  ë¬¼ì²´ì¼ì§€ ì—¬ë¶€.
 	 */
 	virtual bool isIntersection() { return m_bIntersection; }
 	virtual void setIntersection( bool flag ) { m_bIntersection = flag; }
 
 	/**
-	 *	Triangle Data Á¦°ø ¿©ºÎ.
+	 *	Triangle Data ì œê³µ ì—¬ë¶€.
 	 */
 	virtual typePolygon getPolygonType() { return m_PolygonType; }
 	virtual void setPolygonType( typePolygon type ) { m_PolygonType = type; }
 	
 	/**
-	 *	Debug ¿ë Object ÀÎÁö ¿©ºÎ.
+	 *	Debug ìš© Object ì¸ì§€ ì—¬ë¶€.
 	 */
 	bool isDebugObject();
 	void setDebugObject( bool flag );
@@ -178,7 +178,7 @@ public:
 	virtual bool isVisible();
 
 	/**
-	 *	¹°Ã¼¸¦ ÀÓÀÇÀÇ vector ±âÁØÀ¸·Î È¸Àü
+	 *	ë¬¼ì²´ë¥¼ ì„ì˜ì˜ vector ê¸°ì¤€ìœ¼ë¡œ íšŒì „
 	 */
 	virtual void rotateByVector( const GVector &vector, const float &arc );
 

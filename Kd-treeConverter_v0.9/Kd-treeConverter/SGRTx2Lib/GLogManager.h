@@ -13,7 +13,7 @@
 using namespace std;
 
 /**
- *	Render ╥н╠К а╓╨╦╦╕ ╟Э╦╝гр е╛╥║╫╨.
+ *	Render К║°Й╧┘ Л═∙КЁ╢К╔╪ Й╢─К╕╛М∙═ М│╢К·≤Л┼╓.
  */
 class  GLogManager
 {

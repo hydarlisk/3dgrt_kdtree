@@ -60,7 +60,7 @@ ss_RayPacket::setup_eye_packet(int i, int j, ss_Window& win, ss_Camera& camera)
 	n[2] = d[2].crossp(d[3]);
 	n[3] = d[3].crossp(d[0]);
 	
-	b[0] = (o.dotp(n[0]));            // Æò¸é °Å¸®.
+	b[0] = (o.dotp(n[0]));            // í‰ë©´ ê±°ë¦¬.
 	b[1] = (o.dotp(n[1]));
 	b[2] = (o.dotp(n[2]));
 	b[3] = (o.dotp(n[3]));
@@ -141,14 +141,14 @@ GBVH_RayPacket::getRayMore(int which) const
 // --------------------------------------------------------------------------------
 // FRUSTUM - AABB intersect check!!
 // --------------------------------------------------------------------------------
-// !! Large Ray Packets for Real-time Whitted Ray Tracing ¿©±â¿¡ ÀÖ´Â ¹æ¹ıÀ» ±×³É ³»°¡ Â§°Å.
-// 4°³ÀÇ corner ray·Î ÀÌ·ç¾îÁø
-// 1. frustumÀÇ °¢ Æò¸éÀÇ ¹æÁ¤½ÄÀ» Ã£´Â´Ù. -> n[i], b[i] : normal°ú offset.
-// n vector¿Í b·Î Æò¸éÀÌ Á¤ÀÇµÊ.
+// !! Large Ray Packets for Real-time Whitted Ray Tracing ì—¬ê¸°ì— ìˆëŠ” ë°©ë²•ì„ ê·¸ëƒ¥ ë‚´ê°€ ì§ ê±°.
+// 4ê°œì˜ corner rayë¡œ ì´ë£¨ì–´ì§„
+// 1. frustumì˜ ê° í‰ë©´ì˜ ë°©ì •ì‹ì„ ì°¾ëŠ”ë‹¤. -> n[i], b[i] : normalê³¼ offset.
+// n vectorì™€ bë¡œ í‰ë©´ì´ ì •ì˜ë¨.
 int
 GBVH_RayPacket::frustumAABBTest(GBoundingBox& aabb)
 {
-	GVector p[8]; // AABBÀÇ 8 ²ÀÁöÁ¡.
+	GVector p[8]; // AABBì˜ 8 ê¼­ì§€ì .
 	
 	p[0] = aabb.m_Min;
 	p[1] = GVector(aabb.m_Min.x, aabb.m_Min.y, aabb.m_Max.z);
@@ -162,7 +162,7 @@ GBVH_RayPacket::frustumAABBTest(GBoundingBox& aabb)
 	
 	
 	// http://www.everfall.com/paste/id.php?e7nyaefyeins
-	// ¿©±â¿¡ ÀÖ´Â ¹æ¹ı.
+	// ì—¬ê¸°ì— ìˆëŠ” ë°©ë²•.
 	for(int i=0; i<4; ++i)
 	{
 		bool inside = false;
@@ -253,10 +253,10 @@ GBVH_RayPacket::frustumAABBTest2(GBoundingBox& aabb)
 }
 
 // http://www.ce.chalmers.se/~uffe/vfc.pdf
-// ÀÌ ³í¹®¿¡ ÀÖ´Â ¹æ¹ı.
-// outside¸é return false
-// °ãÄ¡¸é return true.
-// ¾ÆÁ÷ ¼öÁ¤Áß!!!
+// ì´ ë…¼ë¬¸ì— ìˆëŠ” ë°©ë²•.
+// outsideë©´ return false
+// ê²¹ì¹˜ë©´ return true.
+// ì•„ì§ ìˆ˜ì •ì¤‘!!!
 bool
 GBVH_RayPacket::frustumAABBTest3(GBoundingBox& aabb)
 {
@@ -305,7 +305,7 @@ GBVH_RayPacket::pre_cal(void)
 	n[2] = d[2].outerProduct(d[3]);
 	n[3] = d[3].outerProduct(d[0]);
 	
-	b[0] = (o.innerProduct(n[0]));            // Æò¸é °Å¸®.
+	b[0] = (o.innerProduct(n[0]));            // í‰ë©´ ê±°ë¦¬.
 	b[1] = (o.innerProduct(n[1]));
 	b[2] = (o.innerProduct(n[2]));
 	b[3] = (o.innerProduct(n[3]));

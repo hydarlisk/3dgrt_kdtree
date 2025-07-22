@@ -24,8 +24,8 @@ public:
 	bool fullyCover( const GBoundingBox &box ) const;
 
 	/**
-	 *	index ´Â 0 ºÎÅÍ 7±îÁöÀÌ°í, À°¸éÃ¼ÀÇ °¢ vertex ¸¦ °è»êÇØ¼­
-	 *	°¡Á®¿Ã ¼ö ÀÖ´Ù.
+	 *	index ëŠ” 0 ë¶€í„° 7ê¹Œì§€ì´ê³ , ìœ¡ë©´ì²´ì˜ ê° vertex ë¥¼ ê³„ì‚°í•´ì„œ
+	 *	ê°€ì ¸ì˜¬ ìˆ˜ ìˆë‹¤.
 	 */
 	GVector operator[] ( int index );
 	void operator+= ( GBoundingBox &box );
@@ -38,13 +38,13 @@ public:
 	GVector getCenter();
 
 	// -----------------------------------------------------------
-	// Ãß°¡. FOR BVH. -ss
+	// ì¶”ê°€. FOR BVH. -ss
 	const GVector size() const
 	{
 		return (m_Max - m_Min);
 	}
 
-	float calcSurfaceArea() const                       // Ç¥¸éÀû
+	float calcSurfaceArea() const                       // í‘œë©´ì 
 	{
 		GVector vS = size();
 		return (vS.x*vS.y + vS.y*vS.z + vS.z*vS.x) * 2.0f;

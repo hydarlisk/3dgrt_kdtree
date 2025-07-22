@@ -1,25 +1,25 @@
 #pragma once
 
 /**
- *	¿¡·¯ÄÚµå.
+ *	ì—ëŸ¬ì½”ë“œ.
  */
 typedef enum {
 
-	errorNo = 0,					//	¿¡·¯¾øÀ½.
-	errorUnknown,					//	Unknown ¿¡·¯.
+	errorNo = 0,					//	ì—ëŸ¬ì—†ìŒ.
+	errorUnknown,					//	Unknown ì—ëŸ¬.
 
 	errorUnsupportedRenderer,
 	errorNoRenderer,
 
 	/**
-	 *	Object °ü·Ã ¿¡·¯.
+	 *	Object ê´€ë ¨ ì—ëŸ¬.
 	 */
 	errorInvalidObject,				//	Invalid Object.
 
 	/**
-	 *	File °ü·Ã ¿¡·¯.
+	 *	File ê´€ë ¨ ì—ëŸ¬.
 	 */
-	errorFileNotFound,				//	File Not Found ¿¡·¯.
+	errorFileNotFound,				//	File Not Found ì—ëŸ¬.
 	errorFileDataError,				//	File Data Error.
 	errorFileInvalidSceneInfo,		//	Scene Info Error
 	errorFileInvalidCamera,			//	Camera Info Error
@@ -29,15 +29,15 @@ typedef enum {
 	errorFileInvalidGlobal,			//	Global Data Error
 
 	/**
-	 *	Rendering °ü·Ã ¿¡·¯
+	 *	Rendering ê´€ë ¨ ì—ëŸ¬
 	 */
-	errorNoScene,					//	Scene ÀÌ ¾ø´Ù.
-	errorKDTree,					//	kdtree »ı¼º½ÇÆĞ.
-	errorRendering,					//	rendering ¿¡·¯.
-	errorOverflowRayCount,			//	ray °³¼ö°¡ ³Ê¹« ¸¹´Ù.
-	errorNoLight,					//	light °¡ ¾ø´Ù.
+	errorNoScene,					//	Scene ì´ ì—†ë‹¤.
+	errorKDTree,					//	kdtree ìƒì„±ì‹¤íŒ¨.
+	errorRendering,					//	rendering ì—ëŸ¬.
+	errorOverflowRayCount,			//	ray ê°œìˆ˜ê°€ ë„ˆë¬´ ë§ë‹¤.
+	errorNoLight,					//	light ê°€ ì—†ë‹¤.
 
-	errorOverflowMaxDepth,			//	ÃÖ´ë depth ¸¦ ³Ñ¾î¼¹´Ù.
+	errorOverflowMaxDepth,			//	ìµœëŒ€ depth ë¥¼ ë„˜ì–´ì„°ë‹¤.
 	
 	/**
 	 *	Cuda ray tracing error
@@ -47,16 +47,16 @@ typedef enum {
 	/**
 	 *	Cuda Error
 	 */
-	errorCudaError,					//	Cuda °ü·Ã ¿¡·¯.
+	errorCudaError,					//	Cuda ê´€ë ¨ ì—ëŸ¬.
 	
 	/**
 	 *	Cuda Photon Mapping Error
 	 */
-	errorCudaLightError,			//	light upload ¿¡·¯.
-	errorCudaPhotonAllocError,		//	photon ÀúÀå¼Ò ÇÒ´ç ¿¡·¯.
-	errorphotonTracingError,	//	tracing ¿¡·¯.
-	errorCudaFreeError,				//	ÀÚ¿øÇØÁ¦¿¡·¯.
-	errorNotEnoughRayMem,			//	photon tracing À» À§ÇÑ ray °ø°£ÀÌ ºÎÁ·.
+	errorCudaLightError,			//	light upload ì—ëŸ¬.
+	errorCudaPhotonAllocError,		//	photon ì €ì¥ì†Œ í• ë‹¹ ì—ëŸ¬.
+	errorphotonTracingError,	//	tracing ì—ëŸ¬.
+	errorCudaFreeError,				//	ìì›í•´ì œì—ëŸ¬.
+	errorNotEnoughRayMem,			//	photon tracing ì„ ìœ„í•œ ray ê³µê°„ì´ ë¶€ì¡±.
 	errorResultError,
 	errorPhotonBoundingError,
 
@@ -65,6 +65,6 @@ typedef enum {
 	/**
 	 *	Cuda Error
 	 */
-	errorThreadError,				//	Thread °ü·Ã ¿¡·¯.
+	errorThreadError,				//	Thread ê´€ë ¨ ì—ëŸ¬.
 
 } GError;

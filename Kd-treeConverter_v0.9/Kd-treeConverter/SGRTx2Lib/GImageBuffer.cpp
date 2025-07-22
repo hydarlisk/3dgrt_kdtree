@@ -92,7 +92,7 @@ int GImageBuffer::getHeight()
 }
 
 /**
- * Dr.Â÷µæÇö±ºÀÇ Halogen light ¼Ò½º¿¡¼­ °¡Á®¿Í »ç¿ëÇßÀ½À» ¹àÈ÷´Â ¹ÙÀÔ´Ï´Ù.
+ * Dr.ì°¨ë“í˜„êµ°ì˜ Halogen light ì†ŒìŠ¤ì—ì„œ ê°€ì ¸ì™€ ì‚¬ìš©í–ˆìŒì„ ë°íˆëŠ” ë°”ì…ë‹ˆë‹¤.
  * bloomming
  */
 void GImageBuffer::bloomming( float bloomRadius, float bloomWeight )
@@ -157,7 +157,7 @@ void GImageBuffer::bloomming( float bloomRadius, float bloomWeight )
 }
 
 /**
- * Dr.Â÷µæÇö±ºÀÇ Halogen light ¼Ò½º¿¡¼­ °¡Á®¿Í »ç¿ëÇßÀ½À» ¹àÈ÷´Â ¹ÙÀÔ´Ï´Ù.
+ * Dr.ì°¨ë“í˜„êµ°ì˜ Halogen light ì†ŒìŠ¤ì—ì„œ ê°€ì ¸ì™€ ì‚¬ìš©í–ˆìŒì„ ë°íˆëŠ” ë°”ì…ë‹ˆë‹¤.
  * gammaCorrection
  */
 void GImageBuffer::gammaCorrection( float gamma, float gain )
@@ -180,7 +180,7 @@ void GImageBuffer::gammaCorrection( float gamma, float gain )
 
 
 /**
- *	ÀÌ¹ÌÁö¸¦ ·ÎµåÇÑ´Ù. 
+ *	ì´ë¯¸ì§€ë¥¼ ë¡œë“œí•œë‹¤. 
  */
 bool GImageBuffer::loadImage( const char* szFileName )
 {
@@ -215,7 +215,7 @@ bool GImageBuffer::loadImage( const char* szFileName )
 	
 	m_pBuffer = (float*) malloc ( sizeof( float ) * m_iWidthCount * m_iHeight );
 
-	/** BGR ·Î µÇ¾î ÀÖÀ¸¹Ç·Î RGB ·Î º¯°æ */
+	/** BGR ë¡œ ë˜ì–´ ìˆìœ¼ë¯€ë¡œ RGB ë¡œ ë³€ê²½ */
 	for ( int j = 0; j < m_iHeight; ++j ) {
 		for ( int i = 0; i < m_iWidth; ++i ) {
 			*( m_pBuffer + j * m_iWidthCount + i * 3 + 0 ) = *( data + j * pitch + i * 3 + 2 ) / 255.0f;
@@ -233,7 +233,7 @@ bool GImageBuffer::loadImage( const char* szFileName )
 }
 
 /**
- *	ÀÌ¹ÌÁö¸¦ ÀúÀåÇÑ´Ù.
+ *	ì´ë¯¸ì§€ë¥¼ ì €ì¥í•œë‹¤.
  */
 bool GImageBuffer::saveImage( const char* filename )
 {
@@ -292,7 +292,7 @@ GImageBuffer *GImageBuffer::makeDiffImage( GImageBuffer *dest )
 }
 
 /**
- *	PSNR °è»ê.
+ *	PSNR ê³„ì‚°.
  */
 double GImageBuffer::calPSNR( GImageBuffer *pDest )
 {

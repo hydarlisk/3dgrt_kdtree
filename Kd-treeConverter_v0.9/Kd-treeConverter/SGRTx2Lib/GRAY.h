@@ -14,7 +14,7 @@ public:
 		:vPos(vP), vDir(vD)
 	{     };
 
-	// BVHø°º≠ 
+	// BVHÏóêÏÑú 
 	// FOR RAY - AABB 
 	// An Efficient and Robust Ray-Box Intersection Algorithm
 	int sign[3];

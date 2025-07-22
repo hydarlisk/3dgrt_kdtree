@@ -52,13 +52,13 @@ void GAreaDensityEstimate::generateAreaPhoton(
 
 	clear();
 
-	/** »ï°¢Çü³»ÀÇ °¢ »ï°¢Çü ¹øÈ£´Â 1¹ø ºÎÅÍ ½ÃÀÛ */
+	/** ì‚¼ê°í˜•ë‚´ì˜ ê° ì‚¼ê°í˜• ë²ˆí˜¸ëŠ” 1ë²ˆ ë¶€í„° ì‹œì‘ */
 	if ( *pNumberInTriangle == 0 ) 
 		*pNumberInTriangle = 1;
 
 	/** 
-	 *	¿øÇÏ´Â Å©±â¸¸Å­ »ï°¢ÇüÀ» ±ÕÀÏÇÏ°Ô ¼­ºêµğºñÀüÇÏ°í »ï°¢ÇüÀÇ ÁßÁ¡¿¡
-	 *	photon À» ÄÛ Âï´Â´Ù.
+	 *	ì›í•˜ëŠ” í¬ê¸°ë§Œí¼ ì‚¼ê°í˜•ì„ ê· ì¼í•˜ê²Œ ì„œë¸Œë””ë¹„ì „í•˜ê³  ì‚¼ê°í˜•ì˜ ì¤‘ì ì—
+	 *	photon ì„ ì½• ì°ëŠ”ë‹¤.
 	 */
 	for ( int i = *pTriOffset; i < size; ++i ) {
 
@@ -74,22 +74,22 @@ void GAreaDensityEstimate::generateAreaPhoton(
 		triArea = pTriObject->calArea();
 
 		/**
-		 *	ÇöÀç ¸î°³ÀÇ »ï°¢ÇüÀ¸·Î ³ª´©¾î¾ß ÇÏ´ÂÁö¿Í total row.
+		 *	í˜„ì¬ ëª‡ê°œì˜ ì‚¼ê°í˜•ìœ¼ë¡œ ë‚˜ëˆ„ì–´ì•¼ í•˜ëŠ”ì§€ì™€ total row.
 		 */
 		divCount = (int) pow( 4, ceil( log( triArea / area ) / log( 4.0 ) ) );
 		totalRow = (int) sqrt( (float)divCount );
 		smallArea = triArea / (float)divCount;
 
 		/**
-		 *	Normal Àº Shading Normal À» °è»êÇØ¾ß ÇÑ´Ù.
+		 *	Normal ì€ Shading Normal ì„ ê³„ì‚°í•´ì•¼ í•œë‹¤.
 		 */
 		*pNumberInTriangle = makeAreaPhoton( p0, p1, p2, n0, n1, n2,
 			smallArea, totalRow, *pNumberInTriangle, divCount );
 
 		/**
-		 *	makeAreaPhoton ¼öÇàÈÄ pOrderOffset == orderCount ÀÌ µÇ¸é, »ï°¢Çü ÇÏ³ª¸¦ ¿ÏÀüÈ÷
-		 *	Ã³¸®ÇÑ °ÍÀÌ°í, ±×·¸Áö »ï°¢ÇüÃ³¸®Áß »ùÇÃ¸µ°¹¼ö°¡ Á¦ÇÑ°³¼ö¸¦ ³Ñ¾î¼­¼­
-		 *	´ÙÀ½¹ø¿¡ Ã³¸®ÇÏ·Á°í iteration À» ºüÁ®³ª¿Â°Í.
+		 *	makeAreaPhoton ìˆ˜í–‰í›„ pOrderOffset == orderCount ì´ ë˜ë©´, ì‚¼ê°í˜• í•˜ë‚˜ë¥¼ ì™„ì „íˆ
+		 *	ì²˜ë¦¬í•œ ê²ƒì´ê³ , ê·¸ë ‡ì§€ ì‚¼ê°í˜•ì²˜ë¦¬ì¤‘ ìƒ˜í”Œë§ê°¯ìˆ˜ê°€ ì œí•œê°œìˆ˜ë¥¼ ë„˜ì–´ì„œì„œ
+		 *	ë‹¤ìŒë²ˆì— ì²˜ë¦¬í•˜ë ¤ê³  iteration ì„ ë¹ ì ¸ë‚˜ì˜¨ê²ƒ.
 		 */
 		if ( *pNumberInTriangle == divCount + 1 ) {
 			(*pTriOffset)++;
@@ -122,8 +122,8 @@ int GAreaDensityEstimate::makeAreaPhoton(
 		col = startIndexInTri - ( row - 1 ) * ( row - 1 );
 
 		/**
-		 *	»ï°¢ÇüÀÌ ÇÑ row ¿¡¼­ È¦¼ö À§Ä¡ÀÎÁö Â¦¼öÀ§Ä¡ÀÎÁö¿¡ µû¶ó photon À»
-		 *	ÂïÀ» À§Ä¡¿Í Á¤º¸¸¦ °áÁ¤ÇÑ´Ù.
+		 *	ì‚¼ê°í˜•ì´ í•œ row ì—ì„œ í™€ìˆ˜ ìœ„ì¹˜ì¸ì§€ ì§ìˆ˜ìœ„ì¹˜ì¸ì§€ì— ë”°ë¼ photon ì„
+		 *	ì°ì„ ìœ„ì¹˜ì™€ ì •ë³´ë¥¼ ê²°ì •í•œë‹¤.
 		 */
 		if ( col % 2 == 1 ) {
 			calPointInfo( row, ( col + 1 ) / 2, totalRow, p0, p1, p2, n0, n1, n2, &tp0, &tn0 );
@@ -139,10 +139,10 @@ int GAreaDensityEstimate::makeAreaPhoton(
 		cuPhoton *pPhoton = (cuPhoton*) malloc( sizeof( cuPhoton ) );
 		memset( pPhoton, 0x00, sizeof( cuPhoton ) );
 
-		// area photon ÀÇ °æ¿ì power.x ¿¡ area Á¤º¸ ÀÔ·Â.
+		// area photon ì˜ ê²½ìš° power.x ì— area ì •ë³´ ì…ë ¥.
 		pPhoton->power.x = triArea;
 
-		// photon ÀÇ Á¤º¸´Â »ï°¢ÇüÀÇ ÁßÁ¡.
+		// photon ì˜ ì •ë³´ëŠ” ì‚¼ê°í˜•ì˜ ì¤‘ì .
 		pPhoton->pos.x = ( tp0.x + tp1.x + tp2.x ) / 3.0f;
 		pPhoton->pos.y = ( tp0.y + tp1.y + tp2.y ) / 3.0f;
 		pPhoton->pos.z = ( tp0.z + tp1.z + tp2.z ) / 3.0f;
@@ -169,7 +169,7 @@ int GAreaDensityEstimate::makeAreaPhoton(
 }
 
 /**
- *	°¡»óÀÇ »ï°¢ÇüÀÇ ²ÀÁöÁ¡ ( row, col ) ÀÇ point, normal Á¤º¸¸¦ °è»êÇÑ´Ù.
+ *	ê°€ìƒì˜ ì‚¼ê°í˜•ì˜ ê¼­ì§€ì  ( row, col ) ì˜ point, normal ì •ë³´ë¥¼ ê³„ì‚°í•œë‹¤.
  */
 inline void GAreaDensityEstimate::calPointInfo( 
 	int row, int col, int totalTriRow, 
@@ -195,7 +195,7 @@ inline void GAreaDensityEstimate::calPointInfo(
 }
 
 /**
- *	ÇöÀç AreaPhoton ¸ñ·Ï ¸®ÅÏ.
+ *	í˜„ì¬ AreaPhoton ëª©ë¡ ë¦¬í„´.
  */
 const vector<cuPhoton*>* GAreaDensityEstimate::getAreaPhoton()
 {

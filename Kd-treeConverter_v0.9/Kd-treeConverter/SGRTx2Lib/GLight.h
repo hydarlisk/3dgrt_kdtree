@@ -17,10 +17,10 @@ class GLight : public GPolygonObject
 protected:
 	GPoint m_Position;
 	float m_fIntensity;
-	bool m_bUsePhoton;						// ÀÌ light °¡ photon À» emit ÇÏ´ÂÁö ¿©ºÎ.
+	bool m_bUsePhoton;						// ì´ light ê°€ photon ì„ emit í•˜ëŠ”ì§€ ì—¬ë¶€.
 	bool m_Enabled;
 
-	GPolygonObject *m_pDebugInfoObject;		// debugging À» À§ÇÑ light geometry info.
+	GPolygonObject *m_pDebugInfoObject;		// debugging ì„ ìœ„í•œ light geometry info.
 
 public:
 	GLight(void);
@@ -31,7 +31,7 @@ public:
 	virtual void setUsePhoton( bool flag );
 	virtual bool isUsePhoton();
 
-	/** light color ´Â material ÀÇ ¸ğµç ÄÃ·¯¸¦ µ¿ÀÏÇÏ°Ô ¼¼ÆÃ */
+	/** light color ëŠ” material ì˜ ëª¨ë“  ì»¬ëŸ¬ë¥¼ ë™ì¼í•˜ê²Œ ì„¸íŒ… */
 	virtual void setLightColor( GColor &color );
 	virtual GColor getLightColor();
 
@@ -51,7 +51,7 @@ public:
 	virtual void setEnable( bool flag = true );
 
 	/**
-	 *	ÁöÁ¡ pos ¿Í normal À» °¡Áø ÇöÀçÁöÁ¡À¸·Î µé¾î¿À´Â radiance ¸¦ ±¸ÇÑ´Ù.
+	 *	ì§€ì  pos ì™€ normal ì„ ê°€ì§„ í˜„ì¬ì§€ì ìœ¼ë¡œ ë“¤ì–´ì˜¤ëŠ” radiance ë¥¼ êµ¬í•œë‹¤.
 	 */
 	virtual GColor getRadiance( GPoint &pos, GVector &normal ) = 0;
 };

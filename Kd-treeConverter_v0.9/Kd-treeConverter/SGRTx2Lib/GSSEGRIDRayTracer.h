@@ -15,13 +15,13 @@
 #include "GThreadingOption.h"
 
 /**
- *	±âº»ÀûÀ¸·Î Path Tracing À» »ç¿ëÇÏ´Â ·»´õ·¯
+ *	ê¸°ë³¸ì ìœ¼ë¡œ Path Tracing ì„ ì‚¬ìš©í•˜ëŠ” ë Œë”ëŸ¬
  *	by graphicsian.
  */
 class  GSSEGRIDRayTracer : public GRenderer, public GThreadWork
 {
 public:
-	// thread work ¸¦ À§ÇÑ ÇÔ¼ö
+	// thread work ë¥¼ ìœ„í•œ í•¨ìˆ˜
 	void work( GThreadContext *pThreadContext );
 	void stop();
 

@@ -1,8 +1,8 @@
 //--------------------------------------------------------------------------//
 //																			//
-//	Point Å¬·¡½º															//
+//	Point í´ë˜ìŠ¤															//
 //																			//
-//	Copyright (c) 2005  ÁøºÀÁØ	( sonagi21@naver.com )						//
+//	Copyright (c) 2005  ì§„ë´‰ì¤€	( sonagi21@naver.com )						//
 //																			//
 //--------------------------------------------------------------------------//
 
@@ -30,22 +30,22 @@ public:
 
 	float& operator[] ( int index );
 
-	float	innerProduct( const GPoint &point );		// ³»Àû
-	GPoint	outerProduct( const GPoint &point );		// ¿ÜÀû
-	GPoint	normalize() const;							// Á¤±ÔÈ­
-	float	length();									// ±æÀÌ
+	float	innerProduct( const GPoint &point );		// ë‚´ì 
+	GPoint	outerProduct( const GPoint &point );		// ì™¸ì 
+	GPoint	normalize() const;							// ì •ê·œí™”
+	float	length();									// ê¸¸ì´
 	bool	isZero();
 
 	GPoint operator+ ( const GPoint &point ) const;			
 	GPoint operator+ ( const GVector &vector ) const;
 	GPoint operator- ( const GPoint &point ) const;	
 
-	friend GPoint operator * ( const GPoint& v, const float f ) { return GPoint( v.x * f, v.y * f, v.z * f ); }	// ½ºÄ®¶ó °ö
-	friend GPoint operator * ( const float f, const GPoint& v ) { return GPoint( v.x * f, v.y * f, v.z * f ); }	// ½ºÄ®¶ó °ö
-	friend GPoint operator / ( const GPoint& v, const float f ) { float invf = 1/f; return GPoint( v.x * invf, v.y * invf, v.z * invf ); }	// ½ºÄ®¶ó ³ª´°¼À
+	friend GPoint operator * ( const GPoint& v, const float f ) { return GPoint( v.x * f, v.y * f, v.z * f ); }	// ìŠ¤ì¹¼ë¼ ê³±
+	friend GPoint operator * ( const float f, const GPoint& v ) { return GPoint( v.x * f, v.y * f, v.z * f ); }	// ìŠ¤ì¹¼ë¼ ê³±
+	friend GPoint operator / ( const GPoint& v, const float f ) { float invf = 1/f; return GPoint( v.x * invf, v.y * invf, v.z * invf ); }	// ìŠ¤ì¹¼ë¼ ë‚˜ëˆ—ì…ˆ
 
-	void operator-= ( const GPoint &point );			// »¬¼À
-	void operator+= ( const GPoint &point );			// µ¡¼À
-	GPoint& operator *=( const float f )  { x *= f; y *= f; z *= f; return *this; }	                            // ½ºÄ®¶ó °ö
-	GPoint& operator /=( const float f )  { float invf = 1/f; x *= invf; y *= invf; z *= invf; return *this; }	// ½ºÄ®¶ó ³ª´°¼À
+	void operator-= ( const GPoint &point );			// ëº„ì…ˆ
+	void operator+= ( const GPoint &point );			// ë§ì…ˆ
+	GPoint& operator *=( const float f )  { x *= f; y *= f; z *= f; return *this; }	                            // ìŠ¤ì¹¼ë¼ ê³±
+	GPoint& operator /=( const float f )  { float invf = 1/f; x *= invf; y *= invf; z *= invf; return *this; }	// ìŠ¤ì¹¼ë¼ ë‚˜ëˆ—ì…ˆ
 };

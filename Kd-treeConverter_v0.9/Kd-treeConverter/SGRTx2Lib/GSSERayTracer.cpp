@@ -3,7 +3,7 @@
 #include "GKDTreeStructure.h"
 #include "GPointLight.h"
 #include "GRenderCommon.h"
-		#include "SSERenderPipeline.h"				//yet GRenderCommon.h ¿¡ ³ÖÀ»°Í
+		#include "SSERenderPipeline.h"				//yet GRenderCommon.h ì— ë„£ì„ê²ƒ
 #include "math.h"
 
 #include "GThreadManager.h"
@@ -108,7 +108,7 @@ void GSSERayTracer::uninitialize()
 }
 
 // ------------------------------------------------------------------------------------------------
-// initialize()		: scene Á¤º¸¸¦ Àç±¸¼ºÇØ¾ßÇÒ¶§ ÃÊ±âÈ­ÇÑ´Ù.
+// initialize()		: scene ì •ë³´ë¥¼ ì¬êµ¬ì„±í•´ì•¼í• ë•Œ ì´ˆê¸°í™”í•œë‹¤.
 // ------------------------------------------------------------------------------------------------
 GError GSSERayTracer::initialize( GScene *pScene )
 {
@@ -125,7 +125,7 @@ GError GSSERayTracer::initialize( GScene *pScene )
 		 m_oldResolution != pScene->getResolution() ) {
 
 		// ----------------------------------------------------------
-		// KdTree ¹× triangle Á¤º¸¸¦ Æ÷ÀÎÆÃÇÏ´Â °øÀ¯ ±¸Á¶Ã¼ »ı¼º
+		// KdTree ë° triangle ì •ë³´ë¥¼ í¬ì¸íŒ…í•˜ëŠ” ê³µìœ  êµ¬ì¡°ì²´ ìƒì„±
 		// ----------------------------------------------------------
 		if ( m_pSSESceneData ) {
 			delete m_pSSESceneData;
@@ -137,13 +137,13 @@ GError GSSERayTracer::initialize( GScene *pScene )
 			return error;
 
 		// ----------------------------------------------------------
-		// ¿©·¯°¡Áö ¼ö °è»ê
+		// ì—¬ëŸ¬ê°€ì§€ ìˆ˜ ê³„ì‚°
 		// ----------------------------------------------------------
 		m_pSSESceneData->calSceneProperty();
 
 		// ----------------------------------------------------------
 
-		// ÇöÀç Renderer °¡ Ã³¸®ÇÑ Scene À» ±â¾ïÇÑ´Ù.
+		// í˜„ì¬ Renderer ê°€ ì²˜ë¦¬í•œ Scene ì„ ê¸°ì–µí•œë‹¤.
 		// ----------------------------------------------------------
 		m_iOldSceneNumber = pScene->getSceneNumber();
 		m_iSceneTimestamp = pScene->getGeometryChangeTimestamp();
@@ -159,7 +159,7 @@ GError GSSERayTracer::initialize( GScene *pScene )
 	if (bModifiedScene || bModifiedThread) {
 #if GOThread
 		// ----------------------------------------------------------
-		// Render Pipeline »ı¼º
+		// Render Pipeline ìƒì„±
 		// ----------------------------------------------------------
 		for ( int i = 0; i < (int)m_SSERenderPipelineList.size(); ++i ) {
 			delete m_SSERenderPipelineList[i];
@@ -177,7 +177,7 @@ GError GSSERayTracer::initialize( GScene *pScene )
 		}
 #else
 		// ----------------------------------------------------------
-		// Render Pipeline »ı¼º
+		// Render Pipeline ìƒì„±
 		// ----------------------------------------------------------
 		if ( m_pSSERenderPipeline ) {
 			delete m_pSSERenderPipeline;
@@ -203,7 +203,7 @@ GError GSSERayTracer::initialize( GScene *pScene )
 }
 
 // ------------------------------------------------------------------------------------------------
-// PrepareRender() : Screen ¹× Ray µî ¼ÂÆÃ
+// PrepareRender() : Screen ë° Ray ë“± ì…‹íŒ…
 // ------------------------------------------------------------------------------------------------
 void GSSERayTracer::Prepare_Render( void )
 {
@@ -231,7 +231,7 @@ void GSSERayTracer::Prepare_Render( void )
 }
 
 // ------------------------------------------------------------------------------------------------
-// Execute_Render() : Render-Pipeline ½ÇÇà
+// Execute_Render() : Render-Pipeline ì‹¤í–‰
 // ------------------------------------------------------------------------------------------------
 void GSSERayTracer::Execute_Render( void )
 {
@@ -291,8 +291,8 @@ GError GSSERayTracer::rendering( GScene *pScene, bool isDebug )
 	GError error;
 
 	// ----------------------------------------------------------
-	//	Scene ÀÌ ÀÌÀü geometry »óÅÂ¿¡¼­ º¯ÇÑ°Ô ÀÖ´ÂÁö Ã¼Å©ÇØ¼­ ÀÖ´Ù¸é
-	//	SpatialStructure ¸¦ Àç±¸¼ºÇÑ´Ù.
+	//	Scene ì´ ì´ì „ geometry ìƒíƒœì—ì„œ ë³€í•œê²Œ ìˆëŠ”ì§€ ì²´í¬í•´ì„œ ìˆë‹¤ë©´
+	//	SpatialStructure ë¥¼ ì¬êµ¬ì„±í•œë‹¤.
 	// ----------------------------------------------------------
 	error = initialize( pScene );
 	if ( error != errorNo ) {
@@ -447,21 +447,21 @@ void GSSERayTracer::logging_out()
 	fprintf(fp, "PRE-5  , Ray Bounce Depth      , %d\n", iMaxReflectionDepth);
 
 
-	// ÇÁ·ÎÆÄÀÏ¸µ¿ë --------------------------------------------------------------------------
+	// í”„ë¡œíŒŒì¼ë§ìš© --------------------------------------------------------------------------
 	float fRatio;
-	unsigned int nDupTri = 0;				// º¸ÀÌ´Â »ï°¢Çü °³¼ö (Áßº¹Çã¿ë)
-	unsigned int nUniTri = 1;				// º¸ÀÌ´Â »ï°¢Çü °³¼ö (unique)
+	unsigned int nDupTri = 0;				// ë³´ì´ëŠ” ì‚¼ê°í˜• ê°œìˆ˜ (ì¤‘ë³µí—ˆìš©)
+	unsigned int nUniTri = 1;				// ë³´ì´ëŠ” ì‚¼ê°í˜• ê°œìˆ˜ (unique)
 
-	// PRI-6 : Spec/Diff ÁöÁ¡
+	// PRI-6 : Spec/Diff ì§€ì 
 	unsigned int _pf_nHit_DiffPnt_ALL, _pf_nHit_DiffPnt_PR, _pf_nHit_DiffPnt_RR; _pf_nHit_DiffPnt_ALL = _pf_nHit_DiffPnt_PR = _pf_nHit_DiffPnt_RR = 0;
 	unsigned int _pf_nHit_SpecPnt_ALL, _pf_nHit_SpecPnt_PR, _pf_nHit_SpecPnt_RR; _pf_nHit_SpecPnt_ALL = _pf_nHit_SpecPnt_PR = _pf_nHit_SpecPnt_RR = 0;
-	// PRI-9 : ±×¸²ÀÚ Áö´Â ÁöÁ¡
+	// PRI-9 : ê·¸ë¦¼ì ì§€ëŠ” ì§€ì 
 	unsigned int _pf_nHit_ShwPnt_ALL    = 0;
 	unsigned int _pf_nHit_ShwCnt_PR, _pf_nHit_ShwCnt_RR;	_pf_nHit_ShwCnt_PR = _pf_nHit_ShwCnt_RR = 0;
-	// CMI-7 : ÅØ½ºÃÄ access
+	// CMI-7 : í…ìŠ¤ì³ access
 	unsigned int _pf_nTexRef_ALL, _pf_nTexRef_PR, _pf_nTexRef_RR; _pf_nTexRef_ALL = _pf_nTexRef_PR = _pf_nTexRef_RR = 0;
 
-	// CMI-6 : Shading Ã³¸® È½¼ö
+	// CMI-6 : Shading ì²˜ë¦¬ íšŸìˆ˜
 	unsigned int _pf_nHit_ShadPnt_PR, _pf_nHit_ShadPnt_RR; _pf_nHit_ShadPnt_PR = _pf_nHit_ShadPnt_RR = 0;
 	unsigned int _pf_nHit_ShadCnt_PR, _pf_nHit_ShadCnt_RR; _pf_nHit_ShadCnt_PR = _pf_nHit_ShadCnt_RR = 0;
 	unsigned int _pf_nGen_RaysCnt_PR, _pf_nGen_RaysCnt_RR, _pf_nGen_RaysCnt_SR;  _pf_nGen_RaysCnt_PR = _pf_nGen_RaysCnt_RR = _pf_nGen_RaysCnt_SR = 0;
@@ -587,7 +587,7 @@ void GSSERayTracer::logging_out()
 	GLogManager::logging( LOG_INFO, "Pri Isect Frustum Cull / TriTest        :  %d / %d", PriIsect_FC_Cull_Count, PriIsect_TriChk_Count);
 
 /*
- min °¹¼ö : 4
+ min ê°¯ìˆ˜ : 4
  -> KDTree Node Count: 163151 (1.244743MB)
  -> n_leafNode: 81576
  -> treeLevel: 57
@@ -598,7 +598,7 @@ void GSSERayTracer::logging_out()
 	// Call			72907
 	// FCull/Test	66,605 / 166,747
 
- min °¹¼ö : 14
+ min ê°¯ìˆ˜ : 14
  -> KDTree Node Count: 27867 (0.212608MB)
  -> n_leafNode: 13934
  -> treeLevel: 44
@@ -609,7 +609,7 @@ void GSSERayTracer::logging_out()
 	// Call			62139
 	// FCull/Test	211,082 / 340,249
 
- min °¹¼ö : 24
+ min ê°¯ìˆ˜ : 24
  -> KDTree Node Count: 13123 (0.100121MB)
  -> n_leafNode: 6562
  -> treeLevel: 36
@@ -620,7 +620,7 @@ void GSSERayTracer::logging_out()
 	// Call			64547
 	// FCull/Test	509,584 / 652,093
 
- min °¹¼ö : 40
+ min ê°¯ìˆ˜ : 40
  -> KDTree Node Count: 6819 (0.052025MB)
  -> n_leafNode: 3410
  -> treeLevel: 31

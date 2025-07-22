@@ -44,7 +44,7 @@ inline double sgrtRadicalInverse(int i, int base) {
 
 inline float cpu_fdot(const _sse_float& a, const _sse_float& b)
 {
-	return a.x * b.x + a.y * b.y + a.z * b.z;	// 3°³ÇÕ
+	return a.x * b.x + a.y * b.y + a.z * b.z;	// 3ê°œí•©
 }
 
 inline void cpu_inverse(_sse_float& e, const _sse_float& n)
@@ -159,14 +159,14 @@ inline float sse_dot( const __m128 v1, const __m128 v2 )
 {
 	union u { __m128 m; float f[4]; } x;
 	x.m = _mm_mul_ps(v1, v2);
-	return x.f[0] + x.f[1] + x.f[2] + x.f[3];	// 4°³ÇÕ
+	return x.f[0] + x.f[1] + x.f[2] + x.f[3];	// 4ê°œí•©
 }
 
 inline float sse_fdot(const _sse_float& a, const _sse_float& b)
 {
 	union u { __m128 m; float f[4]; } x;
 	x.m = _mm_mul_ps(a.v4, b.v4);
-	return x.f[0] + x.f[1] + x.f[2];			// 3°³ÇÕ
+	return x.f[0] + x.f[1] + x.f[2];			// 3ê°œí•©
 }
 
 inline _sse_float sse_fset1(const float* v)
@@ -449,13 +449,13 @@ inline void sse_get_f(float dst[4][3], const _sse_vec& src)
 {
 	union u { __m128 m; float f[4]; } x;
 
-	x.m = src.x4;		// x ¼ººĞ
+	x.m = src.x4;		// x ì„±ë¶„
 	dst[0][0] = x.f[0];		dst[1][0] = x.f[1];		dst[2][0] = x.f[2];		dst[3][0] = x.f[3];
 
-	x.m = src.y4;		// y ¼ººĞ
+	x.m = src.y4;		// y ì„±ë¶„
 	dst[0][1] = x.f[0];		dst[1][1] = x.f[1];		dst[2][1] = x.f[2];		dst[3][1] = x.f[3];
 
-	x.m = src.z4;		// z ¼ººĞ
+	x.m = src.z4;		// z ì„±ë¶„
 	dst[0][2] = x.f[0];		dst[1][2] = x.f[1];		dst[2][2] = x.f[2];		dst[3][2] = x.f[3];
 }
 
@@ -609,7 +609,7 @@ inline void sse_get_f(float dst[4][3], const _sse_vec& src)
 // ------------------------------------------------------------------------------------------------
 
 inline int _Log2Int_(float v) {
-	return ((*(int *) &v) >> 23) - 127;			// ÀÌ°Å ±¸Çö ¸Â´Â °Å³Ä? ¶ó²Ù¾ß
+	return ((*(int *) &v) >> 23) - 127;			// ì´ê±° êµ¬í˜„ ë§ëŠ” ê±°ëƒ? ë¼ê¾¸ì•¼
 }
 
 inline int _Round2Int_(double val) {
@@ -621,7 +621,7 @@ inline int _Round2Int_(double val) {
 
 // ~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.
 // ------------------------------------------------------------------------------------------------
-// ¾Æ·¡ memset ±¸ÇöÀÇ ¼º´É È¿°ú´Â Àß ¸ğ¸£°ÚÀ½.. 
+// ì•„ë˜ memset êµ¬í˜„ì˜ ì„±ëŠ¥ íš¨ê³¼ëŠ” ì˜ ëª¨ë¥´ê² ìŒ.. 
 
 #define SSE_MMREG_SIZE 16
 #define SSE_MIN_LEN 0x40

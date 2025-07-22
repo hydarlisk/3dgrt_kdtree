@@ -1,7 +1,7 @@
 #include "GBaseThread.h"
 
 /**
- *	»ı¼ºÀÚ
+ *	ìƒì„±ì
  */
 GBaseThread::GBaseThread()
 {
@@ -9,9 +9,9 @@ GBaseThread::GBaseThread()
 	m_uiThreadID = 0;
 
 	/**
-	 *	¾²·¹µå¸¦ »ı¼ºÇÑ´Ù. CREATE_SUSPENDED ¸¦ ¿É¼ÇÀ¸·Î ÁÖ¾î¼­
-	 *	»ı¼ºÈÄ ¹Ù·Î ½ÃÀÛÇÏÁö ¾Ê°í, ³ªÁß¿¡ µû·Î start() ¸¦ È£ÃâÇØ¾ß
-	 *	¾²·¹µå°¡ µ¿ÀÛÇÏ°Ô ÇÑ´Ù.
+	 *	ì“°ë ˆë“œë¥¼ ìƒì„±í•œë‹¤. CREATE_SUSPENDED ë¥¼ ì˜µì…˜ìœ¼ë¡œ ì£¼ì–´ì„œ
+	 *	ìƒì„±í›„ ë°”ë¡œ ì‹œì‘í•˜ì§€ ì•Šê³ , ë‚˜ì¤‘ì— ë”°ë¡œ start() ë¥¼ í˜¸ì¶œí•´ì•¼
+	 *	ì“°ë ˆë“œê°€ ë™ì‘í•˜ê²Œ í•œë‹¤.
 	 */
 	m_hThreadHandle = (HANDLE) _beginthreadex( NULL, 0, threadFunc, this, 
 											   CREATE_SUSPENDED, 
@@ -19,7 +19,7 @@ GBaseThread::GBaseThread()
 }
 
 /**
- *	¼Ò¸êÀÚ
+ *	ì†Œë©¸ì
  */
 GBaseThread::~GBaseThread(void)
 {
@@ -27,7 +27,7 @@ GBaseThread::~GBaseThread(void)
 }
 
 /**
- *	¾²·¹µå¸¦ ½ÃÀÛÇÑ´Ù.
+ *	ì“°ë ˆë“œë¥¼ ì‹œì‘í•œë‹¤.
  */
 DWORD GBaseThread::start()
 {
@@ -35,8 +35,8 @@ DWORD GBaseThread::start()
 }
 
 /**
- *	¾²·¹µå ÁøÀÔÁ¡. °¢ ¼­ºê Å¬·¡½º¿¡¼­ ¿À¹ö¶óÀÌµùÇØ¼­
- *	»ç¿ëÇÏ¸é µÈ´Ù.
+ *	ì“°ë ˆë“œ ì§„ì…ì . ê° ì„œë¸Œ í´ë˜ìŠ¤ì—ì„œ ì˜¤ë²„ë¼ì´ë”©í•´ì„œ
+ *	ì‚¬ìš©í•˜ë©´ ëœë‹¤.
  */
 unsigned _stdcall GBaseThread::threadFunc( void* args )
 {
@@ -47,9 +47,9 @@ unsigned _stdcall GBaseThread::threadFunc( void* args )
 }
 
 /**
- *	¾²·¹µå°¡ Á¾·áÇÒ¶§ ±îÁö ±â´Ù¸°´Ù.
+ *	ì“°ë ˆë“œê°€ ì¢…ë£Œí• ë•Œ ê¹Œì§€ ê¸°ë‹¤ë¦°ë‹¤.
  *
- *	@param time time½Ã°£¸¸Å­¸¸ ±â´Ù¸°´Ù ( milisecond )
+ *	@param time timeì‹œê°„ë§Œí¼ë§Œ ê¸°ë‹¤ë¦°ë‹¤ ( milisecond )
  */
 DWORD GBaseThread::waitThread( int time )
 {
@@ -62,7 +62,7 @@ DWORD GBaseThread::waitThread()
 }
 
 /**
- *	¾²·¹µå ÁßÁöÇÑ´Ù.
+ *	ì“°ë ˆë“œ ì¤‘ì§€í•œë‹¤.
  */
 void GBaseThread::suspendThread()
 {
@@ -70,7 +70,7 @@ void GBaseThread::suspendThread()
 }
 
 /**
- *	¾²·¹µå Àç°³
+ *	ì“°ë ˆë“œ ì¬ê°œ
  */
 void GBaseThread::resumeThread()
 {
@@ -78,11 +78,11 @@ void GBaseThread::resumeThread()
 }
 
 /**
- *	¾²·¹µå¸¦ Á¾·á½ÃÅ²´Ù. À©µµ¿ìÀÇ TerminateThread ¸¦ »ç¿ëÇÏ¸é
- *	À§ÇèÇÏ±â ¶§¹®¿¡, °¡±ŞÀûÀÌ¸é ÀÌ ÇÔ¼ö´ë½Å¿¡
- *	°¢ Thread ¾È¿¡¼­ ¾ÈÀüÇÏ°Ô ¾²·¹µå¸¦ Á¾·áÇÏ´Â ¹æ¹ıÀ» »ç¿ëÇÏ´Â°Ô ÁÁ´Ù.
+ *	ì“°ë ˆë“œë¥¼ ì¢…ë£Œì‹œí‚¨ë‹¤. ìœˆë„ìš°ì˜ TerminateThread ë¥¼ ì‚¬ìš©í•˜ë©´
+ *	ìœ„í—˜í•˜ê¸° ë•Œë¬¸ì—, ê°€ê¸‰ì ì´ë©´ ì´ í•¨ìˆ˜ëŒ€ì‹ ì—
+ *	ê° Thread ì•ˆì—ì„œ ì•ˆì „í•˜ê²Œ ì“°ë ˆë“œë¥¼ ì¢…ë£Œí•˜ëŠ” ë°©ë²•ì„ ì‚¬ìš©í•˜ëŠ”ê²Œ ì¢‹ë‹¤.
  *
- *	@param dwExitCode ¾²·¹µå°¡ Á¾·áÈÄ ¸®ÅÏÇÒ °ª ÁöÁ¤
+ *	@param dwExitCode ì“°ë ˆë“œê°€ ì¢…ë£Œí›„ ë¦¬í„´í•  ê°’ ì§€ì •
  */
 void GBaseThread::killThread( DWORD dwExitCode )
 {
@@ -90,7 +90,7 @@ void GBaseThread::killThread( DWORD dwExitCode )
 }
 
 /**
- *	¾²·¹µå°¡ Á¾·áÇÑ ÈÄ ¸®ÅÏÇÑ °ª
+ *	ì“°ë ˆë“œê°€ ì¢…ë£Œí•œ í›„ ë¦¬í„´í•œ ê°’
  */
 DWORD GBaseThread::getExitCode()
 {

@@ -197,12 +197,12 @@ void SSERenderPipeline::IsectPacket4x4( const KdTreeNode *node, int nIdx )
 			COUNT_STATE( nIdx, MAILBOXED_TRIANGLE_COUNT, 1 );
 			continue;
 		}
-		else { acc.mbox = rp->RayId; }	// ¹«Á¶°Ç isect ¾ÈµÇµµ ½ÇÇà µÇ¾î¾ß ÇÔ
+		else { acc.mbox = rp->RayId; }	// ë¬´ì¡°ê±´ isect ì•ˆë˜ë„ ì‹¤í–‰ ë˜ì–´ì•¼ í•¨
 
 		COUNT_STATE( nIdx, TRIANGLE_COUNT, 1 );
 
 		// ---------------------------------------------------------------
-		// Backface Culling : Åõ¸íÇÏÁö ¾Ê´Â ¹°Ã¼¸¸ ÇØ´ç
+		// Backface Culling : íˆ¬ëª…í•˜ì§€ ì•ŠëŠ” ë¬¼ì²´ë§Œ í•´ë‹¹
 		// ---------------------------------------------------------------
 		if (acc.isTransparent || !m_Scene->isBackFaceCulling()) {
 			for (j = 3; j >= 0; j--) {
@@ -310,10 +310,10 @@ void SSERenderPipeline::IsectPacket_P( const KdTreeNode *node, int nIdx )
 		// Mailbox
 		// ---------------------------------------------------------------
 		if (acc.mbox == rp->RayId) { continue; }
-		else { acc.mbox = rp->RayId; }	// ¹«Á¶°Ç isect ¾ÈµÇµµ ½ÇÇà µÇ¾î¾ß ÇÔ
+		else { acc.mbox = rp->RayId; }	// ë¬´ì¡°ê±´ isect ì•ˆë˜ë„ ì‹¤í–‰ ë˜ì–´ì•¼ í•¨
 
 		// ---------------------------------------------------------------
-		// Backface Culling : Åõ¸íÇÏÁö ¾Ê´Â ¹°Ã¼¸¸ ÇØ´ç
+		// Backface Culling : íˆ¬ëª…í•˜ì§€ ì•ŠëŠ” ë¬¼ì²´ë§Œ í•´ë‹¹
 		// ---------------------------------------------------------------
 		if (acc.isTransparent || !m_Scene->isBackFaceCulling()) {
 			for (j = 0; j < 4; j++) {
@@ -437,7 +437,7 @@ void SSERenderPipeline::TracePacket4x4( int nIdx )
 	_sse_4x4_raymask	*rm	= &m_RMask4x4[nIdx];
 
 	// ---------------------------------------------------------------------------
-	// À¯È¿ÇÑ Ray ¾ø´Â °æ¿ì return
+	// ìœ íš¨í•œ Ray ì—†ëŠ” ê²½ìš° return
 	// ---------------------------------------------------------------------------
 	if (_mm_movemask_ps(_mm_or_ps(_mm_or_ps(_mm_or_ps(rm->mask4[0], rm->mask4[1]), rm->mask4[2]), rm->mask4[3])) == 0) return;
 
@@ -660,12 +660,12 @@ void SSERenderPipeline::IsectShadowPacket4x4( const KdTreeNode *node )
 			COUNT_STATE( -1, MAILBOXED_TRIANGLE_COUNT, 1 );
 			continue;
 		}
-		else { acc.mbox = rp->RayId; }	// ¹«Á¶°Ç isect ¾ÈµÇµµ ½ÇÇà µÇ¾î¾ß ÇÔ
+		else { acc.mbox = rp->RayId; }	// ë¬´ì¡°ê±´ isect ì•ˆë˜ë„ ì‹¤í–‰ ë˜ì–´ì•¼ í•¨
 
 		COUNT_STATE( -1, TRIANGLE_COUNT, 1 );
 
 		// ---------------------------------------------------------------
-		// Åõ¸íÇÑ ¹°Ã¼´Â Åõ°ú
+		// íˆ¬ëª…í•œ ë¬¼ì²´ëŠ” íˆ¬ê³¼
 		// ---------------------------------------------------------------
 		if (acc.isTransparent) continue;
 
@@ -921,7 +921,7 @@ void SSERenderPipeline::checkVisibility4x4(const _sse_vec objectPos[], const GPo
 	shadow_rp->o[3] = sse_vadd(objectPos[3], sse_vmul(shadow_rp->d[3], sse_vset1(RAY_START_EPSILON)));
 
 	unsigned int i, b;
-	// coherence Ã¼Å© °â ray dir °áÁ¤ (q = 8¹æÇâÁßÇÏ³ª)
+	// coherence ì²´í¬ ê²¸ ray dir ê²°ì • (q = 8ë°©í–¥ì¤‘í•˜ë‚˜)
 	if (shadow_rp->IsCoherent()) {
 		shadow_rp->RayWay = (shadow_rp->xmask & 1) + (shadow_rp->ymask & 2) + (shadow_rp->zmask & 4);
 		shadow_rm->mask4[0] = shadingmask[0];
@@ -963,7 +963,7 @@ void SSERenderPipeline::Shading4x4 (const int nIdx) {
 	_sse_4x4_raymask	*rm	= &m_RMask4x4[nIdx];
 
 	// --------------------------------------------------------------
-	// À¯È¿ÇÑ Ray ¾ø´Â °æ¿ì return
+	// ìœ íš¨í•œ Ray ì—†ëŠ” ê²½ìš° return
 	// --------------------------------------------------------------
 	union { __m128i iAvailMask4; __m128 fAvailMask4; };
 	iAvailMask4 = _mm_or_si128(	_mm_or_si128(	_mm_or_si128(
@@ -1190,7 +1190,7 @@ void SSERenderPipeline::Shading4x4 (const int nIdx) {
 		}
 
 		for (i = 3; i >= 0; i--) {
-			// Shading ¿¡¼­, Åõ¸íÇÑ ¹°Ã¼ÀÏ¶§, Normal °ú dir ÀÇ dot ÀÌ < 0 ÀÌ¶ó¸é normal À» µÚÂ¤´Â´Ù.
+			// Shading ì—ì„œ, íˆ¬ëª…í•œ ë¬¼ì²´ì¼ë•Œ, Normal ê³¼ dir ì˜ dot ì´ < 0 ì´ë¼ë©´ normal ì„ ë’¤ì§šëŠ”ë‹¤.
 			__m128 mask = _mm_and_ps(
 					_mm_cmpgt_ps(mat_fRefr[i].v4, _mm_setzero_ps()),
 					_mm_cmpgt_ps(sse_vdot(is->n[i], rp->d[i]), _mm_setzero_ps()));
@@ -1210,7 +1210,7 @@ void SSERenderPipeline::Shading4x4 (const int nIdx) {
 		// Diffuse & Specular color
 		const vector<GLight*>* pLightList = m_Scene->getLightList();
 		for ( int lx = 0; lx < (int) pLightList->size(); ++lx ) {	GLight* pLight = (*pLightList)[ lx ];
-			// Point Light ¸¸ ÀÏ´Ü Áö¿ø
+			// Point Light ë§Œ ì¼ë‹¨ ì§€ì›
 			if ( pLight->getLightType() != typePointLight )  continue;
 			if ( pLight->isEnabled() != true ) continue;
 
@@ -1219,22 +1219,22 @@ void SSERenderPipeline::Shading4x4 (const int nIdx) {
 			GPoint   lightPos   = pLight->getPosition();
 			_sse_vec lPos       = sse_vset1(lightPos.x, lightPos.y, lightPos.z);
 
-			// ±¤¿ø ÀÚ±âÀÚ½ÅÀÎ °æ¿ì
+			// ê´‘ì› ìê¸°ìì‹ ì¸ ê²½ìš°
 			for (i = 3; i >= 0; i--) {
 				iislightmask[i] = _mm_cmpeq_epi32(obj_num[i].v4, _mm_set1_epi32(pLight->getObjectNumber()));
 				oColor[i] = sse_vupdate(sse_vadd(oColor[i], sse_vmul(lColor, sse_vset1(pLight->getIntensity()))), oColor[i], _mm_and_ps(islightmask[i], shadingmask[i]));
 			}
 
-			// ±×¸²ÀÚ È®ÀÎ
+			// ê·¸ë¦¼ì í™•ì¸
 			if ( bIsEnableShadow ) {
 				checkVisibility4x4(hit_p, &lightPos, shadingmask);
 
 				for (i = 3; i >= 0; i--) {
 					__m128 lDist = sse_vlength(sse_vsub(lPos, hit_p[i]));
 
-					// shadow °ü·Ã visible Á¶°Ç
-					// 1) shadingmask           : ¹°Ã¼¿Í ±³Á¡ÀÖ´Â °Í
-					// 2) shadow_is->tacc4 > 0  : shadow ray °¡ ±³Â÷Á¡ÀÌ µÚ¿¡ Á¸ÀçÇÏ°Å³ª ¾Æ´Ï¸é °Å¸®°¡ °ÅÀÇ °¡±õ°Å³ª
+					// shadow ê´€ë ¨ visible ì¡°ê±´
+					// 1) shadingmask           : ë¬¼ì²´ì™€ êµì ìˆëŠ” ê²ƒ
+					// 2) shadow_is->tacc4 > 0  : shadow ray ê°€ êµì°¨ì ì´ ë’¤ì— ì¡´ì¬í•˜ê±°ë‚˜ ì•„ë‹ˆë©´ ê±°ë¦¬ê°€ ê±°ì˜ ê°€ê¹ê±°ë‚˜
 					iisisectmask = _mm_cmpgt_epi32(shadow_is->tacc4[i], _mm_setzero_si128());
 					inoisectmask = _mm_cmpeq_epi32(shadow_is->tacc4[i], _mm_setzero_si128());
 
@@ -1556,7 +1556,7 @@ void SSERenderPipeline::RenderPacket4x4( const int nIdx )
 // -----------------------------------------------------------
 void SSERenderPipeline::Render4x4( int nJobID )
 {
-#if 0		// 0: Y¹æÇâÀ¸·Î ±Õµî ºĞÇÒÇÏ¿© ·»´õ¸µ,  1 : ¾²·¹µå º°·Î mix µÈ »óÅÂ·Î ·»´õ¸µ
+#if 0		// 0: Yë°©í–¥ìœ¼ë¡œ ê· ë“± ë¶„í• í•˜ì—¬ ë Œë”ë§,  1 : ì“°ë ˆë“œ ë³„ë¡œ mix ëœ ìƒíƒœë¡œ ë Œë”ë§
 	int xTileEnd = (m_Resolution.x) >> 2;
 	int yTileEnd = (m_Resolution.y) >> 2;
 	int nTileDelta = m_iThreadCount;
@@ -1661,7 +1661,7 @@ void SSERenderPipeline::Render4x4( int nJobID )
 				}
 
 				// -----------------------------------------------------------------------
-				// Ray packet À» ¼ÂÆÃ - ½ÃÀÛÁ¡(ray_o_x4, ray_o_y4, ray_o_z4) ~ ³¡Á¡(tpos)
+				// Ray packet ì„ ì…‹íŒ… - ì‹œì‘ì (ray_o_x4, ray_o_y4, ray_o_z4) ~ ëì (tpos)
 				// -----------------------------------------------------------------------
 				for ( i = 0; i < 4; i++ ) {
 					rp->d[i].x4 = _mm_sub_ps( jpos.d[i].x4, ray_o_x4 );
@@ -1669,10 +1669,10 @@ void SSERenderPipeline::Render4x4( int nJobID )
 					rp->d[i].z4 = _mm_sub_ps( jpos.d[i].z4, ray_o_z4 );
 				}
 				rp->Depth = 0;
-				InitPacket4x4( 0 );	// direction vector normalize µî
+				InitPacket4x4( 0 );	// direction vector normalize ë“±
 
 				// -----------------------------------------------------------------------
-				// Coherence Ã¼Å© ÈÄ rendering
+				// Coherence ì²´í¬ í›„ rendering
 				// -----------------------------------------------------------------------
 				if (rp->IsCoherent()) {
 					rp->RayWay = (rp->xmask & 1) + (rp->ymask & 2) + (rp->zmask & 4);
@@ -1715,7 +1715,7 @@ void SSERenderPipeline::Render4x4( int nJobID )
 				m_Dest[3*(is->addr[i])+2] = o_color[i].b * fSampWeight;
 			}
 
-			// Render tile (tpos) ÀÇ À§Ä¡¸¦ ÀÌµ¿
+			// Render tile (tpos) ì˜ ìœ„ì¹˜ë¥¼ ì´ë™
 			for ( i = 0; i < 4; i++ ) {
 				tpos.d[i].x4 = _mm_add_ps( tpos.d[i].x4, delta4.d[i].x4 );
 				tpos.d[i].y4 = _mm_add_ps( tpos.d[i].y4, delta4.d[i].y4 );
@@ -1783,9 +1783,9 @@ void SSERenderPipeline::Render4x4( int nJobID )
 		unsigned int i = 0;
 
 		// -----------------------------------------------------------------------
-		// tpos (Ray ¸¦ ½ò ¹æÇâÁöÁ¡) °è»ê
+		// tpos (Ray ë¥¼ ì  ë°©í–¥ì§€ì ) ê³„ì‚°
 		// -----------------------------------------------------------------------
-		// m_LeftUp : image screen À§ÂÊ ¿ŞÆí ¸ğ¼­¸®ÀÇ pixel Áß½É À¸·Î ÀÌ¹Ì ¼ÂÆÃ µÇ¾î ÀÖÀ½
+		// m_LeftUp : image screen ìœ„ìª½ ì™¼í¸ ëª¨ì„œë¦¬ì˜ pixel ì¤‘ì‹¬ ìœ¼ë¡œ ì´ë¯¸ ì…‹íŒ… ë˜ì–´ ìˆìŒ
 		for(i = 0; i < 4; i++) {
 			// tpos.d = m_LeftUp + m_DX * (float)iCastSeq4x4_x[i] - m_DY * (float)(ty * 4 + iCastSeq4x4_y[i]);
 			tpos.d[i].x4 = _mm_add_ps(m_LeftUp4->x4, _mm_sub_ps(
@@ -1842,7 +1842,7 @@ void SSERenderPipeline::Render4x4( int nJobID )
 				}
 
 				// -----------------------------------------------------------------------
-				// Ray packet À» ¼ÂÆÃ - ½ÃÀÛÁ¡(ray_o_x4, ray_o_y4, ray_o_z4) ~ ³¡Á¡(tpos)
+				// Ray packet ì„ ì…‹íŒ… - ì‹œì‘ì (ray_o_x4, ray_o_y4, ray_o_z4) ~ ëì (tpos)
 				// -----------------------------------------------------------------------
 				for ( i = 0; i < 4; i++ ) {
 					rp->d[i].x4 = _mm_sub_ps( jpos.d[i].x4, ray_o_x4 );
@@ -1850,10 +1850,10 @@ void SSERenderPipeline::Render4x4( int nJobID )
 					rp->d[i].z4 = _mm_sub_ps( jpos.d[i].z4, ray_o_z4 );
 				}
 				rp->Depth = 0;
-				InitPacket4x4( 0 );	// direction vector normalize µî
+				InitPacket4x4( 0 );	// direction vector normalize ë“±
 
 				// -----------------------------------------------------------------------
-				// Coherence Ã¼Å© ÈÄ rendering
+				// Coherence ì²´í¬ í›„ rendering
 				// -----------------------------------------------------------------------
 				if (rp->IsCoherent()) {
 					rp->RayWay = (rp->xmask & 1) + (rp->ymask & 2) + (rp->zmask & 4);
@@ -1897,7 +1897,7 @@ void SSERenderPipeline::Render4x4( int nJobID )
 				m_Dest[3*(is->addr[i])+2] = o_color[i].b * fSampWeight;
 			}
 
-			// Render tile (tpos) ÀÇ À§Ä¡¸¦ ÀÌµ¿
+			// Render tile (tpos) ì˜ ìœ„ì¹˜ë¥¼ ì´ë™
 			for ( i = 0; i < 4; i++ ) {
 				tpos.d[i].x4 = _mm_add_ps( tpos.d[i].x4, delta4.d[i].x4 );
 				tpos.d[i].y4 = _mm_add_ps( tpos.d[i].y4, delta4.d[i].y4 );
@@ -1985,7 +1985,7 @@ void SSERenderPipeline::Render4x4_ADPSS_OnePass( int nJobID )
 			unsigned int i, b;
 
 			// -----------------------------------------------------------------------
-			// Ray packet À» ¼ÂÆÃ - ½ÃÀÛÁ¡(ray_o_x4, ray_o_y4, ray_o_z4) ~ ³¡Á¡(tpos)
+			// Ray packet ì„ ì…‹íŒ… - ì‹œì‘ì (ray_o_x4, ray_o_y4, ray_o_z4) ~ ëì (tpos)
 			// -----------------------------------------------------------------------
 			for ( i = 0; i < 4; i++ ) {
 				rp->d[i].x4 = _mm_sub_ps( tpos.d[i].x4, ray_o_x4 );
@@ -1993,10 +1993,10 @@ void SSERenderPipeline::Render4x4_ADPSS_OnePass( int nJobID )
 				rp->d[i].z4 = _mm_sub_ps( tpos.d[i].z4, ray_o_z4 );
 			}
 			rp->Depth = 0;
-			InitPacket4x4( 0 );	// direction vector normalize µî
+			InitPacket4x4( 0 );	// direction vector normalize ë“±
 
 			// -----------------------------------------------------------------------
-			// Coherence Ã¼Å© ÈÄ rendering
+			// Coherence ì²´í¬ í›„ rendering
 			// -----------------------------------------------------------------------
 			if (rp->IsCoherent()) {
 				rp->RayWay = (rp->xmask & 1) + (rp->ymask & 2) + (rp->zmask & 4);
@@ -2058,7 +2058,7 @@ void SSERenderPipeline::Render4x4_ADPSS_OnePass( int nJobID )
 			}
 
 			// -----------------------------------------------------------------------
-			// Render tile (tpos) ÀÇ À§Ä¡¸¦ ÀÌµ¿
+			// Render tile (tpos) ì˜ ìœ„ì¹˜ë¥¼ ì´ë™
 			// -----------------------------------------------------------------------
 			for ( i = 0; i < 4; i++ ) {
 				tpos.d[i].x4 = _mm_add_ps( tpos.d[i].x4, delta4.d[i].x4 );
@@ -2148,7 +2148,7 @@ void SSERenderPipeline::Render4x4_ADPSS_Detection( int nJobID )
 		int nSuperSample2x2_Flag  = 0;
 
 		// -----------------------------------------------------------------------------------------------
-		// Pixel ÀÇ difference value »ı¼º
+		// Pixel ì˜ difference value ìƒì„±
 		// -----------------------------------------------------------------------------------------------
 		float colordifference = 1.0f;
 		if (1) {
@@ -2201,7 +2201,7 @@ void SSERenderPipeline::Render4x4_ADPSS_Detection( int nJobID )
 					}
 					}
 			} else {
-				// grayScale[0~7] ¿¡ GrayScale °ªÀ» ÀúÀå
+				// grayScale[0~7] ì— GrayScale ê°’ì„ ì €ì¥
 				for (j = 0; j < 8; j++) {
 					grayScale[j] = sse_dot(GrayScaleCoef4, m_ADPSS_data[tmpPixAddr[j]].oColor.rgba);
 				}
@@ -2212,7 +2212,7 @@ void SSERenderPipeline::Render4x4_ADPSS_Detection( int nJobID )
 			}
 			colordifference = min( 1.0f, fabs( xvalue ) + fabs( yvalue ) );
 		}
-		// ----------------------------------------------------Pixel ÀÇ difference value »ı¼º-------------
+		// ----------------------------------------------------Pixel ì˜ difference value ìƒì„±-------------
 
 		// Check 4 corner test among adjacent pixels
 		for (sub_pi = 0; sub_pi < 4; sub_pi++) {
@@ -2222,7 +2222,7 @@ void SSERenderPipeline::Render4x4_ADPSS_Detection( int nJobID )
 			//	 O t x		x t O		O t x		x t O	
 			//	 x x x		x x x		O O x		x O O	
 
-			// Å×µÎ¸® ¿µ¿ª¿¡ ´ëÇÑ Ã³¸®
+			// í…Œë‘ë¦¬ ì˜ì—­ì— ëŒ€í•œ ì²˜ë¦¬
 			if (xPi == 0          && (sub_pi & 1) == 0) continue;		// Left   margin
 			if (xPi == wPixels -1 && (sub_pi & 1) == 1) continue;		// Right  margin
 			if (yPi == 0          && (sub_pi & 2) == 2) continue;		// Bottom margin
@@ -2239,7 +2239,7 @@ void SSERenderPipeline::Render4x4_ADPSS_Detection( int nJobID )
 			while (1) {
 
 				float fColorThreshold = 0;
-				/** ¿ÀÁ÷ ÇÏ³ªÀÇ threshold ·Î ÀüÃ¼ÀÌ¹ÌÁö¸¦ color ºñ±³ÇÏ´Â°æ¿ì´Â ÀÌ°Í¸¸ ÇÏ°í break */
+				/** ì˜¤ì§ í•˜ë‚˜ì˜ threshold ë¡œ ì „ì²´ì´ë¯¸ì§€ë¥¼ color ë¹„êµí•˜ëŠ”ê²½ìš°ëŠ” ì´ê²ƒë§Œ í•˜ê³  break */
 				if ( ( nCompareType & 512 ) == 512 ) {
 					if ( colordifference > fColorThreshold ) {
 						flag = true;
@@ -2247,11 +2247,11 @@ void SSERenderPipeline::Render4x4_ADPSS_Detection( int nJobID )
 					}
 				}
 
-				/** primary oid ¿µ¿ª. */
+				/** primary oid ì˜ì—­. */
 				for (j = 0; j < 4; j++) {
 					adjPixData[j] = m_ADPSS_data[adjPixAddr[j]].pri_oid;
 				}
-				iMask_PatternTest[sub_pi] = _mm_cmpeq_epi32(_mm_sub_epi32(adjPixData4, _mm_set1_epi32(adjPixData[0])), _mm_setzero_si128());	// ¸ğµÎ °°À¸¸é '1'
+				iMask_PatternTest[sub_pi] = _mm_cmpeq_epi32(_mm_sub_epi32(adjPixData4, _mm_set1_epi32(adjPixData[0])), _mm_setzero_si128());	// ëª¨ë‘ ê°™ìœ¼ë©´ '1'
 				nPatternTestResult = _mm_movemask_ps(Mask_PatternTest[sub_pi]);
 				if (nPatternTestResult != 0xf) {
 					checkRegion = true;
@@ -2269,7 +2269,7 @@ void SSERenderPipeline::Render4x4_ADPSS_Detection( int nJobID )
 					fadjPixData[j] = 
 						sse_fdot(m_ADPSS_data[adjPixAddr[j]].pri_normal, m_ADPSS_data[adjPixAddr[0]].pri_normal);
 				}
-				Mask_PatternTest[sub_pi] = _mm_cmpgt_ps(fadjPixData4, _mm_set1_ps(0.5f));														// ¸ğµÎ 0.5 º¸´Ù Å©¸é '1'
+				Mask_PatternTest[sub_pi] = _mm_cmpgt_ps(fadjPixData4, _mm_set1_ps(0.5f));														// ëª¨ë‘ 0.5 ë³´ë‹¤ í¬ë©´ '1'
 				nPatternTestResult = _mm_movemask_ps(Mask_PatternTest[sub_pi]);
 				if (nPatternTestResult != 0xf) {
 					checkRegion = true;
@@ -2283,7 +2283,7 @@ void SSERenderPipeline::Render4x4_ADPSS_Detection( int nJobID )
 				for (j = 0; j < 4; j++) {
 					adjPixData[j] = m_ADPSS_data[adjPixAddr[j]].pri_shadow;
 				}
-				iMask_PatternTest[sub_pi] = _mm_cmpeq_epi32(_mm_sub_epi32(adjPixData4, _mm_set1_epi32(adjPixData[0])), _mm_setzero_si128());	// ¸ğµÎ °°À¸¸é '1'
+				iMask_PatternTest[sub_pi] = _mm_cmpeq_epi32(_mm_sub_epi32(adjPixData4, _mm_set1_epi32(adjPixData[0])), _mm_setzero_si128());	// ëª¨ë‘ ê°™ìœ¼ë©´ '1'
 				nPatternTestResult = _mm_movemask_ps(Mask_PatternTest[sub_pi]);
 				if (nPatternTestResult != 0xf) {
 					checkRegion = true;
@@ -2306,7 +2306,7 @@ void SSERenderPipeline::Render4x4_ADPSS_Detection( int nJobID )
 				for (j = 0; j < 4; j++) {
 					adjPixData[j] = m_ADPSS_data[adjPixAddr[j]].sec_oid;
 				}
-				iMask_PatternTest[sub_pi] = _mm_cmpeq_epi32(_mm_sub_epi32(adjPixData4, _mm_set1_epi32(adjPixData[0])), _mm_setzero_si128());	// ¸ğµÎ °°À¸¸é '1'
+				iMask_PatternTest[sub_pi] = _mm_cmpeq_epi32(_mm_sub_epi32(adjPixData4, _mm_set1_epi32(adjPixData[0])), _mm_setzero_si128());	// ëª¨ë‘ ê°™ìœ¼ë©´ '1'
 				nPatternTestResult = _mm_movemask_ps(Mask_PatternTest[sub_pi]);
 				if (nPatternTestResult != 0xf) {
 					checkRegion = true;
@@ -2324,7 +2324,7 @@ void SSERenderPipeline::Render4x4_ADPSS_Detection( int nJobID )
 					fadjPixData[j] = 
 						sse_fdot(m_ADPSS_data[adjPixAddr[j]].sec_normal, m_ADPSS_data[adjPixAddr[0]].sec_normal);
 				}
-				Mask_PatternTest[sub_pi] = _mm_cmpgt_ps(fadjPixData4, _mm_set1_ps(0.5f));														// ¸ğµÎ 0.5 º¸´Ù Å©¸é '1'
+				Mask_PatternTest[sub_pi] = _mm_cmpgt_ps(fadjPixData4, _mm_set1_ps(0.5f));														// ëª¨ë‘ 0.5 ë³´ë‹¤ í¬ë©´ '1'
 				nPatternTestResult = _mm_movemask_ps(Mask_PatternTest[sub_pi]);
 				if (nPatternTestResult != 0xf) {
 					checkRegion = true;
@@ -2338,7 +2338,7 @@ void SSERenderPipeline::Render4x4_ADPSS_Detection( int nJobID )
 				for (j = 0; j < 4; j++) {
 					adjPixData[j] = m_ADPSS_data[adjPixAddr[j]].sec_shadow;
 				}
-				iMask_PatternTest[sub_pi] = _mm_cmpeq_epi32(_mm_sub_epi32(adjPixData4, _mm_set1_epi32(adjPixData[0])), _mm_setzero_si128());	// ¸ğµÎ °°À¸¸é '1'
+				iMask_PatternTest[sub_pi] = _mm_cmpeq_epi32(_mm_sub_epi32(adjPixData4, _mm_set1_epi32(adjPixData[0])), _mm_setzero_si128());	// ëª¨ë‘ ê°™ìœ¼ë©´ '1'
 				nPatternTestResult = _mm_movemask_ps(Mask_PatternTest[sub_pi]);
 				if (nPatternTestResult != 0xf) {
 					checkRegion = true;
@@ -2357,7 +2357,7 @@ void SSERenderPipeline::Render4x4_ADPSS_Detection( int nJobID )
 					}
 				}
 
-				/** target ¿µ¿ªÀÌ¿Ü¿¡ ´ëÇØ¼­´Â pixel color ·Î ºñ±³ */
+				/** target ì˜ì—­ì´ì™¸ì— ëŒ€í•´ì„œëŠ” pixel color ë¡œ ë¹„êµ */
 				if ( !checkRegion && ( nCompareType & 256 ) == 256 && colordifference > fEtcRegionColorThreshold ) {
 					flag = true;
 					break;
@@ -2367,7 +2367,7 @@ void SSERenderPipeline::Render4x4_ADPSS_Detection( int nJobID )
 			}
 
 			// ----------------------------------------------
-			// Z) Super Sampling Áö¿ª °áÁ¤
+			// Z) Super Sampling ì§€ì—­ ê²°ì •
 			// ----------------------------------------------
 			if ( flag ) {
 				nSuperSample2x2_Flag |= 1 << sub_pi;
@@ -2386,7 +2386,7 @@ void SSERenderPipeline::Render4x4_ADPSS_Detection( int nJobID )
 		//}
 
 		//----------------------------------------
-		// »ùÇÃ¸µ µÇ´Â Áö¿ª¸¸ Ç¥½Ã
+		// ìƒ˜í”Œë§ ë˜ëŠ” ì§€ì—­ë§Œ í‘œì‹œ
 		//----------------------------------------
 		if (m_Scene->isEnableSamplingDebugInfo() == true) {
 			if ( nSuperSample2x2_Count > 0 ) {
@@ -2407,7 +2407,7 @@ void SSERenderPipeline::Render4x4_ADPSS_Detection( int nJobID )
 			float fSampWeight = 0.0625f; // 1/16
 			for (sub_pi = 0; sub_pi < 4; sub_pi++) {
 				if (nSuperSample2x2_Flag & (1 << sub_pi)) {
-					// ¿©±â¼­ super sampleing ÇÔ
+					// ì—¬ê¸°ì„œ super sampleing í•¨
 					m_RayT2x2->Set_Item(pi, sub_pi);
 				}
 			}
@@ -2419,7 +2419,7 @@ void SSERenderPipeline::Render4x4_ADPSS_Detection( int nJobID )
 		m_Dest[3*pi+1] = o_color.g;
 		m_Dest[3*pi+2] = o_color.b;
 
-		// Primary hit obj ¿¡ µû¸¥ ÀÌ¹ÌÁö
+		// Primary hit obj ì— ë”°ë¥¸ ì´ë¯¸ì§€
 		//m_Dest[3*pi] = 1.0f * m_ADPSS_data[pi].pri_oid / m_Scene->getObjectCount();
 		//m_Dest[3*pi+1] = 0;
 		//m_Dest[3*pi+2] = 0;
@@ -2466,7 +2466,7 @@ void SSERenderPipeline::Render4x4_ADPSS_TwoPass( int nJobID )
 		rp->d.z4 = _mm_add_ps(_mm_set1_ps(m_ADPSS_data[pi].ray_d.z),
 					_mm_sub_ps(_mm_mul_ps(m_DX4->z4, fSampSeq_x[sub_pi]), _mm_mul_ps(m_DY4->z4, fSampSeq_y[sub_pi])));
 
-		// jitter ½Ã ¾Æ·¡ ÄÚµå ±¸Çö Ãß°¡
+		// jitter ì‹œ ì•„ë˜ ì½”ë“œ êµ¬í˜„ ì¶”ê°€
 		// ray_d = ray_d + (jitterX * 0.25f - 0.125f) * m_DX - (jitterY * 0.25f - 0.125f) * m_DY
 
 		rp->d.x4 = _mm_sub_ps( rp->d.x4, ray_o_x4 );
@@ -2479,10 +2479,10 @@ void SSERenderPipeline::Render4x4_ADPSS_TwoPass( int nJobID )
 		rp->Depth = 0;
 
 		// ---------------------------------------------------------
-		// Masking ±â¹ıÀ» ÀÌ¿ëÇÏ¿© Coherence ¸¦ ¸ÂÃß¾î ·»´õ¸µ ½ÃÀÛ
+		// Masking ê¸°ë²•ì„ ì´ìš©í•˜ì—¬ Coherence ë¥¼ ë§ì¶”ì–´ ë Œë”ë§ ì‹œì‘
 		// ---------------------------------------------------------
 		unsigned int i, b;
-		// coherence Ã¼Å© °â ray dir °áÁ¤ (q = 8¹æÇâÁßÇÏ³ª)
+		// coherence ì²´í¬ ê²¸ ray dir ê²°ì • (q = 8ë°©í–¥ì¤‘í•˜ë‚˜)
 		if (rp->IsCoherent()) {
 			rp->RayWay = (rp->xmask & 1) + (rp->ymask & 2) + (rp->zmask & 4);
 			TracePacket2x2( 0 );
@@ -2528,7 +2528,7 @@ void SSERenderPipeline::Render4x4_ADPSS_TwoPass( int nJobID )
 
 // -----------------------------------------------------------
 // SSERenderPipelineQ::GeneratePrimaryRay_inBlock
-//		Block ¾È¿¡¼­ Primary Ray ¸¦ »ı¼ºÇÑ´Ù.
+//		Block ì•ˆì—ì„œ Primary Ray ë¥¼ ìƒì„±í•œë‹¤.
 // -----------------------------------------------------------
 void SSERenderPipeline::Render4x4_ADPSS_OnePass_2_1( int nThreadID )
 {
@@ -2597,7 +2597,7 @@ void SSERenderPipeline::Render4x4_ADPSS_OnePass_2_1( int nThreadID )
 			rp = rayitemData->rp;
 
 			// -----------------------------------------------------------------------
-			// Ray packet À» ¼ÂÆÃ - ½ÃÀÛÁ¡(ray_o_x4, ray_o_y4, ray_o_z4) ~ ³¡Á¡(tpos)
+			// Ray packet ì„ ì…‹íŒ… - ì‹œì‘ì (ray_o_x4, ray_o_y4, ray_o_z4) ~ ëì (tpos)
 			// -----------------------------------------------------------------------
 			for ( i = 0; i < 4; i++ ) {
 				rp->o[i].x4 = ray_o_x4;
@@ -2614,7 +2614,7 @@ void SSERenderPipeline::Render4x4_ADPSS_OnePass_2_1( int nThreadID )
 			m_RayQ4x4->TodoQ_EnQueue(rayitemData);
 
 			// -----------------------------------------------------------------------
-			// Render tile (tpos) ÀÇ À§Ä¡¸¦ ÀÌµ¿
+			// Render tile (tpos) ì˜ ìœ„ì¹˜ë¥¼ ì´ë™
 			// -----------------------------------------------------------------------
 			for ( i = 0; i < 4; i++ ) {
 				tpos.d[i].x4 = _mm_add_ps( tpos.d[i].x4, delta4.d[i].x4 );
@@ -2655,10 +2655,10 @@ void SSERenderPipeline::Render4x4_ADPSS_OnePass_2_2( int nThreadID )
 		InitPacket4x4 ( 0 );	// RMask all clear
 
 		// ---------------------------------------------------------
-		// Masking ±â¹ıÀ» ÀÌ¿ëÇÏ¿© Coherence ¸¦ ¸ÂÃß¾î ·»´õ¸µ ½ÃÀÛ
+		// Masking ê¸°ë²•ì„ ì´ìš©í•˜ì—¬ Coherence ë¥¼ ë§ì¶”ì–´ ë Œë”ë§ ì‹œì‘
 		// ---------------------------------------------------------
 		unsigned int i, b;
-		// coherence Ã¼Å© °â ray dir °áÁ¤ (q = 8¹æÇâÁßÇÏ³ª)
+		// coherence ì²´í¬ ê²¸ ray dir ê²°ì • (q = 8ë°©í–¥ì¤‘í•˜ë‚˜)
 		if (rp->IsCoherent()) {
 			rp->RayWay = (rp->xmask & 1) + (rp->ymask & 2) + (rp->zmask & 4);
 			TracePacket4x4( 0 );

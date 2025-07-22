@@ -42,7 +42,7 @@ void GLogManager::logging( int level, const char* format ... )
 
 
 	/** 
-	 *	listener µé¿¡°Ô log ¸¦ º¸³½´Ù. 
+	 *	listener ë“¤ì—ê²Œ log ë¥¼ ë³´ë‚¸ë‹¤. 
 	 */
 	for ( int i = 0; i < (int) m_LogListenerList.size(); ++i ) {
 		m_LogListenerList[ i ]->printLog( buffer );

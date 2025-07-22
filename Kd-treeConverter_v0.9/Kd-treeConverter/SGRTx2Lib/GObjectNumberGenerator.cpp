@@ -12,8 +12,8 @@ GObjectNumberGenerator::~GObjectNumberGenerator(void)
 }
 
 /**
- *	ÇÁ·Î±×·¥ »óÀÇ Scene ¿¡ À¯ÀÏÇÑ ¹øÈ£¸¦ ºÙÀÌ±â
- *	À§ÇÑ ¹øÈ£¸¦ »ı¼ºÇÑ´Ù.
+ *	í”„ë¡œê·¸ë¨ ìƒì˜ Scene ì— ìœ ì¼í•œ ë²ˆí˜¸ë¥¼ ë¶™ì´ê¸°
+ *	ìœ„í•œ ë²ˆí˜¸ë¥¼ ìƒì„±í•œë‹¤.
  */
 int GObjectNumberGenerator::generateSceneNumber()
 {
@@ -21,8 +21,8 @@ int GObjectNumberGenerator::generateSceneNumber()
 }
 
 /**
- *	ÇÁ·Î±×·¥ »óÀÇ ¸ğµç Object ¿¡ À¯ÀÏÇÑ ¹øÈ£¸¦ ºÙÀÌ±â
- *	À§ÇÑ ¹øÈ£¸¦ »ı¼ºÇÑ´Ù.
+ *	í”„ë¡œê·¸ë¨ ìƒì˜ ëª¨ë“  Object ì— ìœ ì¼í•œ ë²ˆí˜¸ë¥¼ ë¶™ì´ê¸°
+ *	ìœ„í•œ ë²ˆí˜¸ë¥¼ ìƒì„±í•œë‹¤.
  */
 int GObjectNumberGenerator::generateObjectNumber()
 {

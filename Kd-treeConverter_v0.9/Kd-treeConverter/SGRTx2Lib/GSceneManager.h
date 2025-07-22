@@ -6,7 +6,7 @@
 #include "GRaySetLight.h"
 
 /**
- *	ÆÄÀÏ °ü¸®ÀÚ.
+ *	íŒŒì¼ ê´€ë¦¬ì.
  *	by graphicsian
  */
 typedef struct _vertex_info {
@@ -16,8 +16,8 @@ typedef struct _vertex_info {
 } GVertexInfo;
 
 /**
- *	OBJ Data Format ¿¡¼­ NORMAL À» ÇÕÇØ¼­
- *	»õ·Î¿î NORMAL Á¤º¸¸¦ ¸¸µé¶§ »ç¿ëÇÒ ÀÓ½Ã ±¸Á¶Ã¼.
+ *	OBJ Data Format ì—ì„œ NORMAL ì„ í•©í•´ì„œ
+ *	ìƒˆë¡œìš´ NORMAL ì •ë³´ë¥¼ ë§Œë“¤ë•Œ ì‚¬ìš©í•  ì„ì‹œ êµ¬ì¡°ì²´.
  */
 typedef struct _obj_normal_weight_ {
 	GVector normal;
@@ -35,12 +35,12 @@ public:
 
 public:
 	/**
-	 *	Data ÆÄÀÏÀ» ·ÎµåÇØ¼­ Scene À» ¸¸µé¾î¼­ ¸®ÅÏÇÑ´Ù.
+	 *	Data íŒŒì¼ì„ ë¡œë“œí•´ì„œ Scene ì„ ë§Œë“¤ì–´ì„œ ë¦¬í„´í•œë‹¤.
 	 */
 	GError loadScene( const char* szFileName, GScene** ppScene );
 
 	/**
-	 *	ÇöÀç Scene À» file ·Î ÀúÀåÇÑ´Ù.
+	 *	í˜„ì¬ Scene ì„ file ë¡œ ì €ì¥í•œë‹¤.
 	 */
 	GError saveScene( const char* szFileName, GScene* pScene );
 

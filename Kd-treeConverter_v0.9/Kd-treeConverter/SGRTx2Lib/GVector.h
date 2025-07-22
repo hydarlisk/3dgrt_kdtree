@@ -1,8 +1,8 @@
 //--------------------------------------------------------------------------//
 //																			//
-//	Vector Å¬·¡½º															//
+//	Vector í´ë˜ìŠ¤															//
 //																			//
-//	Copyright (c) 2005  ÁøºÀÁØ	( sonagi21@naver.com )						//
+//	Copyright (c) 2005  ì§„ë´‰ì¤€	( sonagi21@naver.com )						//
 //																			//
 //--------------------------------------------------------------------------//
 
@@ -29,29 +29,29 @@ public:
 
 	float*			GetPointer() { return m_Vector; }
 	const float*	getVector();
-	void setVector( float sx, float sy, float sz, float sw = 0.0f );	// º¤ÅÍ°ª ÀÔ·Â
+	void setVector( float sx, float sy, float sz, float sw = 0.0f );	// ë²¡í„°ê°’ ì…ë ¥
 
 	float& operator[] ( int index );
 	float getElement( int index );
 
-	float	innerProduct( const GVector &vector );		// ³»Àû
-	GVector	outerProduct( const GVector &vector );		// ¿ÜÀû
-	GVector	normalize() const;							// Á¤±ÔÈ­
-	float	length();									// ±æÀÌ
+	float	innerProduct( const GVector &vector );		// ë‚´ì 
+	GVector	outerProduct( const GVector &vector );		// ì™¸ì 
+	GVector	normalize() const;							// ì •ê·œí™”
+	float	length();									// ê¸¸ì´
 	bool	isZero();
 
-	BOOL    operator==( const GVector &vector );		// º¤ÅÍ°¡ °°ÀºÁö. º¤ÅÍÀÇ »óµîÀ» ÀÇ¹ÌÇÏ´Â°Ô ¾Æ´Ï¶ó ´Ü¼øÈ÷ ¼ººĞÀÌ ¸ğµÎ ÀÏÄ¡ÇØ¾ßÇÔ
-	void    operator= ( const GVector &vector )                { this->x = vector.x; this->y = vector.y; this->z = vector.z; this->w = vector.w; } // ´ëÀÔ
-	GVector operator+ ( const GVector &vector ) const;	// µ¡¼À
-	GVector operator- ( const GVector &vector ) const;	// »¬¼À
-	GVector operator- () const;							// »¬¼À
+	BOOL    operator==( const GVector &vector );		// ë²¡í„°ê°€ ê°™ì€ì§€. ë²¡í„°ì˜ ìƒë“±ì„ ì˜ë¯¸í•˜ëŠ”ê²Œ ì•„ë‹ˆë¼ ë‹¨ìˆœíˆ ì„±ë¶„ì´ ëª¨ë‘ ì¼ì¹˜í•´ì•¼í•¨
+	void    operator= ( const GVector &vector )                { this->x = vector.x; this->y = vector.y; this->z = vector.z; this->w = vector.w; } // ëŒ€ì…
+	GVector operator+ ( const GVector &vector ) const;	// ë§ì…ˆ
+	GVector operator- ( const GVector &vector ) const;	// ëº„ì…ˆ
+	GVector operator- () const;							// ëº„ì…ˆ
 
-	friend GVector operator * ( const GVector& v, const float f ) { return GVector( v.x * f, v.y * f, v.z * f, v.w * f  ); }	// ½ºÄ®¶ó °ö
-	friend GVector operator * ( const float f, const GVector& v ) { return GVector( v.x * f, v.y * f, v.z * f, v.w * f  ); }	// ½ºÄ®¶ó °ö
-	friend GVector operator / ( const GVector& v, const float f ) { float invf = 1/f; return GVector( v.x * invf, v.y * invf, v.z * invf, v.w * invf ); }	// ½ºÄ®¶ó ³ª´°¼À
+	friend GVector operator * ( const GVector& v, const float f ) { return GVector( v.x * f, v.y * f, v.z * f, v.w * f  ); }	// ìŠ¤ì¹¼ë¼ ê³±
+	friend GVector operator * ( const float f, const GVector& v ) { return GVector( v.x * f, v.y * f, v.z * f, v.w * f  ); }	// ìŠ¤ì¹¼ë¼ ê³±
+	friend GVector operator / ( const GVector& v, const float f ) { float invf = 1/f; return GVector( v.x * invf, v.y * invf, v.z * invf, v.w * invf ); }	// ìŠ¤ì¹¼ë¼ ë‚˜ëˆ—ì…ˆ
 
-	void operator-= ( const GVector &vector );			// »¬¼À
-	void operator+= ( const GVector &vector );			// µ¡¼À
-	GVector& operator *=( const float f )  { x *= f; y *= f; z *= f; w *= f; return *this; }	                            // ½ºÄ®¶ó °ö
-	GVector& operator /=( const float f )  { float invf = 1/f; x *= invf; y *= invf; z *= invf; w *= invf; return *this; }	// ½ºÄ®¶ó ³ª´°¼À
+	void operator-= ( const GVector &vector );			// ëº„ì…ˆ
+	void operator+= ( const GVector &vector );			// ë§ì…ˆ
+	GVector& operator *=( const float f )  { x *= f; y *= f; z *= f; w *= f; return *this; }	                            // ìŠ¤ì¹¼ë¼ ê³±
+	GVector& operator /=( const float f )  { float invf = 1/f; x *= invf; y *= invf; z *= invf; w *= invf; return *this; }	// ìŠ¤ì¹¼ë¼ ë‚˜ëˆ—ì…ˆ
 };

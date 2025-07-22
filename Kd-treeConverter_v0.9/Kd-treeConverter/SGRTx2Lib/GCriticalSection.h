@@ -1,12 +1,13 @@
 #pragma once
-
+#define _SAL_VERSION 0
 #include <windows.h>
+#include <sal.h>
 #include <winbase.h>
 
 /**
- *	WIN32 Critical Section ¸¦ Wrapping ÇÑ Å¬·¡½º
- *	MFC ¿¡´Â CCriticalSection ÀÌ ÀÖÁö¸¸, ÇöÀç MFC ¸¦ »ç¿ëÇÏÁö ¾ÊÀ¸¹Ç·Î
- *	Wrapping Å¬·¡½º¸¦ ¸¸µç´Ù.
+ *	WIN32 Critical Section ë¥¼ Wrapping í•œ í´ë˜ìŠ¤
+ *	MFC ì—ëŠ” CCriticalSection ì´ ìˆì§€ë§Œ, í˜„ì¬ MFC ë¥¼ ì‚¬ìš©í•˜ì§€ ì•Šìœ¼ë¯€ë¡œ
+ *	Wrapping í´ë˜ìŠ¤ë¥¼ ë§Œë“ ë‹¤.
  *
  *	by poovi
  *	2007.12.17

@@ -9,7 +9,7 @@
 #include "cudaRenderPipeline.h"
 
 /**
- *	±âº»ÀûÀ¸·Î Path Tracing À» »ç¿ëÇÏ´Â ·»´õ·¯
+ *	ê¸°ë³¸ì ìœ¼ë¡œ Path Tracing ì„ ì‚¬ìš©í•˜ëŠ” ë Œë”ëŸ¬
  *	by graphicsian.
  */
 class  GGPURayTracer : public GRenderer

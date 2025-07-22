@@ -20,11 +20,11 @@ GError GGridStructure::initialize(){
 	GLogManager::logging( LOG_INFO, "------------------------ GRID Spatial Structure -------------------" );
 	GLogManager::logging( LOG_INFO, " -> GRID build started..." );	
 
-	//¾À ÀüÃ¼ÀÇ »ï°¢ÇüÀ» ÀĞ¾î ¿È.
+	//ì”¬ ì „ì²´ì˜ ì‚¼ê°í˜•ì„ ì½ì–´ ì˜´.
 	m_pSceneTriangleList = m_pScene->createSceneTriangleList(m_gridBounding);
 	m_iSceneTriangleCount = m_pSceneTriangleList->size();
 	
-	//bBox¿¡ ¿©ºĞÀÇ °ªÀ» ÁÜ.
+	//bBoxì— ì—¬ë¶„ì˜ ê°’ì„ ì¤Œ.
 	m_gridBounding.m_Min.x -= 0.05f; m_gridBounding.m_Min.y -= 0.05f; m_gridBounding.m_Min.z -= 0.05f;
 	m_gridBounding.m_Max.x += 0.05f; m_gridBounding.m_Max.y += 0.05f; m_gridBounding.m_Max.z += 0.05f;
 	
@@ -32,27 +32,27 @@ GError GGridStructure::initialize(){
 	float V;
 	float gridTempMinX, gridTempMaxX, gridTempMinY, gridTempMaxY, gridTempMinZ, gridTempMaxZ;
 
-	//¿ì¼± grid resolutionÀ» ±¸ÇÑ´Ù.
+	//ìš°ì„  grid resolutionì„ êµ¬í•œë‹¤.
 	d.x = m_gridBounding.m_Max.x - m_gridBounding.m_Min.x;
 	d.y = m_gridBounding.m_Max.y - m_gridBounding.m_Min.y;
 	d.z = m_gridBounding.m_Max.z - m_gridBounding.m_Min.z;
 	V = d.x * d.y * d.z;
 
-	float temp = pow((lamda * m_iSceneTriangleCount) / V, 0.333333f); //pow(x, y) x¿¡ y½Â.
+	float temp = pow((lamda * m_iSceneTriangleCount) / V, 0.333333f); //pow(x, y) xì— yìŠ¹.
 	m_Nx = float_to_int(d.x * temp); m_Ny = float_to_int(d.y * temp); m_Nz = float_to_int(d.z * temp);			
-	//¹Ù¿î´õ¸® Ã³¸®.
+	//ë°”ìš´ë”ë¦¬ ì²˜ë¦¬.
 	if(m_Nx > 250) m_Nx = 250; if(m_Ny > 250) m_Ny = 250; if(m_Nz > 250) m_Nz = 250;
 
-	//gridÀÇ ÇÑ cellÀÇ x, y, zÃàÀÇ length¸¦ ±¸ÇÔ. 
-	//int·Î Ä³½ºÆÃ ÈÄ ¿¬»ê ÇÏ¹Ç·Î ÃÖÀûÈ­ ±İÁö!!
+	//gridì˜ í•œ cellì˜ x, y, zì¶•ì˜ lengthë¥¼ êµ¬í•¨. 
+	//intë¡œ ìºìŠ¤íŒ… í›„ ì—°ì‚° í•˜ë¯€ë¡œ ìµœì í™” ê¸ˆì§€!!
 	m_xLength = d.x / m_Nx; m_yLength = d.y / m_Ny; m_zLength = d.z / m_Nz;
 
-	//°è»ê·®À» ÁÙÀÌ±â À§ÇØ ¹Ì¸® °è»êÇØ µÒ.
+	//ê³„ì‚°ëŸ‰ì„ ì¤„ì´ê¸° ìœ„í•´ ë¯¸ë¦¬ ê³„ì‚°í•´ ë‘ .
 	m_invXL = 1.0f / m_xLength; m_invYL = 1.0f / m_yLength; m_invZL = 1.0f / m_zLength;	
 
-	//Grid ±¸¼º.
+	//Grid êµ¬ì„±.
 	for(int i = 0;i < m_iSceneTriangleCount;i++){		
-		//¸ğµç »ï°¢Çü¿¡ ´ëÇØ »ï°¢ÇüÀÇ ¹Ù¿îµùÀ» ±¸ÇÏ°í.
+		//ëª¨ë“  ì‚¼ê°í˜•ì— ëŒ€í•´ ì‚¼ê°í˜•ì˜ ë°”ìš´ë”©ì„ êµ¬í•˜ê³ .
 		GTriangleWrapper* poly = m_pSceneTriangleList->getTriangleWrapper(i);
 		gridTempMinX = ((poly->m_BBox.m_Min.x - m_gridBounding.m_Min.x)) * m_invXL; 
 		gridTempMaxX = ((poly->m_BBox.m_Max.x - m_gridBounding.m_Min.x)) * m_invXL;  
@@ -61,7 +61,7 @@ GError GGridStructure::initialize(){
 		gridTempMinZ = ((poly->m_BBox.m_Min.z - m_gridBounding.m_Min.z)) * m_invZL; 
 		gridTempMaxZ = ((poly->m_BBox.m_Max.z - m_gridBounding.m_Min.z)) * m_invZL; 
 
-		//±× ¹Ù¿îµùÀÌ Æ÷ÇÔµÇ´Â cell¿¡ »ï°¢ÇüÀÇ ¾ÆÀÌµğ¸¦ µî·Ï.
+		//ê·¸ ë°”ìš´ë”©ì´ í¬í•¨ë˜ëŠ” cellì— ì‚¼ê°í˜•ì˜ ì•„ì´ë””ë¥¼ ë“±ë¡.
 		for(int z = float_to_int(gridTempMinZ);z <= float_to_int(gridTempMaxZ);z++){
 			for(int y = float_to_int(gridTempMinY);y <= float_to_int(gridTempMaxY);y++){
 				for(int x = float_to_int(gridTempMinX);x <= float_to_int(gridTempMaxX);x++){					
@@ -203,7 +203,7 @@ bool GGridStructure::macro_cell_traversal(int kVector, int& k, GGrid_RayPacket& 
 			if(check_macro_cell_tri_num(kVector, muS, muE, mvS, mvE, mkS, mkE)){
 				k += (macroCellSize - 1); 
 
-				//Á¡ÇÁ ÇÏ±â ¶§¹®¿¡ µÚ¿¡ °ªÀ» ³Ö¾îÁÜ.
+				//ì í”„ í•˜ê¸° ë•Œë¬¸ì— ë’¤ì— ê°’ì„ ë„£ì–´ì¤Œ.
 				m_lastuS1 = m_lastuS2; m_lastvS1 = m_lastvS2; m_lastuE1 = m_lastuE2; m_lastvE1 = m_lastvE2;
 				//
 
@@ -223,7 +223,7 @@ bool GGridStructure::macro_cell_traversal(int kVector, int& k, GGrid_RayPacket& 
 			if(check_macro_cell_tri_num(kVector, muS, muE, mvS, mvE, mkS, mkE)){
 				k -= (macroCellSize - 1); 
 
-				//Á¡ÇÁ ÇÏ±â ¶§¹®¿¡ µÚ¿¡ °ªÀ» ³Ö¾îÁÜ.
+				//ì í”„ í•˜ê¸° ë•Œë¬¸ì— ë’¤ì— ê°’ì„ ë„£ì–´ì¤Œ.
 				m_lastuS1 = m_lastuS2; m_lastvS1 = m_lastvS2; m_lastuE1 = m_lastuE2; m_lastvE1 = m_lastvE2;
 				//
 
@@ -268,7 +268,7 @@ void GGridStructure::macro_packet_check(GGrid_RayPacket& localPacket, int& muS, 
 		break;
 	}
 
-	//ÀúÀåÇØ ³õ±â.
+	//ì €ì¥í•´ ë†“ê¸°.
 	m_lastuS1 = uStart1; m_lastvS1 = vStart1; m_lastuE1 = uEnd1; m_lastvE1 = vEnd1;
 	m_lastuS2 = uStart2; m_lastvS2 = vStart2; m_lastuE2 = uEnd2; m_lastvE2 = vEnd2;
 	//
@@ -427,14 +427,14 @@ GError GGridStructure::makeSSERenderStructureInfo(SSESceneData *pSSEData){
 		return errorUnknown;
 
 	/**
-	 *	Triangle Object List ¼¼ÆÃ
+	 *	Triangle Object List ì„¸íŒ…
 	 */
 	error = pSSEData->setTriangleObjectList( m_pSceneTriangleList );
 	if ( error != errorNo )
 		return error;
 
 	/**
-	 *	Triangle Accel List ¼¼ÆÃ
+	 *	Triangle Accel List ì„¸íŒ…
 	 */
 	error = pSSEData->buildTriAccList_Barycentric();
 

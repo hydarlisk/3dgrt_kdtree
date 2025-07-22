@@ -14,24 +14,24 @@
 #include <float.h>
 
 /**
- *	KD Tree ¸¦ ÀÌ¿ëÇÑ °ø°£ ±¸Á¶Ã¼.
- *	KD Tree »ı¼º. Å½»öÀº ¿À»ó¶ô±ºÀÇ ÄÚµå¸¦ ±âºÎ ¹Ş¾Æ
- *	¼öÁ¤ÇÔ.
+ *	KD Tree ë¥¼ ì´ìš©í•œ ê³µê°„ êµ¬ì¡°ì²´.
+ *	KD Tree ìƒì„±. íƒìƒ‰ì€ ì˜¤ìƒë½êµ°ì˜ ì½”ë“œë¥¼ ê¸°ë¶€ ë°›ì•„
+ *	ìˆ˜ì •í•¨.
  *
  *	by graphicsian.
  */
 
 struct SplitCost {
 
-	//splitµÉ ¶§ÀÇ cost, À§Ä¡, axis
+	//splitë  ë•Œì˜ cost, ìœ„ì¹˜, axis
 	double		cost;
 	float		splitPos;
 	int			axis;
-	//°¢ °æ¿ì¿¡ ´ëÇØ µû·Î µû·Î Áı°è
+	//ê° ê²½ìš°ì— ëŒ€í•´ ë”°ë¡œ ë”°ë¡œ ì§‘ê³„
 	int			n_onlyLeft, n_onlyRight, n_cross, n_planar;
 	//n_left = n_onlyLeft+n_cross+n_planar
 	int			n_left, n_right;
-	//planar triangleµéÀÌ ¼ÓÇÏ°Ô µÇ´Â side
+	//planar triangleë“¤ì´ ì†í•˜ê²Œ ë˜ëŠ” side
 	int			planar_side;
 
 	SplitCost( void ): 

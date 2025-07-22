@@ -4,8 +4,8 @@
 #pragma once
 
 /**
- *	OpenGL °ü·Ã ¿É¼Ç
- *  °´Ã¼ º¹»ç ÇÏ¸é ¾ÈµÊ
+ *	OpenGL ê´€ë ¨ ì˜µì…˜
+ *  ê°ì²´ ë³µì‚¬ í•˜ë©´ ì•ˆë¨
  *	by Hybrid.
 */
 #include "GRenderOption.h"
@@ -17,7 +17,7 @@ class GRayProfilerOption : public GRenderOption
 public:
 	bool isTestRayMode()
 		{ return m_bTestRayMode; }
-	//! KD Tree ÀÇ ÀüÃ¼ È¤Àº ÀÏºÎ¸¦ ±×¸²
+	//! KD Tree ì˜ ì „ì²´ í˜¹ì€ ì¼ë¶€ë¥¼ ê·¸ë¦¼
 	bool isDrawKdTree()					// default : false
 		{ return m_bDrawKdTree; }
 	bool isDrawLeafNodes()				// default : true

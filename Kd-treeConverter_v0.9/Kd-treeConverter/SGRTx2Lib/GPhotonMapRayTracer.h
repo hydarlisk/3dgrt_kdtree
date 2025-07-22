@@ -14,12 +14,12 @@
 #include "GRenderCommon.h"
 
 /**
- *	Grid Box ¿¡¼­ x, y, z °¢°¢ÀÇ ÃÖ´ë grid °³¼ö.
+ *	Grid Box ì—ì„œ x, y, z ê°ê°ì˜ ìµœëŒ€ grid ê°œìˆ˜.
  */
 #define MAX_GRID_COUNT	250		
 
 /**
- *	Ray Tracing °ú Photon Mapping À¸·Î GI ¸¦ ±¸ÇöÇÑ Renderer
+ *	Ray Tracing ê³¼ Photon Mapping ìœ¼ë¡œ GI ë¥¼ êµ¬í˜„í•œ Renderer
  *
  *	by graphicsian.
  */
@@ -52,7 +52,7 @@ private:
 	GGridBox<cuIntersectionPoint, cuPMIntersectionPoint> *m_pIPointGridBox;
 	bool m_bRunTracing;
 
-	/** Åë°èµ¥ÀÌÅÍ */
+	/** í†µê³„ë°ì´í„° */
 	int m_iLogTotalTracedPhoton;
 	float m_iLogTotalIsectGridMakingTime;
 	float m_iLogTotalIsectAreaDensityTime;

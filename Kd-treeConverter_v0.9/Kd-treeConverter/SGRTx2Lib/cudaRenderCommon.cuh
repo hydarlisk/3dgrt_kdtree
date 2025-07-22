@@ -2,29 +2,29 @@
 #define _CUDA_RENDERCOMMON_CUH_
 
 /**
- *	CUDA Kernel °ú CPU °¡ ¼­·Î ÁÖ°í¹ŞÀ» µ¥ÀÌÅÍ ±¸Á¶ ¹×
- *	CUDA Kernel ¿¡¼­ »ç¿ëÇÒ µ¥ÀÌÅÍ ±¸Á¶.
+ *	CUDA Kernel ê³¼ CPU ê°€ ì„œë¡œ ì£¼ê³ ë°›ì„ ë°ì´í„° êµ¬ì¡° ë°
+ *	CUDA Kernel ì—ì„œ ì‚¬ìš©í•  ë°ì´í„° êµ¬ì¡°.
  *	
- *	[°æ°í] 
+ *	[ê²½ê³ ] 
  *
- *	Àı´ë float3, float2 ¸¦ ÇÑ ±¸Á¶Ã¼³»¿¡¼­ È¥ÇÕÇØ¼­ »ç¿ëÇÏÁö ¸¶¶ó !! 
- *	float3 ´Â align ±ÔÄ¢ÀÌ Àû¿ëµÇÁö ¾ÊÀ¸³ª float2 ´Â 8bytes align ±ÔÄ¢ÀÌ »ç¿ëµÇ±â ¶§¹®¿¡
- *	NVCC ÄÄÆÄÀÌ·¯¿¡¼­´Â ¶æÇÏÁö ¾Ê´Â padding ÀÌ ÀÏ¾î³¯ ¼ö ÀÖ´Ù. cuda ³»ºÎ ÄÚµå¿¡ float2,4 ¼±¾ğÀÌ
- *	±×·¸°Ô µÇ¾î ÀÖÀ½.
+ *	ì ˆëŒ€ float3, float2 ë¥¼ í•œ êµ¬ì¡°ì²´ë‚´ì—ì„œ í˜¼í•©í•´ì„œ ì‚¬ìš©í•˜ì§€ ë§ˆë¼ !! 
+ *	float3 ëŠ” align ê·œì¹™ì´ ì ìš©ë˜ì§€ ì•Šìœ¼ë‚˜ float2 ëŠ” 8bytes align ê·œì¹™ì´ ì‚¬ìš©ë˜ê¸° ë•Œë¬¸ì—
+ *	NVCC ì»´íŒŒì´ëŸ¬ì—ì„œëŠ” ëœ»í•˜ì§€ ì•ŠëŠ” padding ì´ ì¼ì–´ë‚  ìˆ˜ ìˆë‹¤. cuda ë‚´ë¶€ ì½”ë“œì— float2,4 ì„ ì–¸ì´
+ *	ê·¸ë ‡ê²Œ ë˜ì–´ ìˆìŒ.
  *
- *	ÀÌ·¸°Ô ÄÄÆÄÀÏµÈ °Í°ú Visual C++ µî ½Ã½ºÅÛ ÄÄÆÄÀÏ·¯¿¡¼­ ÄÄÆÄÀÏµÈ ±¸Á¶Ã¼ÀÇ ÇüÅÂ°¡
- *	Æ²¸®¹Ç·Î »¶ÀÌ ³¯ ¼ö ÀÖ´Ù. !!!!!
+ *	ì´ë ‡ê²Œ ì»´íŒŒì¼ëœ ê²ƒê³¼ Visual C++ ë“± ì‹œìŠ¤í…œ ì»´íŒŒì¼ëŸ¬ì—ì„œ ì»´íŒŒì¼ëœ êµ¬ì¡°ì²´ì˜ í˜•íƒœê°€
+ *	í‹€ë¦¬ë¯€ë¡œ ë»‘ì´ ë‚  ìˆ˜ ìˆë‹¤. !!!!!
  *
- *	µû¶ó¼­ ¹İµå½Ã float3 ´Â float ÇÏ°í¸¸ ¾²°í float4 ´Â float2 ÇÏ°í¸¸ ¾²¶ó.
- *	Àı´ë float3, float2 ÀÌ³ª float4, float3 ¸¦ È¥¿ëÇØ¼­ ¾²Áö ¸¶¶ó.
- *	CUDA ³»¿¡¼­¸¸ »ç¿ëÇÏ´Â ±¸Á¶Ã¼´Â »ó°üÀÌ ¾øÀ¸³ª ½Ã½ºÅÛ ÄÄÆÄÀÏ·¯·Î ÄÄÆÄÀÏÇÑ ¼Ò½º¿Í
- *	°°ÀÌ È¥¿ëÇØ¼­ ±¸Á¶Ã¼¸¦ °øÀ¯ÇÏ´Â °æ¿ì´Â ¹İµå½Ã ÁöÄÑ¾ß ÇÑ´Ù. !!!!
- *  ÀÌ´Â int ³ª uint µî ´Ù¸¥ type µµ °°´Ù. ¸¸¾à ¾îÂ¿¼ö ¾øÀÌ bytes ¸¦ ¸ÂÃß¾î¾ß ÇÏ´Â °æ¿ì´Â
- *	±×³É float ¹è¿­À» ¾²¶ó. float[2], float[3] ÀÌ°Å´Â align ¿É¼ÇÀÌ ¾øÀ¸¹Ç·Î µÎ ÄÄÆÄÀÏ·¯°¡
- *	°°Àº Çü½ÄÀ¸·Î ±¸Á¶Ã¼¸¦ ¸¸µç´Ù.
+ *	ë”°ë¼ì„œ ë°˜ë“œì‹œ float3 ëŠ” float í•˜ê³ ë§Œ ì“°ê³  float4 ëŠ” float2 í•˜ê³ ë§Œ ì“°ë¼.
+ *	ì ˆëŒ€ float3, float2 ì´ë‚˜ float4, float3 ë¥¼ í˜¼ìš©í•´ì„œ ì“°ì§€ ë§ˆë¼.
+ *	CUDA ë‚´ì—ì„œë§Œ ì‚¬ìš©í•˜ëŠ” êµ¬ì¡°ì²´ëŠ” ìƒê´€ì´ ì—†ìœ¼ë‚˜ ì‹œìŠ¤í…œ ì»´íŒŒì¼ëŸ¬ë¡œ ì»´íŒŒì¼í•œ ì†ŒìŠ¤ì™€
+ *	ê°™ì´ í˜¼ìš©í•´ì„œ êµ¬ì¡°ì²´ë¥¼ ê³µìœ í•˜ëŠ” ê²½ìš°ëŠ” ë°˜ë“œì‹œ ì§€ì¼œì•¼ í•œë‹¤. !!!!
+ *  ì´ëŠ” int ë‚˜ uint ë“± ë‹¤ë¥¸ type ë„ ê°™ë‹¤. ë§Œì•½ ì–´ì©”ìˆ˜ ì—†ì´ bytes ë¥¼ ë§ì¶”ì–´ì•¼ í•˜ëŠ” ê²½ìš°ëŠ”
+ *	ê·¸ëƒ¥ float ë°°ì—´ì„ ì“°ë¼. float[2], float[3] ì´ê±°ëŠ” align ì˜µì…˜ì´ ì—†ìœ¼ë¯€ë¡œ ë‘ ì»´íŒŒì¼ëŸ¬ê°€
+ *	ê°™ì€ í˜•ì‹ìœ¼ë¡œ êµ¬ì¡°ì²´ë¥¼ ë§Œë“ ë‹¤.
  *
  *
- *	±×·¸Áö ¾Ê¾ÒÀ»¶§. ¹«¾ó»ó»óÇÏµç ±× ÀÌ»óÀÇ »ğÁúÀÌ °è¼ÓµÉ °ÍÀÌ´Ù.
+ *	ê·¸ë ‡ì§€ ì•Šì•˜ì„ë•Œ. ë¬´ì–¼ìƒìƒí•˜ë“  ê·¸ ì´ìƒì˜ ì‚½ì§ˆì´ ê³„ì†ë  ê²ƒì´ë‹¤.
  *	
  *	by graphicsian.
  */
@@ -38,10 +38,10 @@
 #define CUDA_MAX_LIGHT		10
 #define CUDA_MAX_TEXTURE	150
 
-#define OBJECT_MAX_ID		65535				//	Scene ¾È¿¡ µé¾î°¥ ¼ö ÀÖ´Â ÃÖ´ë ObjectID ¹øÈ£ Å©±â
+#define OBJECT_MAX_ID		65535				//	Scene ì•ˆì— ë“¤ì–´ê°ˆ ìˆ˜ ìˆëŠ” ìµœëŒ€ ObjectID ë²ˆí˜¸ í¬ê¸°
 
-#define USE_CULLING_OPTION						//	Back Face Culling À¯¹«.
-#define USE_SHADOW_RAY							//	Shadow ±â´É Áö¿ø ¿©ºÎ.
+#define USE_CULLING_OPTION						//	Back Face Culling ìœ ë¬´.
+#define USE_SHADOW_RAY							//	Shadow ê¸°ëŠ¥ ì§€ì› ì—¬ë¶€.
 
 #define INTERSECTION_METHOD				0				//	Wald Method
 //#define INTERSECTION_METHOD			1			//	Pluecker Method
@@ -66,19 +66,19 @@ typedef struct _cu_boundingbox_
 } cuBoundingBox;
 
 /**
- *	ÃßÀûÇÒ ray Á¤º¸¸¦ Ç¥Çö.
- *	self intersection À» ÇÇÇÏ±â À§ÇØ¼­ ÀÌÀü¿¡ intersect µÈ »ï°¢ÇüÀÇ id ¸¦ °¡Áö°Ô ÇÑ´Ù.
- *	EPSILON À¸·Î Ã³¸®ÇÒ¼öµµ ÀÖÁö¸¸, »ï°¢ÇüÀÌ Á¶¹ĞÇÑ °æ¿ì ¹®Á¦°¡ µÉ ¼ö ÀÖÀ¸¹Ç·Î id ±â¹İÀ¸·Î
- *	Ã³¸®ÇÏÀÚ.
+ *	ì¶”ì í•  ray ì •ë³´ë¥¼ í‘œí˜„.
+ *	self intersection ì„ í”¼í•˜ê¸° ìœ„í•´ì„œ ì´ì „ì— intersect ëœ ì‚¼ê°í˜•ì˜ id ë¥¼ ê°€ì§€ê²Œ í•œë‹¤.
+ *	EPSILON ìœ¼ë¡œ ì²˜ë¦¬í• ìˆ˜ë„ ìˆì§€ë§Œ, ì‚¼ê°í˜•ì´ ì¡°ë°€í•œ ê²½ìš° ë¬¸ì œê°€ ë  ìˆ˜ ìˆìœ¼ë¯€ë¡œ id ê¸°ë°˜ìœ¼ë¡œ
+ *	ì²˜ë¦¬í•˜ì.
  */
 typedef struct __align__(16) _curay
 {
 	float3 dir;
-	float pad;			//	texture float4 ·Î µ¥ÀÌÅÍ¸¦ ³Ñ±â¹Ç·Î float ÇÏ³ª padding.
+	float pad;			//	texture float4 ë¡œ ë°ì´í„°ë¥¼ ë„˜ê¸°ë¯€ë¡œ float í•˜ë‚˜ padding.
 	float3 pos;
-	float pad2;			//	texture float4 ·Î µ¥ÀÌÅÍ¸¦ ³Ñ°Ü¾ß ÇÏ¹Ç·Î padding ÇØ¾ß ÇÔ.
+	float pad2;			//	texture float4 ë¡œ ë°ì´í„°ë¥¼ ë„˜ê²¨ì•¼ í•˜ë¯€ë¡œ padding í•´ì•¼ í•¨.
 
-	//float4 info;		//	info.x °¡ previous triangle index ¸¦ °¡Áö´Â°Í. ³ª¸ÓÁö´Â padding.
+	//float4 info;		//	info.x ê°€ previous triangle index ë¥¼ ê°€ì§€ëŠ”ê²ƒ. ë‚˜ë¨¸ì§€ëŠ” padding.
 	
 	//__HOST__ __device__ inline void init() {
 	//	info.x = int_as_float( -1 );
@@ -113,13 +113,13 @@ typedef struct __align__(16) _curay
 } cuRay;
 
 /**
- *	shading ¹× ray reflection µîÀ» À§ÇÑ
- *	»ï°¢ÇüÀÇ geometry Á¤º¸. texture ·Î ¿Ã·Á¾ßÇÏ¹Ç·Î
- *	type ÀÌ ´Ù °°¾Æ¾ß ÇÏ¸ç float4 ÀÇ ¹è¼ö ´ÜÀ§¿©¾ß ÇÑ´Ù.
- *	²ÀÁöÁ¡ pos Á¤º¸´Â ¾È¿Ã·Áµµ µÈ´Ù. itersection result ¿¡¼­ tHit °ªÀ»
- *	°¡Áö°í °è»êÇÒ ¼ö ÀÖÀ¸¹Ç·Î.
- *	element ¼ø¼­´Â °íÄ¡Áö ¸»°Í! 
- *	Àı´ë float3,2,4 ¸¦ È¥¿ëÇØ¼­ ¾²Áö ¸»°Í. ÀÌÀ¯´Â ¸ÇÀ§¸¦ º¸½Ã¶ó.
+ *	shading ë° ray reflection ë“±ì„ ìœ„í•œ
+ *	ì‚¼ê°í˜•ì˜ geometry ì •ë³´. texture ë¡œ ì˜¬ë ¤ì•¼í•˜ë¯€ë¡œ
+ *	type ì´ ë‹¤ ê°™ì•„ì•¼ í•˜ë©° float4 ì˜ ë°°ìˆ˜ ë‹¨ìœ„ì—¬ì•¼ í•œë‹¤.
+ *	ê¼­ì§€ì  pos ì •ë³´ëŠ” ì•ˆì˜¬ë ¤ë„ ëœë‹¤. itersection result ì—ì„œ tHit ê°’ì„
+ *	ê°€ì§€ê³  ê³„ì‚°í•  ìˆ˜ ìˆìœ¼ë¯€ë¡œ.
+ *	element ìˆœì„œëŠ” ê³ ì¹˜ì§€ ë§ê²ƒ! 
+ *	ì ˆëŒ€ float3,2,4 ë¥¼ í˜¼ìš©í•´ì„œ ì“°ì§€ ë§ê²ƒ. ì´ìœ ëŠ” ë§¨ìœ„ë¥¼ ë³´ì‹œë¼.
  */
 typedef struct __align__(16) {
 	float3 n0, n1, n2;
@@ -130,14 +130,14 @@ typedef struct __align__(16) {
 } cuTriangleGeometry;
 
 /**
- *	°¢ object ÀÇ material. ¿©·¯°³ÀÇ »ï°¢ÇüÀÌ
- *	ÇÏ³ªÀÇ object material À» °øÀ¯ÇÑ´Ù.
- *	ÀÌ object material À» ÂüÁ¶ÇÏ±â À§ÇÑ index ´Â
- *	cuTriangleInfo ±¸Á¶Ã¼ ¾ÈÀÇ internal2.w ÀÌ´Ù.
- *	texture ·Î ¿Ã·Á¾ßÇÏ¹Ç·Î
- *	type ÀÌ ´Ù °°¾Æ¾ß ÇÏ¸ç float4 ÀÇ ¹è¼ö ´ÜÀ§¿©¾ß ÇÑ´Ù.
- *	element ¼ø¼­´Â °íÄ¡Áö ¸»°Í!
- *	Àı´ë float3,2,4 ¸¦ È¥¿ëÇØ¼­ ¾²Áö ¸»°Í. ÀÌÀ¯´Â ¸ÇÀ§¸¦ º¸½Ã¶ó.
+ *	ê° object ì˜ material. ì—¬ëŸ¬ê°œì˜ ì‚¼ê°í˜•ì´
+ *	í•˜ë‚˜ì˜ object material ì„ ê³µìœ í•œë‹¤.
+ *	ì´ object material ì„ ì°¸ì¡°í•˜ê¸° ìœ„í•œ index ëŠ”
+ *	cuTriangleInfo êµ¬ì¡°ì²´ ì•ˆì˜ internal2.w ì´ë‹¤.
+ *	texture ë¡œ ì˜¬ë ¤ì•¼í•˜ë¯€ë¡œ
+ *	type ì´ ë‹¤ ê°™ì•„ì•¼ í•˜ë©° float4 ì˜ ë°°ìˆ˜ ë‹¨ìœ„ì—¬ì•¼ í•œë‹¤.
+ *	element ìˆœì„œëŠ” ê³ ì¹˜ì§€ ë§ê²ƒ!
+ *	ì ˆëŒ€ float3,2,4 ë¥¼ í˜¼ìš©í•´ì„œ ì“°ì§€ ë§ê²ƒ. ì´ìœ ëŠ” ë§¨ìœ„ë¥¼ ë³´ì‹œë¼.
  */
 typedef struct __align__(16) cu_object_material {
 
@@ -146,27 +146,27 @@ typedef struct __align__(16) cu_object_material {
 	float3 specular;				//	specular color. ( r, g, b )
 //	float3 emission;				//	emit color.
 
-	float reflection;				//	¹İ»çÈ®·ü
-	float transparency;				//	Åõ°úÈ®·ü
+	float reflection;				//	ë°˜ì‚¬í™•ë¥ 
+	float transparency;				//	íˆ¬ê³¼í™•ë¥ 
 	
 	float roughness;				//	roughness.
-	float refractionIndex;			//	±¼Àı·ü
-	float textureNumber;			//	texture °¡ Á¸ÀçÇÑ´Ù¸é texture ¹øÈ£. -1 ÀÌ¸é ¾ø´Â°Í.
-									//	float ·Î ÇüÅÂ·Î ÁÖ°í¹ŞÀ¸¹Ç·Î. int_as_float, float_as_int ·Î »óÈ£º¯È¯.
-	float light;					//	±¤¿øÀÎÁö ¿©ºÎ. 0.0 ÀÌ¸é ±¤¿ø¾Æ´Ô. ±× ÀÌ¿ÜÀÇ °ªÀÌ¸é ±¤¿ø.
-	float iObjectID;				//	¹°Ã¼ÀÇ °íÀ¯¹øÈ£. int_as_float, float_as_int ·Î »óÈ£º¯È¯.
+	float refractionIndex;			//	êµ´ì ˆë¥ 
+	float textureNumber;			//	texture ê°€ ì¡´ì¬í•œë‹¤ë©´ texture ë²ˆí˜¸. -1 ì´ë©´ ì—†ëŠ”ê²ƒ.
+									//	float ë¡œ í˜•íƒœë¡œ ì£¼ê³ ë°›ìœ¼ë¯€ë¡œ. int_as_float, float_as_int ë¡œ ìƒí˜¸ë³€í™˜.
+	float light;					//	ê´‘ì›ì¸ì§€ ì—¬ë¶€. 0.0 ì´ë©´ ê´‘ì›ì•„ë‹˜. ê·¸ ì´ì™¸ì˜ ê°’ì´ë©´ ê´‘ì›.
+	float iObjectID;				//	ë¬¼ì²´ì˜ ê³ ìœ ë²ˆí˜¸. int_as_float, float_as_int ë¡œ ìƒí˜¸ë³€í™˜.
 //	float pad;
 		
 } cuObjectMaterial;
 
 /**
- *	intersection À» °è»êÇÏ±â À§ÇÑ triangle Á¤º¸. pluecker ¹æ¹ı
+ *	intersection ì„ ê³„ì‚°í•˜ê¸° ìœ„í•œ triangle ì •ë³´. pluecker ë°©ë²•
  */
 struct __align__(16) cuPlueckerTriangleInfo  {
 
-	float3 p0, p1, p2;				// p1 ÀÇ x,y,z ´Â »ï°¢Çü ²ÀÁöÁ¡1 Á¤º¸. °¢ p1 p2 p3 ÀÇ w ´Â normal Á¤º¸.
+	float3 p0, p1, p2;				// p1 ì˜ x,y,z ëŠ” ì‚¼ê°í˜• ê¼­ì§€ì 1 ì •ë³´. ê° p1 p2 p3 ì˜ w ëŠ” normal ì •ë³´.
 	float3 normal;
-	float3 attrib;					// »ï°¢Çü ¼Ó¼º.
+	float3 attrib;					// ì‚¼ê°í˜• ì†ì„±.
 	float pad;						// padding.
 
 	__HOST__ __device__ inline int getObjectIndex(void) const
@@ -177,8 +177,8 @@ struct __align__(16) cuPlueckerTriangleInfo  {
 };
 
 /**
- *	intersection À» °è»êÇÏ±â À§ÇÑ triangle Á¤º¸. wald ¹æ¹ı
- *	internal2.w ¸¦ object index ¸¦ À§ÇÑ °ªÀ¸·Î »ç¿ëÇÑ´Ù.
+ *	intersection ì„ ê³„ì‚°í•˜ê¸° ìœ„í•œ triangle ì •ë³´. wald ë°©ë²•
+ *	internal2.w ë¥¼ object index ë¥¼ ìœ„í•œ ê°’ìœ¼ë¡œ ì‚¬ìš©í•œë‹¤.
  */
 struct  __align__(16) cuWaldTriangleInfo  {
 
@@ -199,7 +199,7 @@ struct  __align__(16) cuWaldTriangleInfo  {
 		return ( float_as_int( internal2.z ) == 1 || float_as_int( internal2.z ) == -1 ); 
 	}
 
-	/** wald ¹æ¹ı¿¡¼­ n' ¸¦ ±¸ÇÒ¶§ ³ª´«°ªÀÌ ¾ç¼öÀÎÁö ¿©ºÎ. */
+	/** wald ë°©ë²•ì—ì„œ n' ë¥¼ êµ¬í• ë•Œ ë‚˜ëˆˆê°’ì´ ì–‘ìˆ˜ì¸ì§€ ì—¬ë¶€. */
 	__HOST__ __device__ bool isPositiveDir() const { return ( float_as_int( internal2.z ) > 0 ); }
 
 	struct perm_t { float3 dir, pos; };
@@ -223,34 +223,34 @@ struct  __align__(16) cuWaldTriangleInfo  {
 		}
 	}
 
-	/** selective supersampling À» À§ÇØ¼­.. ÇÏÀ§3¹ÙÀÌÆ®´Â object id, »óÀ§ 1byte ´Â ¹°Ã¼¼±ÅÃ¿©ºÎ */
+	/** selective supersampling ì„ ìœ„í•´ì„œ.. í•˜ìœ„3ë°”ì´íŠ¸ëŠ” object id, ìƒìœ„ 1byte ëŠ” ë¬¼ì²´ì„ íƒì—¬ë¶€ */
 	__HOST__ __device__ inline int getObjectIndex(void) const
 	{	return ( float_as_int( internal2.w ) & 0x00ffffff );	}
 
-	/** selective supersampling À» À§ÇØ¼­.. ÇÏÀ§3¹ÙÀÌÆ®´Â object id, »óÀ§ 1byte ´Â ¹°Ã¼¼±ÅÃ¿©ºÎ */
+	/** selective supersampling ì„ ìœ„í•´ì„œ.. í•˜ìœ„3ë°”ì´íŠ¸ëŠ” object id, ìƒìœ„ 1byte ëŠ” ë¬¼ì²´ì„ íƒì—¬ë¶€ */
 	__HOST__ __device__ inline int isSelection(void) const
 	{	return ( ( float_as_int( internal2.w ) & 0xff000000 ) > 0 );	}
 };
 
 /**
- *	intersection point Á¤º¸. cuda ¾È¿¡¼­ 
- *	shading À» ÇÏ±âÀ§ÇØ¼­ geometry Á¤º¸ ÀÚÃ¼¸¦
- *	´ã´Â´Ù. Àı´ë float3,2,4 ¸¦ È¥¿ëÇØ¼­ ¾²Áö ¸»°Í. ÀÌÀ¯´Â ¸ÇÀ§¸¦ º¸½Ã¶ó.
+ *	intersection point ì •ë³´. cuda ì•ˆì—ì„œ 
+ *	shading ì„ í•˜ê¸°ìœ„í•´ì„œ geometry ì •ë³´ ìì²´ë¥¼
+ *	ë‹´ëŠ”ë‹¤. ì ˆëŒ€ float3,2,4 ë¥¼ í˜¼ìš©í•´ì„œ ì“°ì§€ ë§ê²ƒ. ì´ìœ ëŠ” ë§¨ìœ„ë¥¼ ë³´ì‹œë¼.
  */
 typedef struct __align__(16)
 {
-	unsigned int triIndex;			//	obj list ¾È¿¡¼­ ¸î ¹øÂ° »ï°¢ÇüÀÎÁö.
-	unsigned int objectIndex;		//	»ï°¢ÇüÀÌ Æ÷ÇÔµÈ object index. object material ¿¡ Á¢±ÙÇÒ¶§ ÇÊ¿ä.
-	unsigned int rayIndex;			//	ÀÌ intersection point °¡ ¾î¶² ray ÀÇ °á°úÀÎÁö.
-									//	(left,top) ºÎÅÍ ¼ø¼­´ë·Î. SuperSampling ±îÁö Æ÷ÇÔÇØ¼­ °è»êµÈ index ÀÌ´Ù.
-	unsigned int boundDepth;		//	ÀÌ ray ÀÇ ÇöÀç bounding depth.
+	unsigned int triIndex;			//	obj list ì•ˆì—ì„œ ëª‡ ë²ˆì§¸ ì‚¼ê°í˜•ì¸ì§€.
+	unsigned int objectIndex;		//	ì‚¼ê°í˜•ì´ í¬í•¨ëœ object index. object material ì— ì ‘ê·¼í• ë•Œ í•„ìš”.
+	unsigned int rayIndex;			//	ì´ intersection point ê°€ ì–´ë–¤ ray ì˜ ê²°ê³¼ì¸ì§€.
+									//	(left,top) ë¶€í„° ìˆœì„œëŒ€ë¡œ. SuperSampling ê¹Œì§€ í¬í•¨í•´ì„œ ê³„ì‚°ëœ index ì´ë‹¤.
+	unsigned int boundDepth;		//	ì´ ray ì˜ í˜„ì¬ bounding depth.
 	
-	float3 pos, dir, normal;		//	intersection point Á¤º¸.
-	float u, v;						//	texture ÁÂÇ¥.
-	float3 colorWeight;				//	ÀÌ intersection point ÀÇ color °¡ ÃÖÁ¾ ÀÌ¹ÌÁö¿¡ ¿µÇâÀ» ÁÙ°ª.
-	float shadowCount;				//	ÇØ´çÁö¿ª¿¡ ±×¸²ÀÚ°¡ »ı°å´ÂÁö¿©ºÎ. adaptive sampling À» À§ÇØ¼­. »ı±â¸é -1, ¾Æ´Ï¸é 1
-	short bTexture;					//	texture À¯¹«.
-	short bSelected;				//	¼±ÅÃµÈ Áö¿ªÀÎÁö ¿©ºÎ.
+	float3 pos, dir, normal;		//	intersection point ì •ë³´.
+	float u, v;						//	texture ì¢Œí‘œ.
+	float3 colorWeight;				//	ì´ intersection point ì˜ color ê°€ ìµœì¢… ì´ë¯¸ì§€ì— ì˜í–¥ì„ ì¤„ê°’.
+	float shadowCount;				//	í•´ë‹¹ì§€ì—­ì— ê·¸ë¦¼ìê°€ ìƒê²¼ëŠ”ì§€ì—¬ë¶€. adaptive sampling ì„ ìœ„í•´ì„œ. ìƒê¸°ë©´ -1, ì•„ë‹ˆë©´ 1
+	short bTexture;					//	texture ìœ ë¬´.
+	short bSelected;				//	ì„ íƒëœ ì§€ì—­ì¸ì§€ ì—¬ë¶€.
 	
 	__HOST__ __device__ inline void init()
 	{	
@@ -262,13 +262,13 @@ typedef struct __align__(16)
 } cuIntersectionPoint;
 
 /**
- *	Adaptive Sampling À» À§ÇÑ ±¸Á¶Ã¼. 
+ *	Adaptive Sampling ì„ ìœ„í•œ êµ¬ì¡°ì²´. 
  */
 typedef struct
 {
-	float  primaryAttr;					// primary hit object id, shadow °³¼ö, 4bit selection ¿©ºÎ/ÇÏÀ§ 4bit texture À¯¹«.
+	float  primaryAttr;					// primary hit object id, shadow ê°œìˆ˜, 4bit selection ì—¬ë¶€/í•˜ìœ„ 4bit texture ìœ ë¬´.
 	float3 primaryNormal;
-	float  secondaryAttr;				// secondary hit object id, shadow °³¼ö, texture À¯¹«.		
+	float  secondaryAttr;				// secondary hit object id, shadow ê°œìˆ˜, texture ìœ ë¬´.		
 	float3 secondaryNormal;
 } cuSamplingMap;
 
@@ -283,14 +283,14 @@ typedef struct
 #define GET_SUBPIXEL_CORNER( DATA )					( DATA & 0x000000ff )
 
 /**
- *	cuda ³»¿¡¼­ intersection point ¸¦ Ã¼Å©ÇÏ±â À§ÇØ¼­ »ç¿ëÇÏ´Â
- *	±¸Á¶Ã¼.
+ *	cuda ë‚´ì—ì„œ intersection point ë¥¼ ì²´í¬í•˜ê¸° ìœ„í•´ì„œ ì‚¬ìš©í•˜ëŠ”
+ *	êµ¬ì¡°ì²´.
  */
 typedef struct __align__(16) 
 {
-	unsigned int triIndex;			//	obj list ¾È¿¡¼­ ¸î ¹øÂ° »ï°¢ÇüÀÎÁö.
-	unsigned short objectIndex;		//	»ï°¢ÇüÀÌ Æ÷ÇÔµÈ object index. object material ¿¡ Á¢±ÙÇÒ¶§ ÇÊ¿ä.
-	unsigned short bSelected;		//	»ï°¢ÇüÀÌ ¼±ÅÃµÇ¾ú´ÂÁö ¿©ºÎ. for selective adaptive supersampling.
+	unsigned int triIndex;			//	obj list ì•ˆì—ì„œ ëª‡ ë²ˆì§¸ ì‚¼ê°í˜•ì¸ì§€.
+	unsigned short objectIndex;		//	ì‚¼ê°í˜•ì´ í¬í•¨ëœ object index. object material ì— ì ‘ê·¼í• ë•Œ í•„ìš”.
+	unsigned short bSelected;		//	ì‚¼ê°í˜•ì´ ì„ íƒë˜ì—ˆëŠ”ì§€ ì—¬ë¶€. for selective adaptive supersampling.
 	float tHit, beta, gamma;		//	
 	
 	__HOST__ __device__ inline void init(float _tHit=FLT_MAX)
@@ -301,18 +301,18 @@ typedef struct __align__(16)
 } cuIntersectionCheck;
 
 /**
- *	Texture reference Á¤º¸.
- *	¿©·¯ÀåÀÇ texture ¸¦ 2d array ·Î °°ÀÌ ¿Ã·Á¼­
- *	»ç¿ëÇÏ°Ô²û Ã³¸®ÇÏ±â À§ÇØ¼­ »ç¿ëÇÒ ±¸Á¶Ã¼.
+ *	Texture reference ì •ë³´.
+ *	ì—¬ëŸ¬ì¥ì˜ texture ë¥¼ 2d array ë¡œ ê°™ì´ ì˜¬ë ¤ì„œ
+ *	ì‚¬ìš©í•˜ê²Œë” ì²˜ë¦¬í•˜ê¸° ìœ„í•´ì„œ ì‚¬ìš©í•  êµ¬ì¡°ì²´.
  *
- *	2d array ³»¿¡¼­ ÇØ´ç texture ÀÇ À§Ä¡¿¡ ´ëÇÑ Á¤º¸.
+ *	2d array ë‚´ì—ì„œ í•´ë‹¹ texture ì˜ ìœ„ì¹˜ì— ëŒ€í•œ ì •ë³´.
  */
 typedef struct _cu_texutre_ref {
 	int x, y, width, height;
 } cuTextureRef;
  
 /**
- *	Cuda ·Î ¾÷·ÎµåÇÒ Texture Data.
+ *	Cuda ë¡œ ì—…ë¡œë“œí•  Texture Data.
  */
 typedef struct _cu_texutre_ {
 	int width, height;
@@ -320,7 +320,7 @@ typedef struct _cu_texutre_ {
 } cuTexture;
 
 /** 
- *	Light Type Á¤º¸.
+ *	Light Type ì •ë³´.
  */
 typedef enum _light_type {
 	cuPointLight,
@@ -340,51 +340,51 @@ typedef struct _light_ray_set {
 } cuLightRaySet;
 
 /**
- *	Light ¸ğ¾çÀ» sphere ·Î ÃßÁ¤ÇÒ¶§ »ç¿ëÇÒ sphere Á¤º¸.
+ *	Light ëª¨ì–‘ì„ sphere ë¡œ ì¶”ì •í• ë•Œ ì‚¬ìš©í•  sphere ì •ë³´.
  */
 typedef struct _light_sphere {
 	float4 circle;
 } cuLightSphere;
 
 /**
- *	Light Á¤º¸. 
- *	Constant Memory ·Î Àü¼ÛÇÑ´Ù.
- *	Àı´ë float3,2,4 ¸¦ È¥¿ëÇØ¼­ ¾²Áö ¸»°Í. ÀÌÀ¯´Â ¸ÇÀ§¸¦ º¸½Ã¶ó.
- *	¿©±â´Â float3 °ú float ·Î¸¸ ¾²ÀÚ.
+ *	Light ì •ë³´. 
+ *	Constant Memory ë¡œ ì „ì†¡í•œë‹¤.
+ *	ì ˆëŒ€ float3,2,4 ë¥¼ í˜¼ìš©í•´ì„œ ì“°ì§€ ë§ê²ƒ. ì´ìœ ëŠ” ë§¨ìœ„ë¥¼ ë³´ì‹œë¼.
+ *	ì—¬ê¸°ëŠ” float3 ê³¼ float ë¡œë§Œ ì“°ì.
  */
 typedef struct _cu_light_ {
 
-	int iObjectID;				// °íÀ¯¹øÈ£. ( ±¤¿øµµ ÇÏ³ªÀÇ ¹°Ã¼ÀÌ¹Ç·Î À¯ÀÏÇÑ °íÀ¯¹øÈ£ ÀÖÀ½ )
+	int iObjectID;				// ê³ ìœ ë²ˆí˜¸. ( ê´‘ì›ë„ í•˜ë‚˜ì˜ ë¬¼ì²´ì´ë¯€ë¡œ ìœ ì¼í•œ ê³ ìœ ë²ˆí˜¸ ìˆìŒ )
 	cuLightType lightType;
 
-	/** direct illum ½Ã °è»êÇÒ light ÀÎÁö¿Í photon À» emit ÇÒ light ÀÎÁö ¿©ºÎ. */
+	/** direct illum ì‹œ ê³„ì‚°í•  light ì¸ì§€ì™€ photon ì„ emit í•  light ì¸ì§€ ì—¬ë¶€. */
 	bool bUseDirect;
 	bool bUsePhoton;
 	
 	/**
-	 *	ÀÌ light ·Î ºÎÅÍ emit ½ÃÅ³ photon °³¼ö.
-	 *	ÀüÃ¼ scene ¿¡ emit ½ÃÅ³ photon °³¼ö¸¦ °¢ light °¡ ³ª´©¾î¼­ »Ñ¸°´Ù.
-	 *	 scene ¾ÈÀÇ light µéÀÇ intensity ºñÀ²¿¡ µû¶ó¼­ 
-	 *	°¢ light ¿¡¼­ »Ñ¸± photon °³¼ö¸¦ °áÁ¤ÇÑ´Ù.
+	 *	ì´ light ë¡œ ë¶€í„° emit ì‹œí‚¬ photon ê°œìˆ˜.
+	 *	ì „ì²´ scene ì— emit ì‹œí‚¬ photon ê°œìˆ˜ë¥¼ ê° light ê°€ ë‚˜ëˆ„ì–´ì„œ ë¿Œë¦°ë‹¤.
+	 *	 scene ì•ˆì˜ light ë“¤ì˜ intensity ë¹„ìœ¨ì— ë”°ë¼ì„œ 
+	 *	ê° light ì—ì„œ ë¿Œë¦´ photon ê°œìˆ˜ë¥¼ ê²°ì •í•œë‹¤.
 	 */
 	int iEmitPhoton;
 
 	/**
-	 *	ÇÑ¹ø photon À» »Ñ¸±¶§, Ã³À½ photon ºÎÅÍ 0,... ÀÌ·¸°Ô index ¸¦
-	 *	ºÙÀÎ´Ù°í ÇÒ¶§, ÇöÀç light °¡ »Ñ¸± photon ÀÇ ½ÃÀÛ index.
-	 *	ÀÌ light ¿¡¼­´Â iPhotonStartIndex ºÎÅÍ iPhotonStartIndex + iEmitPhoton ¿¡
-	 *	ÇØ´çÇÏ´Â photon À» »Ñ·Á¾ß ÇÑ´Ù.
+	 *	í•œë²ˆ photon ì„ ë¿Œë¦´ë•Œ, ì²˜ìŒ photon ë¶€í„° 0,... ì´ë ‡ê²Œ index ë¥¼
+	 *	ë¶™ì¸ë‹¤ê³  í• ë•Œ, í˜„ì¬ light ê°€ ë¿Œë¦´ photon ì˜ ì‹œì‘ index.
+	 *	ì´ light ì—ì„œëŠ” iPhotonStartIndex ë¶€í„° iPhotonStartIndex + iEmitPhoton ì—
+	 *	í•´ë‹¹í•˜ëŠ” photon ì„ ë¿Œë ¤ì•¼ í•œë‹¤.
 	 */
 	int iPhotonStartIndex;
 	
 	/**
-	 *	ÀÌ light ¿¡¼­ ³ª°¡´Â photon ÇÑ°³ÀÇ power;
+	 *	ì´ light ì—ì„œ ë‚˜ê°€ëŠ” photon í•œê°œì˜ power;
 	 */
 	float fOnePhotonPower;
 
 	union {
 		/** 
-		 *	point light ÀÏ¶§ Á¤º¸.
+		 *	point light ì¼ë•Œ ì •ë³´.
 		 */
 		struct {
 			float3 pos;
@@ -393,9 +393,9 @@ typedef struct _cu_light_ {
 		};
 		
 		/**
-		 *	ray set light ÀÏ¶§ Á¤º¸.
-		 *	randomMode °¡ 0 ÀÌ¸é rayset µ¥ÀÌÅÍ¸¦ Â÷·Ê´ë·Îgenerate. 
-		 *	1 ÀÌ¸é rayset data ³»¿¡¼­ random ÇÏ°Ô ¼±ÅÃ.
+		 *	ray set light ì¼ë•Œ ì •ë³´.
+		 *	randomMode ê°€ 0 ì´ë©´ rayset ë°ì´í„°ë¥¼ ì°¨ë¡€ëŒ€ë¡œgenerate. 
+		 *	1 ì´ë©´ rayset data ë‚´ì—ì„œ random í•˜ê²Œ ì„ íƒ.
 		 */
 		struct {
 			int randomMode;	
@@ -407,16 +407,16 @@ typedef struct _cu_light_ {
 } cuLight;
 
 /**
- *	Scene Á¤º¸. constant memory ·Î ¿Ã¸².
- *	Àı´ë float3,2,4 ¸¦ È¥¿ëÇØ¼­ ¾²Áö ¸»°Í. ÀÌÀ¯´Â ¸ÇÀ§¸¦ º¸½Ã¶ó.
- *	¿©±â´Â float3 °ú float ·Î¸¸ ¾²ÀÚ. bytes align Àº ¸ÂÃâ°Í.
+ *	Scene ì •ë³´. constant memory ë¡œ ì˜¬ë¦¼.
+ *	ì ˆëŒ€ float3,2,4 ë¥¼ í˜¼ìš©í•´ì„œ ì“°ì§€ ë§ê²ƒ. ì´ìœ ëŠ” ë§¨ìœ„ë¥¼ ë³´ì‹œë¼.
+ *	ì—¬ê¸°ëŠ” float3 ê³¼ float ë¡œë§Œ ì“°ì. bytes align ì€ ë§ì¶œê²ƒ.
  */
 typedef struct _cu_scene_info {
 	
 	float3 globalAmbient;						//	global ambient.
 	int iResolutionX, iResolutionY;				//	resolution.
-	int iSuperSamplingX, iSuperSamplingY;		//	ÇÑ ÇÈ¼¿´ç sampling.
-	int iBlockSizeX, iBlockSizeY;				//	ÇÑ block ´ç ¾²·¹µå size.
+	int iSuperSamplingX, iSuperSamplingY;		//	í•œ í”½ì…€ë‹¹ sampling.
+	int iBlockSizeX, iBlockSizeY;				//	í•œ block ë‹¹ ì“°ë ˆë“œ size.
 	int bEnableShadow;						
 	int bEnableLocalShading;
 	int iShadowRay;
@@ -442,14 +442,14 @@ typedef struct _cu_thresholds {
 } cuThreshold;
 
 /**
- *	Ä«¸Ş¶ó Á¤º¸. constant memory ·Î ¿Ã¸².
+ *	ì¹´ë©”ë¼ ì •ë³´. constant memory ë¡œ ì˜¬ë¦¼.
  */
 typedef struct _camera_info {
 	float3 eye;
 	float3 u, v, n;
 	float fnear;
-	float3 startPoint;		// ¿ŞÂÊ»ó´Ü ray ÀÇ position.
-	float stepX, stepY;		// ray ÇÏ³ª´ç ÀÌµ¿°Å¸®.
+	float3 startPoint;		// ì™¼ìª½ìƒë‹¨ ray ì˜ position.
+	float stepX, stepY;		// ray í•˜ë‚˜ë‹¹ ì´ë™ê±°ë¦¬.
 } cuCamera;
 
 #endif

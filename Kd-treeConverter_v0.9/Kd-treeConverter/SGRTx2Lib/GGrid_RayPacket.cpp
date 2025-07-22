@@ -15,7 +15,7 @@ bool GGrid_RayPacket::early_termination(int lv){
 
 	for(int y = 0;y < packetSize;y++){
 		for(int x = 0;x < packetSize;x++){
-			//ÇÑ¹øµµ hit ¾ÈÇß°Å³ª.
+			//í•œë²ˆë„ hit ì•ˆí–ˆê±°ë‚˜.
 			if(m_tmin[y][x] == kHugeValue || m_tmin[y][x] > m_t_far[y][x]) return false;// check = false;					
 
 			if(m_kVector < 3){
@@ -62,7 +62,7 @@ void GGrid_RayPacket::set_majorAxis(int pi, int pj, GVector LeftUp, GVector DX, 
 	centerV = centerV - _rO;
 	centerV = centerV.normalize();
 
-	//K vector¸¦ Ã£´Â´Ù.
+	//K vectorë¥¼ ì°¾ëŠ”ë‹¤.
 	if(centerV.x >= centerV.y && centerV.x >= centerV.z && centerV.x > 0) m_kVector = PLUS_X;//+x	
 	else if(centerV.y >= centerV.x && centerV.y >= centerV.z && centerV.y > 0) m_kVector = PLUS_Y;//+y	
 	else if(centerV.z >= centerV.x && centerV.z >= centerV.y && centerV.z > 0) m_kVector = PLUS_Z;//+z	
@@ -94,7 +94,7 @@ void GGrid_RayPacket::packet_decrease(int size){
 }
 
 void GGrid_RayPacket::ray_generate(int pi, int pj, GVector LeftUp, GVector DX, GVector DY, GVector _rO){
-	//ray »ı¼º.
+	//ray ìƒì„±.
 	for(int b = 0;b < packetSize;b++){
 		for(int a = 0;a < packetSize;a++){
 			m_r[b][a] = LeftUp + (DX * (float)(pi * packetSize + a)) - (DY * (float)(pj * packetSize + b));
@@ -121,7 +121,7 @@ void GGrid_RayPacket::set_packet(GVector _rO, GGridStructure *pGrid){
 	float rLDdx = m_r[tag][0].x; float rLDdy = m_r[tag][0].y; float rLDdz = m_r[tag][0].z;
 	float rRDdx = m_r[tag][tag].x; float rRDdy = m_r[tag][tag].y; float rRDdz = m_r[tag][tag].z;
 
-	float packetE[2][2][2]; //[0]¿¡ u, [1]¿¡ v.
+	float packetE[2][2][2]; //[0]ì— u, [1]ì— v.
 
 	switch(m_kVector){
 	case PLUS_X: 
@@ -150,7 +150,7 @@ void GGrid_RayPacket::set_packet(GVector _rO, GGridStructure *pGrid){
 		break;
 	}
 
-	//ÆĞÅ¶ÀÇ ÃÊ±â u, v ±¸ÇÏ±â.
+	//íŒ¨í‚·ì˜ ì´ˆê¸° u, v êµ¬í•˜ê¸°.
 	switch(m_kVector){	
 	case PLUS_X: case MINUS_X:
 		rLUTS = kS / rLUdx; rLUTE = kE / rLUdx;
@@ -207,7 +207,7 @@ void GGrid_RayPacket::set_packet(GVector _rO, GGridStructure *pGrid){
 	
 	float temp;
 
-	//ÆĞÅ¶ÀÇ Áõ°¡ °ª ±¸ÇÏ±â.
+	//íŒ¨í‚·ì˜ ì¦ê°€ ê°’ êµ¬í•˜ê¸°.
 	if(m_kVector < 3){
 		temp = 1.0f / (kEnd + 1);
 

@@ -1,63 +1,63 @@
 2009.12.03
-1. GScene Å¬·¡½º´Â ´ÙÀ½ÀÇ ¼¼ º¯¼ö¸¦ °®´Â´Ù. (±âÁ¸¿¡´Â m_pKDTree ¸¸ °¡Áö°í ÀÖ¾úÀ½)
-// Empty KD Tree ¿Í Object ÀÇ KD Tree ¸¦ ¸ğµÎ Æ÷ÇÔÇÏ´Â ÀüÃ¼ ·»´õ¸µ¿ë KD Tree
+1. GScene í´ë˜ìŠ¤ëŠ” ë‹¤ìŒì˜ ì„¸ ë³€ìˆ˜ë¥¼ ê°–ëŠ”ë‹¤. (ê¸°ì¡´ì—ëŠ” m_pKDTree ë§Œ ê°€ì§€ê³  ìˆì—ˆìŒ)
+// Empty KD Tree ì™€ Object ì˜ KD Tree ë¥¼ ëª¨ë‘ í¬í•¨í•˜ëŠ” ì „ì²´ ë Œë”ë§ìš© KD Tree
 GKDTreeStructure *m_pKDTree;
-// Empty Space ¸¸ ³ª´« KD Tree. Object ´Â º»°İÀûÀ¸·Î ³ª´²ÁöÁö ¾ÊÀº »óÅÂ.
+// Empty Space ë§Œ ë‚˜ëˆˆ KD Tree. Object ëŠ” ë³¸ê²©ì ìœ¼ë¡œ ë‚˜ëˆ ì§€ì§€ ì•Šì€ ìƒíƒœ.
 GKDTreeStructure *m_pEmptyKDTree;
-// Visibility Á¤º¸¸¦ °¡Áö°í ÀÖ´Â ±×¸®µå Å¬·¡½º. GVisibilityGridStructure ´Â ¾ÆÁ÷ ¾Æ¹«°Íµµ ±¸ÇöµÇ¾î ÀÖÁö ¾ÊÀº »óÅÂÀÓ.
+// Visibility ì •ë³´ë¥¼ ê°€ì§€ê³  ìˆëŠ” ê·¸ë¦¬ë“œ í´ë˜ìŠ¤. GVisibilityGridStructure ëŠ” ì•„ì§ ì•„ë¬´ê²ƒë„ êµ¬í˜„ë˜ì–´ ìˆì§€ ì•Šì€ ìƒíƒœì„.
 GVisibilityGridStructure *m_pVisibilityGrid;
 
-2. GVisibilityGridStructure.cpp/GVisibilityGridStructure.h °¡ Ãß°¡ µÇ¾úÀ½
-KD-Tree ¿Í µ¿ÀÏÇÏ°Ô Å¬·¡½º GSpatialStructure ¸¦ »ó¼Ó ¹Ş´Â´Ù.
+2. GVisibilityGridStructure.cpp/GVisibilityGridStructure.h ê°€ ì¶”ê°€ ë˜ì—ˆìŒ
+KD-Tree ì™€ ë™ì¼í•˜ê²Œ í´ë˜ìŠ¤ GSpatialStructure ë¥¼ ìƒì† ë°›ëŠ”ë‹¤.
 
-3. GKDTreeStructure ¿Í GVisibilityGridStructure ¸ğµÎ ´ÙÀ½ÀÇ ÇÔ¼ö¸¦ ÀÛ¼ºÇØ¾ßÇÑ´Ù.
+3. GKDTreeStructure ì™€ GVisibilityGridStructure ëª¨ë‘ ë‹¤ìŒì˜ í•¨ìˆ˜ë¥¼ ì‘ì„±í•´ì•¼í•œë‹¤.
 bool loadStructureFromFile( const char *filename );
 bool saveStructureToFile( const char *filename );
 
-4. construction Àº ¿©·¯´Ü°è·Î ³ª´©¾î¼­ ¼öÇàµÉ ¼ö ÀÖ¾î¾ß ÇÏ´Âµ¥, ±âº»ÀûÀÎ ÇÔ¼ö´Â ´ÙÀ½°ú °°´Ù.
-// ÀüÃ¼ construction À» ÇÑ¹ø¿¡ ¼öÇàÇÑ´Ù.
+4. construction ì€ ì—¬ëŸ¬ë‹¨ê³„ë¡œ ë‚˜ëˆ„ì–´ì„œ ìˆ˜í–‰ë  ìˆ˜ ìˆì–´ì•¼ í•˜ëŠ”ë°, ê¸°ë³¸ì ì¸ í•¨ìˆ˜ëŠ” ë‹¤ìŒê³¼ ê°™ë‹¤.
+// ì „ì²´ construction ì„ í•œë²ˆì— ìˆ˜í–‰í•œë‹¤.
 GError convertRenderScene();
-// empty kd tree ¸¸ »ı¼ºÇÑ´Ù.
+// empty kd tree ë§Œ ìƒì„±í•œë‹¤.
 GError buildEmptyKdTree();
-// empty kd tree °¡ Á¸ÀçÇÒ °æ¿ì empty kd tree ¸¦ Åä´ë·Î Æ®¸®¸¦ ±¸¼ºÇÏ°í,
-// ±×·¸Áö ¾ÊÀ» °æ¿ì ÀüÃ¼ scene ¿¡ ´ëÇØ¼­ º¸ÅëÀÇ kd tree ¸¦ ¸¸µç´Ù.
-// (ÁÖÀÇ : object kd tree = m_pKDTree)
+// empty kd tree ê°€ ì¡´ì¬í•  ê²½ìš° empty kd tree ë¥¼ í† ëŒ€ë¡œ íŠ¸ë¦¬ë¥¼ êµ¬ì„±í•˜ê³ ,
+// ê·¸ë ‡ì§€ ì•Šì„ ê²½ìš° ì „ì²´ scene ì— ëŒ€í•´ì„œ ë³´í†µì˜ kd tree ë¥¼ ë§Œë“ ë‹¤.
+// (ì£¼ì˜ : object kd tree = m_pKDTree)
 GError buildObjectKdTree();
-// visibility grid ¸¦ »ı¼ºÇÑ´Ù.
-// ÇÊ¿äÇÏ´Ù¸é buildObjectKdTree() ¸¦ È£Ãâ ÇÒ ¼ö ÀÖ´Ù.
+// visibility grid ë¥¼ ìƒì„±í•œë‹¤.
+// í•„ìš”í•˜ë‹¤ë©´ buildObjectKdTree() ë¥¼ í˜¸ì¶œ í•  ìˆ˜ ìˆë‹¤.
 GError buildVisibilityGrid();
 
-5. GlobalOption.h ÆÄÀÏÀÌ Ãß°¡ µÇ¾úÀ¸¸ç, ÀÌ ÆÄÀÏÀº ÀüÃ¼ ¼¼ÆÃ¿¡ Áß¿äÇÑ ¿ªÇÒÀ» ÇÑ´Ù.
-¿©·¯°¡Áö Å×½ºÆ® ÄÚµåµé¿¡ ´ëÇØ¼­´Â svn À» °ÅÄ¡Áö ¾Ê´Â ¿©·¯ ¹öÀüÀ» ¸¸µéÁö ¸»°í #if/#elif ¸¦ ÅëÇØ¼­ °ü¸®ÇÏ´Â °ÍÀÌ ÁÁÀ» °Í °°À½.
-(ÆÄÀÏ ³»¿¡ ÁÖ¼³ ¼³¸í µÇ¾îÀÖÀ½.)
--> ¾ÕÀ¸·Î ¸ğµç ÄÚµå´Â SVN ¾È¿¡¼­ ÀúÀåµÇ°í °ü¸® µÇ´Â °ÍÀ» ¸ñÇ¥·ÎÇÔ.
+5. GlobalOption.h íŒŒì¼ì´ ì¶”ê°€ ë˜ì—ˆìœ¼ë©°, ì´ íŒŒì¼ì€ ì „ì²´ ì„¸íŒ…ì— ì¤‘ìš”í•œ ì—­í• ì„ í•œë‹¤.
+ì—¬ëŸ¬ê°€ì§€ í…ŒìŠ¤íŠ¸ ì½”ë“œë“¤ì— ëŒ€í•´ì„œëŠ” svn ì„ ê±°ì¹˜ì§€ ì•ŠëŠ” ì—¬ëŸ¬ ë²„ì „ì„ ë§Œë“¤ì§€ ë§ê³  #if/#elif ë¥¼ í†µí•´ì„œ ê´€ë¦¬í•˜ëŠ” ê²ƒì´ ì¢‹ì„ ê²ƒ ê°™ìŒ.
+(íŒŒì¼ ë‚´ì— ì£¼ì„¤ ì„¤ëª… ë˜ì–´ìˆìŒ.)
+-> ì•ìœ¼ë¡œ ëª¨ë“  ì½”ë“œëŠ” SVN ì•ˆì—ì„œ ì €ì¥ë˜ê³  ê´€ë¦¬ ë˜ëŠ” ê²ƒì„ ëª©í‘œë¡œí•¨.
 
-6. parameter/method ¼³Á¤ÀÇ À§ÀÇ ¹æ¹ı°ú °°Àº define À» »ç¿ëÇÏ°Å³ª
-½Ç½Ã°£¿ë ÆÄ¶ó¹ÌÅÍ ÇÔ¼ö¸¦ »ç¿ëÇÔ.
+6. parameter/method ì„¤ì •ì˜ ìœ„ì˜ ë°©ë²•ê³¼ ê°™ì€ define ì„ ì‚¬ìš©í•˜ê±°ë‚˜
+ì‹¤ì‹œê°„ìš© íŒŒë¼ë¯¸í„° í•¨ìˆ˜ë¥¼ ì‚¬ìš©í•¨.
 
-// ÇÔ¼ö ¿øÇü
+// í•¨ìˆ˜ ì›í˜•
 void setGlobalParameterFloat( const char *parameter_name, float value );
 void setGlobalParameterInteger( const char *parameter_name, int value );
 
 float getGlobalParameterFloat( const char *parameter_name );
 int getGlobalParameterInteger( const char *parameter_name );
 
-// »ç¿ë ¿¹
-// ¼³Á¤ ÆÄÀÏ ·Îµå½Ã
+// ì‚¬ìš© ì˜ˆ
+// ì„¤ì • íŒŒì¼ ë¡œë“œì‹œ
 setGlobalParameterFloat( "IntersectionCost", 20.0f );
-// KD Tree ºôµå½Ã
+// KD Tree ë¹Œë“œì‹œ
 m_IntersectionCost = getGlobalParameterFloat( "IntersectionCost" );
 
-Áö³ªÄ¡°Ô ÀÚÁÖ È£Ãâ¸¸µÇÁö ¾ÊÀ¸¸é ±×´ÙÁö ´À¸®Áö ¾Ê°í °ü¸® ÇÏ±â ÆíÇÔ.
-´Ü, ½ºÆç¸µÀÌ Æ²¸®Áö ¾Êµµ·Ï ÁÖÀÇÇØ¾ßÇÔ.
+ì§€ë‚˜ì¹˜ê²Œ ìì£¼ í˜¸ì¶œë§Œë˜ì§€ ì•Šìœ¼ë©´ ê·¸ë‹¤ì§€ ëŠë¦¬ì§€ ì•Šê³  ê´€ë¦¬ í•˜ê¸° í¸í•¨.
+ë‹¨, ìŠ¤í ë§ì´ í‹€ë¦¬ì§€ ì•Šë„ë¡ ì£¼ì˜í•´ì•¼í•¨.
 
-7. ±× ¿Ü¿¡ ¹Ù²ï °Íµé (Áß¿äÇÏÁö ¾ÊÀ½.)
-(1) GRenderer ¿¡ RenderSetting À» Ãß°¡ÇÔ.
-(2) ±âÁ¸ÀÇ OpenGL Pipeline µµ º°µµÀÇ Renderer ·Î ¸¸µé¾úÀ½. (±âÁ¸¿¡´Â Renderer °¡ NULL ÀÏ °æ¿ì OpenGL Pipeline ÀÌ¾úÀ½.)
-(3) ViewerModeRenderer °¡ Ãß°¡ µÇ¾úÀ¸¸ç, ¿©±â¼­ KD Tree/Visibility Á¤º¸¸¦ ¾î¶»°Ô º¸¿©ÁÙÁö ¹«¾ùÀ» º¸¿©ÁÙÁö µîÀÌ °áÁ¤µÊ.
-(4) ViewerModeRenderer ¿ë Dialog °¡ ¸¸µé¾î Áö°í ÀÖÀ½. (ÇüÅÂ´Â ¸¸µé¾îÁ³À½)
+7. ê·¸ ì™¸ì— ë°”ë€ ê²ƒë“¤ (ì¤‘ìš”í•˜ì§€ ì•ŠìŒ.)
+(1) GRenderer ì— RenderSetting ì„ ì¶”ê°€í•¨.
+(2) ê¸°ì¡´ì˜ OpenGL Pipeline ë„ ë³„ë„ì˜ Renderer ë¡œ ë§Œë“¤ì—ˆìŒ. (ê¸°ì¡´ì—ëŠ” Renderer ê°€ NULL ì¼ ê²½ìš° OpenGL Pipeline ì´ì—ˆìŒ.)
+(3) ViewerModeRenderer ê°€ ì¶”ê°€ ë˜ì—ˆìœ¼ë©°, ì—¬ê¸°ì„œ KD Tree/Visibility ì •ë³´ë¥¼ ì–´ë–»ê²Œ ë³´ì—¬ì¤„ì§€ ë¬´ì—‡ì„ ë³´ì—¬ì¤„ì§€ ë“±ì´ ê²°ì •ë¨.
+(4) ViewerModeRenderer ìš© Dialog ê°€ ë§Œë“¤ì–´ ì§€ê³  ìˆìŒ. (í˜•íƒœëŠ” ë§Œë“¤ì–´ì¡ŒìŒ)
 
 2009.01.06
 
-- Scene Data ÆÄÀÏ Format Á¤¸®ÇÏ±â. Áö±İÀº ÀÚÃ¼ Æ÷¸ËÀÎµ¥, obj file format µµÀÔ°í·Á.
+- Scene Data íŒŒì¼ Format ì •ë¦¬í•˜ê¸°. ì§€ê¸ˆì€ ìì²´ í¬ë§·ì¸ë°, obj file format ë„ì…ê³ ë ¤.
 - 

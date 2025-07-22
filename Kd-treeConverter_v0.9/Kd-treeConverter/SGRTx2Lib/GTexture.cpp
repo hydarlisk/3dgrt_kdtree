@@ -75,8 +75,8 @@ bool GTexture::loadTexture()
 }
 
 /**
- *	ÀÌ¹ÌÁö¸¦ ·ÎµåÇÑ´Ù. 
- *	alpha °ªÀÌ ¾ø´õ¶óµµ °­Á¦·Î Ã¤¿î´Ù.
+ *	ì´ë¯¸ì§€ë¥¼ ë¡œë“œí•œë‹¤. 
+ *	alpha ê°’ì´ ì—†ë”ë¼ë„ ê°•ì œë¡œ ì±„ìš´ë‹¤.
  */
 bool GTexture::loadImageFile()
 {
@@ -103,7 +103,7 @@ bool GTexture::loadImageFile()
 	m_iHeight = FreeImage_GetHeight( temp );
 
 	/**
-	 * °­Á¦·Î RGBA Format À¸·Î ¸ÂÃá´Ù.
+	 * ê°•ì œë¡œ RGBA Format ìœ¼ë¡œ ë§ì¶˜ë‹¤.
 	 */
 	fibitMap = FreeImage_ConvertTo32Bits( temp );
 	FreeImage_Unload( temp );
@@ -117,7 +117,7 @@ bool GTexture::loadImageFile()
 	m_pTextureData = (BYTE*) malloc ( FreeImage_GetPitch( fibitMap ) * m_iHeight );
 	memcpy( m_pTextureData, data, FreeImage_GetPitch( fibitMap ) * m_iHeight );
 
-	/** BGR ·Î µÇ¾î ÀÖÀ¸¹Ç·Î RGB ·Î º¯°æ */
+	/** BGR ë¡œ ë˜ì–´ ìˆìœ¼ë¯€ë¡œ RGB ë¡œ ë³€ê²½ */
 	for ( int j = 0; j < m_iHeight; ++j ) {
 		for ( int i = 0; i < m_iWidth; ++i ) {
 			*( m_pTextureData + j * pitch + i * 4 + 0 ) = *( data + j * pitch + i * 4 + 2 );

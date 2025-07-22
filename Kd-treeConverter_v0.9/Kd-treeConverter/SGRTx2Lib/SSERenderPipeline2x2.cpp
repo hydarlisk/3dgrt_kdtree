@@ -96,12 +96,12 @@ void SSERenderPipeline::IsectPacket2x2( const KdTreeNode *node, int nIdx )
 			COUNT_STATE( nIdx, MAILBOXED_TRIANGLE_COUNT, 1 );
 			continue;
 		}
-		else { acc.mbox = rp->RayId; }	// π´¡∂∞« isect æ»µ«µµ Ω««‡ µ«æÓæﬂ «‘
+		else { acc.mbox = rp->RayId; }	// Î¨¥Ï°∞Í±¥ isect ÏïàÎêòÎèÑ Ïã§Ìñâ ÎêòÏñ¥Ïïº Ìï®
 
 		COUNT_STATE( nIdx, TRIANGLE_COUNT, 1 );
 
 		// ---------------------------------------------------------------
-		// Backface Culling : ≈ı∏Ì«œ¡ˆ æ ¥¬ π∞√º∏∏ «ÿ¥Á
+		// Backface Culling : Ìà¨Î™ÖÌïòÏßÄ ÏïäÎäî Î¨ºÏ≤¥Îßå Ìï¥Îãπ
 		// ---------------------------------------------------------------
 		if (acc.isTransparent || !m_bBackFaceCulling) {
 			Mask_Hit = rm->mask4;
@@ -178,7 +178,7 @@ void SSERenderPipeline::TracePacket2x2( int nIdx )
 	_sse_2x2_raymask	*rm	= &m_RMask2x2[nIdx];
 
 	// ---------------------------------------------------------------------------
-	// ¿Ø»ø«— Ray æ¯¥¬ ∞ÊøÏ return
+	// Ïú†Ìö®Ìïú Ray ÏóÜÎäî Í≤ΩÏö∞ return
 	// ---------------------------------------------------------------------------
 	if (_mm_movemask_ps(rm->mask4) == 0) return;
 
@@ -363,12 +363,12 @@ void SSERenderPipeline::IsectShadowPacket2x2( const KdTreeNode *node )
 			COUNT_STATE( -1, MAILBOXED_TRIANGLE_COUNT, 1 );
 			continue;
 		}
-		else { acc.mbox = rp->RayId; }	// π´¡∂∞« isect æ»µ«µµ Ω««‡ µ«æÓæﬂ «‘
+		else { acc.mbox = rp->RayId; }	// Î¨¥Ï°∞Í±¥ isect ÏïàÎêòÎèÑ Ïã§Ìñâ ÎêòÏñ¥Ïïº Ìï®
 
 		COUNT_STATE( -1, TRIANGLE_COUNT, 1 );
 
 		// ---------------------------------------------------------------
-		// ≈ı∏Ì«— π∞√º¥¬ ≈ı∞˙
+		// Ìà¨Î™ÖÌïú Î¨ºÏ≤¥Îäî Ìà¨Í≥º
 		// ---------------------------------------------------------------
 		if (acc.isTransparent) continue;
 
@@ -577,7 +577,7 @@ void SSERenderPipeline::checkVisibility2x2(const _sse_vec &objectPos, const GPoi
 	shadow_rp->o = sse_vadd(objectPos, sse_vmul(shadow_rp->d, sse_vset1(RAY_START_EPSILON)));
 
 	unsigned int i, b;
-	// coherence √º≈© ∞‚ ray dir ∞·¡§ (q = 8πÊ«‚¡ﬂ«œ≥™)
+	// coherence Ï≤¥ÌÅ¨ Í≤∏ ray dir Í≤∞Ï†ï (q = 8Î∞©Ìñ•Ï§ëÌïòÎÇò)
 	if (shadow_rp->IsCoherent()) {
 		shadow_rp->RayWay = (shadow_rp->xmask & 1) + (shadow_rp->ymask & 2) + (shadow_rp->zmask & 4);
 		shadow_rm->mask4 = shadingmask;
@@ -613,7 +613,7 @@ void SSERenderPipeline::Shading2x2 (int nIdx) {
 	_sse_2x2_raymask	*rm	= &m_RMask2x2[nIdx];
 
 	// --------------------------------------------------------------
-	// ¿Ø»ø«— Ray æ¯¥¬ ∞ÊøÏ return
+	// Ïú†Ìö®Ìïú Ray ÏóÜÎäî Í≤ΩÏö∞ return
 	// --------------------------------------------------------------
 	union { __m128i iAvailMask4; __m128 fAvailMask4; };
 	iAvailMask4 = _mm_and_si128(rm->imask4, _mm_cmpgt_epi32(is->tacc4, _mm_setzero_si128()));
@@ -781,7 +781,7 @@ void SSERenderPipeline::Shading2x2 (int nIdx) {
 
 	if ( bIsEnableLocalShading ) {
 		{
-			// Shading ø°º≠, ≈ı∏Ì«— π∞√º¿œ∂ß, Normal ∞˙ dir ¿« dot ¿Ã < 0 ¿Ã∂Û∏È normal ¿ª µ⁄¬§¥¬¥Ÿ.
+			// Shading ÏóêÏÑú, Ìà¨Î™ÖÌïú Î¨ºÏ≤¥ÏùºÎïå, Normal Í≥º dir Ïùò dot Ïù¥ < 0 Ïù¥ÎùºÎ©¥ normal ÏùÑ Îí§ÏßöÎäîÎã§.
 			__m128 mask = _mm_and_ps(
 					_mm_cmpgt_ps(mat_fRefr.v4, _mm_setzero_ps()),
 					_mm_cmpgt_ps(sse_vdot(is->n, rp->d), _mm_setzero_ps()));
@@ -801,7 +801,7 @@ void SSERenderPipeline::Shading2x2 (int nIdx) {
 		// Diffuse & Specular color
 		const vector<GLight*>* pLightList = m_Scene->getLightList();
 		for ( int lx = 0; lx < (int) pLightList->size(); ++lx ) {	GLight* pLight = (*pLightList)[ lx ];
-			// Point Light ∏∏ ¿œ¥‹ ¡ˆø¯
+			// Point Light Îßå ÏùºÎã® ÏßÄÏõê
 			if ( pLight->getLightType() != typePointLight )  continue;
 			if ( pLight->isEnabled() != true ) continue;
 
@@ -810,11 +810,11 @@ void SSERenderPipeline::Shading2x2 (int nIdx) {
 			GPoint   lightPos   = pLight->getPosition();
 			_sse_vec lPos       = sse_vset1(lightPos.x, lightPos.y, lightPos.z);
 
-			// ±§ø¯ ¿⁄±‚¿⁄Ω≈¿Œ ∞ÊøÏ
+			// Í¥ëÏõê ÏûêÍ∏∞ÏûêÏã†Ïù∏ Í≤ΩÏö∞
 			iislightmask = _mm_cmpeq_epi32(obj_num.v4, _mm_set1_epi32(pLight->getObjectNumber()));
 			oColor = sse_vupdate(sse_vadd(oColor, sse_vmul(lColor, sse_vset1(pLight->getIntensity()))), oColor, _mm_and_ps(islightmask, shadingmask));
 
-			// ±◊∏≤¿⁄ »Æ¿Œ
+			// Í∑∏Î¶ºÏûê ÌôïÏù∏
 			if ( bIsEnableShadow ) {
 				_sse_2x2_raypacket	*shadow_rp;
 				_sse_2x2_isect		*shadow_is;
@@ -828,9 +828,9 @@ void SSERenderPipeline::Shading2x2 (int nIdx) {
 				{
 					__m128 lDist = sse_vlength(sse_vsub(lPos, hit_p));
 
-					// shadow ∞¸∑√ visible ¡∂∞«
-					// 1) shadingmask           : π∞√ºøÕ ±≥¡°¿÷¥¬ ∞Õ
-					// 2) shadow_is->tacc4 > 0  : shadow ray ∞° ±≥¬˜¡°¿Ã µ⁄ø° ¡∏¿Á«œ∞≈≥™ æ∆¥œ∏È ∞≈∏Æ∞° ∞≈¿« ∞°±ı∞≈≥™
+					// shadow Í¥ÄÎ†® visible Ï°∞Í±¥
+					// 1) shadingmask           : Î¨ºÏ≤¥ÏôÄ ÍµêÏ†êÏûàÎäî Í≤É
+					// 2) shadow_is->tacc4 > 0  : shadow ray Í∞Ä ÍµêÏ∞®Ï†êÏù¥ Îí§Ïóê Ï°¥Ïû¨ÌïòÍ±∞ÎÇò ÏïÑÎãàÎ©¥ Í±∞Î¶¨Í∞Ä Í±∞Ïùò Í∞ÄÍπùÍ±∞ÎÇò
 					iisisectmask = _mm_cmpgt_epi32(shadow_is->tacc4, _mm_setzero_si128());
 					inoisectmask = _mm_cmpeq_epi32(shadow_is->tacc4, _mm_setzero_si128());
 
@@ -1102,9 +1102,9 @@ void SSERenderPipeline::Render2x2( int nJobID )
 		unsigned int i = 0;
 
 		// -----------------------------------------------------------------------
-		// tpos (Ray ∏¶ ΩÚ πÊ«‚¡ˆ¡°) ∞ËªÍ
+		// tpos (Ray Î•º Ïè† Î∞©Ìñ•ÏßÄÏ†ê) Í≥ÑÏÇ∞
 		// -----------------------------------------------------------------------
-		// m_LeftUp : image screen ¿ß¬  øﬁ∆Ì ∏º≠∏Æ¿« pixel ¡ﬂΩ… ¿∏∑Œ ¿ÃπÃ º¬∆√ µ«æÓ ¿÷¿Ω
+		// m_LeftUp : image screen ÏúÑÏ™Ω ÏôºÌé∏ Î™®ÏÑúÎ¶¨Ïùò pixel Ï§ëÏã¨ ÏúºÎ°ú Ïù¥ÎØ∏ ÏÖãÌåÖ ÎêòÏñ¥ ÏûàÏùå
 		{
 			// tpos.d = m_LeftUp + m_DX * (float)iCastSeq2x2_x[i] - m_DY * (float)(ty * 2 + iCastSeq2x2_y[i]);
 			tpos.d.x4 = _mm_add_ps(m_LeftUp4->x4, _mm_sub_ps(
@@ -1132,17 +1132,17 @@ void SSERenderPipeline::Render2x2( int nJobID )
 				jpos = tpos;
 
 				// -----------------------------------------------------------------------
-				// Ray packet ¿ª º¬∆√ - Ω√¿€¡°(ray_o_x4, ray_o_y4, ray_o_z4) ~ ≥°¡°(tpos)
+				// Ray packet ÏùÑ ÏÖãÌåÖ - ÏãúÏûëÏ†ê(ray_o_x4, ray_o_y4, ray_o_z4) ~ ÎÅùÏ†ê(tpos)
 				// -----------------------------------------------------------------------
 				rp->d.x4 = _mm_sub_ps( jpos.d.x4, ray_o_x4 );
 				rp->d.y4 = _mm_sub_ps( jpos.d.y4, ray_o_y4 );
 				rp->d.z4 = _mm_sub_ps( jpos.d.z4, ray_o_z4 );
 
 				rp->Depth = 0;
-				InitPacket2x2( 0 );	// direction vector normalize µÓ
+				InitPacket2x2( 0 );	// direction vector normalize Îì±
 
 				// -----------------------------------------------------------------------
-				// Coherence √º≈© »ƒ rendering
+				// Coherence Ï≤¥ÌÅ¨ ÌõÑ rendering
 				// -----------------------------------------------------------------------
 				if (rp->IsCoherent()) {
 					rp->RayWay = (rp->xmask & 1) + (rp->ymask & 2) + (rp->zmask & 4);
@@ -1182,7 +1182,7 @@ void SSERenderPipeline::Render2x2( int nJobID )
 				m_Dest[3*(is->addr[i])+2] = o_color[i].b;// * fSampWeight;
 			}
 
-			// Render tile (tpos) ¿« ¿ßƒ°∏¶ ¿Ãµø
+			// Render tile (tpos) Ïùò ÏúÑÏπòÎ•º Ïù¥Îèô
 			tpos.d.x4 = _mm_add_ps( tpos.d.x4, delta4.d.x4 );
 			tpos.d.y4 = _mm_add_ps( tpos.d.y4, delta4.d.y4 );
 			tpos.d.z4 = _mm_add_ps( tpos.d.z4, delta4.d.z4 );

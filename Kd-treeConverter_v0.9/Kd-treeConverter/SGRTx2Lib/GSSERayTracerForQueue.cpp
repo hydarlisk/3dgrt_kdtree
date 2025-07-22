@@ -3,7 +3,7 @@
 #include "GKDTreeStructure.h"
 #include "GPointLight.h"
 #include "GRenderCommon.h"
-		#include "SSERenderPipeline.h"				//yet GRenderCommon.h ¿¡ ³ÖÀ»°Í
+		#include "SSERenderPipeline.h"				//yet GRenderCommon.h ì— ë„£ì„ê²ƒ
 #include "math.h"
 
 #include "GThreadManager.h"
@@ -46,7 +46,7 @@ void GSSERayTracerForQueue::uninitialize()
 }
 
 // ------------------------------------------------------------------------------------------------
-// initialize()		: scene Á¤º¸¸¦ Àç±¸¼ºÇØ¾ßÇÒ¶§ ÃÊ±âÈ­ÇÑ´Ù.
+// initialize()		: scene ì •ë³´ë¥¼ ìž¬êµ¬ì„±í•´ì•¼í• ë•Œ ì´ˆê¸°í™”í•œë‹¤.
 // ------------------------------------------------------------------------------------------------
 GError GSSERayTracerForQueue::initialize( GScene *pScene )
 {
@@ -61,7 +61,7 @@ GError GSSERayTracerForQueue::initialize( GScene *pScene )
 		 m_oldResolution != pScene->getResolution() ) {
 
 		// ----------------------------------------------------------
-		// KdTree ¹× triangle Á¤º¸¸¦ Æ÷ÀÎÆÃÇÏ´Â °øÀ¯ ±¸Á¶Ã¼ »ý¼º
+		// KdTree ë° triangle ì •ë³´ë¥¼ í¬ì¸íŒ…í•˜ëŠ” ê³µìœ  êµ¬ì¡°ì²´ ìƒì„±
 		// ----------------------------------------------------------
 		if ( m_pSSESceneData ) {
 			delete m_pSSESceneData;
@@ -73,7 +73,7 @@ GError GSSERayTracerForQueue::initialize( GScene *pScene )
 			return error;
 
 		// ----------------------------------------------------------
-		// ÇöÀç Renderer °¡ Ã³¸®ÇÑ Scene À» ±â¾ïÇÑ´Ù.
+		// í˜„ìž¬ Renderer ê°€ ì²˜ë¦¬í•œ Scene ì„ ê¸°ì–µí•œë‹¤.
 		// ----------------------------------------------------------
 		m_iOldSceneNumber = pScene->getSceneNumber();
 		m_iSceneTimestamp = pScene->getGeometryChangeTimestamp();
@@ -88,7 +88,7 @@ GError GSSERayTracerForQueue::initialize( GScene *pScene )
 
 	if (bModifiedScene) {
 		// ----------------------------------------------------------
-		// Render Pipeline »ý¼º
+		// Render Pipeline ìƒì„±
 		// ----------------------------------------------------------
 		if ( m_pSSERenderPipeline ) {
 			delete m_pSSERenderPipeline;
@@ -107,8 +107,8 @@ GError GSSERayTracerForQueue::rendering( GScene *pScene, bool isDebug )
 	GError error;
 
 	// ----------------------------------------------------------
-	//	Scene ÀÌ ÀÌÀü geometry »óÅÂ¿¡¼­ º¯ÇÑ°Ô ÀÖ´ÂÁö Ã¼Å©ÇØ¼­ ÀÖ´Ù¸é
-	//	SpatialStructure ¸¦ Àç±¸¼ºÇÑ´Ù.
+	//	Scene ì´ ì´ì „ geometry ìƒíƒœì—ì„œ ë³€í•œê²Œ ìžˆëŠ”ì§€ ì²´í¬í•´ì„œ ìžˆë‹¤ë©´
+	//	SpatialStructure ë¥¼ ìž¬êµ¬ì„±í•œë‹¤.
 	// ----------------------------------------------------------
 	error = initialize( pScene );
 	if ( error != errorNo ) {
@@ -117,10 +117,10 @@ GError GSSERayTracerForQueue::rendering( GScene *pScene, bool isDebug )
 	}
 
 	// ----------------------------------------------------------
-	// PrepareRender È£Ãâ : Screen ¹× Ray µî ¼ÂÆÃ
+	// PrepareRender í˜¸ì¶œ : Screen ë° Ray ë“± ì…‹íŒ…
 	// ----------------------------------------------------------
 	m_pSSERenderPipeline->PrepareRender(m_iThreadCount);
-	m_pSSERenderPipeline->m_TraceQ4x4->ClearIndex();		// ÇöÀç´Â ¾È¾²´Âµ¥.. ³ªÁßÀº ¸ð¸§ ¿¡·¯³ª¸é NULL ÀÌ¶ó¼­ ±×·²¼ö ÀÖÀ½-.-
+	m_pSSERenderPipeline->m_TraceQ4x4->ClearIndex();		// í˜„ìž¬ëŠ” ì•ˆì“°ëŠ”ë°.. ë‚˜ì¤‘ì€ ëª¨ë¦„ ì—ëŸ¬ë‚˜ë©´ NULL ì´ë¼ì„œ ê·¸ëŸ´ìˆ˜ ìžˆìŒ-.-
 
 	GTimer timer1;
 	timer1.start();

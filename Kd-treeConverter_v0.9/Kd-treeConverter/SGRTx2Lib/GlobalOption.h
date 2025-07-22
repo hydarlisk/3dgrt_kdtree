@@ -1,10 +1,10 @@
 #pragma once
 
-//! ¿ä°Ç ¾ÆÁ÷ ¸¸µå´Â Áß
+//! ìš”ê±´ ì•„ì§ ë§Œë“œëŠ” ì¤‘
 /**
  * Global Parameter.
- * Global Parameter ´Â ·ÎµùÇÒ ¶§ parameters.ini ¿¡¼­ ¾ò¾î¿Â °ªÀ» »ç¿ëÇÑ´Ù.
- * ´ë¼Ò¹®ÀÚ´Â °¡¸®Áö ¾ÊÀ¸¸ç, parameter °ªÀº ¼º´ÉÀ» À§ÇØ¼­ º°µµÀÇ º¯¼ö·Î ¾ò¾î¿Â ÈÄ »ç¿ëÇÏ´Â °ÍÀ» ÃßÃµÇÔ.
+ * Global Parameter ëŠ” ë¡œë”©í•  ë•Œ parameters.ini ì—ì„œ ì–»ì–´ì˜¨ ê°’ì„ ì‚¬ìš©í•œë‹¤.
+ * ëŒ€ì†Œë¬¸ìëŠ” ê°€ë¦¬ì§€ ì•Šìœ¼ë©°, parameter ê°’ì€ ì„±ëŠ¥ì„ ìœ„í•´ì„œ ë³„ë„ì˜ ë³€ìˆ˜ë¡œ ì–»ì–´ì˜¨ í›„ ì‚¬ìš©í•˜ëŠ” ê²ƒì„ ì¶”ì²œí•¨.
 **/
 void setGlobalParameterFloat( const char *parameter_name, float value );
 void setGlobalParameterInteger( const char *parameter_name, int value );
@@ -17,35 +17,35 @@ int getGlobalParameterInteger( const char *parameter_name );
 
 /**
  * Profiler On/Off.
- * ¼º´ÉÀ» À§ÇØ¼­´Â ¹İµå½Ã OFF ·Î ÇØ¾ßÇÔ.
+ * ì„±ëŠ¥ì„ ìœ„í•´ì„œëŠ” ë°˜ë“œì‹œ OFF ë¡œ í•´ì•¼í•¨.
 **/
 #define PROFILER_ON OFF
 
 
 /**
  * Frustum Culling On/Off.
- * kD-tree ÀÇ Leaf node ÀÇ ±¸¼º¹æ¹ıÀÌ³ª SSE¿ë RayPacket Trav/Isec ¹æ¹ıÀÌ °áÁ¤µÊ.
+ * kD-tree ì˜ Leaf node ì˜ êµ¬ì„±ë°©ë²•ì´ë‚˜ SSEìš© RayPacket Trav/Isec ë°©ë²•ì´ ê²°ì •ë¨.
 **/
 #define FRUSTUM_CULLING OFF
 
 /**
- * SAH ¸¦ Function Pointer ·Î ÇÒÁö¸¦ °áÁ¤.
- * OFF ÀÏ °æ¿ì ±âº» SAH ¹æ¹ıÀ» »ç¿ëÇÔ. 
- * ¼º´ÉÀ» À§ÇØ¼­´Â ¹İµå½Ã OFF ·Î ÇØ¾ßÇÔ.
+ * SAH ë¥¼ Function Pointer ë¡œ í• ì§€ë¥¼ ê²°ì •.
+ * OFF ì¼ ê²½ìš° ê¸°ë³¸ SAH ë°©ë²•ì„ ì‚¬ìš©í•¨. 
+ * ì„±ëŠ¥ì„ ìœ„í•´ì„œëŠ” ë°˜ë“œì‹œ OFF ë¡œ í•´ì•¼í•¨.
 **/
 #define SPLIT_FUNCTION_POINTER OFF
 
-//! eg. »ç¿ë¿¹
+//! eg. ì‚¬ìš©ì˜ˆ
 enum { ARITHMETIC, HARMONIC };
 
 /**
- * VISIBILITY ¸¦ °è»êÇÏ´Â ¹æ¹ı.
+ * VISIBILITY ë¥¼ ê³„ì‚°í•˜ëŠ” ë°©ë²•.
 **/
 #define VISIBILITY_METHOD HARMONIC
 
-//! ½ÇÁ¦ ±¸Çö ÄÚµå ³»¿¡¼­ »ç¿ë ¿¹
+//! ì‹¤ì œ êµ¬í˜„ ì½”ë“œ ë‚´ì—ì„œ ì‚¬ìš© ì˜ˆ
 // ******************************************************************
-// ************* #if ¿Í ÇÔ²² #elif ·Î ºñ±³ÇØÁÖ´Â °ÍÀÌ ÁÁÀ½ **********
+// ************* #if ì™€ í•¨ê»˜ #elif ë¡œ ë¹„êµí•´ì£¼ëŠ” ê²ƒì´ ì¢‹ìŒ **********
 // ******************************************************************
 #if VISIBILITY_METHOD == ARITHMETIC
 // Arithmetic Code

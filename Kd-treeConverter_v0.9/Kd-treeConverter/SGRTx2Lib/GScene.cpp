@@ -95,8 +95,8 @@ GScene::GScene(void)
 GScene::~GScene(void)
 {
 	/** 
-	 *	light ´Â list ¸¸ Å¬¸®¾î ÇÑ´Ù. ½ÇÁ¦ light object ´Â
-	 *	object list ¿¡µµ µé¾î ÀÖÀ¸¹Ç·Î, object »èÁ¦½Ã »èÁ¦µÉ °ÍÀÌ´Ù.
+	 *	light ëŠ” list ë§Œ í´ë¦¬ì–´ í•œë‹¤. ì‹¤ì œ light object ëŠ”
+	 *	object list ì—ë„ ë“¤ì–´ ìˆìœ¼ë¯€ë¡œ, object ì‚­ì œì‹œ ì‚­ì œë  ê²ƒì´ë‹¤.
 	 */
 	m_LightList.clear();
 
@@ -701,7 +701,7 @@ GDimension GScene::getRenderingBlock()
 }
 
 /**
- *	Scene ÀÇ ¸ğµç Object ¸¦ Á¦°ÅÇÑ´Ù.
+ *	Scene ì˜ ëª¨ë“  Object ë¥¼ ì œê±°í•œë‹¤.
  */
 void GScene::clearObject()
 {
@@ -713,7 +713,7 @@ void GScene::clearObject()
 	m_SelecteGObjectList.clear();
 }
 
-/** debugging °ü·Ã object ¸¸»èÁ¦ */
+/** debugging ê´€ë ¨ object ë§Œì‚­ì œ */
 void GScene::clearDebugObject()
 {
 	vector<GObject*>::iterator iter;
@@ -731,9 +731,9 @@ void GScene::clearDebugObject()
 }
 
 /**
- *	Scene ¿¡ Object ¸¦ Ãß°¡ÇÑ´Ù.
- *	ÇØ´ç Object ÀÇ ÇÊ¿äÁ¤º¸¸¦ ¼¼ÆÃ½ÃÅ°°í, valid ÇÑ object
- *	ÀÎÁö¸¦ È®ÀÎÇÑ´Ù.
+ *	Scene ì— Object ë¥¼ ì¶”ê°€í•œë‹¤.
+ *	í•´ë‹¹ Object ì˜ í•„ìš”ì •ë³´ë¥¼ ì„¸íŒ…ì‹œí‚¤ê³ , valid í•œ object
+ *	ì¸ì§€ë¥¼ í™•ì¸í•œë‹¤.
  */
 GError GScene::addObject( GObject* pObject )
 {
@@ -753,7 +753,7 @@ GError GScene::addObject( GObject* pObject )
 }
 
 /**
- *	Scene ¿¡¼­ Object ¸¦ Á¦°ÅÇÑ´Ù.
+ *	Scene ì—ì„œ Object ë¥¼ ì œê±°í•œë‹¤.
  */
 void GScene::removeObject( GObject* pObject )
 {
@@ -774,7 +774,7 @@ void GScene::removeObject( GObject* pObject )
 }
 
 /**
- *	name ÀÌ¸§À» °¡Áø object ¸¦ »èÁ¦ÇÑ´Ù.
+ *	name ì´ë¦„ì„ ê°€ì§„ object ë¥¼ ì‚­ì œí•œë‹¤.
  */
 void GScene::removeObject( const char* name )
 {
@@ -811,15 +811,15 @@ int GScene::getObjectCount()
 }
 
 /**
- *	ÇöÀç Scene ÀÇ ¸ğµç ¹°Ã¼ ¸ñ·ÏÀ» ¸®ÅÏÇÑ´Ù.
+ *	í˜„ì¬ Scene ì˜ ëª¨ë“  ë¬¼ì²´ ëª©ë¡ì„ ë¦¬í„´í•œë‹¤.
  */
 const vector<GObject*>* GScene::getObjectList()
 {
 	return &m_ObjectList;
 }
 /**
- *	pObject ¹°Ã¼¸¦ ¼±ÅÃ ¸ñ·Ï¿¡ Ãß°¡ÇÑ´Ù.
- *	ÀÌ¹Ì ÀÖ´Ù¸é Ãß°¡ÇÏÁö ¾Ê´Â´Ù.
+ *	pObject ë¬¼ì²´ë¥¼ ì„ íƒ ëª©ë¡ì— ì¶”ê°€í•œë‹¤.
+ *	ì´ë¯¸ ìˆë‹¤ë©´ ì¶”ê°€í•˜ì§€ ì•ŠëŠ”ë‹¤.
  */
 void GScene::selectObject( GObject *pObject )
 {
@@ -836,7 +836,7 @@ void GScene::selectObject( GObject *pObject )
 }
 
 /**
- *	ÇöÀç Scene ¿¡¼­ ¼±ÅÃµÈ ¹°Ã¼ÀÇ °¹¼ö.
+ *	í˜„ì¬ Scene ì—ì„œ ì„ íƒëœ ë¬¼ì²´ì˜ ê°¯ìˆ˜.
  */
 int GScene::getSelectedGObjectCount()
 {
@@ -844,9 +844,9 @@ int GScene::getSelectedGObjectCount()
 }
 
 /**
- *	ÇöÀç Scene ¿¡¼­ ¼±ÅÃµÈ ¹°Ã¼¸¦ ¸®ÅÏÇÑ´Ù.
- *	¿©·¯°³¸¦ ¼±ÅÃÇß´Ù¸é ±×Áß Ã¹¹øÂ° °Í¸¸ ¸®ÅÏ.
- *	¸ğµç ¹°Ã¼¸¦ ³Ñ°Ü¹ŞÀ¸·Á¸é getSelectedGObjectList() ÇÔ¼ö¸¦ »ç¿ë.
+ *	í˜„ì¬ Scene ì—ì„œ ì„ íƒëœ ë¬¼ì²´ë¥¼ ë¦¬í„´í•œë‹¤.
+ *	ì—¬ëŸ¬ê°œë¥¼ ì„ íƒí–ˆë‹¤ë©´ ê·¸ì¤‘ ì²«ë²ˆì§¸ ê²ƒë§Œ ë¦¬í„´.
+ *	ëª¨ë“  ë¬¼ì²´ë¥¼ ë„˜ê²¨ë°›ìœ¼ë ¤ë©´ getSelectedGObjectList() í•¨ìˆ˜ë¥¼ ì‚¬ìš©.
  */
 GObject* GScene::getSelectedGObject()
 {
@@ -857,8 +857,8 @@ GObject* GScene::getSelectedGObject()
 }
 
 /**
- *	¼±ÅÃµÈ ¸ğµç ¹°Ã¼¸¦ deselect ½ÃÅ²´Ù.
- *	°¢ object ÀÇ selected ´Â false ·Î ÇØÁ¦½ÃÅ²´Ù.
+ *	ì„ íƒëœ ëª¨ë“  ë¬¼ì²´ë¥¼ deselect ì‹œí‚¨ë‹¤.
+ *	ê° object ì˜ selected ëŠ” false ë¡œ í•´ì œì‹œí‚¨ë‹¤.
  */
 void GScene::deselectAllObject()
 {
@@ -869,7 +869,7 @@ void GScene::deselectAllObject()
 }
 
 /**
- *	¹°Ã¼¸¦ deselect ½ÃÅ²´Ù.
+ *	ë¬¼ì²´ë¥¼ deselect ì‹œí‚¨ë‹¤.
  */
 void GScene::deselectObject( GObject* pObject )
 {
@@ -886,7 +886,7 @@ void GScene::deselectObject( GObject* pObject )
 }
 
 /**
- *	ÇöÀç Scene ¿¡¼­ ¼±ÅÃµÈ ¹°Ã¼ ¸ñ·ÏÀ» ¸®ÅÏÇÑ´Ù.
+ *	í˜„ì¬ Scene ì—ì„œ ì„ íƒëœ ë¬¼ì²´ ëª©ë¡ì„ ë¦¬í„´í•œë‹¤.
  */
 vector<GObject*>* const GScene::getSelectedGObjectList()
 {
@@ -894,7 +894,7 @@ vector<GObject*>* const GScene::getSelectedGObjectList()
 }
 
 /**
- *	object Number ¿¡ ÇØ´çÇÏ´Â Object ¸¦ ¸®ÅÏÇÑ´Ù.
+ *	object Number ì— í•´ë‹¹í•˜ëŠ” Object ë¥¼ ë¦¬í„´í•œë‹¤.
  */
 GObject* GScene::getObjectByNumber( int objectNumber )
 {
@@ -949,7 +949,7 @@ GBoundingBox GScene::getBoundingBoxOfSelectedGObjects()
 }
 	
 /**
- *	Light Ãß°¡. Object ¿¡µµ Ãß°¡ÇÑ´Ù.
+ *	Light ì¶”ê°€. Object ì—ë„ ì¶”ê°€í•œë‹¤.
  */
 void GScene::addLight( GLight *pLight )
 {
@@ -961,7 +961,7 @@ void GScene::addLight( GLight *pLight )
 }
 
 /**
- *	Light ¸ñ·Ï °¡Á®¿À±â
+ *	Light ëª©ë¡ ê°€ì ¸ì˜¤ê¸°
  */
 const vector<GLight*>* GScene::getLightList()
 {
@@ -1070,13 +1070,13 @@ GTextureManager *GScene::getTextureManager()
 
 void GScene::setRenderCamera( const GCamera* pCamera )
 {
-	/** ¼¼ÆÃº¹»ç */
+	/** ì„¸íŒ…ë³µì‚¬ */
 	m_RenderCamera = (*pCamera);
 }
 
 void GScene::setInitRenderCamera( const GCamera* pCamera )
 {
-	/** ¼¼ÆÃº¹»ç */
+	/** ì„¸íŒ…ë³µì‚¬ */
 	m_InitRenderCamera = (*pCamera);
 }
 
@@ -1110,8 +1110,8 @@ GError GScene::convertRenderScene()
 	GError error;
 
 	/**
-	 *	Rendering °á°ú¸¦ ÀúÀåÇÒ Image Buffer ¸¦ ¸¸µç´Ù.
-	 *	ÀÌÀü screen size ¿Í º¯ÇßÀ»¶§¸¸ »õ·Î »ı¼º.
+	 *	Rendering ê²°ê³¼ë¥¼ ì €ì¥í•  Image Buffer ë¥¼ ë§Œë“ ë‹¤.
+	 *	ì´ì „ screen size ì™€ ë³€í–ˆì„ë•Œë§Œ ìƒˆë¡œ ìƒì„±.
 	 */
 	if ( m_pImageBuffer == NULL || m_pImageBuffer->getWidth() != m_Resolution.x ||
 		 m_pImageBuffer->getWidth() != m_Resolution.y ) {
@@ -1131,9 +1131,9 @@ GError GScene::convertRenderScene()
 	}
 
 	/**
-	 *	ÀÌÀü¿¡ ±¸¼ºÇÑ Spatial structure ÀÇ º¯µ¿»çÇ×ÀÌ ¾ø°í,
-	 *	ÀÌÀü¿¡ º¯È¯ÇÑ ÀÌÈÄ¿¡µµ geometry º¯µ¿»çÇ×ÀÌ ¾ø´Â °æ¿ì ¸®ÅÏ
-	 *	±× ¿Ü ÁÂÇ¥°èº¯È¯ ¹× Spatial structure Àç±¸¼º
+	 *	ì´ì „ì— êµ¬ì„±í•œ Spatial structure ì˜ ë³€ë™ì‚¬í•­ì´ ì—†ê³ ,
+	 *	ì´ì „ì— ë³€í™˜í•œ ì´í›„ì—ë„ geometry ë³€ë™ì‚¬í•­ì´ ì—†ëŠ” ê²½ìš° ë¦¬í„´
+	 *	ê·¸ ì™¸ ì¢Œí‘œê³„ë³€í™˜ ë° Spatial structure ì¬êµ¬ì„±
 	 */
 	if (m_iLastConvertRenderScene == m_iGeometryChangeTimestamp) {
 		if (m_iLastGeomTimestamp_For_SpatialStructure[m_CurrUseSpatialStructure] == m_iGeometryChangeTimestamp)
@@ -1141,7 +1141,7 @@ GError GScene::convertRenderScene()
 	}
 
 	/** 
-	 *	object ( light Æ÷ÇÔ ) ¸¦ ¸ğµÎ world ÁÂÇ¥°è·Î º¸³½´Ù. 
+	 *	object ( light í¬í•¨ ) ë¥¼ ëª¨ë‘ world ì¢Œí‘œê³„ë¡œ ë³´ë‚¸ë‹¤. 
 	 */
 	for ( int i = 0; i < (int) m_ObjectList.size(); ++i ) {
 		if ( ( error = m_ObjectList[ i ]->convertToWorldObject() ) != errorNo ) {
@@ -1157,37 +1157,37 @@ GError GScene::convertRenderScene()
 		if ( m_pKDTree ) delete m_pKDTree;
 		m_pKDTree = new GKDTreeStructure( this );
 
-		GKDTreeOption *kdtree_option = new GKDTreeOption();	// ÀÓ½Ã
+		GKDTreeOption *kdtree_option = new GKDTreeOption();	// ì„ì‹œ
 		//kdtree_option->LoadFile()
 		m_pKDTree->setKDTreeOption( kdtree_option );
 
 		bool bKDTreeNewBuild = true;
 
-		// ÀÌ¹Ì ±¸¼ºµÈ KDTree °¡ ÆÄÀÏ¿¡ ÀÖ´Ù¸é ÆÄÀÏ·ÎºÎÅÍ KDTree ¸¦ ÀĞ´Â´Ù
+		// ì´ë¯¸ êµ¬ì„±ëœ KDTree ê°€ íŒŒì¼ì— ìˆë‹¤ë©´ íŒŒì¼ë¡œë¶€í„° KDTree ë¥¼ ì½ëŠ”ë‹¤
 		if ( m_bKDTreeFileLoad ) {
 			bKDTreeNewBuild = !(m_pKDTree->loadStructureFromFile( m_szKDTreeLoadFilePath ));
 		}
 		
 		if ( bKDTreeNewBuild ) {
-			// KDTree ¸¦ ±¸¼ºÇÑ´Ù.
+			// KDTree ë¥¼ êµ¬ì„±í•œë‹¤.
 			if ( m_pKDTree->initialize() != errorNo ) {
 				return errorKDTree;
 			}
 		}
 
-		// ±¸¼ºµÈ KDTree ¸¦ ÆÄÀÏ¿¡ ÀúÀåÇÑ´Ù
+		// êµ¬ì„±ëœ KDTree ë¥¼ íŒŒì¼ì— ì €ì¥í•œë‹¤
 		if ( m_bKDTreeFileSave ) {
 			if ( m_bKDTreeFileType == SAH ) {
-				// SAH ÀÎ °æ¿ì
+				// SAH ì¸ ê²½ìš°
 				if ( bKDTreeNewBuild ) {
-					// »õ·Î SAH ¸¦ ¸¸µé¾ú°Å³ª
+					// ìƒˆë¡œ SAH ë¥¼ ë§Œë“¤ì—ˆê±°ë‚˜
 					m_pKDTree->saveStructureToFile( m_szKDTreeSaveFilePath );
 				} else if ( strcmp(m_szKDTreeSaveFilePath, m_szKDTreeLoadFilePath) != 0 ) {
-					// È¤Àº SAH ¸¦ ·ÎµùÇßÁö¸¸, ÀúÀåÇÏ´Â ÆÄÀÏÀÌ¸§ÀÌ ´Ù¸¥ °æ¿ì
+					// í˜¹ì€ SAH ë¥¼ ë¡œë”©í–ˆì§€ë§Œ, ì €ì¥í•˜ëŠ” íŒŒì¼ì´ë¦„ì´ ë‹¤ë¥¸ ê²½ìš°
 					m_pKDTree->saveStructureToFile( m_szKDTreeSaveFilePath );
 				}
 			} else if (m_bKDTreeFileType == EMPTY_SAH) {
-				// EMPTY_SAH ÀÎ °æ¿ì
+				// EMPTY_SAH ì¸ ê²½ìš°
 				m_pKDTree->saveStructureToFile( m_szKDTreeSaveFilePath );
 			}
 		}
@@ -1213,7 +1213,7 @@ GError GScene::convertRenderScene()
 
 		m_pGrid = new GGridStructure( this );
 		if( m_pGrid->initialize() != errorNo ){
-			return errorUnknown;//³ªÁß¿¡ ¿¡·¯ Ãß°¡ ÇÒ °Í.
+			return errorUnknown;//ë‚˜ì¤‘ì— ì—ëŸ¬ ì¶”ê°€ í•  ê²ƒ.
 		}
 	}
 
@@ -1225,7 +1225,7 @@ GError GScene::convertRenderScene()
 }
 
 /**
- * Empty KD-Tree ¸¦ ¸¸µê.
+ * Empty KD-Tree ë¥¼ ë§Œë“¦.
 */
 GError GScene::buildEmptyKdTree()
 {
@@ -1236,15 +1236,15 @@ GError GScene::buildEmptyKdTree()
 		delete m_pEmptyKDTree;
 
 	//m_pEmptyKDTree = new GKDTreeStructure();
-	// °á°ú : m_pEmptyKDTree
+	// ê²°ê³¼ : m_pEmptyKDTree
 
 	return errorNo;
 }
 
 /**
- * Object ÀÇ KD-Tree ¸¦ ¸¸µê.
- * Empty KD-Tree °¡ ¾øÀ» °æ¿ì ÀüÃ¼ scene ¿¡ ´ëÇØ¼­ ¸¸µç´Ù.
- * Empty KD-Tree ¸¦ »èÁ¦¸¦ ÇÏ¸é ¾ÈµÊ.
+ * Object ì˜ KD-Tree ë¥¼ ë§Œë“¦.
+ * Empty KD-Tree ê°€ ì—†ì„ ê²½ìš° ì „ì²´ scene ì— ëŒ€í•´ì„œ ë§Œë“ ë‹¤.
+ * Empty KD-Tree ë¥¼ ì‚­ì œë¥¼ í•˜ë©´ ì•ˆë¨.
 */
 GError GScene::buildObjectKdTree()
 {
@@ -1253,22 +1253,22 @@ GError GScene::buildObjectKdTree()
 
 	if( m_pEmptyKDTree )
 	{
-		// Object ¿¡ ´ëÇØ¼­ »ı¼º
+		// Object ì— ëŒ€í•´ì„œ ìƒì„±
 	}
 	else
 	{
-		// ÀüÃ¼ scene ¿¡ ´ëÇØ¼­ »ı¼º
+		// ì „ì²´ scene ì— ëŒ€í•´ì„œ ìƒì„±
 
 	}
 
 	//m_pKDTree = new GKDTreeStructure();
-	// °á°ú : m_pKDTree
+	// ê²°ê³¼ : m_pKDTree
 
 	return errorNo;
 }
 
 /**
- *	KDTree ¸¦ ¸®ÅÏÇÑ´Ù.
+ *	KDTree ë¥¼ ë¦¬í„´í•œë‹¤.
  */
 GKDTreeStructure *GScene::getKDTreeStructure()
 {
@@ -1276,7 +1276,7 @@ GKDTreeStructure *GScene::getKDTreeStructure()
 }
 
 /**
- *	BVH ¸¦ ¸®ÅÏÇÑ´Ù.
+ *	BVH ë¥¼ ë¦¬í„´í•œë‹¤.
  */
 GBVHStructure* GScene::getBVHStructure()
 {
@@ -1284,7 +1284,7 @@ GBVHStructure* GScene::getBVHStructure()
 }
 
 /**
- *	Grid ¸¦ ¸®ÅÏÇÑ´Ù.
+ *	Grid ë¥¼ ë¦¬í„´í•œë‹¤.
  */
 GGridStructure *GScene::getGridStructure(void)
 {
@@ -1297,9 +1297,9 @@ void GScene::setUseSpatialStructure( enumSpatialStructureType type )
 }
 
 /**
- *	Scene ¾ÈÀÇ ¹°Ã¼µéÁß intersection À» Áö¿øÇØ¾ß ÇÏ°í,
- *	trianglulation À» Áö¿øÇÏ´Â object ¸¦ GTriangleWrapperList ·Î
- *	¸¸µé¾î ¸®ÅÏÇÑ´Ù.
+ *	Scene ì•ˆì˜ ë¬¼ì²´ë“¤ì¤‘ intersection ì„ ì§€ì›í•´ì•¼ í•˜ê³ ,
+ *	trianglulation ì„ ì§€ì›í•˜ëŠ” object ë¥¼ GTriangleWrapperList ë¡œ
+ *	ë§Œë“¤ì–´ ë¦¬í„´í•œë‹¤.
  */
 GTriangleWrapperList *GScene::createSceneTriangleList( GBoundingBox &bbox )
 {
@@ -1311,8 +1311,8 @@ GTriangleWrapperList *GScene::createSceneTriangleList( GBoundingBox &bbox )
 	bbox.setMin( GVector( 1000000.0f, 1000000.0f, 1000000.0f ) );
 
 	/**
-	 *	Scene ¾ÈÀÇ Object µé·ÎºÎÅÍ »ï°¢Çü Á¤º¸¸¦ ¾ò¾î¿Â´Ù.
-	 *	1. ¸ÕÀú ÃÑ »ï°¢ÇüÀÇ °³¼ö¸¦ ±¸ÇÑ´Ù.
+	 *	Scene ì•ˆì˜ Object ë“¤ë¡œë¶€í„° ì‚¼ê°í˜• ì •ë³´ë¥¼ ì–»ì–´ì˜¨ë‹¤.
+	 *	1. ë¨¼ì € ì´ ì‚¼ê°í˜•ì˜ ê°œìˆ˜ë¥¼ êµ¬í•œë‹¤.
 	 */
 	for ( int i = 0; i < (int) m_ObjectList.size(); ++i ) {
 
@@ -1322,7 +1322,7 @@ GTriangleWrapperList *GScene::createSceneTriangleList( GBoundingBox &bbox )
 			continue;
 
 		/**
-		 *	Scene ÀüÃ¼ÀÇ »ï°¢ÇüµéÀÇ BoundingBox ¸¦ ±¸ÇÑ´Ù.
+		 *	Scene ì „ì²´ì˜ ì‚¼ê°í˜•ë“¤ì˜ BoundingBox ë¥¼ êµ¬í•œë‹¤.
 		 */
 		bbox += (*pTriangleObject->getBoundingBox());
 		totalCount += pTriangleObject->getTriangleCount();
@@ -1330,7 +1330,7 @@ GTriangleWrapperList *GScene::createSceneTriangleList( GBoundingBox &bbox )
 	}
 
 	/** 
-	 *	2. scene ÀüÃ¼ÀÇ »ï°¢ÇüÀ» À§ÇÑ °ø°£À» ÇÒ´çÇÏ°í, ±¸¼ºÇÑ´Ù. 
+	 *	2. scene ì „ì²´ì˜ ì‚¼ê°í˜•ì„ ìœ„í•œ ê³µê°„ì„ í• ë‹¹í•˜ê³ , êµ¬ì„±í•œë‹¤. 
 	 */
 	pList->reserve( totalCount );
 	totalCount = 0;
@@ -1463,9 +1463,9 @@ bool GScene::IsTestFlag()
 }
 
 /**
- *	Scene ¾ÈÀÇ ¹°Ã¼µéÁß intersection À» Áö¿øÇØ¾ß ÇÏ°í,
- *	trianglulation À» Áö¿øÇÏ´Â object ¸¦ GTriangleWrapperList ·Î
- *	¸¸µé¾î ¸®ÅÏÇÑ´Ù.
+ *	Scene ì•ˆì˜ ë¬¼ì²´ë“¤ì¤‘ intersection ì„ ì§€ì›í•´ì•¼ í•˜ê³ ,
+ *	trianglulation ì„ ì§€ì›í•˜ëŠ” object ë¥¼ GTriangleWrapperList ë¡œ
+ *	ë§Œë“¤ì–´ ë¦¬í„´í•œë‹¤.
  */
 /*
 GTriangleWrapperList *GScene::precalcBVHTriangleList( GBoundingBox &bbox )
@@ -1479,8 +1479,8 @@ GTriangleWrapperList *GScene::precalcBVHTriangleList( GBoundingBox &bbox )
 	bbox.setMin( GVector( 1000000.0f, 1000000.0f, 1000000.0f ) );
 
 	///**
-	// *	Scene ¾ÈÀÇ Object µé·ÎºÎÅÍ »ï°¢Çü Á¤º¸¸¦ ¾ò¾î¿Â´Ù.
-	// *	1. ¸ÕÀú ÃÑ »ï°¢ÇüÀÇ °³¼ö¸¦ ±¸ÇÑ´Ù.
+	// *	Scene ì•ˆì˜ Object ë“¤ë¡œë¶€í„° ì‚¼ê°í˜• ì •ë³´ë¥¼ ì–»ì–´ì˜¨ë‹¤.
+	// *	1. ë¨¼ì € ì´ ì‚¼ê°í˜•ì˜ ê°œìˆ˜ë¥¼ êµ¬í•œë‹¤.
 	
 	for ( int i = 0; i < (int) m_ObjectList.size(); ++i ) {
 
@@ -1489,11 +1489,11 @@ GTriangleWrapperList *GScene::precalcBVHTriangleList( GBoundingBox &bbox )
 		if ( !isSceneTriangleObject( pTriangleObject ) ) 
 			continue;
 
-		// °¢ »ï°¢ÇüµéÀÇ bounding box¸¦ ±¸ÇÑ´Ù.
+		// ê° ì‚¼ê°í˜•ë“¤ì˜ bounding boxë¥¼ êµ¬í•œë‹¤.
 		aryAABB[tri_index++] = (*pTriangleObject->getBoundingBox());
 
 		///**
-		// *	Scene ÀüÃ¼ÀÇ »ï°¢ÇüµéÀÇ BoundingBox ¸¦ ±¸ÇÑ´Ù.
+		// *	Scene ì „ì²´ì˜ ì‚¼ê°í˜•ë“¤ì˜ BoundingBox ë¥¼ êµ¬í•œë‹¤.
 	
 		bbox += (*pTriangleObject->getBoundingBox());		
 		totalCount += pTriangleObject->getTriangleCount();
@@ -1501,7 +1501,7 @@ GTriangleWrapperList *GScene::precalcBVHTriangleList( GBoundingBox &bbox )
 	}
 
 	//
-	 //*	2. scene ÀüÃ¼ÀÇ »ï°¢ÇüÀ» À§ÇÑ °ø°£À» ÇÒ´çÇÏ°í, ±¸¼ºÇÑ´Ù. 
+	 //*	2. scene ì „ì²´ì˜ ì‚¼ê°í˜•ì„ ìœ„í•œ ê³µê°„ì„ í• ë‹¹í•˜ê³ , êµ¬ì„±í•œë‹¤. 
 	 
 	pList->reserve( totalCount );
 	totalCount = 0;

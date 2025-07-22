@@ -1,5 +1,5 @@
 /**
- *	CPU rendering ½Ã Queue ¸¦ »ç¿ëÇÒ ¶§ »ç¿ëµÇ´Â class
+ *	CPU rendering ì‹œ Queue ë¥¼ ì‚¬ìš©í•  ë•Œ ì‚¬ìš©ë˜ëŠ” class
  *
  *	by oipini.
  */
@@ -19,11 +19,11 @@ public:
 
 	void initialize(int a_MaxSize);
 
-	void ClearIndex(void);				// ÀüÃ¼ Queue ¸¦ ºñ¿ò(ÀÎµ¦½º¸¸ ÃÊ±âÈ­)
-	_sse_4x4_raypacket*	GetRay(void);	// Queue array Æ÷ÀÎÅÍ ¹İÈ¯
-	_sse_4x4_isectQ*	GetIsect(void);	// Queue array Æ÷ÀÎÅÍ ¹İÈ¯
-	_sse_4x4_raymask*	GetRMask(void);	// Queue array Æ÷ÀÎÅÍ ¹İÈ¯
-	_sse_4x4_raymask*	GetTMask(void);	// Queue array Æ÷ÀÎÅÍ ¹İÈ¯
+	void ClearIndex(void);				// ì „ì²´ Queue ë¥¼ ë¹„ì›€(ì¸ë±ìŠ¤ë§Œ ì´ˆê¸°í™”)
+	_sse_4x4_raypacket*	GetRay(void);	// Queue array í¬ì¸í„° ë°˜í™˜
+	_sse_4x4_isectQ*	GetIsect(void);	// Queue array í¬ì¸í„° ë°˜í™˜
+	_sse_4x4_raymask*	GetRMask(void);	// Queue array í¬ì¸í„° ë°˜í™˜
+	_sse_4x4_raymask*	GetTMask(void);	// Queue array í¬ì¸í„° ë°˜í™˜
 
 	_sse_4x4_raypacket	*m_RayQ4x4;
 	_sse_4x4_isectQ		*m_IsectQ4x4;
@@ -60,11 +60,11 @@ public:
 
 	void initialize(int a_MaxSize);
 
-	void ClearIndex(void);				// ÀüÃ¼ Queue ¸¦ ºñ¿ò(ÀÎµ¦½º¸¸ ÃÊ±âÈ­)
-	_sse_2x2_raypacket*	GetRay(void);	// Queue array Æ÷ÀÎÅÍ ¹İÈ¯
-	_sse_2x2_isectQ*	GetIsect(void);	// Queue array Æ÷ÀÎÅÍ ¹İÈ¯
-	_sse_2x2_raymask*	GetRMask(void);	// Queue array Æ÷ÀÎÅÍ ¹İÈ¯
-	_sse_2x2_raymask*	GetTMask(void);	// Queue array Æ÷ÀÎÅÍ ¹İÈ¯
+	void ClearIndex(void);				// ì „ì²´ Queue ë¥¼ ë¹„ì›€(ì¸ë±ìŠ¤ë§Œ ì´ˆê¸°í™”)
+	_sse_2x2_raypacket*	GetRay(void);	// Queue array í¬ì¸í„° ë°˜í™˜
+	_sse_2x2_isectQ*	GetIsect(void);	// Queue array í¬ì¸í„° ë°˜í™˜
+	_sse_2x2_raymask*	GetRMask(void);	// Queue array í¬ì¸í„° ë°˜í™˜
+	_sse_2x2_raymask*	GetTMask(void);	// Queue array í¬ì¸í„° ë°˜í™˜
 
 	// IdleQ
 	void IdleQ_EnQueue(_sse_2x2_traceData *item);		// EnQueue
@@ -101,8 +101,8 @@ public:
 
 	void initialize(int a_MaxSize);
 
-	void Clear(void);					// ÀüÃ¼ Queue ¸¦ ºñ¿ò(ÀÎµ¦½º¸¸ ÃÊ±âÈ­)
-	_sse_4x4_raypacket*	GetRay(void);	// Queue array Æ÷ÀÎÅÍ ¹İÈ¯
+	void Clear(void);					// ì „ì²´ Queue ë¥¼ ë¹„ì›€(ì¸ë±ìŠ¤ë§Œ ì´ˆê¸°í™”)
+	_sse_4x4_raypacket*	GetRay(void);	// Queue array í¬ì¸í„° ë°˜í™˜
 
 	// IdleQ
 	void IdleQ_EnQueue(_sse_4x4_rayitemData *item);		// EnQueue
@@ -139,8 +139,8 @@ public:
 
 	void initialize(int a_MaxSize);
 
-	void Clear(void);					// ÀüÃ¼ Queue ¸¦ ºñ¿ò(ÀÎµ¦½º¸¸ ÃÊ±âÈ­)
-	_sse_2x2_raypacket*	GetRay(void);	// Queue array Æ÷ÀÎÅÍ ¹İÈ¯
+	void Clear(void);					// ì „ì²´ Queue ë¥¼ ë¹„ì›€(ì¸ë±ìŠ¤ë§Œ ì´ˆê¸°í™”)
+	_sse_2x2_raypacket*	GetRay(void);	// Queue array í¬ì¸í„° ë°˜í™˜
 
 	// IdleQ
 	void IdleQ_EnQueue(_sse_2x2_rayitemData *item);		// EnQueue
@@ -177,8 +177,8 @@ public:
 
 	void initialize(int a_MaxSize);
 
-	void Clear(void);					// ÀüÃ¼ Queue ¸¦ ºñ¿ò(ÀÎµ¦½º¸¸ ÃÊ±âÈ­)
-	_sse_1x1_raypacket*	GetRay(void);	// Queue array Æ÷ÀÎÅÍ ¹İÈ¯
+	void Clear(void);					// ì „ì²´ Queue ë¥¼ ë¹„ì›€(ì¸ë±ìŠ¤ë§Œ ì´ˆê¸°í™”)
+	_sse_1x1_raypacket*	GetRay(void);	// Queue array í¬ì¸í„° ë°˜í™˜
 
 	// IdleQ
 	void IdleQ_EnQueue(_sse_1x1_rayitemData *item);		// EnQueue
@@ -215,9 +215,9 @@ public:
 
 	void initialize(int a_MaxSize);
 
-	void Clear(void);						// ÀüÃ¼ Table ¸¦ ºñ¿ò(ÀÎµ¦½º¸¸ ÃÊ±âÈ­)
-	void Clear(int a_MaxIdx);				// ÀüÃ¼ Table ¸¦ ºñ¿ò(ÀÎµ¦½º¸¸ ÃÊ±âÈ­)
-	_tableitemData*			GetTable(void);	// Table array Æ÷ÀÎÅÍ ¹İÈ¯
+	void Clear(void);						// ì „ì²´ Table ë¥¼ ë¹„ì›€(ì¸ë±ìŠ¤ë§Œ ì´ˆê¸°í™”)
+	void Clear(int a_MaxIdx);				// ì „ì²´ Table ë¥¼ ë¹„ì›€(ì¸ë±ìŠ¤ë§Œ ì´ˆê¸°í™”)
+	_tableitemData*			GetTable(void);	// Table array í¬ì¸í„° ë°˜í™˜
 	void Make_LinkedList(void);
 
 	// TodoQ

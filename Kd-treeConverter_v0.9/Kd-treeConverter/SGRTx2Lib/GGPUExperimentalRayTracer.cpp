@@ -27,7 +27,7 @@ void GGPUExperimentalRayTracer::uninitialize()
 }
 
 /**
- *	scene Á¤º¸¸¦ Àç±¸¼ºÇØ¾ßÇÒ¶§ ÃÊ±âÈ­ÇÑ´Ù.
+ *	scene ì •ë³´ë¥¼ ìž¬êµ¬ì„±í•´ì•¼í• ë•Œ ì´ˆê¸°í™”í•œë‹¤.
  */
 GError GGPUExperimentalRayTracer::initialize( GScene *pScene )
 {
@@ -65,7 +65,7 @@ GError GGPUExperimentalRayTracer::initialize( GScene *pScene )
 			return error; 
 
 		/**
-		 *	Light Á¤º¸ ¼¼ÆÃ. ¼¼ÆÃÈÄ ÇÊ¿ä¾øÀ¸¹Ç·Î »èÁ¦.
+		 *	Light ì •ë³´ ì„¸íŒ…. ì„¸íŒ…í›„ í•„ìš”ì—†ìœ¼ë¯€ë¡œ ì‚­ì œ.
 		 */
 		int lightCount = 0;
 		cuLight* pLight = GRenderCommon::makeCudaLightInfo( pScene, &lightCount, m_pCudaRenderPipeline );
@@ -76,13 +76,13 @@ GError GGPUExperimentalRayTracer::initialize( GScene *pScene )
 			return error;
 
 		/** 
-		 *	Á» ¾î»öÇÏÁö¸¸, kdtree Á¤º¸¸¦ ÀÌ·¸°Ô ÇØ¼­ cuda ·Î ³Ñ±è. 
+		 *	ì¢€ ì–´ìƒ‰í•˜ì§€ë§Œ, kdtree ì •ë³´ë¥¼ ì´ë ‡ê²Œ í•´ì„œ cuda ë¡œ ë„˜ê¹€. 
 		 */ 
 		error = pScene->getKDTreeStructure()->makeCudaRenderStructureInfo( m_pCudaRenderPipeline );
 		if ( error != errorNo )
 			return error;
 
-		/** blooming È¿°ú¸¦ Àû¿ëÇÏ±â¸¦ ¿øÇÑ´Ù¸é ÃÊ±âÈ­ ÇØµÒ.*/
+		/** blooming íš¨ê³¼ë¥¼ ì ìš©í•˜ê¸°ë¥¼ ì›í•œë‹¤ë©´ ì´ˆê¸°í™” í•´ë‘ .*/
 		error = m_pCudaRenderPipeline->initBloomingFilter( m_pScene->getBloomingRadius(),
 														   m_pScene->getBloomingWeight() );
 		if ( error != errorNo )
@@ -92,7 +92,7 @@ GError GGPUExperimentalRayTracer::initialize( GScene *pScene )
 	}
 
 	/**
-	 *	ÇöÀç Renderer °¡ Ã³¸®ÇÑ Scene À» ±â¾ïÇÑ´Ù.
+	 *	í˜„ìž¬ Renderer ê°€ ì²˜ë¦¬í•œ Scene ì„ ê¸°ì–µí•œë‹¤.
 	 */
 	m_iOldSceneNumber = pScene->getSceneNumber();
 	m_iSceneTimestamp = pScene->getGeometryChangeTimestamp();
@@ -106,8 +106,8 @@ GError GGPUExperimentalRayTracer::rendering( GScene *pScene, bool isDebug )
 	GError error;
 
 	/** 
-	 *	Scene ÀÌ ÀÌÀü geometry »óÅÂ¿¡¼­ º¯ÇÑ°Ô ÀÖ´ÂÁö Ã¼Å©ÇØ¼­ ÀÖ´Ù¸é
-	 *	SpatialStructure ¸¦ Àç±¸¼ºÇÑ´Ù.
+	 *	Scene ì´ ì´ì „ geometry ìƒíƒœì—ì„œ ë³€í•œê²Œ ìžˆëŠ”ì§€ ì²´í¬í•´ì„œ ìžˆë‹¤ë©´
+	 *	SpatialStructure ë¥¼ ìž¬êµ¬ì„±í•œë‹¤.
 	 */
 	error = initialize( pScene );
 	if ( error != errorNo ) {
@@ -115,7 +115,7 @@ GError GGPUExperimentalRayTracer::rendering( GScene *pScene, bool isDebug )
 		return error;
 	}
 
-	/** rendering option ¼¼ÆÃ */
+	/** rendering option ì„¸íŒ… */
 	cuScene cuSceneInfo;
 	cuSceneInfo.globalAmbient = make_float3( pScene->getGlobalAmbient().r, 
 											 pScene->getGlobalAmbient().g,
@@ -245,16 +245,16 @@ cuCamera GGPUExperimentalRayTracer::calCameraInfo( GScene *pScene )
 }
 
 /**
- *	ÇöÀç scene Á¤º¸¸¦ ±â¹ÝÀ¸·Î ray index ¿¡ ÇØ´çÇÏ´Â ray °¡
- *	image »óÀÇ ¸î pixel ¿¡ ÇØ´çÇÒÁö¸¦ °è»êÇÑ´Ù.
+ *	í˜„ìž¬ scene ì •ë³´ë¥¼ ê¸°ë°˜ìœ¼ë¡œ ray index ì— í•´ë‹¹í•˜ëŠ” ray ê°€
+ *	image ìƒì˜ ëª‡ pixel ì— í•´ë‹¹í• ì§€ë¥¼ ê³„ì‚°í•œë‹¤.
  */
 int GGPUExperimentalRayTracer::toImageIndex( GScene *pScene, int rayIndex, int *x, int *y )
 {
-	/** ray index ¸¦ x,y ÁÂÇ¥·Î º¯È¯ */
+	/** ray index ë¥¼ x,y ì¢Œí‘œë¡œ ë³€í™˜ */
 	(*x) = rayIndex % ( pScene->getResolution().x );
 	(*y) = rayIndex / ( pScene->getResolution().x );
 	
-	/** ´Ù½Ã image index ·Î º¯È¯ */
+	/** ë‹¤ì‹œ image index ë¡œ ë³€í™˜ */
 	return (*y) * pScene->getResolution().x + (*x);
 }
 

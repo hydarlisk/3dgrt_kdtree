@@ -129,12 +129,12 @@ void SSERenderPipeline::IsectShadowPacket1x1( const KdTreeNode *node )
 			COUNT_INSTRUCTION( -1, INTERSECTION_CHECK, LOAD, 1 );
 			COUNT_INSTRUCTION( -1, INTERSECTION_CHECK, STORE, 1 );
 			acc.mbox = rp->RayId;
-		}	// ¹«Á¶°Ç isect ¾ÈµÇµµ ½ÇÇà µÇ¾î¾ß ÇÔ
+		}	// ë¬´ì¡°ê±´ isect ì•ˆë˜ë„ ì‹¤í–‰ ë˜ì–´ì•¼ í•¨
 
 		COUNT_STATE( -1, TRIANGLE_COUNT, 1 );
 
 		// ---------------------------------------------------------------
-		// Åõ¸íÇÑ ¹°Ã¼´Â Åõ°ú
+		// íˆ¬ëª…í•œ ë¬¼ì²´ëŠ” íˆ¬ê³¼
 		// ---------------------------------------------------------------
 		COUNT_INSTRUCTION( -1, INTERSECTION_CHECK, LOAD, 1 );
 		COUNT_INSTRUCTION( -1, INTERSECTION_CHECK, BRANCH, 1 );
@@ -372,7 +372,7 @@ void SSERenderPipeline::checkVisibility1x1(const GPoint* objectPos, const GPoint
 	InitShadowPacket1x1();
 	shadow_rp->o = cpu_fadd(oPos, cpu_fmul(shadow_rp->d, RAY_START_EPSILON));
 
-	// ray dir °áÁ¤ (q = 8¹æÇâÁßÇÏ³ª)
+	// ray dir ê²°ì • (q = 8ë°©í–¥ì¤‘í•˜ë‚˜)
 	COUNT_INSTRUCTION( -1, RAY_GENERATION, LOAD, 3 );
 	COUNT_INSTRUCTION( -1, RAY_GENERATION, SHIFT, 2 );
 	COUNT_INSTRUCTION( -1, RAY_GENERATION, COMPARISON, 3 );
@@ -430,12 +430,12 @@ void SSERenderPipeline::IsectPacket1x1( const KdTreeNode *node, int nIdx )
 			COUNT_INSTRUCTION( nIdx, INTERSECTION_CHECK_MAILBOX, LOAD, 1 );
 			COUNT_INSTRUCTION( nIdx, INTERSECTION_CHECK_MAILBOX, STORE, 1 );
 			acc.mbox = rp->RayId;
-		}	// ¹«Á¶°Ç isect ¾ÈµÇµµ ½ÇÇà µÇ¾î¾ß ÇÔ
+		}	// ë¬´ì¡°ê±´ isect ì•ˆë˜ë„ ì‹¤í–‰ ë˜ì–´ì•¼ í•¨
 
 		COUNT_STATE( nIdx, TRIANGLE_COUNT, 1 );
 
 		// ---------------------------------------------------------------
-		// Backface Culling : Åõ¸íÇÏÁö ¾Ê´Â ¹°Ã¼¸¸ ÇØ´ç
+		// Backface Culling : íˆ¬ëª…í•˜ì§€ ì•ŠëŠ” ë¬¼ì²´ë§Œ í•´ë‹¹
 		COUNT_INSTRUCTION( nIdx, INTERSECTION_CHECK, LOAD, 6 );
 		COUNT_INSTRUCTION( nIdx, INTERSECTION_CHECK, DOT_PRODUCT, 1 );
 		COUNT_INSTRUCTION( nIdx, INTERSECTION_CHECK, COMPARISON, 2 );
@@ -642,7 +642,7 @@ void SSERenderPipeline::TracePacket1x1( unsigned int quad, int nIdx )
 				m_Stack1x1[stackIndex].node = BackSideSon;
 				stackIndex++;
 		}
-		COUNT_INSTRUCTION( nIdx, TRAVERSE, BRANCH, 1 ); // while ¹® ºüÁ®³ª°¨
+		COUNT_INSTRUCTION( nIdx, TRAVERSE, BRANCH, 1 ); // while ë¬¸ ë¹ ì ¸ë‚˜ê°
 		COUNT_INSTRUCTION( nIdx, TRAVERSE, COMPARISON, 1 );
 
 		// Isect check
@@ -812,8 +812,8 @@ void SSERenderPipeline::shading1x1 (int nIdx)
 			shadow_rp->o = hit_p;
 		}
 
-		// Shading ¿¡¼­, Åõ¸íÇÑ ¹°Ã¼ÀÏ¶§, Normal °ú dir ÀÇ dot ÀÌ < 0 ÀÌ¶ó¸é normal À» µÚÂ¤´Â´Ù.
-		// È®ÀÎ ÇÊ¿ä!!
+		// Shading ì—ì„œ, íˆ¬ëª…í•œ ë¬¼ì²´ì¼ë•Œ, Normal ê³¼ dir ì˜ dot ì´ < 0 ì´ë¼ë©´ normal ì„ ë’¤ì§šëŠ”ë‹¤.
+		// í™•ì¸ í•„ìš”!!
 		COUNT_INSTRUCTION( nIdx, SHADING_LOCAL_SHADING, COMPARISON, 2 );
 		COUNT_INSTRUCTION( nIdx, SHADING_LOCAL_SHADING, BRANCH, 1 );
 
@@ -854,7 +854,7 @@ void SSERenderPipeline::shading1x1 (int nIdx)
 			for ( int lx = 0; lx < (int) pLightList->size(); ++lx ) {	GLight* pLight = (*pLightList)[ lx ];
 				COUNT_INSTRUCTION( nIdx, SHADING_LOCAL_SHADING, COMPARISON, 1 );
 				COUNT_INSTRUCTION( nIdx, SHADING_LOCAL_SHADING, BRANCH, 1 );
-				// Point Light ¸¸ ÀÏ´Ü Áö¿ø
+				// Point Light ë§Œ ì¼ë‹¨ ì§€ì›
 				COUNT_INSTRUCTION( nIdx, SHADING_LOCAL_SHADING, COMPARISON, 2 );
 				COUNT_INSTRUCTION( nIdx, SHADING_LOCAL_SHADING, LOAD, 2 );
 				COUNT_INSTRUCTION( nIdx, SHADING_LOCAL_SHADING, BOOLEAN_OR, 1 );
@@ -865,7 +865,7 @@ void SSERenderPipeline::shading1x1 (int nIdx)
 				GColor   lightColor = pLight->getLightColor();
 				GPoint   lightPos   = pLight->getPosition();
 
-				// ±¤¿ø ÀÚ±âÀÚ½ÅÀÎ °æ¿ì
+				// ê´‘ì› ìê¸°ìì‹ ì¸ ê²½ìš°
 				COUNT_INSTRUCTION( nIdx, SHADING_LOCAL_SHADING, COMPARISON, 1 );
 				COUNT_INSTRUCTION( nIdx, SHADING_LOCAL_SHADING, BRANCH, 1 );
 				if (obj_num == pLight->getObjectNumber()) {
@@ -876,7 +876,7 @@ void SSERenderPipeline::shading1x1 (int nIdx)
 					continue;
 				}
 
-				// ±×¸²ÀÚ È®ÀÎ
+				// ê·¸ë¦¼ì í™•ì¸
 				COUNT_INSTRUCTION( nIdx, SHADING_SHADOW, COMPARISON, 1 );
 				COUNT_INSTRUCTION( nIdx, SHADING_SHADOW, BRANCH, 1 );
 				if ( bIsEnableShadow ) {
@@ -893,9 +893,9 @@ void SSERenderPipeline::shading1x1 (int nIdx)
 					COUNT_INSTRUCTION( nIdx, SHADING_PHONG_SHADING, NORMALIZATION, 1 );
 					L = GVector(lightPos - hitP).normalize();
 
-					// shadow °ü·Ã visible Á¶°Ç
-					//		Áß°£¿¡ shadow ray ¿Í ±³Á¡ÀÌ ¾ø°Å³ª
-					//		shadow ray °¡ ±³Â÷Á¡ÀÌ µÚ¿¡ Á¸ÀçÇÏ°Å³ª ¾Æ´Ï¸é °Å¸®°¡ °ÅÀÇ °¡±õ°Å³ª
+					// shadow ê´€ë ¨ visible ì¡°ê±´
+					//		ì¤‘ê°„ì— shadow ray ì™€ êµì ì´ ì—†ê±°ë‚˜
+					//		shadow ray ê°€ êµì°¨ì ì´ ë’¤ì— ì¡´ì¬í•˜ê±°ë‚˜ ì•„ë‹ˆë©´ ê±°ë¦¬ê°€ ê±°ì˜ ê°€ê¹ê±°ë‚˜
 					COUNT_INSTRUCTION( nIdx, SHADING_PHONG_SHADING, SUBTRACT, 1 );
 					COUNT_INSTRUCTION( nIdx, SHADING_PHONG_SHADING, LOAD, 3 );
 					COUNT_INSTRUCTION( nIdx, SHADING_PHONG_SHADING, COMPARISON, 3 );
@@ -1181,9 +1181,9 @@ void SSERenderPipeline::Render1x1( int nJobID )
 	for ( tx = 0; tx < xTileEnd;  tx++ ) {
 
 		// -----------------------------------------------------------------------
-		// tpos (Ray ¸¦ ½ò ¹æÇâÁöÁ¡) °è»ê
+		// tpos (Ray ë¥¼ ì  ë°©í–¥ì§€ì ) ê³„ì‚°
 		// -----------------------------------------------------------------------
-		// m_LeftUp : image screen À§ÂÊ ¿ŞÆí ¸ğ¼­¸®ÀÇ pixel Áß½É À¸·Î ÀÌ¹Ì ¼ÂÆÃ µÇ¾î ÀÖÀ½
+		// m_LeftUp : image screen ìœ„ìª½ ì™¼í¸ ëª¨ì„œë¦¬ì˜ pixel ì¤‘ì‹¬ ìœ¼ë¡œ ì´ë¯¸ ì…‹íŒ… ë˜ì–´ ìˆìŒ
 		COUNT_INSTRUCTION( 0, RAY_GENERATION, FUNCTION_ENTER, 1 );
 		COUNT_INSTRUCTION( 0, RAY_GENERATION, LOAD, 8 );
 		COUNT_INSTRUCTION( 0, RAY_GENERATION, MULTIPLY, 8 );
@@ -1223,7 +1223,7 @@ void SSERenderPipeline::Render1x1( int nJobID )
 					}
 				}
 
-				// Ray ¸¦ ¼ÂÆÃ - ½ÃÀÛÁ¡(rp->o) ~ ³¡Á¡(jpos)
+				// Ray ë¥¼ ì…‹íŒ… - ì‹œì‘ì (rp->o) ~ ëì (jpos)
 				COUNT_INSTRUCTION( 0, RAY_GENERATION, LOAD, 3 );
 				COUNT_INSTRUCTION( 0, RAY_GENERATION, SUBTRACT, 3 );
 				COUNT_INSTRUCTION( 0, RAY_GENERATION, STORE, 3 );
@@ -1231,7 +1231,7 @@ void SSERenderPipeline::Render1x1( int nJobID )
 
 				COUNT_INSTRUCTION( 0, RAY_GENERATION, STORE, 1 );
 				rp->Depth = 0;
-				InitPacket1x1( 0 );	// direction vector normalize µî
+				InitPacket1x1( 0 );	// direction vector normalize ë“±
 
 
 				COUNT_INSTRUCTION( 0, RAY_GENERATION, LOAD, 3 );
@@ -1239,7 +1239,7 @@ void SSERenderPipeline::Render1x1( int nJobID )
 				COUNT_INSTRUCTION( 0, RAY_GENERATION, COMPARISON, 3 );
 				COUNT_INSTRUCTION( 0, RAY_GENERATION, ADD, 2 );
 				COUNT_INSTRUCTION( 0, RAY_GENERATION, MOVE, 2 );
-				// ray dir °áÁ¤ (q = 8¹æÇâÁßÇÏ³ª)
+				// ray dir ê²°ì • (q = 8ë°©í–¥ì¤‘í•˜ë‚˜)
 				int q = (rp->d.x < 0) + ((rp->d.y < 0) << 1) + ((rp->d.z < 0) << 2);
 				RenderPacket1x1(q, 0);
 
@@ -1303,14 +1303,14 @@ void SSERenderPipeline::Render1x1_ADPSS_OnePass( int nJobID )
 		is->addr = tx + (m_Height - 1 - ty) * m_Width;
 
 		// -----------------------------------------------------------------------
-		// Ray ¸¦ ¼ÂÆÃ - ½ÃÀÛÁ¡(rp->o) ~ ³¡Á¡(tpos)
+		// Ray ë¥¼ ì…‹íŒ… - ì‹œì‘ì (rp->o) ~ ëì (tpos)
 		// -----------------------------------------------------------------------
 		rp->d = cpu_fsub(tpos.d, rp->o);
 		rp->Depth = 0;
-		InitPacket1x1( 0 );	// direction vector normalize µî
+		InitPacket1x1( 0 );	// direction vector normalize ë“±
 
 		// -----------------------------------------------------------------------
-		// Ray dir °áÁ¤ (q = 8¹æÇâÁßÇÏ³ª) ÈÄ rendering
+		// Ray dir ê²°ì • (q = 8ë°©í–¥ì¤‘í•˜ë‚˜) í›„ rendering
 		// -----------------------------------------------------------------------
 		int q = (rp->d.x < 0) + ((rp->d.y < 0) << 1) + ((rp->d.z < 0) << 2);
 		RenderPacket1x1(q, 0);
@@ -1402,7 +1402,7 @@ void SSERenderPipeline::Render1x1_ADPSS_Detection( int nJobID )
 		int nSuperSample1x1_Flag  = 0;
 
 		// -----------------------------------------------------------------------------------------------
-		// Pixel ÀÇ difference value »ı¼º
+		// Pixel ì˜ difference value ìƒì„±
 		// -----------------------------------------------------------------------------------------------
 		float colordifference = 1.0f;
 		if (1) {
@@ -1433,7 +1433,7 @@ void SSERenderPipeline::Render1x1_ADPSS_Detection( int nJobID )
 			}
 			colordifference = min( 1.0f, fabs( xvalue ) + fabs( yvalue ) );
 		}
-		// ----------------------------------------------------Pixel ÀÇ difference value »ı¼º-------------
+		// ----------------------------------------------------Pixel ì˜ difference value ìƒì„±-------------
 
 		// Check 4 corner test among adjacent pixels
 		for (sub_pi = 0; sub_pi < 4; sub_pi++) {
@@ -1443,7 +1443,7 @@ void SSERenderPipeline::Render1x1_ADPSS_Detection( int nJobID )
 			//	 O t x		x t O		O t x		x t O	
 			//	 x x x		x x x		O O x		x O O	
 
-			// Å×µÎ¸® ¿µ¿ª¿¡ ´ëÇÑ Ã³¸®
+			// í…Œë‘ë¦¬ ì˜ì—­ì— ëŒ€í•œ ì²˜ë¦¬
 			if (xPi == 0          && (sub_pi & 1) == 0) continue;		// Left   margin
 			if (xPi == wPixels -1 && (sub_pi & 1) == 1) continue;		// Right  margin
 			if (yPi == 0          && (sub_pi & 2) == 2) continue;		// Bottom margin
@@ -1461,7 +1461,7 @@ void SSERenderPipeline::Render1x1_ADPSS_Detection( int nJobID )
 			while (1) {
 
 				float fColorThreshold = 0;
-				/** ¿ÀÁ÷ ÇÏ³ªÀÇ threshold ·Î ÀüÃ¼ÀÌ¹ÌÁö¸¦ color ºñ±³ÇÏ´Â°æ¿ì´Â ÀÌ°Í¸¸ ÇÏ°í break */
+				/** ì˜¤ì§ í•˜ë‚˜ì˜ threshold ë¡œ ì „ì²´ì´ë¯¸ì§€ë¥¼ color ë¹„êµí•˜ëŠ”ê²½ìš°ëŠ” ì´ê²ƒë§Œ í•˜ê³  break */
 				if ( ( nCompareType & 512 ) == 512 ) {
 					if ( colordifference > fColorThreshold ) {
 						flag = true;
@@ -1469,7 +1469,7 @@ void SSERenderPipeline::Render1x1_ADPSS_Detection( int nJobID )
 					}
 				}
 
-				/** primary oid ¿µ¿ª. */
+				/** primary oid ì˜ì—­. */
 				for (j = 0; j < 4; j++) {
 					adjPixData[j] = m_ADPSS_data[adjPixAddr[j]].pri_oid;
 				}
@@ -1493,7 +1493,7 @@ void SSERenderPipeline::Render1x1_ADPSS_Detection( int nJobID )
 						m_ADPSS_data[adjPixAddr[j]].pri_normal.y * m_ADPSS_data[adjPixAddr[0]].pri_normal.y +
 						m_ADPSS_data[adjPixAddr[j]].pri_normal.z * m_ADPSS_data[adjPixAddr[0]].pri_normal.z;
 				}
-				if (!(fadjPixData[0] > 0.5f && fadjPixData[1] > 0.5f && fadjPixData[2] > 0.5f && fadjPixData[3] > 0.5f)) { // ÇÏ³ª¶óµµ 0.5 º¸´Ù ÀÛÀº °æ¿ì
+				if (!(fadjPixData[0] > 0.5f && fadjPixData[1] > 0.5f && fadjPixData[2] > 0.5f && fadjPixData[3] > 0.5f)) { // í•˜ë‚˜ë¼ë„ 0.5 ë³´ë‹¤ ì‘ì€ ê²½ìš°
 					checkRegion = true;
 					if ( ( nCompareType & 2 ) == 2 && colordifference > fPrimaryNormalRegionColorThreshold) {
 						flag = true;
@@ -1546,7 +1546,7 @@ void SSERenderPipeline::Render1x1_ADPSS_Detection( int nJobID )
 						m_ADPSS_data[adjPixAddr[j]].sec_normal.y * m_ADPSS_data[adjPixAddr[0]].sec_normal.y +
 						m_ADPSS_data[adjPixAddr[j]].sec_normal.z * m_ADPSS_data[adjPixAddr[0]].sec_normal.z;
 				}
-				if (!(fadjPixData[0] > 0.5f && fadjPixData[1] > 0.5f && fadjPixData[2] > 0.5f && fadjPixData[3] > 0.5f)) { // ÇÏ³ª¶óµµ 0.5 º¸´Ù ÀÛÀº °æ¿ì
+				if (!(fadjPixData[0] > 0.5f && fadjPixData[1] > 0.5f && fadjPixData[2] > 0.5f && fadjPixData[3] > 0.5f)) { // í•˜ë‚˜ë¼ë„ 0.5 ë³´ë‹¤ ì‘ì€ ê²½ìš°
 					checkRegion = true;
 					if ( ( nCompareType & 32 ) == 32 && colordifference > fSecondaryNormalRegionColorThreshold) {
 						flag = true;
@@ -1575,7 +1575,7 @@ void SSERenderPipeline::Render1x1_ADPSS_Detection( int nJobID )
 					}
 				}
 
-				/** target ¿µ¿ªÀÌ¿Ü¿¡ ´ëÇØ¼­´Â pixel color ·Î ºñ±³ */
+				/** target ì˜ì—­ì´ì™¸ì— ëŒ€í•´ì„œëŠ” pixel color ë¡œ ë¹„êµ */
 				if ( !checkRegion && ( nCompareType & 256 ) == 256 && colordifference > fEtcRegionColorThreshold ) {
 					flag = true;
 					break;
@@ -1585,7 +1585,7 @@ void SSERenderPipeline::Render1x1_ADPSS_Detection( int nJobID )
 			}
 
 			// ----------------------------------------------
-			// Z) Super Sampling Áö¿ª °áÁ¤
+			// Z) Super Sampling ì§€ì—­ ê²°ì •
 			// ----------------------------------------------
 			if ( flag ) {
 				nSuperSample1x1_Flag |= 1 << sub_pi;
@@ -1594,7 +1594,7 @@ void SSERenderPipeline::Render1x1_ADPSS_Detection( int nJobID )
 		}	// sub_pi loop
 
 		//----------------------------------------
-		// »ùÇÃ¸µ µÇ´Â Áö¿ª¸¸ Ç¥½Ã
+		// ìƒ˜í”Œë§ ë˜ëŠ” ì§€ì—­ë§Œ í‘œì‹œ
 		//----------------------------------------
 		if (m_Scene->isEnableSamplingDebugInfo() == true) {
 			if ( nSuperSample1x1_Count > 0 ) {
@@ -1615,7 +1615,7 @@ void SSERenderPipeline::Render1x1_ADPSS_Detection( int nJobID )
 			float fSampWeight = 0.0625f; // 1/16
 			for (sub_pi = 0; sub_pi < 4; sub_pi++) {
 				if (nSuperSample1x1_Flag & (1 << sub_pi)) {
-					// ¿©±â¼­ super sampleing ÇÔ
+					// ì—¬ê¸°ì„œ super sampleing í•¨
 					m_RayT1x1->Set_Item(pi, sub_pi);
 				}
 			}
@@ -1626,7 +1626,7 @@ void SSERenderPipeline::Render1x1_ADPSS_Detection( int nJobID )
 		m_Dest[3*pi+1] = m_ADPSS_data[pi].oColor.g * weight;
 		m_Dest[3*pi+2] = m_ADPSS_data[pi].oColor.b * weight;
 
-		// Primary hit obj ¿¡ µû¸¥ ÀÌ¹ÌÁö
+		// Primary hit obj ì— ë”°ë¥¸ ì´ë¯¸ì§€
 		//m_Dest[3*pi] = 1.0f * m_ADPSS_data[pi].pri_oid / m_Scene->getObjectCount();
 		//m_Dest[3*pi+1] = 0;
 		//m_Dest[3*pi+2] = 0;
@@ -1668,7 +1668,7 @@ void SSERenderPipeline::Render1x1_ADPSS_TwoPass( int nJobID )
 			rp->d.y = m_ADPSS_data[pi].ray_d.y + (m_DX.y * fSampSeq_x[sub_pi][i]) - (m_DY.y * fSampSeq_y[sub_pi][i]);
 			rp->d.z = m_ADPSS_data[pi].ray_d.z + (m_DX.z * fSampSeq_x[sub_pi][i]) - (m_DY.z * fSampSeq_y[sub_pi][i]);
 
-			// jitter ½Ã ¾Æ·¡ ÄÚµå ±¸Çö Ãß°¡
+			// jitter ì‹œ ì•„ë˜ ì½”ë“œ êµ¬í˜„ ì¶”ê°€
 			// ray_d = ray_d + (jitterX * 0.25f - 0.125f) * m_DX - (jitterY * 0.25f - 0.125f) * m_DY
 
 			rp->d = cpu_fsub(rp->d, rp->o);
@@ -1679,7 +1679,7 @@ void SSERenderPipeline::Render1x1_ADPSS_TwoPass( int nJobID )
 			is->weight = GColor(0.0625f, 0.0625f, 0.0625f);
 			rp->Depth = 0;
 
-			// ray dir °áÁ¤ (q = 8¹æÇâÁßÇÏ³ª)
+			// ray dir ê²°ì • (q = 8ë°©í–¥ì¤‘í•˜ë‚˜)
 			int q = (rp->d.x < 0) + ((rp->d.y < 0) << 1) + ((rp->d.z < 0) << 2);
 			RenderPacket1x1(q, 0);
 

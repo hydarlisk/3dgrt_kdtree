@@ -1,6 +1,6 @@
 /**
- *	Traversal ¹× Intersection Test °ü·Ã °¡¼ÓÈ­¿ë ÀÚ·á±¸Á¶
- *	µîµî.
+ *	Traversal ë° Intersection Test ê´€ë ¨ ê°€ì†í™”ìš© ìë£Œêµ¬ì¡°
+ *	ë“±ë“±.
  *	
  *	by oipini.
  */
@@ -23,8 +23,8 @@ public:
 	GError buildTriAccList_Barycentric( void );
 	GError buildTriAccList_Pluecker( void );
 
-	unsigned int		m_TriObjCnt;		// ÀüÃ¼ »ï°¢Çü °³¼ö
-	GTriangleWrapper**	m_TriObjList;		// ÀüÃ¼ »ï°¢Çü ¸®½ºÆ®
+	unsigned int		m_TriObjCnt;		// ì „ì²´ ì‚¼ê°í˜• ê°œìˆ˜
+	GTriangleWrapper**	m_TriObjList;		// ì „ì²´ ì‚¼ê°í˜• ë¦¬ìŠ¤íŠ¸
 	TriAccel*			m_TriAccList;		// Barycentric Triangle Accel (for intersection test)
 	TriAccel_P*			m_TriAccList_P;		// Pluecker    Triangle Accel (for intersection test)
 	
@@ -37,7 +37,7 @@ public:
 	GError setKDTreeNodeData( kdtreeNode *pRootNode, int nodeCount, GBoundingBox sceneBox );
 	GError setTriangleOffsetList( unsigned int *pTriangleOffsetList, int offsetCount );
 	KdTreeNode*			m_pKDTreeNodes;		// Pointer of Kd-Tree root node 
-	unsigned int*		m_TriOffList;		// Kd-Tree ÀÇ ¸ğµç leaf node ¿¡ ÀÖ´Â Triangle ID list
+	unsigned int*		m_TriOffList;		// Kd-Tree ì˜ ëª¨ë“  leaf node ì— ìˆëŠ” Triangle ID list
 
 	//-------------------------------------------------------------------------------------
 	// BVH

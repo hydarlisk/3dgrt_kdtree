@@ -9,9 +9,9 @@
 using namespace std;
 
 /**
- *	Renderer ¾È¿¡¼­ »ç¿ëÇÏ´Â Texture ¸¦ °ü¸®ÇÏ´Â
- *	Å¬·¡½º. FreeImage Library ¸¦ »ç¿ëÇØ¼­ jpg ¸¦
- *	ÀĞ¾îµéÀÎ´Ù.
+ *	Renderer ì•ˆì—ì„œ ì‚¬ìš©í•˜ëŠ” Texture ë¥¼ ê´€ë¦¬í•˜ëŠ”
+ *	í´ë˜ìŠ¤. FreeImage Library ë¥¼ ì‚¬ìš©í•´ì„œ jpg ë¥¼
+ *	ì½ì–´ë“¤ì¸ë‹¤.
  *
  *	by graphicsian.
  */

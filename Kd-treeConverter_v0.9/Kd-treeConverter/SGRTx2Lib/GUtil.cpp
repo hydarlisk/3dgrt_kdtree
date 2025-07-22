@@ -116,7 +116,7 @@ void GUtil::getKeyValue( char *data, char **key, char **value )
 }
 
 /**
- *	ÁÖÀÇ: strtok ÇÔ¼ö¸¦ »ç¿ëÇÏ¹Ç·Î thread-safe ÇÏÁö ¾Ê´Ù.
+ *	ì£¼ì˜: strtok í•¨ìˆ˜ë¥¼ ì‚¬ìš©í•˜ë¯€ë¡œ thread-safe í•˜ì§€ ì•Šë‹¤.
  */
 void GUtil::getValueList( char *data, vector<char*> &valueList )
 {

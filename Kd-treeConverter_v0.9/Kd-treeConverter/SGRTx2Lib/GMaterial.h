@@ -4,8 +4,8 @@
 #include "GColor.h"
 
 /**
- *	¹°Ã¼ÀÇ Material.
- *	¹°Ã¼´Â ´ÙÀ½°ú °°Àº material ·Î Ç¥ÇöÇÑ´Ù.
+ *	ë¬¼ì²´ì˜ Material.
+ *	ë¬¼ì²´ëŠ” ë‹¤ìŒê³¼ ê°™ì€ material ë¡œ í‘œí˜„í•œë‹¤.
  *
  *	by graphicsian
  */
@@ -17,13 +17,13 @@ public:
 	GColor m_Specular;				//	specular color
 	GColor m_Emission;				//	emission color
 
-	//	m_fReflection + m_fTransparency + m_fLocalShading Àº 1 ÀÌ¾î¾ß ÇÑ´Ù.
-	//	µû¶ó¼­ m_fLocalShading ºñÀ²Àº = m_fReflection - m_fTransparency;
-	float m_fReflection;			//	reflection È®·ü.
-	float m_fTransparency;			//	refraction È®·ü.
+	//	m_fReflection + m_fTransparency + m_fLocalShading ì€ 1 ì´ì–´ì•¼ í•œë‹¤.
+	//	ë”°ë¼ì„œ m_fLocalShading ë¹„ìœ¨ì€ = m_fReflection - m_fTransparency;
+	float m_fReflection;			//	reflection í™•ë¥ .
+	float m_fTransparency;			//	refraction í™•ë¥ .
 
 	float m_fRoughness;				//	roughness. 
-	float m_fRefractionIndex;		//  ±¼Àı·ü
+	float m_fRefractionIndex;		//  êµ´ì ˆë¥ 
 
 public:
 	GMaterial(void);

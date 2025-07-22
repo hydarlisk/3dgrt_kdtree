@@ -61,7 +61,7 @@ bool GOBJFileLoader::load( const char *filename )
 
 		} else if ( _stricmp( valueList[0], "g" ) == 0 ) {
 			
-			/** object ÀÌ¸§ÀÌ ÀÖÀ»¶§¸¸ parsing */
+			/** object ì´ë¦„ì´ ìˆì„ë•Œë§Œ parsing */
 			if ( (int) valueList.size() == 2 ) {
 				GLogManager::logging( LOG_DEBUG, " -> OBJ Load Object : %s", valueList[ 1 ] );
 				pObject = new GOBJObject();
@@ -117,7 +117,7 @@ bool GOBJFileLoader::load( const char *filename )
 		} else if( _stricmp( valueList[0], "f" ) == 0 ) {
 
 			/** 
-			 * »ï°¢Çü or »ç°¢Çü¸¸ ºÒ·¯µéÀÎ´Ù.
+			 * ì‚¼ê°í˜• or ì‚¬ê°í˜•ë§Œ ë¶ˆëŸ¬ë“¤ì¸ë‹¤.
 			 */
 
 			if ( (int) valueList.size() != 4 && (int) valueList.size() != 5 ) { 
@@ -126,13 +126,13 @@ bool GOBJFileLoader::load( const char *filename )
 			}
 			
 			/**
-			 *	»ï°¢ÇüÀÏ¶§.
+			 *	ì‚¼ê°í˜•ì¼ë•Œ.
 			 */
 			if ( (int) valueList.size() == 4 ) {
-				/** face µ¥ÀÌÅÍ parsing :  vertex/texture/normal */
+				/** face ë°ì´í„° parsing :  vertex/texture/normal */
 				/** 
-				 *	µ¥ÀÌÅÍ»ó¿¡¼­´Â index °¡ 1 ºÎÅÍ ½ÃÀÛÇÏÁö¸¸ 
-				 *	c ¹è¿­»óÀÇ index ´Â 0ºÎÅÍ ½ÃÀÛÇÏ¹Ç·Î -1 ÇÑ´Ù.
+				 *	ë°ì´í„°ìƒì—ì„œëŠ” index ê°€ 1 ë¶€í„° ì‹œì‘í•˜ì§€ë§Œ 
+				 *	c ë°°ì—´ìƒì˜ index ëŠ” 0ë¶€í„° ì‹œì‘í•˜ë¯€ë¡œ -1 í•œë‹¤.
 				 */
 				GOBJTriangleFace *pFace = new GOBJTriangleFace();
 				int indexResult[3];
@@ -152,7 +152,7 @@ bool GOBJFileLoader::load( const char *filename )
 				pFace->t2 = indexResult[ 1 ] - 1;
 				pFace->n2 = indexResult[ 2 ] - 1;
 
-				/** Ã¹ face °ªÀ» Ã¼Å©ÇØ¼­ normal °ú texture coord °¡ ÀÖ´ÂÁö¸¦ ¼³Á¤ */
+				/** ì²« face ê°’ì„ ì²´í¬í•´ì„œ normal ê³¼ texture coord ê°€ ìˆëŠ”ì§€ë¥¼ ì„¤ì • */
 				if ( bFirstFace ) {
 					bFirstFace = false;
 					if ( pFace->n0 >= 0 && pFace->n1 >= 0 && pFace->n2 >= 0 )
@@ -164,19 +164,19 @@ bool GOBJFileLoader::load( const char *filename )
 			}
 
 			/**
-			 *	»ç°¢ÇüÀÏ¶§. »ï°¢Çü 2°³·Î ¸¸µç´Ù.
+			 *	ì‚¬ê°í˜•ì¼ë•Œ. ì‚¼ê°í˜• 2ê°œë¡œ ë§Œë“ ë‹¤.
 			 */
 			if ( (int) valueList.size() == 5 ) {
 
-				/** face µ¥ÀÌÅÍ parsing :  vertex/texture/normal */
+				/** face ë°ì´í„° parsing :  vertex/texture/normal */
 				/** 
-				 *	µ¥ÀÌÅÍ»ó¿¡¼­´Â index °¡ 1 ºÎÅÍ ½ÃÀÛÇÏÁö¸¸ 
-				 *	c ¹è¿­»óÀÇ index ´Â 0ºÎÅÍ ½ÃÀÛÇÏ¹Ç·Î -1 ÇÑ´Ù.
+				 *	ë°ì´í„°ìƒì—ì„œëŠ” index ê°€ 1 ë¶€í„° ì‹œì‘í•˜ì§€ë§Œ 
+				 *	c ë°°ì—´ìƒì˜ index ëŠ” 0ë¶€í„° ì‹œì‘í•˜ë¯€ë¡œ -1 í•œë‹¤.
 				 */
 				GOBJTriangleFace *pFace = new GOBJTriangleFace();
 				int indexResult[3];
 
-				/** parsingFaceData ÈÄ¿¡´Â ÀÎÀÚ·Î ÁÖ¾îÁø string ÀÌ º¯ÇÏ¹Ç·Î ¹é¾÷ */
+				/** parsingFaceData í›„ì—ëŠ” ì¸ìë¡œ ì£¼ì–´ì§„ string ì´ ë³€í•˜ë¯€ë¡œ ë°±ì—… */
 				char *p1 = GUtil::copyString( valueList[ 1 ] );
 				char *p2 = GUtil::copyString( valueList[ 2 ] );
 				char *p3 = GUtil::copyString( valueList[ 3 ] );
@@ -197,7 +197,7 @@ bool GOBJFileLoader::load( const char *filename )
 				pFace->t2 = indexResult[ 1 ] - 1;
 				pFace->n2 = indexResult[ 2 ] - 1;
 
-				/** Ã¹ face °ªÀ» Ã¼Å©ÇØ¼­ normal °ú texture coord °¡ ÀÖ´ÂÁö¸¦ ¼³Á¤ */
+				/** ì²« face ê°’ì„ ì²´í¬í•´ì„œ normal ê³¼ texture coord ê°€ ìˆëŠ”ì§€ë¥¼ ì„¤ì • */
 				if ( bFirstFace ) {
 					bFirstFace = false;
 					if ( pFace->n0 >= 0 && pFace->n1 >= 0 && pFace->n2 >= 0 )
@@ -242,9 +242,9 @@ bool GOBJFileLoader::load( const char *filename )
 }
 
 /**
- *	face µ¥ÀÌÅÍ¸¦ parsing ÇØ¼­, index Á¤º¸¸¦ ¸®ÅÏÇÑ´Ù.
- *	ÇÏ³ªÀÇ face Á¤º¸´Â vertex/texture/normal index ·Î ±¸¼ºµÇ¾î ÀÖ´Ù.
- *	ÇØ´ç °ªÀÌ ¾ø´Ù¸é -1 ·Î ÁöÁ¤.
+ *	face ë°ì´í„°ë¥¼ parsing í•´ì„œ, index ì •ë³´ë¥¼ ë¦¬í„´í•œë‹¤.
+ *	í•˜ë‚˜ì˜ face ì •ë³´ëŠ” vertex/texture/normal index ë¡œ êµ¬ì„±ë˜ì–´ ìˆë‹¤.
+ *	í•´ë‹¹ ê°’ì´ ì—†ë‹¤ë©´ -1 ë¡œ ì§€ì •.
  */
 bool GOBJFileLoader::parsingFaceData( char* str, int *result )
 {
@@ -306,14 +306,14 @@ bool GOBJFileLoader::loadMaterialFile( const char *filename )
 		}
 
 		/** 
-		 *	ÁÖ¼®ÀÌ³ª °ø¹éÀÏ¶§.
+		 *	ì£¼ì„ì´ë‚˜ ê³µë°±ì¼ë•Œ.
 		 */
 		if ( data[ 0 ] == '#' || data[ 0 ] == 0x00 ) continue;
 
-		/** »õ·Î¿î material Á¤º¸ ½ÃÀÛ */
+		/** ìƒˆë¡œìš´ material ì •ë³´ ì‹œì‘ */
 		if ( _strnicmp( data, "newmtl", 6 ) == 0 ) {
 			GUtil::getValueList( data, valueList );
-			/** newmtl µÚ¿¡ ÀÌ¸§ÀÌ ÀÖ¾î¾ß ÇÔ. */
+			/** newmtl ë’¤ì— ì´ë¦„ì´ ìˆì–´ì•¼ í•¨. */
 			if ( valueList.size() != 2 ) {
 				bSuccess = false;
 				break;
@@ -345,12 +345,12 @@ bool GOBJFileLoader::readMaterialInfo( const char* matname, FILE *fp )
 		}
 
 		/** 
-		 *	ÁÖ¼®ÀÏ¶§.
+		 *	ì£¼ì„ì¼ë•Œ.
 		 */
 		if ( data[ 0 ] == '#' ) continue;
 
 		/**
-		 *	°ø¹éÀÌ ³ªÅ¸³ª¸é material Á¤º¸ ³¡.
+		 *	ê³µë°±ì´ ë‚˜íƒ€ë‚˜ë©´ material ì •ë³´ ë.
 		 */
 		if ( data[ 0 ] == 0x00 ) {
 			break;
@@ -410,8 +410,8 @@ bool GOBJFileLoader::readMaterialInfo( const char* matname, FILE *fp )
 
 		} else if ( _stricmp( valueList[0], "map_Ka" ) == 0 ) {
 			/** 
-			 *	°æ·Î¸í¿¡ °ø¹éÀÌ ÀÖÀ»¼öµµ ÀÖÀ¸´Ï ÀÎÀÚ°¡ 1 ÀÌ»óÀÖÀ¸¸é 
-			 *	´Ù ¿¬°áÇØ¼­ ÇÏ³ªÀÇ ¹®ÀÚ¿­·Î ¸¸µç´Ù. 
+			 *	ê²½ë¡œëª…ì— ê³µë°±ì´ ìˆì„ìˆ˜ë„ ìˆìœ¼ë‹ˆ ì¸ìê°€ 1 ì´ìƒìˆìœ¼ë©´ 
+			 *	ë‹¤ ì—°ê²°í•´ì„œ í•˜ë‚˜ì˜ ë¬¸ìì—´ë¡œ ë§Œë“ ë‹¤. 
 			 */
 			pMaterial->pMapKaPath = createPathFromParam( valueList );
 
@@ -458,14 +458,14 @@ char *GOBJFileLoader::createPathFromParam( vector<char*> &valueList )
 
 
 /**
- *	ÁÖ¼®, °ø¹éµîÀ» Á¦°ÅÇÑ µ¥ÀÌÅÍ¸¦ ¸¸³¯¶§±îÁö loop ¸¦ µ¹¸é¼­
- *	ÇÑÁÙÀ» ÀĞ¾î¿Â´Ù.
+ *	ì£¼ì„, ê³µë°±ë“±ì„ ì œê±°í•œ ë°ì´í„°ë¥¼ ë§Œë‚ ë•Œê¹Œì§€ loop ë¥¼ ëŒë©´ì„œ
+ *	í•œì¤„ì„ ì½ì–´ì˜¨ë‹¤.
  */
 bool GOBJFileLoader::readLine( char *data, int size, FILE *fp )
 {
 	while( !feof( fp ) ) {
 		/**
-		 *	µ¥ÀÌÅÍ°¡ ¾ø´Ù¸é continue;
+		 *	ë°ì´í„°ê°€ ì—†ë‹¤ë©´ continue;
 		 */
 		if ( fgets( data, 2040, fp ) == NULL )
 			continue;
@@ -473,7 +473,7 @@ bool GOBJFileLoader::readLine( char *data, int size, FILE *fp )
 		GUtil::removeCRLF( data );
 
 		/** 
-		 *	½ÇÁ¦ µ¥ÀÌÅÍ ÀÏ¶§¸¸ ¸®ÅÏ.
+		 *	ì‹¤ì œ ë°ì´í„° ì¼ë•Œë§Œ ë¦¬í„´.
 		 */	
 		return true;
 	}

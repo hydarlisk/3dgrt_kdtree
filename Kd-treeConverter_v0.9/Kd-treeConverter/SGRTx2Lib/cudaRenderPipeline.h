@@ -2,17 +2,17 @@
 #define _CUDA_RENDER_PIPELINE_H_
 
 /** 
- *	CUDA ¿¡ »ç¿ëµÇ´Â ±¸Á¶Ã¼¸¦ CPU ¿¡¼­ °ªÀ» Ã¤¿ì±â
- *	À§ÇØ¼­ cudaRenderPipeline.cuh ¸¦ °øÀ¯ÇØ¾ß ÇÏ´Âµ¥,
- *	cudaRenderPipeline.cuh ¸¦ ¹Ù·Î¾²¸é cuda ¿¡¼­¸¸ »ç¿ëµÇ´Â
- *	ÇÔ¼ö°¡ ÀÖ±â ¶§¹®¿¡ cpu ¿¡¼­´Â ¿©±â¿¡ ÇØ´çÇÔ¼ö¸¦
- *	¼±¾ğÇÑ ´ÙÀ½ cudaRenderPipeline.cuh ¸¦ ·ÎµåÇÑ´Ù.
+ *	CUDA ì— ì‚¬ìš©ë˜ëŠ” êµ¬ì¡°ì²´ë¥¼ CPU ì—ì„œ ê°’ì„ ì±„ìš°ê¸°
+ *	ìœ„í•´ì„œ cudaRenderPipeline.cuh ë¥¼ ê³µìœ í•´ì•¼ í•˜ëŠ”ë°,
+ *	cudaRenderPipeline.cuh ë¥¼ ë°”ë¡œì“°ë©´ cuda ì—ì„œë§Œ ì‚¬ìš©ë˜ëŠ”
+ *	í•¨ìˆ˜ê°€ ìˆê¸° ë•Œë¬¸ì— cpu ì—ì„œëŠ” ì—¬ê¸°ì— í•´ë‹¹í•¨ìˆ˜ë¥¼
+ *	ì„ ì–¸í•œ ë‹¤ìŒ cudaRenderPipeline.cuh ë¥¼ ë¡œë“œí•œë‹¤.
  */
 
 inline float fminf(const float a, const float b) { return (b > a) ? a : b; }
 inline float fmaxf(const float a, const float b) { return (b < a) ? a : b; }
-inline float int_as_float(const int a) { return *(float *)&(a); }
-inline int float_as_int(const float a) { return *(int *)&(a); }
+inline float int_as_float_H(const int a) { return *(float *)&(a); }
+inline int float_as_int_H(const float a) { return *(int *)&(a); }
 
 #include "cudaRenderPipeline.cuh"
 

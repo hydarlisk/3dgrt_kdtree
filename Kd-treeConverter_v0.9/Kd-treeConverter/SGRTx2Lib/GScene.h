@@ -2,7 +2,7 @@
 
 //--------------------------------------------------------------------------//
 //																			//
-//	ÀüÃ¼ Scene																//
+//	ì „ì²´ Scene																//
 //																			//
 //--------------------------------------------------------------------------//
 #include "GBase.h"
@@ -25,26 +25,26 @@ using namespace std;
 #define MAX_PATH_LENGTH	2048
 
 /**
- *	face ¹æÇâ.
+ *	face ë°©í–¥.
  */
 typedef enum {
-	faceCW = 0,			//	½Ã°è¹æÇâ
-	faceCCW = 1,		//	¹İ½Ã°è¹æÇâ
+	faceCW = 0,			//	ì‹œê³„ë°©í–¥
+	faceCCW = 1,		//	ë°˜ì‹œê³„ë°©í–¥
 } enumFrontFace;
 
 typedef enum {
-	adaptiveFixed = 0,			//	Ãß°¡ÀûÀ¸·Î super-sampling ÇØ¾ßÇÒ ¿µ¿ª¿¡ ¹«Á¶°Ç 4x4 ¸¦ ½î´Â ¹æ¹ı.
-	adaptiveSubpixel = 1		//	Ãß°¡ÀûÀ¸·Î super-sampling ÇØ¾ßÇÒ ¿µ¿ªÀÇ sub 4 pixels Áß ¾î¶²°É ½òÁö °áÁ¤ÇÏ´Â ¹æ¹ı.
+	adaptiveFixed = 0,			//	ì¶”ê°€ì ìœ¼ë¡œ super-sampling í•´ì•¼í•  ì˜ì—­ì— ë¬´ì¡°ê±´ 4x4 ë¥¼ ì˜ëŠ” ë°©ë²•.
+	adaptiveSubpixel = 1		//	ì¶”ê°€ì ìœ¼ë¡œ super-sampling í•´ì•¼í•  ì˜ì—­ì˜ sub 4 pixels ì¤‘ ì–´ë–¤ê±¸ ì ì§€ ê²°ì •í•˜ëŠ” ë°©ë²•.
 } enumAdaptiveSamplingType;
 
 typedef enum {
-	SAH  = 0,			//	SAH (±âº»°ª)
+	SAH  = 0,			//	SAH (ê¸°ë³¸ê°’)
 	EMPTY_SAH = 1,		//	EMPTY_SAH
 } enumKdTreeType;
 
 typedef enum {
 	USE_NONE	  = 0,
-	USE_KDTREE    = 1,		//	Kd-Tree (±âº»°ª)
+	USE_KDTREE    = 1,		//	Kd-Tree (ê¸°ë³¸ê°’)
 	USE_BVH       = 2,		//	BVH
 	USE_GRID      = 3,		//	Grid
 } enumSpatialStructureType;
@@ -83,12 +83,12 @@ private:
 	char m_szOutputPath[MAX_PATH_LENGTH];
 	char m_szTexturePath[MAX_PATH_LENGTH];
 
-	int m_iGeometryChangeTimestamp;			//	Scene ÀÇ Object, Light Á¤º¸°¡ º¯°æµÉ¶§¸¶´Ù+
+	int m_iGeometryChangeTimestamp;			//	Scene ì˜ Object, Light ì •ë³´ê°€ ë³€ê²½ë ë•Œë§ˆë‹¤+
 	int m_iLastConvertRenderScene;
 
 	enumSpatialStructureType m_LastUseSpatialStructure;
 	enumSpatialStructureType m_CurrUseSpatialStructure;
-	int m_iLastGeomTimestamp_For_SpatialStructure[16];		// enumSpatialStructureType ÀÇ Å©±â¸¸Å­ ÇÊ¿ä
+	int m_iLastGeomTimestamp_For_SpatialStructure[16];		// enumSpatialStructureType ì˜ í¬ê¸°ë§Œí¼ í•„ìš”
 
 	GDimension m_Resolution;
 	GDimension m_SuperSampling;
@@ -107,7 +107,7 @@ private:
 	GImageBuffer *m_pDirectIllumImageBuffer;
 	GImageBuffer *m_pIndirectIllumImageBuffer;
 
-	int m_iCPUThreadCount;					// ¾²·¹µå °¹¼ö
+	int m_iCPUThreadCount;					// ì“°ë ˆë“œ ê°¯ìˆ˜
 	GDimension m_GPUBlockSize;				// GPU block  size
 	GDimension m_CPUPacketSize;				// CPU packet size : 1x1, 2x2, 4x4
 
@@ -231,7 +231,7 @@ public:
 	GColor getGlobalAmbient();
 
 	/**
-	 *	Scene À» ·»´õ¸µÇÑ °á°ú¸¦ °¡Áö°í ÀÖ´Â Image Buffer.
+	 *	Scene ì„ ë Œë”ë§í•œ ê²°ê³¼ë¥¼ ê°€ì§€ê³  ìˆëŠ” Image Buffer.
 	 */
 	GImageBuffer *getImageBuffer();
 	GImageBuffer *getDirectIllumImageBuffer();
@@ -273,15 +273,15 @@ public:
 	void setUseSpatialStructure( enumSpatialStructureType type );
 
 	/**
-	 * Empty KD-Tree ¸¦ ¸¸µê.
-	 * ¸¸¾à Object KD Tree °¡ Á¸ÀçÇÒ °æ¿ì Object KD Tree ¸¦ »èÁ¦ÇÔ.
+	 * Empty KD-Tree ë¥¼ ë§Œë“¦.
+	 * ë§Œì•½ Object KD Tree ê°€ ì¡´ì¬í•  ê²½ìš° Object KD Tree ë¥¼ ì‚­ì œí•¨.
 	*/
 	GError buildEmptyKdTree();
 
 	/**.
-	 * Object ÀÇ KD-Tree ¸¦ ¸¸µê
-	 * Empty KD-Tree °¡ ¾øÀ» °æ¿ì ÀüÃ¼ scene ¿¡ ´ëÇØ¼­ ¸¸µç´Ù.
-	 * Empty KD-Tree ¸¦ »èÁ¦¸¦ ÇÏ¸é ¾ÈµÊ.
+	 * Object ì˜ KD-Tree ë¥¼ ë§Œë“¦
+	 * Empty KD-Tree ê°€ ì—†ì„ ê²½ìš° ì „ì²´ scene ì— ëŒ€í•´ì„œ ë§Œë“ ë‹¤.
+	 * Empty KD-Tree ë¥¼ ì‚­ì œë¥¼ í•˜ë©´ ì•ˆë¨.
 	*/
 	GError buildObjectKdTree();
 
@@ -355,101 +355,101 @@ public:
 	GTextureManager *getTextureManager();
 
 	/**
-	 *	·ÎµåÇÑ Scene µ¥ÀÌÅÍ¸¦ ±â¹İÀ¸·Î ÃÊ±âÈ­ ÇÒ°ÍÀÌ ÀÖ´Ù¸é
-	 *	¼öÇàÇÑ´Ù.
+	 *	ë¡œë“œí•œ Scene ë°ì´í„°ë¥¼ ê¸°ë°˜ìœ¼ë¡œ ì´ˆê¸°í™” í• ê²ƒì´ ìˆë‹¤ë©´
+	 *	ìˆ˜í–‰í•œë‹¤.
 	 */
 	bool initalize();
 
 	/**
-	 *	Light Ãß°¡. Æ÷ÀÎÅÍ º¯¼ö·Î Ãß°¡ÇØ¾ß ÇÑ´Ù. ³ªÁß¿¡
-	 *	scene ¿¡¼­ ÇØÁ¦ ½ÃÅ´.
+	 *	Light ì¶”ê°€. í¬ì¸í„° ë³€ìˆ˜ë¡œ ì¶”ê°€í•´ì•¼ í•œë‹¤. ë‚˜ì¤‘ì—
+	 *	scene ì—ì„œ í•´ì œ ì‹œí‚´.
 	 */
 	void addLight( GLight *pLight );
 	
 	/**
-	 *	Light ¸ñ·Ï °¡Á®¿À±â
+	 *	Light ëª©ë¡ ê°€ì ¸ì˜¤ê¸°
 	 */
 	const vector<GLight*>* getLightList();
 
 	/**
-	 *	Camera Ãß°¡. Æ÷ÀÎÅÍ º¯¼ö·Î Ãß°¡ÇØ¾ß ÇÑ´Ù. ³ªÁß¿¡
-	 *	scene ¿¡¼­ ÇØÁ¦ ½ÃÅ´.
+	 *	Camera ì¶”ê°€. í¬ì¸í„° ë³€ìˆ˜ë¡œ ì¶”ê°€í•´ì•¼ í•œë‹¤. ë‚˜ì¤‘ì—
+	 *	scene ì—ì„œ í•´ì œ ì‹œí‚´.
 	*/
 	void addCamera( GCamera *pCamera );
 
 	/**
-	 *	Camera ¸ñ·Ï °¡Á®¿À±â
+	 *	Camera ëª©ë¡ ê°€ì ¸ì˜¤ê¸°
 	*/
 	const vector<GCamera*>* getCameraList();
 
 	/** 
-	 *	Scene ¿¡ ¹°Ã¼ Ãß°¡ 
+	 *	Scene ì— ë¬¼ì²´ ì¶”ê°€ 
 	 */
 	virtual GError addObject( GObject* pObject );
 
 	/**
-	 *	Scene ¿¡¼­ ¹°Ã¼ »èÁ¦
+	 *	Scene ì—ì„œ ë¬¼ì²´ ì‚­ì œ
 	 */
 	virtual void removeObject( GObject* pObject );
 
 	/**
-	 *	name ÀÌ¸§À» °¡Áø Scene ¿¡¼­ ¹°Ã¼ »èÁ¦
+	 *	name ì´ë¦„ì„ ê°€ì§„ Scene ì—ì„œ ë¬¼ì²´ ì‚­ì œ
 	 */
 	virtual void removeObject( const char* name );
 
 	/**
-	 *	Scene ¿¡ ÀÖ´Â ¸ğµç ¹°Ã¼ Á¦°Å
+	 *	Scene ì— ìˆëŠ” ëª¨ë“  ë¬¼ì²´ ì œê±°
 	 */
 	virtual void clearObject();
 	virtual void clearDebugObject();
 
 	/**
-	 *	index ¿¡ ÇØ´çÇÏ´Â ¹°Ã¼ °¡Á®¿À±â
+	 *	index ì— í•´ë‹¹í•˜ëŠ” ë¬¼ì²´ ê°€ì ¸ì˜¤ê¸°
 	 */
 	GObject* getObject( int index );
 
 	/**
-	 *	ÇöÀç ¹°Ã¼ °¹¼ö ¸®ÅÏ.
+	 *	í˜„ì¬ ë¬¼ì²´ ê°¯ìˆ˜ ë¦¬í„´.
 	 */
 	int getObjectCount();
 
 	/**
-	 *	¹°Ã¼ ¸ñ·Ï vector ¸®ÅÏ.
+	 *	ë¬¼ì²´ ëª©ë¡ vector ë¦¬í„´.
 	 */
 	const vector<GObject*>* getObjectList();
 
 	/**
-	 * ¸ğµç ¹°Ã¼¸¦ deselect »óÅÂ·Î ¸¸µç´Ù.
+	 * ëª¨ë“  ë¬¼ì²´ë¥¼ deselect ìƒíƒœë¡œ ë§Œë“ ë‹¤.
 	 */
 	void deselectAllObject();
 
 	/**
-	 *	Æ¯Á¤ ¹°Ã¼¸¦ deselect »óÅÂ·Î ¸¸µç´Ù.
+	 *	íŠ¹ì • ë¬¼ì²´ë¥¼ deselect ìƒíƒœë¡œ ë§Œë“ ë‹¤.
 	 */
 	void deselectObject( GObject* pObject );
 
 	/**
-	 *	¹°Ã¼¸¦ select ½ÃÅ²´Ù.
+	 *	ë¬¼ì²´ë¥¼ select ì‹œí‚¨ë‹¤.
 	 */
 	void selectObject( GObject* pObject );
 
 	/**
-	 *	select µÈ ¹°Ã¼ °¹¼ö ¸®ÅÏ.
+	 *	select ëœ ë¬¼ì²´ ê°¯ìˆ˜ ë¦¬í„´.
 	 */
 	int getSelectedGObjectCount();
 
 	/**
-	 *	ÇöÀç select µÈ ¹°Ã¼Áß Ã¹ ¹øÂ° ¹°Ã¼ ¸®ÅÏ.
+	 *	í˜„ì¬ select ëœ ë¬¼ì²´ì¤‘ ì²« ë²ˆì§¸ ë¬¼ì²´ ë¦¬í„´.
 	 */
 	GObject* getSelectedGObject();
 
 	/**
-	 *	ÇöÀç select µÈ ¸ğµç ¹°Ã¼ ¸®ÅÏ.
+	 *	í˜„ì¬ select ëœ ëª¨ë“  ë¬¼ì²´ ë¦¬í„´.
 	 */
 	vector<GObject*>* const getSelectedGObjectList();
 
 	/**
-	 *	object Number ¿¡ ÇØ´çÇÏ´Â ¹°Ã¼ ¸®ÅÏ.
+	 *	object Number ì— í•´ë‹¹í•˜ëŠ” ë¬¼ì²´ ë¦¬í„´.
 	 */
 	GObject* getObjectByNumber( int objectNumber );
 
@@ -464,9 +464,9 @@ public:
 	GBoundingBox getBoundingBoxOfSelectedGObjects();
 
 	/**
-	 *	·»´õ¸µÀ» ¼öÇàÇÏ±â À§ÇØ Scene ÀÇ ÃÊ±âÈ­ ÀÛ¾÷À» ¼öÇàÇÑ´Ù.
-	 *	Object ÀÇ matrix ¸¦ ¸ğµÎ Àû¿ëÇØ¼­ ¸ğµç µ¥ÀÌÅÍ¸¦ World ÁÂÇ¥°è·Î
-	 *	º¯È¯ÇØ µĞ´Ù. Rendering À» ¼öÇàÇÏ±â Àü¿¡ Ç×»ó ¸ÕÀú Ã³¸®ÇØ¾ßÇÔ.
+	 *	ë Œë”ë§ì„ ìˆ˜í–‰í•˜ê¸° ìœ„í•´ Scene ì˜ ì´ˆê¸°í™” ì‘ì—…ì„ ìˆ˜í–‰í•œë‹¤.
+	 *	Object ì˜ matrix ë¥¼ ëª¨ë‘ ì ìš©í•´ì„œ ëª¨ë“  ë°ì´í„°ë¥¼ World ì¢Œí‘œê³„ë¡œ
+	 *	ë³€í™˜í•´ ë‘”ë‹¤. Rendering ì„ ìˆ˜í–‰í•˜ê¸° ì „ì— í•­ìƒ ë¨¼ì € ì²˜ë¦¬í•´ì•¼í•¨.
 	 */
 	GError convertRenderScene();
 
@@ -480,7 +480,7 @@ public:
 	GRayProfilerOption* getOpenGLOption();
 
 	/**
-	 *	·»´õ¸µÀ» 10È¸ ½ÃÇàÇÏµµ·Ï flag ¼ÂÆÃ
+	 *	ë Œë”ë§ì„ 10íšŒ ì‹œí–‰í•˜ë„ë¡ flag ì…‹íŒ…
 	 */
 	bool m_bRun10Times;
 	void setRun10Times( bool flag );
@@ -493,7 +493,7 @@ public:
 	bool IsProfileFlag();
 
 	/**
-	 *	Å×½ºÆ® ¿ëµµ flag setting
+	 *	í…ŒìŠ¤íŠ¸ ìš©ë„ flag setting
 	 */
 	bool m_bTestFlag;
 	void setTestFlag( bool flag );

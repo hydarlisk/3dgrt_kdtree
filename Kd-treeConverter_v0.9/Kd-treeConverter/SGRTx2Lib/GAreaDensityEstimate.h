@@ -21,7 +21,7 @@ public:
 	void clear();
 
 	/**
-	 *	»ï°¢Çü¿¡ ´ëÇØ¼­ AreaPhoton »ı¼º.
+	 *	ì‚¼ê°í˜•ì— ëŒ€í•´ì„œ AreaPhoton ìƒì„±.
 	 */
 	void generateAreaPhoton( GTriangleWrapperList *pTriangleList, 
 							 int *offset, int *depthInTri, float area );
@@ -31,7 +31,7 @@ public:
 				float triArea, int totalRow, int startIndexInTri, int maxIndexTri );
 
 	/**
-	 *	ÇöÀç AreaPhoton ¸ñ·Ï ¸®ÅÏ.
+	 *	í˜„ì¬ AreaPhoton ëª©ë¡ ë¦¬í„´.
 	 */
 	const vector<cuPhoton*>* getAreaPhoton();
 

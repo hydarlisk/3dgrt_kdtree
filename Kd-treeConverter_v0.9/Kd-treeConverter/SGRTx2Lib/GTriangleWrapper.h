@@ -8,10 +8,10 @@
 #include "SSE_common.h"
 
 /**
- *	Triangle Wrapper Å¬·¡½º.
- *	¸Ş¸ğ¸®¿¡ ÀúÀåµÇ¾î ÀÖ´Â vertex data ¸¦ p0, p1, p2 °¡
- *	°¡¸®Å²´Ù. ÀÌ Å¬·¡½º´Â ¹İµå½Ã Wrapper ÀÇ TargetÀÌ µÇ´Â
- *	Å¬·¡½º°¡ »ì¾ÆÀÖ¾î¾ß ÇÑ´Ù.
+ *	Triangle Wrapper í´ë˜ìŠ¤.
+ *	ë©”ëª¨ë¦¬ì— ì €ì¥ë˜ì–´ ìˆëŠ” vertex data ë¥¼ p0, p1, p2 ê°€
+ *	ê°€ë¦¬í‚¨ë‹¤. ì´ í´ë˜ìŠ¤ëŠ” ë°˜ë“œì‹œ Wrapper ì˜ Targetì´ ë˜ëŠ”
+ *	í´ë˜ìŠ¤ê°€ ì‚´ì•„ìˆì–´ì•¼ í•œë‹¤.
  *
  *	by graphicsian.
  */
@@ -19,16 +19,16 @@ class GPolygonObject;
 class GTriangleWrapper
 {
 public:
-	float *p0, *p1, *p2;			//	Triangle position ÀÇ ¸Ş¸ğ¸® À§Ä¡¸¦ °¡¸®Å´.
-	float *n0, *n1, *n2;			//	Triangle normal ÀÇ ¸Ş¸ğ¸® À§Ä¡¸¦ °¡¸®Å´.
-	float *uv0, *uv1, *uv2;			//	texture ÁÂÇ¥ s, t ÀÇ ¸Ş¸ğ¸® À§Ä¡¸¦ °¡¸®Å´.
+	float *p0, *p1, *p2;			//	Triangle position ì˜ ë©”ëª¨ë¦¬ ìœ„ì¹˜ë¥¼ ê°€ë¦¬í‚´.
+	float *n0, *n1, *n2;			//	Triangle normal ì˜ ë©”ëª¨ë¦¬ ìœ„ì¹˜ë¥¼ ê°€ë¦¬í‚´.
+	float *uv0, *uv1, *uv2;			//	texture ì¢Œí‘œ s, t ì˜ ë©”ëª¨ë¦¬ ìœ„ì¹˜ë¥¼ ê°€ë¦¬í‚´.
 
-	GPolygonObject* m_pObject;		//	Triangle ÀÌ ¼ÓÇÑ Triangle Object.
-	GBoundingBox m_BBox;			//	»ï°¢ÇüÀÇ Bounding Box.
-	int indexInObject;				//	¹°Ã¼³»¿¡¼­ÀÇ »ï°¢Çü index.
-	int index;						//	Scene ÀüÃ¼ »ï°¢Çü List µ¥ÀÌÅÍ¿¡¼­ ÇöÀç »ï°¢ÇüÀÇ index.
-	int objectIndexInScene;			//	»ï°¢ÇüÀÌ Æ÷ÇÔµÈ object ÀÇ scene ¾È¿¡¼­ÀÇ index.
-	bool bSelected;					//	»ï°¢ÇüÀÌ ¼±ÅÃµÇ¾ú´ÂÁö ¿©ºÎ.
+	GPolygonObject* m_pObject;		//	Triangle ì´ ì†í•œ Triangle Object.
+	GBoundingBox m_BBox;			//	ì‚¼ê°í˜•ì˜ Bounding Box.
+	int indexInObject;				//	ë¬¼ì²´ë‚´ì—ì„œì˜ ì‚¼ê°í˜• index.
+	int index;						//	Scene ì „ì²´ ì‚¼ê°í˜• List ë°ì´í„°ì—ì„œ í˜„ì¬ ì‚¼ê°í˜•ì˜ index.
+	int objectIndexInScene;			//	ì‚¼ê°í˜•ì´ í¬í•¨ëœ object ì˜ scene ì•ˆì—ì„œì˜ index.
+	bool bSelected;					//	ì‚¼ê°í˜•ì´ ì„ íƒë˜ì—ˆëŠ”ì§€ ì—¬ë¶€.
 
 	float visibility;
 

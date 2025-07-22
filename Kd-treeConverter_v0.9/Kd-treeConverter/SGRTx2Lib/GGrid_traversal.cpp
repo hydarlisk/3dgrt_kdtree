@@ -18,17 +18,17 @@
 #include"GGridConstants.h"
 
 void SSERenderPipeline::Grid_Rendering(void){
-	int xTileEnd = m_Resolution.x; int yTileEnd = m_Resolution.y; //ÇØ»óµµ.
+	int xTileEnd = m_Resolution.x; int yTileEnd = m_Resolution.y; //í•´ìƒë„.
 	int packetH = yTileEnd / packetSize; int packetW = xTileEnd / packetSize;
 
-	//ÆĞÅ¶ »ı¼º. ÁÖ Ãà ¼³Á¤.
+	//íŒ¨í‚· ìƒì„±. ì£¼ ì¶• ì„¤ì •.
 	GGridStructure *pGrid = m_Scene->getGridStructure();
 	GGrid_RayPacket rayPacket, macroPacket;
 
 	GTriangleWrapperList *pTriangleList = pGrid->get_tri_list(); 
 
 	//----------------------------------------------------------------------
-	//ray »ı¼º.	
+	//ray ìƒì„±.	
 	GVector LeftUp = GVector(m_LeftUp);
 	GVector DX     = GVector(m_DX);
 	GVector DY     = GVector(m_DY);
@@ -43,7 +43,7 @@ void SSERenderPipeline::Grid_Rendering(void){
 	for(int b = 0;b < packetH;b++){
 	for(int a = 0;a < packetW;a++){		
 		rayPacket.ray_generate(a, b, LeftUp, DX, DY, _rO);
-		pGrid->grid_setup(rayPacket, _rO);//grid¸¦ setup.
+		pGrid->grid_setup(rayPacket, _rO);//gridë¥¼ setup.
 		
 		int kS, kE, kVector = rayPacket.get_kVector();		
 
@@ -71,7 +71,7 @@ void SSERenderPipeline::Grid_Rendering(void){
 					float _t_far;
 					pGrid->get_tri_id(kVector, u, v, k, n, polyIdx);
 
-					//¸ŞÀÏ ¹Ú½º Ã¤Å©. °°À¸¸é ÀÌ¹Ì Ã¤Å©ÇÑ °ÍÀÌ¹Ç·Î pass.
+					//ë©”ì¼ ë°•ìŠ¤ ì±„í¬. ê°™ìœ¼ë©´ ì´ë¯¸ ì±„í¬í•œ ê²ƒì´ë¯€ë¡œ pass.
 					if(rayPacket.get_packetId() == pTriangleList->getTriangleWrapper(polyIdx)->m_mailBoxId)	continue;							
 					else pTriangleList->getTriangleWrapper(polyIdx)->m_mailBoxId = rayPacket.get_packetId();
 
@@ -120,7 +120,7 @@ void SSERenderPipeline::Grid_Rendering(void){
 					float _t_far;
 					pGrid->get_tri_id(kVector, u, v, k, n, polyIdx);
 
-					//¸ŞÀÏ ¹Ú½º Ã¤Å©. °°À¸¸é ÀÌ¹Ì Ã¤Å©ÇÑ °ÍÀÌ¹Ç·Î pass.
+					//ë©”ì¼ ë°•ìŠ¤ ì±„í¬. ê°™ìœ¼ë©´ ì´ë¯¸ ì±„í¬í•œ ê²ƒì´ë¯€ë¡œ pass.
 					if(rayPacket.get_packetId() == pTriangleList->getTriangleWrapper(polyIdx)->m_mailBoxId)	continue;							
 					else pTriangleList->getTriangleWrapper(polyIdx)->m_mailBoxId = rayPacket.get_packetId();	
 
@@ -173,7 +173,7 @@ bool SSERenderPipeline::grid_isect(int polyIdx, float tMin, GBoundingBox* cellBo
 	float lambda, mue;
 	if (!Split_Isect1x1_TriUVTest_PriRay(acc, 0, f, lambda, mue, 0)) return false;	
 
-	//hitÁ¡ÀÌ grid cell¾È¿¡ ÀÖ´Â°¡.
+	//hitì ì´ grid cellì•ˆì— ìˆëŠ”ê°€.
 	_sse_float rcpRayDir;
 	_GVEC_vRCP(rcpRayDir, rp->d);
 

@@ -1,9 +1,9 @@
 /**
- *	Cuda ·Î Rendering À» ¼öÇàÇÏ±â À§ÇØ¼­
- *	¿©·¯°¡Áö¸¦ °ü¸®ÇÏ´Â class.
+ *	Cuda ë¡œ Rendering ì„ ìˆ˜í–‰í•˜ê¸° ìœ„í•´ì„œ
+ *	ì—¬ëŸ¬ê°€ì§€ë¥¼ ê´€ë¦¬í•˜ëŠ” class.
  *
  *	light, texture, shading, ray tracing, photon mapping
- *	µîµî.
+ *	ë“±ë“±.
  *	
  *	by graphicsian.
  */
@@ -44,7 +44,7 @@ public:
 
 	virtual GError initialize( void );
 
-	// rendering À» À§ÇÑ ÇÔ¼ö
+	// rendering ì„ ìœ„í•œ í•¨ìˆ˜
 	virtual void PrepareRender( int nMaxWorker );
 
 	// Packet Size 1x1 -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -205,7 +205,7 @@ public:
 		_sse_2x2_rayfrustum	*m_FrustomRayPk2x2;
 		__m128 m_FrustumRay_t_near4, m_FrustumRay_t_far_4;
 	public:
-		// ÀÓ½Ã poor code
+		// ì„ì‹œ poor code
 	// ~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.
 	//-------------------------------------------------------------------------------
 
@@ -338,7 +338,7 @@ public:
 			inline GColor getTexColor (int nIdx);
 
 	public:
-		// Åë°èÄ¡
+		// í†µê³„ì¹˜
 		int m_RunStatics;
 
 		unsigned int G_PR, G_RR, G_SR;								// Processed Ray count		: CMI-1
@@ -346,20 +346,20 @@ public:
 		unsigned int T_PR, T_RR, T_SR;								// Traversal     count
 		unsigned int S_PR, S_RR, S_SR;								// Shading       count (x)
 
-		unsigned int m_pf_Hit_DiffPnt_PR, m_pf_Hit_SpecPnt_PR;		// PRI-6 : diffuse / specualr °³¼ö (primary)
-		unsigned int m_pf_Hit_DiffPnt_RR, m_pf_Hit_SpecPnt_RR;		// PRI-6 : diffuse / specualr °³¼ö (secondary)
-		float        m_Area_Diff_PR, m_Area_Spec_PR;				// PRI-7 : diffuse / specualr ¸éÀû (primary)
+		unsigned int m_pf_Hit_DiffPnt_PR, m_pf_Hit_SpecPnt_PR;		// PRI-6 : diffuse / specualr ê°œìˆ˜ (primary)
+		unsigned int m_pf_Hit_DiffPnt_RR, m_pf_Hit_SpecPnt_RR;		// PRI-6 : diffuse / specualr ê°œìˆ˜ (secondary)
+		float        m_Area_Diff_PR, m_Area_Spec_PR;				// PRI-7 : diffuse / specualr ë©´ì  (primary)
 
-		unsigned int m_pf_TexRef_PR, m_pf_TexRef_RR;					// CMI-7 : ÅØ½ºÃÄ access
+		unsigned int m_pf_TexRef_PR, m_pf_TexRef_RR;					// CMI-7 : í…ìŠ¤ì³ access
 
-		unsigned int m_pf_Hit_ShwPnt_ALL;								// PRI-9 : ±×¸²ÀÚ Áö´Â ÁöÁ¡
-		unsigned int m_pf_Hit_ShwCnt_PR;								//       : ±×¸²ÀÚ Ã³¸® È½¼ö (Primary)
-		unsigned int m_pf_Hit_ShwCnt_RR;								//       : ±×¸²ÀÚ Ã³¸® È½¼ö (Secondary)
+		unsigned int m_pf_Hit_ShwPnt_ALL;								// PRI-9 : ê·¸ë¦¼ì ì§€ëŠ” ì§€ì 
+		unsigned int m_pf_Hit_ShwCnt_PR;								//       : ê·¸ë¦¼ì ì²˜ë¦¬ íšŸìˆ˜ (Primary)
+		unsigned int m_pf_Hit_ShwCnt_RR;								//       : ê·¸ë¦¼ì ì²˜ë¦¬ íšŸìˆ˜ (Secondary)
 
-		unsigned int m_pf_Hit_ShadCnt_PR;								// CMI-6 : Shading Ã³¸® (Primary)
-		unsigned int m_pf_Hit_ShadCnt_RR;								// CMI-6 : Shading Ã³¸® (Secondary)
-		unsigned int m_pf_Hit_ShadPnt_PR;								// CMI-6 : Shading ÁöÁ¡ (Primary)
-		unsigned int m_pf_Hit_ShadPnt_RR;								// CMI-6 : Shading ÁöÁ¡ (Secondary)
+		unsigned int m_pf_Hit_ShadCnt_PR;								// CMI-6 : Shading ì²˜ë¦¬ (Primary)
+		unsigned int m_pf_Hit_ShadCnt_RR;								// CMI-6 : Shading ì²˜ë¦¬ (Secondary)
+		unsigned int m_pf_Hit_ShadPnt_PR;								// CMI-6 : Shading ì§€ì  (Primary)
+		unsigned int m_pf_Hit_ShadPnt_RR;								// CMI-6 : Shading ì§€ì  (Secondary)
 
 		std::vector<int> vTriID;
 

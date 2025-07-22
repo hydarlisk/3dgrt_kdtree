@@ -6,7 +6,7 @@
 using namespace std;
 
 /**
- *	GTriangleWrapper ¸¦ list ·Î °ü¸®ÇÏ´Â Å¬·¡½º.
+ *	GTriangleWrapper ë¥¼ list ë¡œ ê´€ë¦¬í•˜ëŠ” í´ë˜ìŠ¤.
  *
  *	by graphicsian.
  */

@@ -2,8 +2,8 @@
 
 #include "GLight.h"
 /**
- *	Halogen Light ¸¦ Ç¥ÇöÇÏ±â À§ÇÑ Å¬·¡½º.
- *	Polygon À¸·Î Ç¥Çö.
+ *	Halogen Light ë¥¼ í‘œí˜„í•˜ê¸° ìœ„í•œ í´ë˜ìŠ¤.
+ *	Polygon ìœ¼ë¡œ í‘œí˜„.
  */
 class GVirtualLight : public GLight
 {

@@ -4,8 +4,8 @@
 #include "GColor.h"
 
 /**
- *	Rendering °á°ú¸¦ ÀúÀåÇÒ Image Buffer
- *	RGB ¸¦ °¢°¢ float ÇüÀ¸·Î ÀúÀåÇÑ´Ù.
+ *	Rendering ê²°ê³¼ë¥¼ ì €ì¥í•  Image Buffer
+ *	RGB ë¥¼ ê°ê° float í˜•ìœ¼ë¡œ ì €ì¥í•œë‹¤.
  *
  *	by graphicsian.
  */

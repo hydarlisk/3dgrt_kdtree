@@ -19,8 +19,8 @@ using namespace std;
 class GGridStructure : public GSpatialStructure
 {
 public:
-	GGridStructure(GScene* pScene); //»ı¼ºÀÚ.
-	virtual ~GGridStructure(void); //¼Ò¸êÀÚ.
+	GGridStructure(GScene* pScene); //ìƒì„±ì.
+	virtual ~GGridStructure(void); //ì†Œë©¸ì.
 
 	virtual GError makeSSERenderStructureInfo( SSESceneData *pSSEData );
 	
@@ -31,7 +31,7 @@ public:
 	virtual bool loadStructureFromFile(const char *filename);
 	virtual bool saveStructureToFile(const char *filename);
 	
-//	void macro_cell_init(void); //macro cellÀ» »ç¿ëÇÏ±â Àü¿¡ initÇÏ´Â ÇÔ¼ö.
+//	void macro_cell_init(void); //macro cellì„ ì‚¬ìš©í•˜ê¸° ì „ì— inití•˜ëŠ” í•¨ìˆ˜.
 
 	GTriangleWrapperList* get_tri_list(void);
 	GBoundingBox* getBBox(void);
@@ -60,20 +60,20 @@ public:
 
 	int macroK;
 protected:
-	GBoundingBox m_gridBounding; //¹Ù¿îµù ¹Ú½ºÀÌ°í.
-	vector<GGridIndex*> m_gridCells[250][250][250];//grid cellÀÇ index. °¢ ¼¿¿¡ »ï°¢ÇüÀÇ index¸¦ ÀúÀå.	gridCells[z][y][x].
+	GBoundingBox m_gridBounding; //ë°”ìš´ë”© ë°•ìŠ¤ì´ê³ .
+	vector<GGridIndex*> m_gridCells[250][250][250];//grid cellì˜ index. ê° ì…€ì— ì‚¼ê°í˜•ì˜ indexë¥¼ ì €ì¥.	gridCells[z][y][x].
 	GBoundingBox m_cellBbox;
 	
-	GScene *m_pScene; //¾ÀÁ¤º¸ µîÀ» º¸À¯ÇÏ´Â º¯¼ö...ÀÎ°¡
+	GScene *m_pScene; //ì”¬ì •ë³´ ë“±ì„ ë³´ìœ í•˜ëŠ” ë³€ìˆ˜...ì¸ê°€
 
-	int m_iSceneTriangleCount; //»ï°¢ÇüÀÇ ¼ö ÀÎ µí.
-	GTriangleWrapperList *m_pSceneTriangleList; //»ï°¢ÇüÀÇ ¸®½ºÆ® °ÚÁö.
+	int m_iSceneTriangleCount; //ì‚¼ê°í˜•ì˜ ìˆ˜ ì¸ ë“¯.
+	GTriangleWrapperList *m_pSceneTriangleList; //ì‚¼ê°í˜•ì˜ ë¦¬ìŠ¤íŠ¸ ê² ì§€.
 
-	int m_Nx, m_Ny, m_Nz; //grid cellÀÇ ¼ö.	
+	int m_Nx, m_Ny, m_Nz; //grid cellì˜ ìˆ˜.	
 	int m_Nu, m_Nv, m_Nk;
 	int m_mNu, m_mNv, m_mNk;
-	float m_xLength, m_yLength, m_zLength; //grid cellÀÇ length.	
-	float m_invXL, m_invYL, m_invZL; //¿¬»êÀ» À§ÇÑ °ª. ÇÑ¹ø¸¸ °è»êÇÏ±â À§ÇØ ¿©±â¿¡ ÀúÀå.
+	float m_xLength, m_yLength, m_zLength; //grid cellì˜ length.	
+	float m_invXL, m_invYL, m_invZL; //ì—°ì‚°ì„ ìœ„í•œ ê°’. í•œë²ˆë§Œ ê³„ì‚°í•˜ê¸° ìœ„í•´ ì—¬ê¸°ì— ì €ì¥.
 
 	float m_sliceL, m_uLength, m_vLength;
 	float m_lastuS1, m_lastvS1, m_lastuE1, m_lastvE1;
@@ -86,7 +86,7 @@ inline GTriangleWrapperList* GGridStructure::get_tri_list(void){
 }
 
 inline void GGridStructure::get_tri_id(int kVector, int u, int v, int k, int n, int& polyIdx){
-	//ÇØ´ç ¼ø¼­ÀÇ »ï°¢ÇüÀÇ object id¿Í triangle id¸¦ return.
+	//í•´ë‹¹ ìˆœì„œì˜ ì‚¼ê°í˜•ì˜ object idì™€ triangle idë¥¼ return.
 	switch(kVector){
 	case PLUS_X: case MINUS_X:
 		polyIdx = m_gridCells[u][v][k][n]->m_triangleId; 
@@ -113,7 +113,7 @@ inline float GGridStructure::get_invZL(void){
 }
 
 inline int GGridStructure::get_cell_triN(int kVector, int u, int v, int k){
-	//grid cell¾ÈÀÇ »ï°¢ÇüÀÉ ¼ö¸¦ return.
+	//grid cellì•ˆì˜ ì‚¼ê°í˜•ì  ìˆ˜ë¥¼ return.
 	switch(kVector){
 	case PLUS_X: case MINUS_X:
 		return (int)m_gridCells[u][v][k].size();

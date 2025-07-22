@@ -122,12 +122,12 @@ void SSERenderPipelineQ::IsectPacket4x4Q( const KdTreeNode *node, _sse_4x4_trace
 		bool bContinue = false;
 		m_MailboxCS.lock();
 		if (acc.mbox == rp->RayId) { bContinue = true; }
-		else { acc.mbox = rp->RayId; }	// ¹«Á¶°Ç isect ¾ÈµÇµµ ½ÇÇà µÇ¾î¾ß ÇÔ
+		else { acc.mbox = rp->RayId; }	// ë¬´ì¡°ê±´ isect ì•ˆë˜ë„ ì‹¤í–‰ ë˜ì–´ì•¼ í•¨
 		m_MailboxCS.unlock();
 		if (bContinue) continue;
 
 		// ---------------------------------------------------------------
-		// Backface Culling : Åõ¸íÇÏÁö ¾Ê´Â ¹°Ã¼¸¸ ÇØ´ç
+		// Backface Culling : íˆ¬ëª…í•˜ì§€ ì•ŠëŠ” ë¬¼ì²´ë§Œ í•´ë‹¹
 		// ---------------------------------------------------------------
 		if (acc.isTransparent || !m_Scene->isBackFaceCulling()) {
 			for (j = 3; j >= 0; j--) {
@@ -297,8 +297,8 @@ void SSERenderPipelineQ::TracePacket4x4Q( _sse_4x4_traceData *traceData )
 
 // ?????????????????????????????????????????????????????????????????
 // ?????????????????????????????????????????????????????????????????
-// m_Stack4x4 µµ thread safe ÇÏ°Ô µ¿±âÈ­ ÇÊ¿äÇÔ... T.T
-// ¾ÆÁ÷ ¹Ì±¸Çö(¼öÁ¤) Â÷ÈÄ °èÈ¹ÀÌ ÀÖÀ¸¸é ÇÏÀÚ~~~~!!!
+// m_Stack4x4 ë„ thread safe í•˜ê²Œ ë™ê¸°í™” í•„ìš”í•¨... T.T
+// ì•„ì§ ë¯¸êµ¬í˜„(ìˆ˜ì •) ì°¨í›„ ê³„íšì´ ìˆìœ¼ë©´ í•˜ì~~~~!!!
 // ?????????????????????????????????????????????????????????????????
 // ?????????????????????????????????????????????????????????????????
 
@@ -446,7 +446,7 @@ void SSERenderPipelineQ::shading4x4Q (_sse_4x4_traceData *traceData) {
 		ishadingmask[i] = _mm_cmpgt_epi32(is->tacc4[i], _mm_setzero_si128());
 		shadingmask[i]  = _mm_and_ps(shadingmask[i], rm->mask4[i]);
 
-		// Shading ¿¡¼­, Åõ¸íÇÑ ¹°Ã¼ÀÏ¶§, Normal °ú dir ÀÇ dot ÀÌ < 0 ÀÌ¶ó¸é normal À» µÚÂ¤´Â´Ù.
+		// Shading ì—ì„œ, íˆ¬ëª…í•œ ë¬¼ì²´ì¼ë•Œ, Normal ê³¼ dir ì˜ dot ì´ < 0 ì´ë¼ë©´ normal ì„ ë’¤ì§šëŠ”ë‹¤.
 		__m128 mask = _mm_and_ps(
 				_mm_cmpgt_ps(mat_fRefr[i].v4, _mm_setzero_ps()),
 				_mm_cmpgt_ps(sse_vdot(is->n[i], rp->d[i]), _mm_setzero_ps()));
@@ -466,7 +466,7 @@ void SSERenderPipelineQ::shading4x4Q (_sse_4x4_traceData *traceData) {
 	// Diffuse & Specular color
 	const vector<GLight*>* pLightList = m_Scene->getLightList();
 	for ( int lx = 0; lx < (int) pLightList->size(); ++lx ) {	GLight* pLight = (*pLightList)[ lx ];
-		// Point Light ¸¸ ÀÏ´Ü Áö¿ø
+		// Point Light ë§Œ ì¼ë‹¨ ì§€ì›
 		if ( pLight->getLightType() != typePointLight )  continue;
 		if ( pLight->isEnabled() != true ) continue;
 
@@ -475,22 +475,22 @@ void SSERenderPipelineQ::shading4x4Q (_sse_4x4_traceData *traceData) {
 		GPoint   lightPos   = pLight->getPosition();
 		_sse_vec lPos       = sse_vset1(lightPos.x, lightPos.y, lightPos.z);
 
-		// ±¤¿ø ÀÚ±âÀÚ½ÅÀÎ °æ¿ì
+		// ê´‘ì› ìê¸°ìì‹ ì¸ ê²½ìš°
 		for (i = 3; i >= 0; i--) {
 			iislightmask[i] = _mm_cmpeq_epi32(obj_num[i].v4, _mm_set1_epi32(pLight->getObjectNumber()));
 			oColor[i] = sse_vupdate(sse_vadd(oColor[i], sse_vmul(lColor, sse_vset1(pLight->getIntensity()))), oColor[i], _mm_and_ps(islightmask[i], shadingmask[i]));
 		}
 
-		// ±×¸²ÀÚ È®ÀÎ
+		// ê·¸ë¦¼ì í™•ì¸
 		if ( m_Scene->isEnableShadow() ) {
 			checkVisibility4x4(&lightPos, shadingmask);
 
 			for (i = 3; i >= 0; i--) {
 				__m128 lDist = sse_vlength(sse_vsub(lPos, hit_p[i]));
 
-				// shadow °ü·Ã visible Á¶°Ç
-				// 1) shadingmask[i]           : ¹°Ã¼¿Í ±³Á¡ÀÖ´Â °Í
-				// 2) shadow_is->tacc4[i] > 0  : shadow ray °¡ ±³Â÷Á¡ÀÌ µÚ¿¡ Á¸ÀçÇÏ°Å³ª ¾Æ´Ï¸é °Å¸®°¡ °ÅÀÇ °¡±õ°Å³ª
+				// shadow ê´€ë ¨ visible ì¡°ê±´
+				// 1) shadingmask[i]           : ë¬¼ì²´ì™€ êµì ìˆëŠ” ê²ƒ
+				// 2) shadow_is->tacc4[i] > 0  : shadow ray ê°€ êµì°¨ì ì´ ë’¤ì— ì¡´ì¬í•˜ê±°ë‚˜ ì•„ë‹ˆë©´ ê±°ë¦¬ê°€ ê±°ì˜ ê°€ê¹ê±°ë‚˜
 				iisisectmask = _mm_cmpgt_epi32(shadow_is->tacc4[i], _mm_setzero_si128());
 				inoisectmask = _mm_cmpeq_epi32(shadow_is->tacc4[i], _mm_setzero_si128());
 
@@ -757,10 +757,10 @@ void SSERenderPipelineQ::RenderQueue4x4Q( void )
 		InitPacket4x4Q ( traceData );	// RMask all clear
 
 		// ---------------------------------------------------------
-		// Masking ±â¹ıÀ» ÀÌ¿ëÇÏ¿© Coherence ¸¦ ¸ÂÃß¾î ·»´õ¸µ ½ÃÀÛ
+		// Masking ê¸°ë²•ì„ ì´ìš©í•˜ì—¬ Coherence ë¥¼ ë§ì¶”ì–´ ë Œë”ë§ ì‹œì‘
 		// ---------------------------------------------------------
 		unsigned int i, b;
-		// coherence Ã¼Å© °â ray dir °áÁ¤ (q = 8¹æÇâÁßÇÏ³ª)
+		// coherence ì²´í¬ ê²¸ ray dir ê²°ì • (q = 8ë°©í–¥ì¤‘í•˜ë‚˜)
 		if (rp->IsCoherent()) {
 			rp->RayWay = (rp->xmask & 1) + (rp->ymask & 2) + (rp->zmask & 4);
 			rm->mask4[0] = tm->mask4[0];
@@ -811,7 +811,7 @@ void SSERenderPipelineQ::RenderQueue4x4Q( void )
 
 // -----------------------------------------------------------
 // SSERenderPipelineQ::GeneratePrimaryRay_inBlock
-//		Block ¾È¿¡¼­ Primary Ray ¸¦ »ı¼ºÇÑ´Ù.
+//		Block ì•ˆì—ì„œ Primary Ray ë¥¼ ìƒì„±í•œë‹¤.
 // -----------------------------------------------------------
 void SSERenderPipelineQ::GeneratePrimaryRay_inBlock4x4Q(int bx, int by) 
 {
@@ -878,7 +878,7 @@ void SSERenderPipelineQ::GeneratePrimaryRay_inBlock4x4Q(int bx, int by)
 
 // -----------------------------------------------------------
 // SSERenderPipelineQ::Render4x4Q
-//		4x4 ray packet À» ÀúÀåÇÑ Queue ¸¦ ÀÌ¿ëÇÏ¿© ·»´õ¸µ
+//		4x4 ray packet ì„ ì €ì¥í•œ Queue ë¥¼ ì´ìš©í•˜ì—¬ ë Œë”ë§
 // -----------------------------------------------------------
 void SSERenderPipelineQ::Render4x4Q_onThread( int nThreadID )
 {
@@ -896,20 +896,20 @@ void SSERenderPipelineQ::Render4x4Q_onThread( int nThreadID )
 	}
 
 	// For Testing
-	//	GeneratePrimaryRay_inBlock4x4Q(18, 5);	// Primary Ray ¸¦ Queue ¿¡ ÀúÀå
-	//	RenderQueue4x4Q();						// Queue ¿¡ »ı¼ºµÈ Ray-packet ·»´õ¸µ
+	//	GeneratePrimaryRay_inBlock4x4Q(18, 5);	// Primary Ray ë¥¼ Queue ì— ì €ì¥
+	//	RenderQueue4x4Q();						// Queue ì— ìƒì„±ëœ Ray-packet ë Œë”ë§
 
 	int bx, by;
 	for (by = yBlockStart; by < yBlockEnd; by++) {
 	for (bx = 0; bx < m_BlockX; bx++) {
-		GeneratePrimaryRay_inBlock4x4Q(bx, by);	// Primary Ray ¸¦ Queue ¿¡ ÀúÀå
-		RenderQueue4x4Q();						// Queue ¿¡ »ı¼ºµÈ Ray-packet ·»´õ¸µ
+		GeneratePrimaryRay_inBlock4x4Q(bx, by);	// Primary Ray ë¥¼ Queue ì— ì €ì¥
+		RenderQueue4x4Q();						// Queue ì— ìƒì„±ëœ Ray-packet ë Œë”ë§
 	}}
 }
 
 // -----------------------------------------------------------
 // SSERenderPipelineQ::Render4x4Q
-//		4x4 ray packet À» ÀúÀåÇÑ Queue ¸¦ ÀÌ¿ëÇÏ¿© ·»´õ¸µ
+//		4x4 ray packet ì„ ì €ì¥í•œ Queue ë¥¼ ì´ìš©í•˜ì—¬ ë Œë”ë§
 // -----------------------------------------------------------
 void SSERenderPipelineQ::Render4x4Q( void )
 {
@@ -921,8 +921,8 @@ void SSERenderPipelineQ::Render4x4Q( void )
 		int bx, by;
 		for (by = 0; by < m_BlockY; by++) {
 		for (bx = 0; bx < m_BlockX; bx++) {
-			GeneratePrimaryRay_inBlock4x4Q(bx, by);	// Primary Ray ¸¦ Queue ¿¡ ÀúÀå
-			RenderQueue4x4Q();						// Queue ¿¡ »ı¼ºµÈ Ray-packet ·»´õ¸µ
+			GeneratePrimaryRay_inBlock4x4Q(bx, by);	// Primary Ray ë¥¼ Queue ì— ì €ì¥
+			RenderQueue4x4Q();						// Queue ì— ìƒì„±ëœ Ray-packet ë Œë”ë§
 		}}
 	}
 }

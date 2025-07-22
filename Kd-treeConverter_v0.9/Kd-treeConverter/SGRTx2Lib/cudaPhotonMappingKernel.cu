@@ -1,3 +1,4 @@
+#include "cudaRenderPipelineCommonKernel.cu"
 #include "cudaPhotonMapping.cuh"
 #include "cuda_math.h"
 
@@ -19,7 +20,7 @@
 
 
 /**
- *	Photon Tracing ¹× Photon Gathering À» ¼öÇàÇÒ CUDA Kernel
+ *	Photon Tracing ë° Photon Gathering ì„ ìˆ˜í–‰í•  CUDA Kernel
  *
  *	by graphicsian.
  */
@@ -29,8 +30,8 @@ texture<int2, 1, cudaReadModeElementType> photonIndexTexture;
 texture<float4, 1, cudaReadModeElementType> areaPhotonTexture;
 
 /**
- *	theta, phi ·Î dir ¸¦ ±¸ÇÑ´Ù.
- *	sgrt ¿¡¼­ °¡Á®¿È. thanks to Dr.Cha.
+ *	theta, phi ë¡œ dir ë¥¼ êµ¬í•œë‹¤.
+ *	sgrt ì—ì„œ ê°€ì ¸ì˜´. thanks to Dr.Cha.
  */	
 __device__ void makeSolidAngle( float theta, float phi, float3 normal, float3 *dir )
 {
@@ -69,8 +70,8 @@ __device__ void makeSolidAngle( float theta, float phi, float3 normal, float3 *d
 }
 
 /**
- *	glossy ¸¦ À§ÇÑ aniso photon hemi sphere »ùÇÃ¸µ.
- *	sgrt ¿¡¼­ °¡Á®¿Í¼­ ¼öÁ¤. thanks to Dr.Â÷µæÇö.
+ *	glossy ë¥¼ ìœ„í•œ aniso photon hemi sphere ìƒ˜í”Œë§.
+ *	sgrt ì—ì„œ ê°€ì ¸ì™€ì„œ ìˆ˜ì •. thanks to Dr.ì°¨ë“í˜„.
  */	
 __device__ void anisoPhongSampleHemiSphere( float u1, float u2, 
 											float3 normal, float3 dir, 
@@ -80,7 +81,7 @@ __device__ void anisoPhongSampleHemiSphere( float u1, float u2,
 	float theta, phi;
 	float3 h;
 	
-	/** dir Àº out-going ¹æÇâÀ¸·Î µé¾î¿Ô´Ù°í»ı°¢. */
+	/** dir ì€ out-going ë°©í–¥ìœ¼ë¡œ ë“¤ì–´ì™”ë‹¤ê³ ìƒê°. */
 	
 	// calculate phi of halfway vector h
 	if( u1 < 0.25f ) {
@@ -122,9 +123,9 @@ __device__ void anisoPhongSampleHemiSphere( float u1, float u2,
 
 
 /**
- *	point light ¿¡¼­ photon À» emit ÇÑ´Ù.
- *	dir.w ¿¡´Â mint, pos.w ¿¡´Â maxt ¸¦ ÀúÀåÇØ¾ß ÇÑ´Ù.
- *	light Á¤º¸´Â constant memory ¿¡¼­ ÂüÁ¶ÇÑ´Ù.
+ *	point light ì—ì„œ photon ì„ emit í•œë‹¤.
+ *	dir.w ì—ëŠ” mint, pos.w ì—ëŠ” maxt ë¥¼ ì €ì¥í•´ì•¼ í•œë‹¤.
+ *	light ì •ë³´ëŠ” constant memory ì—ì„œ ì°¸ì¡°í•œë‹¤.
  */
 __device__ void generatePointLightEmitPhoton( int randomSeed, cuLight* pLight,
 											  float4 *pos, float4 *dir, float3 *power ) 
@@ -150,9 +151,9 @@ __device__ void generatePointLightEmitPhoton( int randomSeed, cuLight* pLight,
 }
 
 /**
- *	ray set light ¿¡¼­ photon À» emit ÇÑ´Ù.
- *	ÀÌ ligth °¡ ÂüÁ¶ÇÏ´Â ray set data ¹üÀ§¾È¿¡¼­ ray sample À» ÇÏ³ª
- *	¼±ÅÃÇØ¾ß ÇÑ´Ù.
+ *	ray set light ì—ì„œ photon ì„ emit í•œë‹¤.
+ *	ì´ ligth ê°€ ì°¸ì¡°í•˜ëŠ” ray set data ë²”ìœ„ì•ˆì—ì„œ ray sample ì„ í•˜ë‚˜
+ *	ì„ íƒí•´ì•¼ í•œë‹¤.
  */
 __device__ void generateRaySetLightEmitPhoton( int randomSeed, cuLight* pLight,
 											   float4 *pos, float4 *dir, float3 *power ) 
@@ -164,25 +165,25 @@ __device__ void generateRaySetLightEmitPhoton( int randomSeed, cuLight* pLight,
 	float phi = u2 * 2.0f * M_PI;
 	float3 normal, randdir;
 
-	/** random ÇÏ°Ô ray set data ¹üÀ§ ¾ÈÀÇ index ¸¦ »ı¼ºÇØ³½´Ù. */
+	/** random í•˜ê²Œ ray set data ë²”ìœ„ ì•ˆì˜ index ë¥¼ ìƒì„±í•´ë‚¸ë‹¤. */
 	//int randomIndex = ( (int)( ( k1 * (float)pLight->iRaySetCount ) ) % pLight->iRaySetCount ) + 
 	//					pLight->iStartIndexInRaySetData;
 	int randomIndex = ( randomSeed % pLight->iRaySetCount ) + pLight->iStartIndexInRaySetData;
 
 	/** 
-	 *	ray set data texture ¿¡¼­ ÀÌ index ¿¡ ÇØ´çÇÏ´Â µ¥ÀÌÅÍ¸¦ °¡Á®¿Â´Ù. 
-	 *	ray tracing À» À§ÇØ¼­ dir.w ´Â 0.0, pos.w ´Â FLT_MAX ·Î ¼³Á¤ÇØ¾ß ÇÑ´Ù.
+	 *	ray set data texture ì—ì„œ ì´ index ì— í•´ë‹¹í•˜ëŠ” ë°ì´í„°ë¥¼ ê°€ì ¸ì˜¨ë‹¤. 
+	 *	ray tracing ì„ ìœ„í•´ì„œ dir.w ëŠ” 0.0, pos.w ëŠ” FLT_MAX ë¡œ ì„¤ì •í•´ì•¼ í•œë‹¤.
 	 */
 	float4 temp = tex1Dfetch( inLightRaySetTexture, randomIndex * 2 + 0 );
 	(*pos).x = temp.x; (*pos).y = temp.y; (*pos).z = temp.z; (*pos).w = FLT_MAX;
 	normal.x = temp.w;
 
-	/** temp z ¿¡´Â °¢ ray ÀÇ power °¡ ±â·ÏµÇ¾î ÀÖ´Ù. */
+	/** temp z ì—ëŠ” ê° ray ì˜ power ê°€ ê¸°ë¡ë˜ì–´ ìˆë‹¤. */
 	temp = tex1Dfetch( inLightRaySetTexture, randomIndex * 2 + 1 );
 	normal.y = temp.x; normal.z = temp.y;
 
 	/**
-	 *	dir ¸¦ »ı¼ºÇÑ´Ù.
+	 *	dir ë¥¼ ìƒì„±í•œë‹¤.
 	 */
 	makeSolidAngle( theta, phi, normal, &randdir );
 
@@ -195,12 +196,12 @@ __device__ void generateRaySetLightEmitPhoton( int randomSeed, cuLight* pLight,
 }
 
 /**
- *	È®·üÀûÀ¸·Î photon À» generation ÇÑ´Ù. ÇöÀç ÁöÁ¡¿¡¼­ÀÇ È®·ü°ªÀº nextBound °ª°ú
- *	currentPhoton ÀÇ pos ¸¦ ±âÁØÀ¸·Î ±¸ÇÑ´Ù. ( µ¿ÀÏÇÑ Àå¸é¿¡¼­´Â µ¿ÀÏÇÑ °ªÀÌ ³ª¿Í¾ß ÇÏ¹Ç·Î )
- *	¸¸¾à, specular ÇÏ°í glossy ÇÑ photon À» ÀúÀåÇÏ´Â°Ô ¾Æ´Ï¶ó¸é,
- *	ÇöÀç photon ÀÌ bound µÇ´Â ¼ºÁúÀÌ ps ÀÌ°Å³ª pg ÀÏ¶§´Â photon À» Áö¿î´Ù. ( dir À» ¸ğµÎ 0.0 À¸·Î )
+ *	í™•ë¥ ì ìœ¼ë¡œ photon ì„ generation í•œë‹¤. í˜„ì¬ ì§€ì ì—ì„œì˜ í™•ë¥ ê°’ì€ nextBound ê°’ê³¼
+ *	currentPhoton ì˜ pos ë¥¼ ê¸°ì¤€ìœ¼ë¡œ êµ¬í•œë‹¤. ( ë™ì¼í•œ ì¥ë©´ì—ì„œëŠ” ë™ì¼í•œ ê°’ì´ ë‚˜ì™€ì•¼ í•˜ë¯€ë¡œ )
+ *	ë§Œì•½, specular í•˜ê³  glossy í•œ photon ì„ ì €ì¥í•˜ëŠ”ê²Œ ì•„ë‹ˆë¼ë©´,
+ *	í˜„ì¬ photon ì´ bound ë˜ëŠ” ì„±ì§ˆì´ ps ì´ê±°ë‚˜ pg ì¼ë•ŒëŠ” photon ì„ ì§€ìš´ë‹¤. ( dir ì„ ëª¨ë‘ 0.0 ìœ¼ë¡œ )
  *
- *	generate ºÎºĞÀº ¼­°­´ëÇĞ±³ Dr. Â÷µæÇö±ºÀÇ photon source ¸¦ ¼öÁ¤ÇßÀ½À» ¹àÈ÷´Â ¹ÙÀÔ´Ï´Ù.
+ *	generate ë¶€ë¶„ì€ ì„œê°•ëŒ€í•™êµ Dr. ì°¨ë“í˜„êµ°ì˜ photon source ë¥¼ ìˆ˜ì •í–ˆìŒì„ ë°íˆëŠ” ë°”ì…ë‹ˆë‹¤.
  */
 __device__ bool photonStorageAndBoundingPhoton( int nextBound, int maxBound, int seed,
 												cuIntersectionPoint &hitPoint,
@@ -222,10 +223,10 @@ __device__ bool photonStorageAndBoundingPhoton( int nextBound, int maxBound, int
 	float pt = material.transparency;
 
 	/**
-	 *	¸ÕÀú ÇöÀç »óÅÂ¿¡ µû¶ó¼­ photon À» ÀúÀåÇÒÁö ¸»Áö °áÁ¤.
-	 *	¸¸¾à photon ÀÌ bound µÉ °ªÀÌ ps, pg, pt ¶ó¸é storing ÇÏÁö ¾Ê±â À§ÇØ
-	 *	photon À» ÃÊ±âÈ­ ½ÃÅ²´Ù. bound °¡ maxbound ¿¡ ´Ù µµ´ŞÇßÀ»¶§µµ
-	 *	ÀÌ ºÎºĞÀº ¼öÇàµÇ¾î¾ß ÇÑ´Ù.
+	 *	ë¨¼ì € í˜„ì¬ ìƒíƒœì— ë”°ë¼ì„œ photon ì„ ì €ì¥í• ì§€ ë§ì§€ ê²°ì •.
+	 *	ë§Œì•½ photon ì´ bound ë  ê°’ì´ ps, pg, pt ë¼ë©´ storing í•˜ì§€ ì•Šê¸° ìœ„í•´
+	 *	photon ì„ ì´ˆê¸°í™” ì‹œí‚¨ë‹¤. bound ê°€ maxbound ì— ë‹¤ ë„ë‹¬í–ˆì„ë•Œë„
+	 *	ì´ ë¶€ë¶„ì€ ìˆ˜í–‰ë˜ì–´ì•¼ í•œë‹¤.
 	 */
 	if ( prob > pd && prob <= pd + ps + pt + pg ) {
 		currentPhoton.dir.x = 0.0f; 
@@ -235,7 +236,7 @@ __device__ bool photonStorageAndBoundingPhoton( int nextBound, int maxBound, int
 
 
 	/**
-	 *	¸¸¾à nextBound °¡ maxBound º¸´Ù °°°Å³ª Å©´Ù¸é ´õ ÀÌ»ó ÃßÀûÇÏÁö ¾Ê´Â´Ù.
+	 *	ë§Œì•½ nextBound ê°€ maxBound ë³´ë‹¤ ê°™ê±°ë‚˜ í¬ë‹¤ë©´ ë” ì´ìƒ ì¶”ì í•˜ì§€ ì•ŠëŠ”ë‹¤.
 	 */
 	if ( nextBound >= maxBound )
 		return false;
@@ -243,8 +244,8 @@ __device__ bool photonStorageAndBoundingPhoton( int nextBound, int maxBound, int
 
 	if ( prob <= pd ) {
 
-		/** diffuse ¹İ»ç.	*/
-		/** µŞ¸é¿¡ ¸Â¾ÒÀ»¶§ Ã³¸® */
+		/** diffuse ë°˜ì‚¬.	*/
+		/** ë’·ë©´ì— ë§ì•˜ì„ë•Œ ì²˜ë¦¬ */
 		tempnormal = ( dot( dir, currentPhoton.normal ) < 0.0f ) ? 
 						-1.0f * currentPhoton.normal : currentPhoton.normal;
 		
@@ -263,9 +264,9 @@ __device__ bool photonStorageAndBoundingPhoton( int nextBound, int maxBound, int
 		nextRay.pos.z = currentPhoton.pos.z + nextRay.dir.z * RAY_START_EPSILON; 
 	
 		/** 
-		 *	next photon À» °¡¸®Å°´Â global memory ¿¡ 
-		 *	diffuse power ¸¦ °è»êÇØ ÀúÀåÇÑ´Ù. ÀÌ¹ÌÈ®·üÀûÀ¸·Î °áÁ¤µÇ¾úÀ¸¹Ç·Î kd ´Â
-		 *	°öÇÏÁö ¾Ê´Â´Ù.
+		 *	next photon ì„ ê°€ë¦¬í‚¤ëŠ” global memory ì— 
+		 *	diffuse power ë¥¼ ê³„ì‚°í•´ ì €ì¥í•œë‹¤. ì´ë¯¸í™•ë¥ ì ìœ¼ë¡œ ê²°ì •ë˜ì—ˆìœ¼ë¯€ë¡œ kd ëŠ”
+		 *	ê³±í•˜ì§€ ì•ŠëŠ”ë‹¤.
 		 */
 		int texture = float_as_int( material.textureNumber );
 
@@ -281,7 +282,7 @@ __device__ bool photonStorageAndBoundingPhoton( int nextBound, int maxBound, int
 	} else if ( prob <= pd + ps ) {
 	
 		/**
-		 *	specular ¹İ»ç.
+		 *	specular ë°˜ì‚¬.
 		 */
 		tempnormal = ( dot( dir, currentPhoton.normal ) < 0.0f ) ? 
 						-1.0f * currentPhoton.normal : currentPhoton.normal;
@@ -296,9 +297,9 @@ __device__ bool photonStorageAndBoundingPhoton( int nextBound, int maxBound, int
 		nextRay.pos.z = currentPhoton.pos.z + nextRay.dir.z * RAY_START_EPSILON; 
 	
 		/** 
-		 *	next photon À» °¡¸®Å°´Â global memory ¿¡ 
-		 *	specular power ¸¦ °è»êÇØ ÀúÀåÇÑ´Ù. ÀÌ¹ÌÈ®·üÀûÀ¸·Î °áÁ¤µÇ¾úÀ¸¹Ç·Î ks ´Â
-		 *	°öÇÏÁö ¾Ê´Â´Ù.
+		 *	next photon ì„ ê°€ë¦¬í‚¤ëŠ” global memory ì— 
+		 *	specular power ë¥¼ ê³„ì‚°í•´ ì €ì¥í•œë‹¤. ì´ë¯¸í™•ë¥ ì ìœ¼ë¡œ ê²°ì •ë˜ì—ˆìœ¼ë¯€ë¡œ ks ëŠ”
+		 *	ê³±í•˜ì§€ ì•ŠëŠ”ë‹¤.
 		 */
 		int texture = float_as_int( material.textureNumber );
 		texture = fetchTexture( texture, hitPoint.u, hitPoint.v, texColor );
@@ -312,7 +313,7 @@ __device__ bool photonStorageAndBoundingPhoton( int nextBound, int maxBound, int
 	} else if ( prob <= pd + ps + pt ) {
 	
 		/**
-		 *	refraction ¹İ»ç.
+		 *	refraction ë°˜ì‚¬.
 		 */
 		dir = refraction( dir, currentPhoton.normal, material.refractionIndex );
 
@@ -325,8 +326,8 @@ __device__ bool photonStorageAndBoundingPhoton( int nextBound, int maxBound, int
 
 		
 		/** 
-		 *	next photon À» °¡¸®Å°´Â global memory power ¸¦ °è»êÇØ ÀúÀåÇÑ´Ù.
-		 *	Åõ°úÀÌ¹Ç·Î ÀÌÀü power ¸¦ ±×´ë·Î.
+		 *	next photon ì„ ê°€ë¦¬í‚¤ëŠ” global memory power ë¥¼ ê³„ì‚°í•´ ì €ì¥í•œë‹¤.
+		 *	íˆ¬ê³¼ì´ë¯€ë¡œ ì´ì „ power ë¥¼ ê·¸ëŒ€ë¡œ.
 		 */
 		nextPhoton.power = currentPhoton.power;
 		
@@ -335,7 +336,7 @@ __device__ bool photonStorageAndBoundingPhoton( int nextBound, int maxBound, int
 	} else if ( prob <= pd + ps + pt + pg ) {
 	
 		/**
-		 *	glossy ¹İ»ç.
+		 *	glossy ë°˜ì‚¬.
 		 */
 		float u1, u2;
 		
@@ -354,9 +355,9 @@ __device__ bool photonStorageAndBoundingPhoton( int nextBound, int maxBound, int
 
 		
 		/** 
-		 *	next photon À» °¡¸®Å°´Â global memory ¿¡ 
-		 *	glossy power ¸¦ °è»êÇØ ÀúÀåÇÑ´Ù. ÀÌ¹ÌÈ®·üÀûÀ¸·Î °áÁ¤µÇ¾úÀ¸¹Ç·Î kg ´Â
-		 *	°öÇÏÁö ¾Ê´Â´Ù.
+		 *	next photon ì„ ê°€ë¦¬í‚¤ëŠ” global memory ì— 
+		 *	glossy power ë¥¼ ê³„ì‚°í•´ ì €ì¥í•œë‹¤. ì´ë¯¸í™•ë¥ ì ìœ¼ë¡œ ê²°ì •ë˜ì—ˆìœ¼ë¯€ë¡œ kg ëŠ”
+		 *	ê³±í•˜ì§€ ì•ŠëŠ”ë‹¤.
 		 */
 		int texture = float_as_int( material.textureNumber );
 		texture = fetchTexture( texture, hitPoint.u, hitPoint.v, texColor );
@@ -370,9 +371,9 @@ __device__ bool photonStorageAndBoundingPhoton( int nextBound, int maxBound, int
 	}
 
 	/** 
-	 *	photon ÀÌ Á×¾î¼­ ÃßÀûÇÒ ÇÊ¿ä°¡ ¾ø´Â °æ¿ì´Â 
-	 *  nextPhoton ÀÇ mint ¸¦ MAX_FLT ·Î ÇÏ°í,
-	 *	photon Á¤º¸ÀÇ dir Àº ¸ğµÎ 0.0 À¸·Î Ã¤¿î´Ù.
+	 *	photon ì´ ì£½ì–´ì„œ ì¶”ì í•  í•„ìš”ê°€ ì—†ëŠ” ê²½ìš°ëŠ” 
+	 *  nextPhoton ì˜ mint ë¥¼ MAX_FLT ë¡œ í•˜ê³ ,
+	 *	photon ì •ë³´ì˜ dir ì€ ëª¨ë‘ 0.0 ìœ¼ë¡œ ì±„ìš´ë‹¤.
 	 */
 	nextPhoton.dir.x = 0.0f; nextPhoton.dir.y = 0.0f; nextPhoton.dir.z = 0.0f;
 	
@@ -380,9 +381,9 @@ __device__ bool photonStorageAndBoundingPhoton( int nextBound, int maxBound, int
 }
 
 /**
- *	Photon À» emit ÇÒ ¹æÇâÀ» °è»êÇØ¼­ ÀúÀåÇÑ´Ù.
- *	rayTracing kernel ·Î º¸³»±â À§ÇØ¼­ cuRay global memory ¿¡ ray ¸¦ ±â·ÏÇÑ´Ù.
- *	»ı¼ºµÈ photon Á¤º¸´Â global photon memory ¿¡ ÀúÀåÇÑ´Ù.
+ *	Photon ì„ emit í•  ë°©í–¥ì„ ê³„ì‚°í•´ì„œ ì €ì¥í•œë‹¤.
+ *	rayTracing kernel ë¡œ ë³´ë‚´ê¸° ìœ„í•´ì„œ cuRay global memory ì— ray ë¥¼ ê¸°ë¡í•œë‹¤.
+ *	ìƒì„±ëœ photon ì •ë³´ëŠ” global photon memory ì— ì €ì¥í•œë‹¤.
  */
 __global__ void cuPhotonEmitKernel( int iEmitPhoton, int iRandomBase,
 									cuPhoton *pDevicePhotonMem,
@@ -392,21 +393,21 @@ __global__ void cuPhotonEmitKernel( int iEmitPhoton, int iRandomBase,
 	float3 power;
 	
 	/** 
-	 *	°¢ thread °¡ »ı¼ºÇÒ photon ÀÇ °íÀ¯ index °è»ê. BLOCK Àº (block,1)
-	 *	thread µµ (thread°³¼ö,1) ÇüÅÂ·Î kernel ÀÌ½ÃÀÛµÇ¾úÀ¸¹Ç·Î.
+	 *	ê° thread ê°€ ìƒì„±í•  photon ì˜ ê³ ìœ  index ê³„ì‚°. BLOCK ì€ (block,1)
+	 *	thread ë„ (threadê°œìˆ˜,1) í˜•íƒœë¡œ kernel ì´ì‹œì‘ë˜ì—ˆìœ¼ë¯€ë¡œ.
 	 */
 	int photonIndex = blockIdx.x * blockDim.x + threadIdx.x;
 	
 	/** 
-	 *	photon °³¼öÀÌ³»ÀÇ thread ¸¸ ¼öÇàµÊ. 
-	 *	kernel À» ÇÑ¹ø¸¸ È£ÃâÇÏ±â À§ÇØ¼­ ½ÇÁ¦ photon À» Ã³¸®ÇÏÁö ¾Ê´Â thread µµ
-	 *	¸î°³ Á¤µµ ´õ ½ÇÇàµÇ´Â °æ¿ì°¡ ÀÖ±â¶§¹®¿¡ Ã¼Å©ÇØ¾ß ÇÑ´Ù.
+	 *	photon ê°œìˆ˜ì´ë‚´ì˜ thread ë§Œ ìˆ˜í–‰ë¨. 
+	 *	kernel ì„ í•œë²ˆë§Œ í˜¸ì¶œí•˜ê¸° ìœ„í•´ì„œ ì‹¤ì œ photon ì„ ì²˜ë¦¬í•˜ì§€ ì•ŠëŠ” thread ë„
+	 *	ëª‡ê°œ ì •ë„ ë” ì‹¤í–‰ë˜ëŠ” ê²½ìš°ê°€ ìˆê¸°ë•Œë¬¸ì— ì²´í¬í•´ì•¼ í•œë‹¤.
 	 */
 	if ( photonIndex < iEmitPhoton ) {
 	
 		/**
-		 *	photonIndex ¿¡ ÇØ´çÇÏ´Â photon À» »Ñ¸± light ¸¦ Ã£¾Æ¼­, emit photon Á¤º¸¸¦
-		 *	»ı¼ºÇØ³½´Ù. light Á¤º¸´Â common kernel ¸ğµâ¿¡ ÀÇÇØ¼­ constant memory ¿¡ ¿Ã¶ó°¡ ÀÖ´Ù.
+		 *	photonIndex ì— í•´ë‹¹í•˜ëŠ” photon ì„ ë¿Œë¦´ light ë¥¼ ì°¾ì•„ì„œ, emit photon ì •ë³´ë¥¼
+		 *	ìƒì„±í•´ë‚¸ë‹¤. light ì •ë³´ëŠ” common kernel ëª¨ë“ˆì— ì˜í•´ì„œ constant memory ì— ì˜¬ë¼ê°€ ìˆë‹¤.
 		 */
 	
 		#ifdef __DEVICE_EMULATION__
@@ -419,20 +420,20 @@ __global__ void cuPhotonEmitKernel( int iEmitPhoton, int iRandomBase,
 			}
 		#endif
 
-		// ÃÊ±âÈ­.
+		// ì´ˆê¸°í™”.
 		dir = make_float4( 0.0f, 0.0f, 0.0f, FLT_MAX );
 		pos = make_float4( 0.0f, 0.0f, 0.0f, FLT_MAX );
 
 		for ( int i = 0; i < constantLightCount; ++i ) {
 		
-			/** photon emit ÇÏÁö ¾Ê´Â light ÀÏ¶§´Â continue */
+			/** photon emit í•˜ì§€ ì•ŠëŠ” light ì¼ë•ŒëŠ” continue */
 			if ( constantLightInfo[ i ].bUsePhoton == 0 )
 				continue;
 
 			if ( photonIndex >= constantLightInfo[ i ].iPhotonStartIndex &&
 				 photonIndex < constantLightInfo[ i ].iPhotonStartIndex + constantLightInfo[ i ].iEmitPhoton ) {
 					
-				/** Point Light ÀÏ¶§ */
+				/** Point Light ì¼ë•Œ */
 				if ( constantLightInfo[ i ].lightType == cuPointLight ) {
 				
 					/**
@@ -443,27 +444,27 @@ __global__ void cuPhotonEmitKernel( int iEmitPhoton, int iRandomBase,
 				}
 
 				/**
-				 *	Ray Set À¸·Î ÀÌ·ç¾îÁø Light ÀÏ¶§.
+				 *	Ray Set ìœ¼ë¡œ ì´ë£¨ì–´ì§„ Light ì¼ë•Œ.
 				 */
 				if ( constantLightInfo[ i ].lightType == cuRaySetLight ) {
-					/** ÃÑ Ray Set Data ¾È¿¡¼­ random ÇÏ°Ô ray sample À» ¼±ÅÃÇÑ´Ù. */
+					/** ì´ Ray Set Data ì•ˆì—ì„œ random í•˜ê²Œ ray sample ì„ ì„ íƒí•œë‹¤. */
 					generateRaySetLightEmitPhoton( iRandomBase + photonIndex, 
 								&constantLightInfo[ i ], &pos, &dir, &power );
 				}
 					
 
 				/** 
-				 *	ray tracing kernel ¿¡ ³Ñ°Ü¼­ intersection À» ±¸ÇÏ±â À§ÇÑ ¼³Á¤ 
-				 *	mint, maxt ´Â °¢°¢ dir.z, pos.z ¿¡ ÀúÀåµÈ´Ù.
+				 *	ray tracing kernel ì— ë„˜ê²¨ì„œ intersection ì„ êµ¬í•˜ê¸° ìœ„í•œ ì„¤ì • 
+				 *	mint, maxt ëŠ” ê°ê° dir.z, pos.z ì— ì €ì¥ëœë‹¤.
 				 */
 				//pDeviceRayBuffer[ photonIndex ].init();
 				pDeviceRayBuffer[ photonIndex ].dir = make_float3(dir.x, dir.y, dir.z);
 				pDeviceRayBuffer[ photonIndex ].pos = make_float3(pos.x, pos.y, pos.z);
 					
 				/** 
-				 *	ÇöÀç photon ¿¡ ´ëÇÑ Á¤º¸´Â ÀÓ½ÃÀûÀ¸·Î photon map ¿¡ ÀúÀåÇÑ´Ù
-				 *	photon ÀÌ Ãâ¹ßÇÑ À§Ä¡ÀÌ±â ¶§¹®¿¡ ³ªÁß¿¡ hit µÈ Á¤º¸·Î µ¤¾î¾²°Ô
-				 *	µÉ°ÍÀÌ´Ù. ¸¸¾à hit ¸¦ ¾ÈÇÏ¸é ÃÊ±âÈ­ ½ÃÄÑ¾ß ÇÑ´Ù. dir À» ¸ğµÎ 0.0 À¸·Î.
+				 *	í˜„ì¬ photon ì— ëŒ€í•œ ì •ë³´ëŠ” ì„ì‹œì ìœ¼ë¡œ photon map ì— ì €ì¥í•œë‹¤
+				 *	photon ì´ ì¶œë°œí•œ ìœ„ì¹˜ì´ê¸° ë•Œë¬¸ì— ë‚˜ì¤‘ì— hit ëœ ì •ë³´ë¡œ ë®ì–´ì“°ê²Œ
+				 *	ë ê²ƒì´ë‹¤. ë§Œì•½ hit ë¥¼ ì•ˆí•˜ë©´ ì´ˆê¸°í™” ì‹œì¼œì•¼ í•œë‹¤. dir ì„ ëª¨ë‘ 0.0 ìœ¼ë¡œ.
 				 */
 				cuPhoton photon;
 				photon.dir.x = dir.x; photon.dir.y = dir.y; photon.dir.z = dir.z; 
@@ -482,44 +483,44 @@ __global__ void cuPhotonEmitKernel( int iEmitPhoton, int iRandomBase,
 }
 
 /**
- *	ÀÌÀü¿¡ ÃßÀûÇÑ ray ¿¡ ´ëÇÑ hit °á°ú¸¦ °¡Áö°í, photon map À» ±¸¼ºÇÑ´Ù.
+ *	ì´ì „ì— ì¶”ì í•œ ray ì— ëŒ€í•œ hit ê²°ê³¼ë¥¼ ê°€ì§€ê³ , photon map ì„ êµ¬ì„±í•œë‹¤.
  *
- *	°¢ photon À» »ı¼ºÇÒ¶§ ÀÌ¹Ì photon map ¿¡ ÇØ´ç photon ÀÇ Á¤º¸¸¦ ±â·ÏÇØ µÎ´Âµ¥ ( power °ª¶§¹®¿¡ )
- *	ÀÌ´Â photon ÀÇ ½ÃÀÛÁ¡ Á¤º¸ÀÌ±â ¶§¹®¿¡ ray hit ¸¦ Ã¼Å©ÇÑµÚ¿¡ photon map Á¤º¸Áß¿¡
- *	photon.pos, photon.dir, photon.normal Àº hit ÇÑ ÁöÁ¡°ªÀ¸·Î ¾÷µ¥ÀÌÆ® ÇØ¾ß ÇÑ´Ù.
+ *	ê° photon ì„ ìƒì„±í• ë•Œ ì´ë¯¸ photon map ì— í•´ë‹¹ photon ì˜ ì •ë³´ë¥¼ ê¸°ë¡í•´ ë‘ëŠ”ë° ( power ê°’ë•Œë¬¸ì— )
+ *	ì´ëŠ” photon ì˜ ì‹œì‘ì  ì •ë³´ì´ê¸° ë•Œë¬¸ì— ray hit ë¥¼ ì²´í¬í•œë’¤ì— photon map ì •ë³´ì¤‘ì—
+ *	photon.pos, photon.dir, photon.normal ì€ hit í•œ ì§€ì ê°’ìœ¼ë¡œ ì—…ë°ì´íŠ¸ í•´ì•¼ í•œë‹¤.
  *
- *	¸¸¾à hit µÇÁö ¾Ê¾Ò´Ù¸é photon.dir À» ¸ğµÎ 0.0 À¸·Î ¼¼ÆÃÇÑ´Ù.
+ *	ë§Œì•½ hit ë˜ì§€ ì•Šì•˜ë‹¤ë©´ photon.dir ì„ ëª¨ë‘ 0.0 ìœ¼ë¡œ ì„¸íŒ…í•œë‹¤.
  * 
- *	ÀÌ·¸°Ô global photon map À» ±¸¼ºÇÑµÚ¿¡, photon ÀÌ bound µÇ¾î¾ß ÇÏ´ÂÁö¸¦ Ã¼Å©ÇØ¼­
- *	»õ·Î¿î ray ¸¦ »ı¼ºÇÑ´ÙÀ½¿¡ ´Ù½Ã ray memory block ¿¡ ±â·ÏÇÑ´Ù. ( offset 0 ~ iEmitPhoton - 1 )
- *	¸¸¾à bound µÇÁö ¾Ê´Â photon ÀÌ¶ó¸é mint ¸¦ FLT_MAT ·Î ÇØ¼­ ÀúÀåÇÑ´Ù. 
+ *	ì´ë ‡ê²Œ global photon map ì„ êµ¬ì„±í•œë’¤ì—, photon ì´ bound ë˜ì–´ì•¼ í•˜ëŠ”ì§€ë¥¼ ì²´í¬í•´ì„œ
+ *	ìƒˆë¡œìš´ ray ë¥¼ ìƒì„±í•œë‹¤ìŒì— ë‹¤ì‹œ ray memory block ì— ê¸°ë¡í•œë‹¤. ( offset 0 ~ iEmitPhoton - 1 )
+ *	ë§Œì•½ bound ë˜ì§€ ì•ŠëŠ” photon ì´ë¼ë©´ mint ë¥¼ FLT_MAT ë¡œ í•´ì„œ ì €ì¥í•œë‹¤. 
  *	 
- *	 context ¾ÈÀÇ pDeviceIntResult ´Â bound µÇ´Â photon ÀÌ ÃÖ¼ÒÇÑ
- *	ÇÏ³ª¶óµµ ÀÖ´ÂÁö¸¦ Ã¼Å©ÇÏ±â À§ÇÑ global memory °ªÀÌ´Ù. ¸¸¾à ÇÏ³ª¶óµµ
- *	photon ÀÌ bound µÈ´Ù¸é pDeviceIntResult À» 1 ·Î ÇÑ´Ù. ¼ö¸¹Àº thread °¡
- *	µ¿½Ã¿¡ ÀÌ º¯¼ö¿¡ Á¢±ÙÇÏ°ÚÁö¸¸ ÀÌ º¯¼ö´Â photon ÀÌ bound µÉ¶§¸¸ 1 ·Î °¢ thread °¡
- *	¼¼ÆÃÇÏ±â ¶§¹®¿¡ µ¿±âÈ­ ¹®Á¦´Â ¹ß»ıÇÏÁö ¾Ê´Â´Ù. ÇÏ³ªÀÇ thread ¶óµµ 1 ·Î ¼¼ÆÃÇÏ¸é 1ÀÌ µÇ´Ï.
+ *	 context ì•ˆì˜ pDeviceIntResult ëŠ” bound ë˜ëŠ” photon ì´ ìµœì†Œí•œ
+ *	í•˜ë‚˜ë¼ë„ ìˆëŠ”ì§€ë¥¼ ì²´í¬í•˜ê¸° ìœ„í•œ global memory ê°’ì´ë‹¤. ë§Œì•½ í•˜ë‚˜ë¼ë„
+ *	photon ì´ bound ëœë‹¤ë©´ pDeviceIntResult ì„ 1 ë¡œ í•œë‹¤. ìˆ˜ë§ì€ thread ê°€
+ *	ë™ì‹œì— ì´ ë³€ìˆ˜ì— ì ‘ê·¼í•˜ê² ì§€ë§Œ ì´ ë³€ìˆ˜ëŠ” photon ì´ bound ë ë•Œë§Œ 1 ë¡œ ê° thread ê°€
+ *	ì„¸íŒ…í•˜ê¸° ë•Œë¬¸ì— ë™ê¸°í™” ë¬¸ì œëŠ” ë°œìƒí•˜ì§€ ì•ŠëŠ”ë‹¤. í•˜ë‚˜ì˜ thread ë¼ë„ 1 ë¡œ ì„¸íŒ…í•˜ë©´ 1ì´ ë˜ë‹ˆ.
  *
- *	bound µÇ´Â photon ¿¡ ´ëÇÑ Á¤º¸´Â global photon map ÀÇ ÇØ´ç bound Á¤º¸¸¦
- *	ÀúÀåÇÒ block ¿¡ ±â·ÏµÈ´Ù. 
+ *	bound ë˜ëŠ” photon ì— ëŒ€í•œ ì •ë³´ëŠ” global photon map ì˜ í•´ë‹¹ bound ì •ë³´ë¥¼
+ *	ì €ì¥í•  block ì— ê¸°ë¡ëœë‹¤. 
  *	
- *	global photon map ¸Ş¸ğ¸® ±¸Á¶´Â ¾Æ·¡¿Í °°´Ù.
+ *	global photon map ë©”ëª¨ë¦¬ êµ¬ì¡°ëŠ” ì•„ë˜ì™€ ê°™ë‹¤.
  *	
- *	¸Ş¸ğ¸®´Â ÃÖ¼ÒÇÑ iMaxPhotonSize ( iEmitPhoton * iMaxBound ) ¸¸Å­ ÀâÇôÀÖ°í, 
- *	°¢ ¸Ş¸ğ¸®´Â iMaxBound °³¸¸Å­ÀÇ block À¸·Î ±¸ºĞÇÑ´Ù.
- *	 ÇöÀç bound °¡ currentBound ¶ó°í ÇÏ¸é photon memory °ø°£¿¡¼­ 
- *	currentBound * iEmitPhoton ºÎÅÍ iEmitPhoton °³ ¾È¿¡ ÀúÀåµÇ´Â °ÍÀÌ´Ù.
+ *	ë©”ëª¨ë¦¬ëŠ” ìµœì†Œí•œ iMaxPhotonSize ( iEmitPhoton * iMaxBound ) ë§Œí¼ ì¡í˜€ìˆê³ , 
+ *	ê° ë©”ëª¨ë¦¬ëŠ” iMaxBound ê°œë§Œí¼ì˜ block ìœ¼ë¡œ êµ¬ë¶„í•œë‹¤.
+ *	 í˜„ì¬ bound ê°€ currentBound ë¼ê³  í•˜ë©´ photon memory ê³µê°„ì—ì„œ 
+ *	currentBound * iEmitPhoton ë¶€í„° iEmitPhoton ê°œ ì•ˆì— ì €ì¥ë˜ëŠ” ê²ƒì´ë‹¤.
  *
- *	[ Áß¿ä ] ray ¿Í intersection Àº ÇÑ block À¸·Î °è¼Ó Àç»ç¿ëÇÏ°í
- *	global photon memory ´Â bound °³¼ö¸¸Å­ÀÇ block ÀÖ´Ù.
+ *	[ ì¤‘ìš” ] ray ì™€ intersection ì€ í•œ block ìœ¼ë¡œ ê³„ì† ì¬ì‚¬ìš©í•˜ê³ 
+ *	global photon memory ëŠ” bound ê°œìˆ˜ë§Œí¼ì˜ block ìˆë‹¤.
  *
- *	µû¶ó¼­ ÀÌ ¸Ş¸ğ¸®¸¦ ÂüÁ¶ÇÏ´Â index ´Â µÎ°³°¡ ¼­·Î ´Ù¸£´Ù.
- *	ray, intersection Àº bound ¿Í »ó°ü¾øÀÌ index ¸¦ ÇØ¾ßÇÏ°í,
- *	global photon memory ´Â ÇöÀç bound ¸¦ °è»êÇØ¼­ bound * iEmitPhoton + index 
- *	¸¦ ÇØ¾ßÇÑ´Ù.
+ *	ë”°ë¼ì„œ ì´ ë©”ëª¨ë¦¬ë¥¼ ì°¸ì¡°í•˜ëŠ” index ëŠ” ë‘ê°œê°€ ì„œë¡œ ë‹¤ë¥´ë‹¤.
+ *	ray, intersection ì€ bound ì™€ ìƒê´€ì—†ì´ index ë¥¼ í•´ì•¼í•˜ê³ ,
+ *	global photon memory ëŠ” í˜„ì¬ bound ë¥¼ ê³„ì‚°í•´ì„œ bound * iEmitPhoton + index 
+ *	ë¥¼ í•´ì•¼í•œë‹¤.
  *
- *	direct photon À» ÀúÀåÇÏÁö ¾Ê´Â´Ù¸é bound °¡ 0 ÀÎ°ÍÀº photon map Á¤º¸¿¡¼­ 
- *	dir À» ¸ğµÎ 0.0 À¸·Î ¸¸µç´Ù.
+ *	direct photon ì„ ì €ì¥í•˜ì§€ ì•ŠëŠ”ë‹¤ë©´ bound ê°€ 0 ì¸ê²ƒì€ photon map ì •ë³´ì—ì„œ 
+ *	dir ì„ ëª¨ë‘ 0.0 ìœ¼ë¡œ ë§Œë“ ë‹¤.
  *
  */
 __global__ void cuMakePhotonMapAndBoundingKernel( int iEmitPhoton,
@@ -533,56 +534,56 @@ __global__ void cuMakePhotonMapAndBoundingKernel( int iEmitPhoton,
 												  int *pDeviceIntResult )
 {
 	/** 
-	 *	°¢ thread °¡ »ı¼ºÇÒ photon ÀÇ °íÀ¯ index °è»ê. BLOCK Àº (block,1)
-	 *	thread µµ (thread°³¼ö,1) ÇüÅÂ·Î kernel ÀÌ½ÃÀÛµÇ¾úÀ¸¹Ç·Î.
+	 *	ê° thread ê°€ ìƒì„±í•  photon ì˜ ê³ ìœ  index ê³„ì‚°. BLOCK ì€ (block,1)
+	 *	thread ë„ (threadê°œìˆ˜,1) í˜•íƒœë¡œ kernel ì´ì‹œì‘ë˜ì—ˆìœ¼ë¯€ë¡œ.
 	 */
 	int photonOffset = ( currentBound * iEmitPhoton );
 	
 	/**
-	 *	intersection index ¿Í ray ¸¦ À§ÇÑ index
+	 *	intersection index ì™€ ray ë¥¼ ìœ„í•œ index
 	 */
 	int index = blockIdx.x * blockDim.x + threadIdx.x;
 	int photonIndex = photonOffset + index;
 	
 	/** 
-	 *	photon °³¼öÀÌ³»ÀÇ thread ¸¸ ¼öÇàµÊ. 
-	 *	kernel À» ÇÑ¹ø¸¸ È£ÃâÇÏ±â À§ÇØ¼­ ½ÇÁ¦ photon À» Ã³¸®ÇÏÁö ¾Ê´Â thread µµ
-	 *	¸î°³ Á¤µµ ´õ ½ÇÇàµÇ´Â °æ¿ì°¡ ÀÖ±â¶§¹®¿¡ Ã¼Å©ÇØ¾ß ÇÑ´Ù.
+	 *	photon ê°œìˆ˜ì´ë‚´ì˜ thread ë§Œ ìˆ˜í–‰ë¨. 
+	 *	kernel ì„ í•œë²ˆë§Œ í˜¸ì¶œí•˜ê¸° ìœ„í•´ì„œ ì‹¤ì œ photon ì„ ì²˜ë¦¬í•˜ì§€ ì•ŠëŠ” thread ë„
+	 *	ëª‡ê°œ ì •ë„ ë” ì‹¤í–‰ë˜ëŠ” ê²½ìš°ê°€ ìˆê¸°ë•Œë¬¸ì— ì²´í¬í•´ì•¼ í•œë‹¤.
 	 */
 	if ( index < iEmitPhoton ) {
 	
 		/** 
-		 *	hit ÇÑ°æ¿ì »ï°¢Çü°ú ¹°Ã¼Á¤º¸¸¦ °¡Á®¿Í¼­ global photon map ¿¡ hit ÁöÁ¡Á¤º¸¸¦ ¾÷µ¥ÀÌÆ®
-		 *	ÇÑ´Ù. power ´Â photon À» »ı¼ºÇÒ ´ç½Ã¿¡ ÀÌ¹Ì ±â·ÏÇØ µÎ¾úÀ¸¹Ç·Î ¾÷µ¥ÀÌÆ® ÇÏ¸é ¾ÈµÈ´Ù.
-		 *	intersection result ´Â rayIndex ·Î Á¢±Ù.
+		 *	hit í•œê²½ìš° ì‚¼ê°í˜•ê³¼ ë¬¼ì²´ì •ë³´ë¥¼ ê°€ì ¸ì™€ì„œ global photon map ì— hit ì§€ì ì •ë³´ë¥¼ ì—…ë°ì´íŠ¸
+		 *	í•œë‹¤. power ëŠ” photon ì„ ìƒì„±í•  ë‹¹ì‹œì— ì´ë¯¸ ê¸°ë¡í•´ ë‘ì—ˆìœ¼ë¯€ë¡œ ì—…ë°ì´íŠ¸ í•˜ë©´ ì•ˆëœë‹¤.
+		 *	intersection result ëŠ” rayIndex ë¡œ ì ‘ê·¼.
 		 */
 		if ( pDeviceIntersectionBuffer[ index ].isHit() ) {
 
 			/** 
-			 *	photon map À» hit Á¤º¸·Î ¼¼ÆÃÇÑ´Ù.
+			 *	photon map ì„ hit ì •ë³´ë¡œ ì„¸íŒ…í•œë‹¤.
 			 */
 			pDevicePhotonMem[ photonIndex ].dir = pDeviceIntersectionBuffer[ index ].dir;
 			pDevicePhotonMem[ photonIndex ].pos = pDeviceIntersectionBuffer[ index ].pos;
 			pDevicePhotonMem[ photonIndex ].normal = pDeviceIntersectionBuffer[ index ].normal;
 			
-			// power ´Â ÀÌ¹Ì ÀÌÀü Ãâ¹ßÁö¿¡¼­ ¼¼ÆÃµÇ¾î ¿ÔÀ¸¹Ç·Î ¼¼ÆÃ¾ÈÇØ¾ß ÇÑ´Ù.
+			// power ëŠ” ì´ë¯¸ ì´ì „ ì¶œë°œì§€ì—ì„œ ì„¸íŒ…ë˜ì–´ ì™”ìœ¼ë¯€ë¡œ ì„¸íŒ…ì•ˆí•´ì•¼ í•œë‹¤.
 			// pDevicePhotonMem[ photonIndex ].power;
 
 			/** 
-			*	max bound ¸¦ ÃÊ°úÇÏÁö ¾Ê¾Ò´Ù¸é
-			*	ÇöÀç hit ÁöÁ¡ÀÇ material À» ¹ÙÅÁÀ¸·Î bounding photon À» »ı¼ºÇÏ°í
-			*	bounding µÉ¶§ÀÇ power Á¤º¸¸¦ ±¸¼ºÇØ¼­, global photon memory ÀÇ
-			*	ÇØ´ç bound À§Ä¡¿¡ ±â·ÏÇÑ´Ù.
-			*	max bound Ã¼Å©´Â ¹İµå½Ã generateBoundingPhoton ¾È¿¡¼­ ÇöÀç photon À» ÀúÀåÇÒÁö
-			*	¸»Áö¿Í °°ÀÌ °áÁ¤ÇØ¾ß ÇÑ´Ù.
+			*	max bound ë¥¼ ì´ˆê³¼í•˜ì§€ ì•Šì•˜ë‹¤ë©´
+			*	í˜„ì¬ hit ì§€ì ì˜ material ì„ ë°”íƒ•ìœ¼ë¡œ bounding photon ì„ ìƒì„±í•˜ê³ 
+			*	bounding ë ë•Œì˜ power ì •ë³´ë¥¼ êµ¬ì„±í•´ì„œ, global photon memory ì˜
+			*	í•´ë‹¹ bound ìœ„ì¹˜ì— ê¸°ë¡í•œë‹¤.
+			*	max bound ì²´í¬ëŠ” ë°˜ë“œì‹œ generateBoundingPhoton ì•ˆì—ì„œ í˜„ì¬ photon ì„ ì €ì¥í• ì§€
+			*	ë§ì§€ì™€ ê°™ì´ ê²°ì •í•´ì•¼ í•œë‹¤.
 			*/
 			cuObjectMaterial material;
 			getObjectMaterial( pDeviceIntersectionBuffer[ index ].objectIndex, material );
 			 
 			/** 
-			*	bounding photon generation ÇØ¾ß ÇÏ´Â °æ¿ì¶ó¸é generation ÇÑ´Ù. 
-			*	ÀÌ ÇÔ¼ö°¡ ¼öÇàµÈ ÀÌÈÄ¿¡´Â ÇöÀç ray °¡ »õ·Î bounding µÇ´Â 
-			*	photon ÀÇ ray Á¤º¸·Î µ¤¾î½áÁüÀ» ÁÖÀÇÇÏ¶ó.
+			*	bounding photon generation í•´ì•¼ í•˜ëŠ” ê²½ìš°ë¼ë©´ generation í•œë‹¤. 
+			*	ì´ í•¨ìˆ˜ê°€ ìˆ˜í–‰ëœ ì´í›„ì—ëŠ” í˜„ì¬ ray ê°€ ìƒˆë¡œ bounding ë˜ëŠ” 
+			*	photon ì˜ ray ì •ë³´ë¡œ ë®ì–´ì¨ì§ì„ ì£¼ì˜í•˜ë¼.
 			*/
 			if ( photonStorageAndBoundingPhoton( currentBound + 1, maxBound, iRandomSeed + index, 
 										pDeviceIntersectionBuffer[ index ],
@@ -592,17 +593,17 @@ __global__ void cuMakePhotonMapAndBoundingKernel( int iEmitPhoton,
 				(*pDeviceIntResult) = 1;
 			}
 			
-			// direct photon ÀúÀå¿É¼Ç¿¡µû¶ó ÇöÀç photon ÀúÀå°áÁ¤.
+			// direct photon ì €ì¥ì˜µì…˜ì—ë”°ë¼ í˜„ì¬ photon ì €ì¥ê²°ì •.
 			if ( !bSaveDirectPhoton && currentBound == 0 ) {
 				pDevicePhotonMem[ photonIndex ].dir = make_float3( 0.0f, 0.0f, 0.0f );
 			}
 			
 		} else {
 			/** 
-			 *	[ Áß¿ä ]
+			 *	[ ì¤‘ìš” ]
 			 *
-			 *	hit µÇÁö ¾ÊÀº photon Àº photon global memory ÀÇ µ¥ÀÌÅÍÁß dir À» ¸ğµÎ 0.0f À¸·Î ¼¼ÆÃ.
-			 *	¶ÇÇÑ ´õÀÌ»ó ÃßÀûµµ ÇÏÁö ¸»¾Æ¾ß ÇÏ¹Ç·Î ray ÀÇ mint ¸¦ MAX_FLT ·Î Ã¤¿î´Ù.
+			 *	hit ë˜ì§€ ì•Šì€ photon ì€ photon global memory ì˜ ë°ì´í„°ì¤‘ dir ì„ ëª¨ë‘ 0.0f ìœ¼ë¡œ ì„¸íŒ….
+			 *	ë˜í•œ ë”ì´ìƒ ì¶”ì ë„ í•˜ì§€ ë§ì•„ì•¼ í•˜ë¯€ë¡œ ray ì˜ mint ë¥¼ MAX_FLT ë¡œ ì±„ìš´ë‹¤.
 			 */
 			pDevicePhotonMem[ photonIndex ].dir = make_float3( 0.0f, 0.0f, 0.0f );
 			
@@ -615,7 +616,7 @@ __global__ void cuMakePhotonMapAndBoundingKernel( int iEmitPhoton,
 /*******************************************************************************
  *
  *
- *	PHOTON GATHERING °ü·Ã ÇÔ¼ö
+ *	PHOTON GATHERING ê´€ë ¨ í•¨ìˆ˜
  *
  *
  *	by graphicsian
@@ -678,10 +679,10 @@ __device__ float3 isotropicGaussianModel( float3 rayDir,
 }
 
 /**
- *	intersection point ÀÇ density area ¸¦
- *	area photon À» ÀÌ¿ëÇØ¼­ ÃøÁ¤ÇÑ´Ù. ÁÖÀÇÇØ¾ßÇÒ °ÍÀº intersection point ´Â
- *	°íÁ¤µÈ »óÅÂ¿¡¼­ area photon À» ¹Ù²Ù¾î °¡¸é¼­ ´©Àû½ÃÅ°´Â °ÍÀÌ¹Ç·Î ¹İµå½Ã
- *	pPMIsectPoint ¿¡ ÀúÀåµÇ¾î ÀÖ´Â area ¿¡ ÇÕÀ» ´©Àû½ÃÄÑ¾ß ÇÑ´Ù.  
+ *	intersection point ì˜ density area ë¥¼
+ *	area photon ì„ ì´ìš©í•´ì„œ ì¸¡ì •í•œë‹¤. ì£¼ì˜í•´ì•¼í•  ê²ƒì€ intersection point ëŠ”
+ *	ê³ ì •ëœ ìƒíƒœì—ì„œ area photon ì„ ë°”ê¾¸ì–´ ê°€ë©´ì„œ ëˆ„ì ì‹œí‚¤ëŠ” ê²ƒì´ë¯€ë¡œ ë°˜ë“œì‹œ
+ *	pPMIsectPoint ì— ì €ì¥ë˜ì–´ ìˆëŠ” area ì— í•©ì„ ëˆ„ì ì‹œì¼œì•¼ í•œë‹¤.  
  */
 __global__ void cuCalDensityAreaKernel( cuIntersectionPoint *pIsectPoint, 
 										cuPMIntersectionPoint *pPMIsectPoint, 
@@ -689,10 +690,10 @@ __global__ void cuCalDensityAreaKernel( cuIntersectionPoint *pIsectPoint,
 {
 	int photonIndexOffset;
 	int photonIndexCount;
-	int2 photonIndex;			//	PhotonIndex ¿Í ¸ÅÄ¡
+	int2 photonIndex;			//	PhotonIndex ì™€ ë§¤ì¹˜
 	int index = 0, index2 = 0;
 
-	/** intersection point ÀÇ pos, normal */
+	/** intersection point ì˜ pos, normal */
 	float3 iPointPos;
 	float3 iPointNormal;
 
@@ -703,12 +704,12 @@ __global__ void cuCalDensityAreaKernel( cuIntersectionPoint *pIsectPoint,
 
 	float4 temp;
 
-	/** result ¸¦ À§ÇÑ ÀÓ½Ãº¯¼ö */
+	/** result ë¥¼ ìœ„í•œ ì„ì‹œë³€ìˆ˜ */
 	float densityArea = 0.0f;
 	int usedPhotonCount = 0, totalPhotonCount = 0;
 
 	/**
-	 *	ÇöÀç thread °¡ Ã³¸®ÇØ¾ßÇÒ ray ÀÇ offset À» °¡Á®¿Â´Ù.
+	 *	í˜„ì¬ thread ê°€ ì²˜ë¦¬í•´ì•¼í•  ray ì˜ offset ì„ ê°€ì ¸ì˜¨ë‹¤.
 	 */
 	int iPointIndex = startOffset + ( blockIdx.y * gridDim.x + blockIdx.x ) * 
 		blockDim.x * blockDim.y + threadIdx.y * blockDim.x + threadIdx.x;
@@ -716,7 +717,7 @@ __global__ void cuCalDensityAreaKernel( cuIntersectionPoint *pIsectPoint,
 	if ( iPointIndex < iPointTotalCount ) {
 		
 		/** 
-		 * intersection point ÁÖº¯ÀÇ photon À» À§ÇÑ index Á¤º¸ °¡Á®¿È 
+		 * intersection point ì£¼ë³€ì˜ photon ì„ ìœ„í•œ index ì •ë³´ ê°€ì ¸ì˜´ 
 		 */
 		photonIndexOffset = pPMIsectPoint[ iPointIndex ].photonIndexOffset;
 		photonIndexCount = pPMIsectPoint[ iPointIndex ].photonIndexCount;
@@ -724,8 +725,8 @@ __global__ void cuCalDensityAreaKernel( cuIntersectionPoint *pIsectPoint,
 		iPointNormal = pIsectPoint[ iPointIndex ].normal;
 
 		/**
-		 *	ÇöÀç ray ÁÖº¯ÀÇ photon Á¤º¸¸¦ °¡¸®Å°°í ÀÖ´Â photonIndex µ¥ÀÌÅÍ¸¦
-		 *	ÀÌ¿ëÇØ¼­ area photon ¿¡ Á¢±ÙÇÑ´Ù.
+		 *	í˜„ì¬ ray ì£¼ë³€ì˜ photon ì •ë³´ë¥¼ ê°€ë¦¬í‚¤ê³  ìˆëŠ” photonIndex ë°ì´í„°ë¥¼
+		 *	ì´ìš©í•´ì„œ area photon ì— ì ‘ê·¼í•œë‹¤.
 		 */
 
 		totalPhotonCount = 0;
@@ -736,7 +737,7 @@ __global__ void cuCalDensityAreaKernel( cuIntersectionPoint *pIsectPoint,
 			photonIndex = tex1Dfetch( photonIndexTexture, photonIndexOffset + index );
 
 			/** 
-			 *	photon cell ¾ÈÀÇ °¢ photon À» ÇÏ³ª¾¿ Ã³¸®ÇÑ´Ù. 
+			 *	photon cell ì•ˆì˜ ê° photon ì„ í•˜ë‚˜ì”© ì²˜ë¦¬í•œë‹¤. 
 			 *	photonIndex.x = photon start offset.
 			 *	photonIndex.y = photon count.
 			 */
@@ -744,10 +745,10 @@ __global__ void cuCalDensityAreaKernel( cuIntersectionPoint *pIsectPoint,
 			for ( index2 = 0; index2 < photonIndex.y; ++index2 ) {
 
 				/** 
-				 *	float type 12°³°¡ ÇÏ³ªÀÇ photon Á¤º¸ÀÎµ¥ texture type ÀÌ float4 ÀÌ¹Ç·Î
-				 *	ÃÑ 3°³ÀÇ texture °ªÀ» °¡Á®¿Í¼­ data ¸¦ ±¸¼ºÇÑ´Ù.
-				 *	area photon ÀÇ °æ¿ì´Â power.x °¡ area °ªÀ» ÀÇ¹ÌÇÑ´Ù. area ¸¦ °è»êÇÒ¶§´Â
-				 *	pos, normal, area °ª¸¸ ÇÊ¿äÇÏ¹Ç·Î ÀÌ °ª¸¸ ½ï »©³½´Ù.
+				 *	float type 12ê°œê°€ í•˜ë‚˜ì˜ photon ì •ë³´ì¸ë° texture type ì´ float4 ì´ë¯€ë¡œ
+				 *	ì´ 3ê°œì˜ texture ê°’ì„ ê°€ì ¸ì™€ì„œ data ë¥¼ êµ¬ì„±í•œë‹¤.
+				 *	area photon ì˜ ê²½ìš°ëŠ” power.x ê°€ area ê°’ì„ ì˜ë¯¸í•œë‹¤. area ë¥¼ ê³„ì‚°í• ë•ŒëŠ”
+				 *	pos, normal, area ê°’ë§Œ í•„ìš”í•˜ë¯€ë¡œ ì´ ê°’ë§Œ ì™ ë¹¼ë‚¸ë‹¤.
 				 */
 				temp = tex1Dfetch( areaPhotonTexture, ( photonIndex.x + index2 ) * 3 + 0 );
 				photonPos.x = temp.x; photonPos.y = temp.y; photonPos.z = temp.z; 
@@ -757,9 +758,9 @@ __global__ void cuCalDensityAreaKernel( cuIntersectionPoint *pIsectPoint,
 				photonNormal.y = temp.x; photonNormal.z = temp.y; photonArea = temp.z;
 				
 				/**
-				 *	search dist °Å¸®¾È¿¡ µé¾î¿À°í ray »ï°¢Çü normal °ú photon ÀÌ ¹·Àº
-				 *	»ï°¢Çü normal ÀÌ ÁöÁ¤µÈ °¢µµ ¹Ì¸¸ÀÏ¶§¸¸ area ¸¦ ´©ÀûÇÑ´Ù. ÀÌ Á¶°ÇÀº
-				 *	¹İµå½Ã ¾Æ·¡ caIPointRadianceKernel() ¿¡¼­ photon ¼±ÅÃ ±âÁØ°ú °°¾Æ¾ß ÇÑ´Ù.
+				 *	search dist ê±°ë¦¬ì•ˆì— ë“¤ì–´ì˜¤ê³  ray ì‚¼ê°í˜• normal ê³¼ photon ì´ ë­ì€
+				 *	ì‚¼ê°í˜• normal ì´ ì§€ì •ëœ ê°ë„ ë¯¸ë§Œì¼ë•Œë§Œ area ë¥¼ ëˆ„ì í•œë‹¤. ì´ ì¡°ê±´ì€
+				 *	ë°˜ë“œì‹œ ì•„ë˜ caIPointRadianceKernel() ì—ì„œ photon ì„ íƒ ê¸°ì¤€ê³¼ ê°™ì•„ì•¼ í•œë‹¤.
 				 */
 				if ( calSquareDist( iPointPos, photonPos ) <= squareRadius &&
 					 dotProduct( iPointNormal, photonNormal ) > VALID_COSINE_VALUE ) {
@@ -781,8 +782,8 @@ __global__ void cuCalDensityAreaKernel( cuIntersectionPoint *pIsectPoint,
 }
 
 /**
- *	radiance °è»ê.
- *	iteration ÀÌ ¿©·¯¹ø µÇ¹Ç·Î, ipoint ÀÇ radiance ´Â ´©ÀûÇØ¾ß ÇÑ´Ù.
+ *	radiance ê³„ì‚°.
+ *	iteration ì´ ì—¬ëŸ¬ë²ˆ ë˜ë¯€ë¡œ, ipoint ì˜ radiance ëŠ” ëˆ„ì í•´ì•¼ í•œë‹¤.
  */
 __global__ void caIPointRadianceKernel( cuIntersectionPoint *pIsectPoint, 
 										cuPMIntersectionPoint *pPMIsectPoint, 
@@ -792,7 +793,7 @@ __global__ void caIPointRadianceKernel( cuIntersectionPoint *pIsectPoint,
 	int photonIndexOffset;
 	int photonIndexCount;
 	
-	int2 photonIndex;			//	PhotonIndex ¿Í ¸ÅÄ¡
+	int2 photonIndex;			//	PhotonIndex ì™€ ë§¤ì¹˜
 	int index = 0, index2 = 0;
 	
 	/** ray geometry info */
@@ -812,7 +813,7 @@ __global__ void caIPointRadianceKernel( cuIntersectionPoint *pIsectPoint,
 	float3 photonPower;
 	float4 temp;
 	
-	/** result ¸¦ À§ÇÑ ÀÓ½Ãº¯¼ö */
+	/** result ë¥¼ ìœ„í•œ ì„ì‹œë³€ìˆ˜ */
 	float3 powerDiffuse, powerSpecular;
 	int usedPhotonCount = 0, totalPhotonCount = 0;
 	float squareDist;
@@ -826,7 +827,7 @@ __global__ void caIPointRadianceKernel( cuIntersectionPoint *pIsectPoint,
 	powerSpecular = make_float3( 0.0f, 0.0f, 0.0f );
 
 	/**
-	 *	ÇöÀç thread °¡ Ã³¸®ÇØ¾ßÇÒ ray ÀÇ offset À» °¡Á®¿Â´Ù.
+	 *	í˜„ì¬ thread ê°€ ì²˜ë¦¬í•´ì•¼í•  ray ì˜ offset ì„ ê°€ì ¸ì˜¨ë‹¤.
 	 */
 	int iPointIndex = startOffset + ( blockIdx.y * gridDim.x + blockIdx.x ) * 
 		blockDim.x * blockDim.y + threadIdx.y * blockDim.x + threadIdx.x;
@@ -834,7 +835,7 @@ __global__ void caIPointRadianceKernel( cuIntersectionPoint *pIsectPoint,
 	if ( iPointIndex < iPointTotalCount ) {
 
 		/** 
-		 * intersection point ÁÖº¯ÀÇ photon À» À§ÇÑ index Á¤º¸ °¡Á®¿È 
+		 * intersection point ì£¼ë³€ì˜ photon ì„ ìœ„í•œ index ì •ë³´ ê°€ì ¸ì˜´ 
 		 */
 		photonIndexOffset = pPMIsectPoint[ iPointIndex ].photonIndexOffset;
 		photonIndexCount = pPMIsectPoint[ iPointIndex ].photonIndexCount;
@@ -859,8 +860,8 @@ __global__ void caIPointRadianceKernel( cuIntersectionPoint *pIsectPoint,
 		float3 R = reflection( iPointDir, iPointNormal );
 
 		/**
-		 *	ÇöÀç ray ÁÖº¯ÀÇ photon Á¤º¸¸¦ °¡¸®Å°°í ÀÖ´Â photonIndex µ¥ÀÌÅÍ¸¦
-		 *	ÀÌ¿ëÇØ¼­ photon ¿¡ Á¢±ÙÇÑ´Ù.
+		 *	í˜„ì¬ ray ì£¼ë³€ì˜ photon ì •ë³´ë¥¼ ê°€ë¦¬í‚¤ê³  ìˆëŠ” photonIndex ë°ì´í„°ë¥¼
+		 *	ì´ìš©í•´ì„œ photon ì— ì ‘ê·¼í•œë‹¤.
 		 *	rayAttribute.y = photonIndex Offset.
 		 *	rayAttribute.z = photonIndex Count.
 		 */
@@ -872,7 +873,7 @@ __global__ void caIPointRadianceKernel( cuIntersectionPoint *pIsectPoint,
 			photonIndex = tex1Dfetch( photonIndexTexture, photonIndexOffset + index );
 
 			/** 
-			 *	photon cell ¾ÈÀÇ °¢ photon À» ÇÏ³ª¾¿ Ã³¸®ÇÑ´Ù. 
+			 *	photon cell ì•ˆì˜ ê° photon ì„ í•˜ë‚˜ì”© ì²˜ë¦¬í•œë‹¤. 
 			 *	photonIndex.x = photon start offset.
 			 *	photonIndex.y = photon count.
 			 */
@@ -880,8 +881,8 @@ __global__ void caIPointRadianceKernel( cuIntersectionPoint *pIsectPoint,
 			for ( index2 = 0; index2 < photonIndex.y; ++index2 ) {
 
 				/** 
-				 *	float type 12°³°¡ ÇÏ³ªÀÇ photon Á¤º¸ÀÎµ¥ texture type ÀÌ float4 ÀÌ¹Ç·Î
-				 *	ÃÑ 3°³ÀÇ texture °ªÀ» °¡Á®¿Í¼­ data ¸¦ ±¸¼ºÇÑ´Ù.
+				 *	float type 12ê°œê°€ í•˜ë‚˜ì˜ photon ì •ë³´ì¸ë° texture type ì´ float4 ì´ë¯€ë¡œ
+				 *	ì´ 3ê°œì˜ texture ê°’ì„ ê°€ì ¸ì™€ì„œ data ë¥¼ êµ¬ì„±í•œë‹¤.
 				 */
 				temp = tex1Dfetch( photonTexture, ( photonIndex.x + index2 ) * 3 + 0 );
 				photonPos.x = temp.x; photonPos.y = temp.y; photonPos.z = temp.z; 
@@ -896,24 +897,24 @@ __global__ void caIPointRadianceKernel( cuIntersectionPoint *pIsectPoint,
 				photonDir.z = temp.w;
 
 				/**
-				 *	dist °Å¸®¾È¿¡ µé¾î¿À°í ray »ï°¢Çü normal °ú photon ÀÌ ¹·Àº
-				 *	»ï°¢Çü normal ÀÌ 45' ¹Ì¸¸ÀÏ¶§¸¸.
-				 *	¹İµå½Ã calDensityArea() ÇÔ¼öÀÇ photon ¼±ÅÃ±âÁØ°ú °°¾Æ¾ß ÇÑ´Ù.
+				 *	dist ê±°ë¦¬ì•ˆì— ë“¤ì–´ì˜¤ê³  ray ì‚¼ê°í˜• normal ê³¼ photon ì´ ë­ì€
+				 *	ì‚¼ê°í˜• normal ì´ 45' ë¯¸ë§Œì¼ë•Œë§Œ.
+				 *	ë°˜ë“œì‹œ calDensityArea() í•¨ìˆ˜ì˜ photon ì„ íƒê¸°ì¤€ê³¼ ê°™ì•„ì•¼ í•œë‹¤.
 				 */
 				squareDist = calSquareDist( iPointPos, photonPos );
 
 				/**
-				 *	¹İ°æ¾È¿¡ µé¾î¿À°í, ±âÇÏÀûÀ¸·Î ³Ê¹« ¸¹Àº Â÷ÀÌ°¡ ³ªÁö ¾Ê´Â ÁöÁ¡.
-				 *	±×¸®°í ±¤¿øÀÌ°Å³ª, Åõ¸í¹°Ã¼°¡ ¾Æ´Ï¸é, »ï°¢Çü µŞ¸é¿¡ ¹·Àº°Ç Á¦¿Ü. 
-				 *	±¤¿øÀÌ³ª Åõ¸íÇÑ ¹°Ã¼´Â µŞ¸é¿¡ ¹·¾î ÀÖ´Â photon ÀÇ dir À» ¹Ù²Ù¾î¼­
-				 *	»ç¿ëÇÑ´Ù.
+				 *	ë°˜ê²½ì•ˆì— ë“¤ì–´ì˜¤ê³ , ê¸°í•˜ì ìœ¼ë¡œ ë„ˆë¬´ ë§ì€ ì°¨ì´ê°€ ë‚˜ì§€ ì•ŠëŠ” ì§€ì .
+				 *	ê·¸ë¦¬ê³  ê´‘ì›ì´ê±°ë‚˜, íˆ¬ëª…ë¬¼ì²´ê°€ ì•„ë‹ˆë©´, ì‚¼ê°í˜• ë’·ë©´ì— ë­ì€ê±´ ì œì™¸. 
+				 *	ê´‘ì›ì´ë‚˜ íˆ¬ëª…í•œ ë¬¼ì²´ëŠ” ë’·ë©´ì— ë­ì–´ ìˆëŠ” photon ì˜ dir ì„ ë°”ê¾¸ì–´ì„œ
+				 *	ì‚¬ìš©í•œë‹¤.
 				 */
 				if ( squareDist <= squareRadius && 
 					 dotProduct( iPointNormal, photonNormal ) > VALID_COSINE_VALUE &&
 					( isTransmission || isLight || dotProduct( photonDir, iPointNormal ) >= 0.0f ) ) {
 					
 					/**
-					 *	diffuse term °è»ê. dot °ªÀÌ À½¼ö¶ó¸é ¾ç¼ö·Î ¹Ù²Ù¾î ÁØ´Ù.
+					 *	diffuse term ê³„ì‚°. dot ê°’ì´ ìŒìˆ˜ë¼ë©´ ì–‘ìˆ˜ë¡œ ë°”ê¾¸ì–´ ì¤€ë‹¤.
 					 */
 					//power += photonPower * kd_brdf;
 					float pdoti = dot( photonDir, iPointNormal );
@@ -923,7 +924,7 @@ __global__ void caIPointRadianceKernel( cuIntersectionPoint *pIsectPoint,
 					if ( Rdotp < 0.0f )
 						Rdotp = -1.0f * Rdotp;
 
-					/** ±¤¿øÀÏ¶§¿Í ÀÏ¹İ ¹°Ã¼ÀÏ¶§ ±¸ºĞ. */
+					/** ê´‘ì›ì¼ë•Œì™€ ì¼ë°˜ ë¬¼ì²´ì¼ë•Œ êµ¬ë¶„. */
 					if ( isLight ) {
 						powerSpecular += photonPower * max( 0.0f, pdoti );
 					} else {
@@ -940,7 +941,7 @@ __global__ void caIPointRadianceKernel( cuIntersectionPoint *pIsectPoint,
 		}
 
 		/** 
-		 *	texture Á¸Àç ¿©ºÎ¿¡ µû¶ó¼­ material »ö±ò ¼±ÅÃ 
+		 *	texture ì¡´ì¬ ì—¬ë¶€ì— ë”°ë¼ì„œ material ìƒ‰ê¹” ì„ íƒ 
 		 */
 		if ( texture == 1 ) {
 			powerDiffuse = powerDiffuse * texColor;
@@ -951,9 +952,9 @@ __global__ void caIPointRadianceKernel( cuIntersectionPoint *pIsectPoint,
 		}
 
 		/**	
-		 *	ÀÌ kernel À» È£ÃâÇÏ´Â ÂÊ¿¡¼­ iteration ½ÃÀÛ Àü¿¡ ¹İµå½Ã
-		 *	power ¸¦ ÃÊ±âÈ­	ÇØ¾ß ÇÑ´Ù.
-		 *	iteration ÀÌ ¿©·¯¹ø µÇ¹Ç·Î, ipoint ÀÇ radiance ´Â ´©ÀûÇØ¾ß ÇÑ´Ù. 
+		 *	ì´ kernel ì„ í˜¸ì¶œí•˜ëŠ” ìª½ì—ì„œ iteration ì‹œì‘ ì „ì— ë°˜ë“œì‹œ
+		 *	power ë¥¼ ì´ˆê¸°í™”	í•´ì•¼ í•œë‹¤.
+		 *	iteration ì´ ì—¬ëŸ¬ë²ˆ ë˜ë¯€ë¡œ, ipoint ì˜ radiance ëŠ” ëˆ„ì í•´ì•¼ í•œë‹¤. 
 		 */
 		pPMIsectPoint[ iPointIndex ].power[ 0 ] += ( ( powerDiffuse.x + powerSpecular.x ) / ( densityArea ) );
 		pPMIsectPoint[ iPointIndex ].power[ 1 ] += ( ( powerDiffuse.y + powerSpecular.y ) / ( densityArea ) );

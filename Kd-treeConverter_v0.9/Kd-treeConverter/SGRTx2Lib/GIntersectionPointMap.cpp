@@ -27,7 +27,7 @@ void GIntersectionPointMap::clear()
 {
 	m_iCurrentCount = 0;
 
-	// memset ÇÏÁö¸»ÀÚ. fps °¡ 1/3 ·Î ÁØ´Ù. ¸Ş¸ğ¸®°¡ ³Ê¹« Ä¿¼­.
+	// memset í•˜ì§€ë§ì. fps ê°€ 1/3 ë¡œ ì¤€ë‹¤. ë©”ëª¨ë¦¬ê°€ ë„ˆë¬´ ì»¤ì„œ.
 	// memset( m_pPointData, -1, sizeof( cuIntersectionPoint ) * m_iMaxCount );
 }
 

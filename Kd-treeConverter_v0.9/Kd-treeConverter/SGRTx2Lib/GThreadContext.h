@@ -1,21 +1,22 @@
 #pragma once
-
+#define _SAL_VERSION 0
 #include <windows.h>
+#include <sal.h>
 
 /**
- *	°¢ ¾²·¹µåº°·Î ¼³Á¤ÇØ¾ßÇÒ È¯°æº¯¼öµé.
- *	Main ÇÁ·Î±×·¥ÀÇ ¾²·¹µå¿¡µµ Àû¿ë.
+ *	ê° ì“°ë ˆë“œë³„ë¡œ ì„¤ì •í•´ì•¼í•  í™˜ê²½ë³€ìˆ˜ë“¤.
+ *	Main í”„ë¡œê·¸ë¨ì˜ ì“°ë ˆë“œì—ë„ ì ìš©.
  */
 class GThreadContext
 {
 private:
 	/**
-	 *	ÇöÀç Thread ID 
+	 *	í˜„ì¬ Thread ID 
 	 */
 	UINT m_uiThreadID;
 
 	/**
-	 *	¾²·¹µå Work Number.
+	 *	ì“°ë ˆë“œ Work Number.
 	 */
 	UINT m_uiWorkNumber;
 
@@ -26,17 +27,17 @@ public:
 	~GThreadContext(void);
 
 	/**
-	 *	ÇöÀç ¾²·¹µåÀÇ ID ¸¦ ¸®ÅÏ.
+	 *	í˜„ì¬ ì“°ë ˆë“œì˜ ID ë¥¼ ë¦¬í„´.
 	 */
 	UINT getThreadID();
 
 	/**
-	 *	¾²·¹µåÀÇ Work Number ¸¦ ÁöÁ¤ÇÑ´Ù.
+	 *	ì“°ë ˆë“œì˜ Work Number ë¥¼ ì§€ì •í•œë‹¤.
 	 */
 	void setWorkNumber( UINT nWork );
 
 	/**
-	 *	¾²·¹µåÀÇ Work Number ¸¦ ¹İÈ¯ÇÑ´Ù.
+	 *	ì“°ë ˆë“œì˜ Work Number ë¥¼ ë°˜í™˜í•œë‹¤.
 	 */
 	UINT getWorkNumber();
 

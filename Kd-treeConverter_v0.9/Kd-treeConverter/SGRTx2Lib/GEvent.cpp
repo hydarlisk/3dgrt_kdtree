@@ -11,9 +11,9 @@ GEvent::~GEvent(void)
 }
 
 /**
- *	signal ╟║ ╧ъ╩Щгр╤╖╠НаЖ ╧╚гя ╢К╠Б
- *	signal ╩Себ╟║ ╣г╦И гт╪Ж╦╕ ╨Эа╝Ё╙©ю╦И╪╜ гЖюГ╩Себ╦╕ 
- *	unsignal ╩Себ╥н ╦╦╣К.
+ *	signal Й╟─ К╟°Л┐²М∙═К∙▄Й╧▄Л╖─ К╛╢М∙° К▄─Й╦╟
+ *	signal Л┐│М┐°Й╟─ К░≤К╘╢ М∙╗Л┬≤К╔╪ К╧═Л═╦К┌≤Л≤╓К╘╢Л└° М≤└Л·╛Л┐│М┐°К╔╪ 
+ *	unsignal Л┐│М┐°К║° К╖▄К⌠╛.
  */
 DWORD GEvent::wait()
 {
@@ -21,9 +21,9 @@ DWORD GEvent::wait()
 }
 
 /**
- *	signal ╟║ ╧ъ╩Щгр╤╖╠НаЖ time ╫ц╟ё╦╦е╜ ╢К╠Б
- *	signal ╩Себ╟║ ╣г╦И гт╪Ж╦╕ ╨Эа╝Ё╙©ю╦И╪╜ гЖюГ╩Себ╦╕ 
- *	unsignal ╩Себ╥н ╦╦╣К.
+ *	signal Й╟─ К╟°Л┐²М∙═К∙▄Й╧▄Л╖─ time Л▀°Й╟└К╖▄М│╪ К▄─Й╦╟
+ *	signal Л┐│М┐°Й╟─ К░≤К╘╢ М∙╗Л┬≤К╔╪ К╧═Л═╦К┌≤Л≤╓К╘╢Л└° М≤└Л·╛Л┐│М┐°К╔╪ 
+ *	unsignal Л┐│М┐°К║° К╖▄К⌠╛.
  */
 DWORD GEvent::wait( UINT time )
 {
@@ -31,7 +31,7 @@ DWORD GEvent::wait( UINT time )
 }
 
 /**
- *	signal ╦╕ ╧ъ╩Щ╫це╡╢ы.
+ *	signal К╔╪ К╟°Л┐²Л▀°М┌╗К▀╓.
  */
 void GEvent::notify()
 {
@@ -39,7 +39,7 @@ void GEvent::notify()
 }
 
 /**
- *	non-signal ╩Себ╥н ╦╦╣К.
+ *	non-signal Л┐│М┐°К║° К╖▄К⌠╛.
  */
 void GEvent::reset()
 {

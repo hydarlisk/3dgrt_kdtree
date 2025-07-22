@@ -4,7 +4,7 @@
 #include "GPolygonObject.h"
 
 /**
- *	»ï°¢ÇüÀ¸·Î ÀÌ·ç¾îÁø Geometry.
+ *	ì‚¼ê°í˜•ìœ¼ë¡œ ì´ë£¨ì–´ì§„ Geometry.
  *	by graphicsian.
  */
 class GPolygonGeometry : public GPolygonObject

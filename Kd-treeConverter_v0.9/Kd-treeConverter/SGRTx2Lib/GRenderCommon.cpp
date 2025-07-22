@@ -15,9 +15,9 @@ GRenderCommon::~GRenderCommon(void)
 }
 
 /**
- *	Scene ÀÇ ±¤¿øÀ» gpu ¿Ã¸± Á¤º¸·Î ±¸¼ºÇÑ´Ù. ray set data °¡ Á¸ÀçÇÑ´Ù¸é
- *	¸¸µé¾î¼­ cuda ¿¡ ¿Ã¸°´Ù. ray set data ´Â cuda ¿¡ ¿Ã¸±¶§ ÇÏ³ªÀÇ texture ¿¡
- *	¿©·¯°³ÀÇ light °ü·Ã ray set data ¸¦ ´ã¾Æ¼­ ¿Ã¸°´Ù.
+ *	Scene ì˜ ê´‘ì›ì„ gpu ì˜¬ë¦´ ì •ë³´ë¡œ êµ¬ì„±í•œë‹¤. ray set data ê°€ ì¡´ìž¬í•œë‹¤ë©´
+ *	ë§Œë“¤ì–´ì„œ cuda ì— ì˜¬ë¦°ë‹¤. ray set data ëŠ” cuda ì— ì˜¬ë¦´ë•Œ í•˜ë‚˜ì˜ texture ì—
+ *	ì—¬ëŸ¬ê°œì˜ light ê´€ë ¨ ray set data ë¥¼ ë‹´ì•„ì„œ ì˜¬ë¦°ë‹¤.
  */
 cuLight* GRenderCommon::makeCudaLightInfo( GScene *pScene, int *pCount, 
 										   cudaRenderPipeline *pCudaRenderPipeline )
@@ -45,7 +45,7 @@ cuLight* GRenderCommon::makeCudaLightInfo( GScene *pScene, int *pCount,
 		cuLights[ i ].bUseDirect = 0;
 
 		/**
-		 *	Point Light ¸¦ cuda data ·Î º¯È¯ÇÑ´Ù.
+		 *	Point Light ë¥¼ cuda data ë¡œ ë³€í™˜í•œë‹¤.
 		 */
 		if ( pLight->getLightType() == typePointLight ) {
 
@@ -67,7 +67,7 @@ cuLight* GRenderCommon::makeCudaLightInfo( GScene *pScene, int *pCount,
 		}
 
 		/**
-		 *	Ray Set Light ¸¦ cuda light ·Î ¸¸µç´Ù.
+		 *	Ray Set Light ë¥¼ cuda light ë¡œ ë§Œë“ ë‹¤.
 		 */
 		if ( pLight->getLightType() == typeVirtualLight ) {
 
@@ -91,7 +91,7 @@ cuLight* GRenderCommon::makeCudaLightInfo( GScene *pScene, int *pCount,
 		}
 
 		/**
-		 *	Ray Set Light ¸¦ cuda light ·Î ¸¸µç´Ù.
+		 *	Ray Set Light ë¥¼ cuda light ë¡œ ë§Œë“ ë‹¤.
 		 */
 		if ( pLight->getLightType() == typeRaySetLight ) {
 
@@ -109,10 +109,10 @@ cuLight* GRenderCommon::makeCudaLightInfo( GScene *pScene, int *pCount,
 			cuLights[ i ].pos.z = pRaySetLight->getPosition().z;
 
 			/** 
-			 *	photon »ý¼º ¸ðµå. light µéÁß¿¡ rayset light °¡ ¿©·¯°³ ÀÖÀ»´ë
-			 *	ray set data ´Â cuda texture ÇÑ°³¿¡ ´Ù ¸ô¾Æ¼­ ³ÖÀ» °ÍÀÌ±â ¶§¹®¿¡
-			 *	°¢ ray set light °¡ ÇÏ³ªÀÇ linear ÇÑ memory ±¸Á¶¿¡¼­ ÀÚ½ÅÀÇ ray set data
-			 *	ÀÇ À§Ä¡¸¦ ¾î¶»°Ô ±¸¼ºÇÒÁö¸¦ °è»ê.
+			 *	photon ìƒì„± ëª¨ë“œ. light ë“¤ì¤‘ì— rayset light ê°€ ì—¬ëŸ¬ê°œ ìžˆì„ëŒ€
+			 *	ray set data ëŠ” cuda texture í•œê°œì— ë‹¤ ëª°ì•„ì„œ ë„£ì„ ê²ƒì´ê¸° ë•Œë¬¸ì—
+			 *	ê° ray set light ê°€ í•˜ë‚˜ì˜ linear í•œ memory êµ¬ì¡°ì—ì„œ ìžì‹ ì˜ ray set data
+			 *	ì˜ ìœ„ì¹˜ë¥¼ ì–´ë–»ê²Œ êµ¬ì„±í• ì§€ë¥¼ ê³„ì‚°.
 			 */
 			cuLights[ i ].randomMode = pRaySetLight->isRandomMode();
 			cuLights[ i ].iStartIndexInRaySetData = raySetCount;
@@ -131,9 +131,9 @@ cuLight* GRenderCommon::makeCudaLightInfo( GScene *pScene, int *pCount,
 	(*pCount) = (int) pLightList->size();
 
 	/**
-	 *	ray set data °¡ Á¸ÀçÇÑ´Ù¸é, À§¿¡¼­ ±¸¼ºÇÑ Á¤º¸¸¦ ±â¹ÝÀ¸·Î
-	 *	´Ù½Ã ÇÑ¹ø µ¹¸é¼­ ¸Þ¸ð¸®¸¦ ±¸¼ºÀ» ÇÑ´ÙÀ½¿¡
-	 *	cuda ¿¡ ¿Ã¸°´Ù.
+	 *	ray set data ê°€ ì¡´ìž¬í•œë‹¤ë©´, ìœ„ì—ì„œ êµ¬ì„±í•œ ì •ë³´ë¥¼ ê¸°ë°˜ìœ¼ë¡œ
+	 *	ë‹¤ì‹œ í•œë²ˆ ëŒë©´ì„œ ë©”ëª¨ë¦¬ë¥¼ êµ¬ì„±ì„ í•œë‹¤ìŒì—
+	 *	cuda ì— ì˜¬ë¦°ë‹¤.
 	 */
 	if ( raySetCount ) {
 	
@@ -147,7 +147,7 @@ cuLight* GRenderCommon::makeCudaLightInfo( GScene *pScene, int *pCount,
 			pCuLight = ( cuLights + i );
 
 			/**
-			 *	Ray Set data ¸¦ linear ÇÑ ¸Þ¸ð¸®¿¡ º¹»çÇÑ´Ù.
+			 *	Ray Set data ë¥¼ linear í•œ ë©”ëª¨ë¦¬ì— ë³µì‚¬í•œë‹¤.
 			 */
 			if ( pCuLight->lightType == cuRaySetLight ) {
 
@@ -171,8 +171,8 @@ cuLight* GRenderCommon::makeCudaLightInfo( GScene *pScene, int *pCount,
 		assert( raySetCount == copyRaySetCount );
 
 		/**
-		 *	cuda device memory ·Î ¿Ã¸®°í ¸Þ¸ð¸®¸¦ ÇØÁ¦ÇÑ´Ù. ¿¡·¯°¡
-		 *	¹ß»ýÇÑ´Ù¸é light ÀÚÃ¼¸¦ ÇØÁ¦ÇÏ°í NULL À» ¸®ÅÏ½ÃÅ²´Ù.
+		 *	cuda device memory ë¡œ ì˜¬ë¦¬ê³  ë©”ëª¨ë¦¬ë¥¼ í•´ì œí•œë‹¤. ì—ëŸ¬ê°€
+		 *	ë°œìƒí•œë‹¤ë©´ light ìžì²´ë¥¼ í•´ì œí•˜ê³  NULL ì„ ë¦¬í„´ì‹œí‚¨ë‹¤.
 		 */
 		if ( pCudaRenderPipeline->setLightRaySetData( pCuRaySetData, raySetCount ) != errorNo ) {
 			free( pCuRaySetData );

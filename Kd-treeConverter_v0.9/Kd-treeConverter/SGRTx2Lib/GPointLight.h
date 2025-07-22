@@ -5,7 +5,7 @@
 #include "GPoint.h"
 
 /**
- *	PointLight Å¬·¡½º.
+ *	PointLight í´ë˜ìŠ¤.
  *
  *	by graphicsian
  */

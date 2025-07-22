@@ -142,7 +142,7 @@ GError SSESceneData::buildTriAccList_Barycentric ( void )
 		// f = m_TriAccList[i].isTransparent;
 sizeof (_sse_vec);
 
-		// ÇÁ·ÎÆÄÀÏ¸µ¿ë
+		// í”„ë¡œíŒŒì¼ë§ìš©
 		//m_TriAccList[i].area = m_TriObjList[i]->calArea();
 		m_TriAccList[i].pObject = m_TriObjList[i]->m_pObject;
 		m_TriAccList[i].indexInObject = m_TriObjList[i]->indexInObject;

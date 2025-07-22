@@ -25,8 +25,8 @@ GTextureManager* GTextureManager::getInstance()
 }
 
 /**
- *	Texture ¸¦ Ãß°¡ÇÏ°í, texture °íÀ¯¹øÈ£¸¦ ¸®ÅÏÇØÁØ´Ù.
- *	¸¸¾à µ¿ÀÏÇÑ texture ¶ó¸é ±âÁ¸¿¡ ÀÖ´Â ¹øÈ£¸¦ ¸®ÅÏ.
+ *	Texture ë¥¼ ì¶”ê°€í•˜ê³ , texture ê³ ìœ ë²ˆí˜¸ë¥¼ ë¦¬í„´í•´ì¤€ë‹¤.
+ *	ë§Œì•½ ë™ì¼í•œ texture ë¼ë©´ ê¸°ì¡´ì— ìˆëŠ” ë²ˆí˜¸ë¥¼ ë¦¬í„´.
  */
 int GTextureManager::addTexture( const char* filename )
 {
@@ -53,7 +53,7 @@ int GTextureManager::addTexture( const char* filename )
 }
 
 /**
- *	textureID ¿¡ ÇØ´çÇÏ´Â texture °´Ã¼ ¸®ÅÏ.
+ *	textureID ì— í•´ë‹¹í•˜ëŠ” texture ê°ì²´ ë¦¬í„´.
  */	
 GTexture* GTextureManager::getTexture( int textureID )
 {

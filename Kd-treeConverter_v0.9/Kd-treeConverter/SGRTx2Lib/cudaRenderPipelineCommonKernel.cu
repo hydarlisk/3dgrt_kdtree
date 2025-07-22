@@ -1,7 +1,7 @@
 #define M_PI 3.14159f
 
 /** 
- *	ray check �ʹ� �տ��� ������ �����ϱ� ���� epsilon 
+ *	ray check 너무 앞에서 만나면 무시하기 위한 epsilon 
  */
 #define RAY_START_EPSILON		EPSILON3
 #define BARYCENTRY_EPSILON		EPSILON7
@@ -19,23 +19,23 @@
 #define INTERSECTION_THREAD_DIM				128
 
 #define ADAPTIVE_THREADS					256
-#define SUBPIXEL_CAPABILITY					64			// ���� �ݵ�� ADAPTIVE_THREADS / 4���� ����Ѵ�.!!!
+#define SUBPIXEL_CAPABILITY					64			// 주의 반드시 ADAPTIVE_THREADS / 4개를 써야한다.!!!
 
-#define USE_CONTRAST_COMPARE							// contrast �� ������, luminance �� ������
+#define USE_CONTRAST_COMPARE							// contrast 로 비교할지, luminance 로 비교할지
 
 #define COLOR_WEIGHT_THREADHOLD				0.01f
 #define EDGE_THRESHOLD						0.3f
 #define DETECTOR_NORMAL_THREADHOLD			0.4f
 
 /**
- *	contrast �� ����Ʈ threshold. Mitchell �� ����� 0.4, 0.3, 0.6 �� �⺻
- *	threshold �� �Ѵ�. �� default ������ ������� ���α׷��������� scale factor
- *	�ϳ��� �� ��ü threshold �� ���ȴ�, �÷ȴ��Ѵ�.
+ *	contrast 의 디폴트 threshold. Mitchell 이 언급한 0.4, 0.3, 0.6 을 기본
+ *	threshold 로 한다. 이 default 비율을 기반으로 프로그램내에서는 scale factor
+ *	하나로 이 전체 threshold 를 내렸다, 올렸다한다.
  *
- *	scalefactor �� 1.0 �϶� 3threshold �� ��� 1 �� �Ѱ��ϱ����ؼ�.
- *	0.4 0.3 0.6 threshold �� 0.34 �� ���ؼ� 1.36, 1.2, 2.04 �� �ǰ� �Ѵ�.
+ *	scalefactor 가 1.0 일때 3threshold 가 모두 1 이 넘게하기위해서.
+ *	0.4 0.3 0.6 threshold 에 0.34 를 곱해서 1.36, 1.2, 2.04 가 되게 한다.
  *
- *	scalefactor �� 0.3 �� �Ǹ� 0.4 0.3 0.6 �� �ȴ�.
+ *	scalefactor 가 0.3 이 되면 0.4 0.3 0.6 이 된다.
  */
 #define CONTRAST_RED_DEFAULT_THRESHOLD		1.36f
 #define CONTRAST_GREEN_DEFAULT_THRESHOLD	1.02f
@@ -54,10 +54,10 @@
 
 
 /**----------------------------------------------------------------------------------------------
- *	����� ������ �� ����ü
+ *	사용할 데이터 및 구조체
  **---------------------------------------------------------------------------------------------*/
 /**
- *	Texture ������
+ *	Texture 데이터
  */
 texture<kdtreeNode, 1, cudaReadModeElementType> inKdTreeNodeTex;
 texture<float4, 1, cudaReadModeElementType> inWaldTriangleTex;
@@ -69,12 +69,12 @@ texture<float4, 1, cudaReadModeElementType> inTriangleGeometryTex;
 texture<float4, 1, cudaReadModeElementType> inObjectMaterialTex;
 
 /**
- *	Light �� ray set ���� �־��� ��� ����� Texture ������.
+ *	Light 가 ray set 으로 주어진 경우 사용할 Texture 데이터.
  */
 texture<float4, 1, cudaReadModeElementType> inLightRaySetTexture;
 
 /**
- *	Light �� sphere polygon ���� �����Ҷ� ����� texture ������.
+ *	Light 를 sphere polygon 으로 추정할때 사용할 texture 데이터.
  */
 texture<float4, 1, cudaReadModeElementType> inLightSphereTexture;
 
@@ -84,7 +84,7 @@ texture<float4, 1, cudaReadModeElementType> inLightSphereTexture;
 texture<float, 1, cudaReadModeElementType> inBloomingFilterTexture;
 
 /**
- *	frame buffer �� texture �� �����Ҷ� ���. read �Ҷ���.
+ *	frame buffer 를 texture 로 접근할때 사용. read 할때만.
  */
 texture<float4, 1, cudaReadModeElementType> inSamplingMapTexture;
 texture<float, 1, cudaReadModeElementType> inFrameBufferTexture;
@@ -92,7 +92,7 @@ texture<float, 1, cudaReadModeElementType> inFrameBuffer2Texture;
 texture<int, 1, cudaReadModeElementType> inASBufferTexture;
 
 /**
- *	Constant �� �����ϴ� ������.
+ *	Constant 로 관리하는 데이터.
  */
 __constant__ cuScene g_SceneInfo;
 __constant__ cuThreshold g_ThresholdInfo;
@@ -102,32 +102,32 @@ __constant__ unsigned shortStackDepth;
 __constant__ cuBoundingBox g_SceneBBox;
 
 /**
- *	setting �� texture ������ ���� constant.
+ *	setting 된 texture 정보를 위한 constant.
  */
 __constant__ cuTextureRef g_TextureRefInfo[ CUDA_MAX_TEXTURE ];
 __constant__ int g_TextureRefCount;
 
 /**
- *	Light ����. �ִ� 20������ ��ϰ����ϰ�.
+ *	Light 정보. 최대 20개까지 등록가능하게.
  */
 __constant__ cuLight constantLightInfo[ CUDA_MAX_LIGHT ];
 __constant__ int constantLightCount;
 
 /**
- *	adaptive sampling ���� subpixel �� ����� index table
+ *	adaptive sampling 에서 subpixel 이 사용할 index table
  */
 __constant__ int constantIndexTablePattern[ 24 ];
 __constant__ float constantPixelWeight[12];
 
 /**
- *	Texture �ִ� CUDA_MAX_TEXTURE ���� ��ϰ����ϰ�.
- *	�������� Texture �޸𸮸� �Ҵ��� ����� ���µ� �ϴ�
- *	�ϳ��� texture �ȿ� ������ texture �� �� �÷��� ����������
- *	ó���Ѵ�.
+ *	Texture 최대 CUDA_MAX_TEXTURE 까지 등록가능하게.
+ *	동적으로 Texture 메모리를 할당할 방법은 없는듯 하니
+ *	하나의 texture 안에 여러개 texture 를 다 올려서 내부적으로
+ *	처리한다.
  */
 texture<uchar4, 2, cudaReadModeNormalizedFloat> inObjectTexture;
 
-// stack�� element ����.
+// stack의 element 형식.
 typedef struct 
 {
 	unsigned nodeID; 
@@ -136,16 +136,16 @@ typedef struct
 }cu_traceState;
 
 /**
- *	shared memory �� intersection point ���� �ʿ���
- *	������ access �ϱ� ���� ����ü. �׻� bytes ���� 14bytes ��
- *	�����ؾ� �Ѵ�.
+ *	shared memory 로 intersection point 에서 필요한
+ *	정보를 access 하기 위한 구조체. 항상 bytes 수는 14bytes 로
+ *	고정해야 한다.
  */
 typedef struct
 {
-	float3 pos, dir, normal;		//	intersection point ����.
-	float u, v;						//	texture ��ǥ.
+	float3 pos, dir, normal;		//	intersection point 정보.
+	float u, v;						//	texture 좌표.
 	unsigned int objectIndex;		//	object index
-	unsigned int bTexture;			//	texture ����.
+	unsigned int bTexture;			//	texture 유무.
 	float pad;
 } sharedIntersectPoint;
 
@@ -164,7 +164,7 @@ struct smemIntersect {
 	}
 */
 
-// traceStack�� lmem�� ���� stack�̴�. �Ϲ����� ������ ������ �����Ѵ�.
+// traceStack은 lmem을 쓰는 stack이다. 일반적인 스택의 역할을 수행한다.
 struct traceStack {
 	cu_traceState lmemStack[50];
     int _top;
@@ -186,11 +186,11 @@ struct traceStack {
     __device__ inline void pop() { --_top; }
 };
 
-//Ǫ���� �� ������尡 �ִ� ������ �ִޱ�.
+//푸쉬할 때 오버헤드가 있는 단점이 있달까.
 struct cached_lmemStack {
 	traceStack lmemStack;
 	unsigned _top, cacheQuant, baseOffset;
-	__host__ __device__ cached_lmemStack() : _top(shortStackDepth-1), cacheQuant(0) {}
+	cached_lmemStack() : _top(shortStackDepth-1), cacheQuant(0) {}
 	__device__ inline void init(const unsigned smem_baseOffset) 
 	{ baseOffset = smem_baseOffset*shortStackDepth; }
 	__device__ inline cu_traceState top() const { 
@@ -211,7 +211,7 @@ struct cached_lmemStack {
 		smemBuffer[baseOffset + _top].tMax = t_max;
 	}
 	__device__ inline int empty() const {	return cacheQuant == 0 && lmemStack.empty(); }
-	__device__ inline void pop() {//����!! �� �������� pop()�Ұ�
+	__device__ inline void pop() {//주의!! 다 쓴다음에 pop()할것
 		if(cacheQuant == 0) {
 			lmemStack.pop();
 			return;
@@ -223,10 +223,10 @@ struct cached_lmemStack {
 };
 
 
-//���� ����. bank conflict ��� ����.
+//심플 버전. bank conflict 고려 안함.
 struct shortStack {
 	unsigned _top, quant, baseOffset;
-	__host__ __device__ shortStack() : _top(shortStackDepth-1), quant(0) {}
+	shortStack() : _top(shortStackDepth-1), quant(0) {}
 	__device__ inline void init(const unsigned smem_baseOffset) 
 	{ baseOffset = smem_baseOffset*(shortStackDepth); }
 	__device__ inline cu_traceState top() { return smemBuffer[baseOffset + _top];}
@@ -252,13 +252,13 @@ struct shortStack {
 
 
 /**----------------------------------------------------------------------------------------------
- *	����� ������ �� ����ü
+ *	사용할 데이터 및 구조체
  **---------------------------------------------------------------------------------------------*/
 
 
 
 /**----------------------------------------------------------------------------------------------
- *	�Լ���
+ *	함수들
  **---------------------------------------------------------------------------------------------*/
 
 inline cudaError_t checkError( const char* title )
@@ -278,7 +278,7 @@ inline cudaError_t checkError( const char* title )
 __device__ float3 reflection( float3 ray, float3 normal )
 {
 	/**
-	 *	��ü�� �޸鿡 ������� normal �� �����´�.
+	 *	물체의 뒷면에 맞은경우 normal 을 뒤집는다.
 	 */
 	float rdotn = dot( ray, normal );
 	return normalize( 2.0f * rdotn * normal - ray );
@@ -337,7 +337,7 @@ __device__ float3 refraction( float3 dir, float3 normal, float refractionIndex )
 }
 
 /**
- *	Object Material �� �����´�.
+ *	Object Material 을 가져온다.
  */
 /*
 __device__ void getObjectMaterial( int objIndex, cuObjectMaterial &material )
@@ -366,8 +366,8 @@ __device__ void getObjectMaterial( int objIndex, cuObjectMaterial &material )
 __device__ void getObjectMaterial( int objIndex, cuObjectMaterial &material )
 {
 	/** 
-	 *	object material texture ���� �����͸� �ε��� �´�. 
-	 *	float4 ������ texture �̹Ƿ� �����ͼ� �������Ѵ�.
+	 *	object material texture 에서 데이터를 로드해 온다. 
+	 *	float4 형태의 texture 이므로 가져와서 재조합한다.
 	 */
 	float4 temp = tex1Dfetch( inObjectMaterialTex, 4 * objIndex + 0 );
 	material.ambient_emission.x = temp.x; material.ambient_emission.y = temp.y;
@@ -387,11 +387,11 @@ __device__ void getObjectMaterial( int objIndex, cuObjectMaterial &material )
 }
 
 /**
- *	Texture Collection Data ���� textureNumber �� u, v �� �ش��ϴ� 
- *	�����͸� �����´�. u, v ����( 0, 1.0 ) �� wrapping �Ѵ�����
- *	texutre �� �����ϱ� ���ؼ��� ���� �̹��� ��ǥ�� ��ȯ�Ѵ�.
- *	( �� texture �ȿ� ���� texture �� �ֱ� ���� )
- *	return ���� texture ���� �����Դ��� ����.
+ *	Texture Collection Data 에서 textureNumber 의 u, v 에 해당하는 
+ *	데이터를 가져온다. u, v 값은( 0, 1.0 ) 로 wrapping 한다음에
+ *	texutre 를 접근하기 위해서는 실제 이미지 좌표로 변환한다.
+ *	( 한 texture 안에 여러 texture 가 있기 때문 )
+ *	return 값은 texture 값을 가져왔는지 여부.
  */
 __device__ int fetchTexture( int textureNumber, float u, float v, float3 &color )
 {
@@ -465,7 +465,7 @@ BoundsRayIntersect( const cuBoundingBox &box, const cuRay &ray, float &tmin, flo
 }
 
 /**
- *	���� thread id �� �̿��ؼ� ó���� ray id �� ���Ѵ�.
+ *	현재 thread id 를 이용해서 처리할 ray id 를 구한다.
  */
 __device__ inline int samplingRayID( int startOffset )
 {
@@ -484,7 +484,7 @@ __device__ int samplingRayID_BlockGrouping( int startOffset )
 }
 
 /**
- *	���� thread id �� �̿��ؼ� ó���� image ���� index �� ���Ѵ�.
+ *	현재 thread id 를 이용해서 처리할 image 상의 index 를 구한다.
  */
 __device__ int samplingImageIndex( int startOffset )
 {
@@ -562,15 +562,15 @@ __device__ inline void PlueckerIntersection( const cuRay &ray, const int id,
 }
 
 /**
- *	intersection point �����͸� �����Ѵ�.
+ *	intersection point 데이터를 생성한다.
  */
 __device__ void makeIntersectionPoint( cuRay* pRay, cuIntersectionCheck *pHit, 
 									   cuIntersectionPoint *pCurrIsectResult )
 {
 	/**
-	 *	����ü cuTriangleGeometry �� texture ��
-	 *	�ε��ѰͿ��� ���� �����´�. texture�� float4 �� �������
-	 *	������ ����ü�� ���� �������� ���ؼ� ����� ���ؾ� �Ѵ�.
+	 *	구조체 cuTriangleGeometry 를 texture 로
+	 *	로딩한것에서 값을 가져온다. texture는 float4 로 만들었기
+	 *	때문에 구조체의 값을 가져오기 위해서 계산을 잘해야 한다.
 	 */
 	float3 n0, n1, n2;
 	float2 uv0, uv1, uv2;
@@ -586,7 +586,7 @@ __device__ void makeIntersectionPoint( cuRay* pRay, cuIntersectionCheck *pHit,
 	uv1.y = temp.x; uv2.x = temp.y; uv2.y = temp.z;
 	
 	/** 
-	 *	�ﰢ�� ����, ray ���� ä��.
+	 *	삼각형 정보, ray 정보 채움.
 	 */
 	pCurrIsectResult->triIndex = pHit->triIndex; 
 	pCurrIsectResult->objectIndex = pHit->objectIndex;
@@ -598,15 +598,15 @@ __device__ void makeIntersectionPoint( cuRay* pRay, cuIntersectionCheck *pHit,
 	temp.w = 1.0f - pHit->beta - pHit->gamma;
 
 	/**
-	 *	boundDepth, rayIndex �� colorWeight ������ ray �� �����Ҷ�
-	 *	����� �ξ����Ƿ�	���⼭ ������Ʈ �ϸ� �ȵȴ�.
+	 *	boundDepth, rayIndex 와 colorWeight 정보는 ray 를 생성할때
+	 *	기록해 두었으므로	여기서 업데이트 하면 안된다.
 	 */
 	//pCurrIsectResult->boundDepth;
 	//pCurrIsectResult->rayIndex;
 	//pCurrIsectResult->colorWeight;
 	
 	/**
-	 *	position�� barycentric normal �� ����Ѵ�.
+	 *	position과 barycentric normal 을 계산한다.
 	 */
 	pCurrIsectResult->pos.x = pRay->pos.x + pHit->tHit * pRay->dir.x;
 	pCurrIsectResult->pos.y = pRay->pos.y + pHit->tHit * pRay->dir.y;
@@ -617,7 +617,7 @@ __device__ void makeIntersectionPoint( cuRay* pRay, cuIntersectionCheck *pHit,
 									n1 * ( pHit->beta ) + n2 * ( pHit->gamma ) );
 	float2 tex = uv0 * ( temp.w ) + uv1 * ( pHit->beta ) + uv2 * ( pHit->gamma );
 
-	/** ������ �ؽ��� ��ǥ�� 2���� ���� ��. */
+	/** 지금은 텍스쳐 좌표는 2차원 값만 씀. */
 	pCurrIsectResult->u = tex.x;
 	pCurrIsectResult->v = tex.y;
 }
@@ -699,8 +699,8 @@ __device__ inline void MultipassIntersectRoutine( const cuRay &ray, const int id
 	if ( ( hit.tHit <= t ) || ( t < t_near - EPSILON4 ) || ( t > t_far + EPSILON4 ) ) return;
 	
 	/**
-	 *	culling �ɼ��� �ְ�, object �� transparent ���� �ʴٸ�
-	 *	�ո����� �޸����� üũ. �޸鿡 �����Ÿ� hit ó�� ����.
+	 *	culling 옵션이 있고, object 가 transparent 하지 않다면
+	 *	앞면인지 뒷면인지 체크. 뒷면에 맞은거면 hit 처리 안함.
 	 */
 	if ( !tri.isTransparent() && bCulling == 1 ) {
 		float value = p.dir.x + p.dir.y * tri.n_u() + p.dir.z * tri.n_v();
@@ -714,7 +714,7 @@ __device__ inline void MultipassIntersectRoutine( const cuRay &ray, const int id
 	const float beta = hv * tri.b_nu() + hu * tri.b_nv();
 	const float gamma = hu * tri.c_nu() + hv * tri.c_nv();
 	
-	/** �ﰢ���� edge �� �ε�����, ��ġ������ �����Ƿ� epsilon �� �� �ش�. */
+	/** 삼각형의 edge 와 부딪힐때, 수치오차가 있으므로 epsilon 을 좀 준다. */
 	if ( isnan( beta * gamma ) ) return;
 	if ( ( beta < 0.f - BARYCENTRY_EPSILON ) | ( gamma < 0.f - BARYCENTRY_EPSILON ) | ( ( 1.0f - beta - gamma ) < 0.0f - BARYCENTRY_EPSILON ) ) return;
 
@@ -749,8 +749,8 @@ __device__ inline void IntersectRoutine( const cuRay &ray, const int id, cuInter
 	if ( ( hit.tHit <= t ) || ( t < t_near - EPSILON4 ) || ( t > t_far + EPSILON4 ) ) return;
 	
 	/**
-	 *	culling �ɼ��� �ְ�, object �� transparent ���� �ʴٸ�
-	 *	�ո����� �޸����� üũ. �޸鿡 �����Ÿ� hit ó�� ����.
+	 *	culling 옵션이 있고, object 가 transparent 하지 않다면
+	 *	앞면인지 뒷면인지 체크. 뒷면에 맞은거면 hit 처리 안함.
 	 */
 /*
 #ifdef USE_CULLING_OPTION
@@ -767,7 +767,7 @@ __device__ inline void IntersectRoutine( const cuRay &ray, const int id, cuInter
 	const float beta = hv * tri.b_nu() + hu * tri.b_nv();
 	const float gamma = hu * tri.c_nu() + hv * tri.c_nv();
 	
-	/** �ﰢ���� edge �� �ε�����, ��ġ������ �����Ƿ� epsilon �� �� �ش�. */
+	/** 삼각형의 edge 와 부딪힐때, 수치오차가 있으므로 epsilon 을 좀 준다. */
 	if ( isnan( beta * gamma ) ) return;
 	if ( ( beta < 0.f - BARYCENTRY_EPSILON ) | ( gamma < 0.f - BARYCENTRY_EPSILON ) | ( ( 1.0f - beta - gamma ) < 0.0f - BARYCENTRY_EPSILON ) ) return;
 
@@ -782,10 +782,10 @@ __device__ inline void IntersectRoutine( const cuRay &ray, const int id, cuInter
 
 
 /** 
- *	shadow ray �� intersection üũ 
- *	transparent �� ��ü�� ���. ��ü�� hit ���θ� �˸�ȴ�. 
+ *	shadow ray 의 intersection 체크 
+ *	transparent 한 물체면 통과. 물체의 hit 여부만 알면된다. 
  *
- *	TODO: ���߿� HIT ���θ� üũ�ϴ� ��ƾ���� ��ġ��.
+ *	TODO: 나중에 HIT 여부만 체크하는 루틴으로 고치자.
  */
 __device__ inline void
 IntersectShadowRoutine( const cuRay &ray, const int id, 
@@ -795,7 +795,7 @@ IntersectShadowRoutine( const cuRay &ray, const int id,
 	tri.internal2 = tex1Dfetch( inWaldTriangleTex, 3 * id + 2 );
 
 	/**
-	 *	transparent �ϴٸ� hit ó�� ����.
+	 *	transparent 하다면 hit 처리 안함.
 	 */
 	if ( tri.isTransparent() == 1 )
 		return;
@@ -818,7 +818,7 @@ IntersectShadowRoutine( const cuRay &ray, const int id,
 	const float beta = hv*tri.b_nu() + hu*tri.b_nv();
 	const float gamma = hu*tri.c_nu() + hv*tri.c_nv();
 	
-	/** �ﰢ���� edge �� �ε�����, ��ġ������ �����Ƿ� epsilon �� �� �ش�. */
+	/** 삼각형의 edge 와 부딪힐때, 수치오차가 있으므로 epsilon 을 좀 준다. */
 	if ( isnan( beta * gamma ) ) return;
 	if ( ( beta < 0.f - BARYCENTRY_EPSILON ) | ( gamma < 0.f - BARYCENTRY_EPSILON ) | ( ( 1.0f - beta - gamma ) < 0.0f - BARYCENTRY_EPSILON ) ) return;
 
@@ -832,7 +832,7 @@ IntersectShadowRoutine( const cuRay &ray, const int id,
 }
 
 /**
- *	intersection point �� ã�´�.
+ *	intersection point 를 찾는다.
  */
 __device__ void intersect( cuRay &currRay, cuIntersectionCheck &intersectionCheck, bool faceCCW, bool bCulling )
 {
@@ -872,7 +872,7 @@ __device__ void intersect( cuRay &currRay, cuIntersectionCheck &intersectionChec
 			int objectSize = OBJECT_SIZE( node ) + baseOffset;
 			for ( ; baseOffset < objectSize ; baseOffset++ ) {
 				const unsigned objListOffset = tex1Dfetch( inObjectOffsetListTex, baseOffset );
-				/** intersection ���� ������ �ﰢ���϶� */
+				/** intersection 에서 제외할 삼각형일때 */
 				//if ( currRay.getPrevTriIndex() == objListOffset ) continue;
 
 				#if INTERSECTION_METHOD == 0
@@ -898,7 +898,7 @@ __device__ void intersect( cuRay &currRay, cuIntersectionCheck &intersectionChec
 
 
 /**
- *	intersection point �� ã�´�.
+ *	intersection point 를 찾는다.
  */
 __device__ void MultipassIntersect( cuRay &currRay, cuIntersectionCheck &intersectionCheck, bool faceCCW, bool bCulling )
 {
@@ -960,7 +960,7 @@ __device__ void MultipassIntersect( cuRay &currRay, cuIntersectionCheck &interse
 
 
 /**
- *	shadow ray �� intersection üũ.
+ *	shadow ray 의 intersection 체크.
  */
 __device__ void intersectShadow( cuRay &currRay, cuIntersectionCheck &intersectionCheck, float maxt )
 {
@@ -999,7 +999,7 @@ __device__ void intersectShadow( cuRay &currRay, cuIntersectionCheck &intersecti
 			int objectSize = OBJECT_SIZE(node) + baseOffset;
 			for ( ; baseOffset < objectSize ; baseOffset++ ) {
 				const unsigned objListOffset = tex1Dfetch( inObjectOffsetListTex, baseOffset );
-				/** intersection ���� ������ �ﰢ���϶� */
+				/** intersection 에서 제외할 삼각형일때 */
 				//if ( currRay.getPrevTriIndex() == objListOffset ) continue;
 				
 				#if INTERSECTION_METHOD == 0
@@ -1030,14 +1030,14 @@ __device__ void intersectShadow( cuRay &currRay, cuIntersectionCheck &intersecti
 }
 
 /**
- *	light �� ���̴��� shadow ray �� ���� üũ.
- *	�ϴ��� ����ȭ ���� ���� ray check ����� ����ؼ� üũ.
+ *	light 가 보이는지 shadow ray 를 쏴서 체크.
+ *	일단은 최적화 없이 기존 ray check 기능을 사용해서 체크.
  */
 __device__ bool checkVisibility( float3 pos, float3 lightPos )
 {
 	cuRay currRay;
 	
-	/** light ������ t �� ��� */
+	/** light 까지의 t 를 계산 */
 	float3 dir = lightPos - pos;
 	float maxt = length( dir );
 
@@ -1057,20 +1057,20 @@ __device__ bool checkVisibility( float3 pos, float3 lightPos )
 	/** shadow ray */
 	intersectShadow( currRay, currIsectCheck, maxt );
 
-	/** hit �� �ߴٴ°Ŵ� light �� ���������� ��ü�� �������̴�. */
+	/** hit 를 했다는거는 light 를 만나기전에 물체를 만난것이다. */
 	return !currIsectCheck.isHit();		
 }
 
 
 /**
- *	light �� ���̴��� shadow ray �� ���� üũ.
- *	�ϴ��� ����ȭ ���� ���� ray check ����� ����ؼ� üũ.
+ *	light 가 보이는지 shadow ray 를 쏴서 체크.
+ *	일단은 최적화 없이 기존 ray check 기능을 사용해서 체크.
  */
 __device__ bool checkVisibility_ForSelective( float3 pos, float3 lightPos, bool &bSelected )
 {
 	cuRay currRay;
 	
-	/** light ������ t �� ��� */
+	/** light 까지의 t 를 계산 */
 	float3 dir = lightPos - pos;
 	float maxt = length( dir );
 
@@ -1092,6 +1092,6 @@ __device__ bool checkVisibility_ForSelective( float3 pos, float3 lightPos, bool 
 	
 	bSelected = currIsectCheck.bSelected;
 
-	/** hit �� �ߴٴ°Ŵ� light �� ���������� ��ü�� �������̴�. */
+	/** hit 를 했다는거는 light 를 만나기전에 물체를 만난것이다. */
 	return !currIsectCheck.isHit();		
 }

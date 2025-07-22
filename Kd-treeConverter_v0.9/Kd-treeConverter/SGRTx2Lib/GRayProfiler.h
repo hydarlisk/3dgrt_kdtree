@@ -79,7 +79,7 @@ enum STATE {
 #define MAX_TREE_DEPTH 100
 
 /*! \class GRayProfiler
- * \brief Ray ÇÏ³ª¿¡ ´ëÇÑ Profiler
+ * \brief Ray í•˜ë‚˜ì— ëŒ€í•œ Profiler
  * 
  * @author Hybrid
 */

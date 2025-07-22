@@ -3,7 +3,7 @@
 #include "GRayProfiler.h"
 
 /*! GRayProfiler
-* \brief Ray ÇÏ³ª¿¡ ´ëÇÑ Profiler
+* \brief Ray í•˜ë‚˜ì— ëŒ€í•œ Profiler
 * 
 * @author Hybrid
 */
@@ -28,7 +28,7 @@ struct ResultData
 };
 
 /*! \namespace GRayTracerProfiler
-* \brief Image ¸¦ ÀÌ·ç´Â Rays ¿¡ ´ëÇÑ Profiler
+* \brief Image ë¥¼ ì´ë£¨ëŠ” Rays ì— ëŒ€í•œ Profiler
 * 
 * @author Hybrid
 */

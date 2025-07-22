@@ -1,7 +1,7 @@
 #pragma once
 
 /**
- *	Constructing KD-Tree °ü·Ã ¿É¼Ç
+ *	Constructing KD-Tree ê´€ë ¨ ì˜µì…˜
  *
  *	by Hybrid.
  */
@@ -41,8 +41,8 @@ public:
 	
 private:
 	
-	//! ¸Ş¸ğ¸®ÀÇ ÃÖ´ë Å©±â
-	//! ·»´õ¸µ ·¹ÀÌ°¡ °¡Áö´Â ÃÖ´ë Å©±â (»ı¼º½Ã¿¡ ÇÑÂÊÀÌ empty node ÀÏ °æ¿ì ÀÌ depth ´Â Áõ°¡½ÃÅ°Áö ¾Ê´Â´Ù.)
+	//! ë©”ëª¨ë¦¬ì˜ ìµœëŒ€ í¬ê¸°
+	//! ë Œë”ë§ ë ˆì´ê°€ ê°€ì§€ëŠ” ìµœëŒ€ í¬ê¸° (ìƒì„±ì‹œì— í•œìª½ì´ empty node ì¼ ê²½ìš° ì´ depth ëŠ” ì¦ê°€ì‹œí‚¤ì§€ ì•ŠëŠ”ë‹¤.)
 
 	//! Split Function Number
 	SPLIT_FUNCTION m_SplitFunction;
