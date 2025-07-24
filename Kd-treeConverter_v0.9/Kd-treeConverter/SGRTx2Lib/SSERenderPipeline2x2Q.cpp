@@ -65,7 +65,7 @@ void SSERenderPipeline::InitPacket2x2(int nIdx)
 // SSERenderPipeline::IsectPacket
 //		Intersection check
 // ------------------------------------------------------------------------------------------------
-void SSERenderPipeline::IsectPacket2x2( const KdTreeNode *node, int nIdx )
+void SSERenderPipeline::IsectPacket2x2( const KdTreeNode2 *node, int nIdx )
 {
 	int i;
 
@@ -78,7 +78,7 @@ void SSERenderPipeline::IsectPacket2x2( const KdTreeNode *node, int nIdx )
 
 	for (i = baseOffset; i < baseOffset+nObjs; i++) {
 		int     triID = m_Data->m_TriOffList[i];
-		TriAccel &acc = m_Data->m_TriAccList[triID];
+		TriAccel2 &acc = m_Data->m_TriAccList[triID];
 
 		union { __m128 Mask_Hit; __m128i iMask_Hit; };
 
@@ -176,7 +176,7 @@ void SSERenderPipeline::TracePacket2x2( int nIdx )
 	const unsigned int* ray_dir = &raydir[rp->RayWay][0][0];		// Get precomputed the traversal order (front/back)
 															//      as offsets for a bundle of rays with equal directions
 	// kdtree start node, stack index
-	KdTreeNode* node = &m_Data->m_pKDTreeNodes[0];
+	KdTreeNode2* node = &m_Data->m_pKDTreeNodes[0];
 
 	unsigned int stackIndex = 0;
 
@@ -199,8 +199,8 @@ void SSERenderPipeline::TracePacket2x2( int nIdx )
 		while (IS_LEAF(*node) == 0) {
 			const __m128 node_split4 = _mm_set_ps1(SPLIT_POS(*node));
 			const unsigned int dim	= SPLIT_AXIS(*node);
-			KdTreeNode *FrontSideSon	= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[dim << 1])];
-			KdTreeNode *BackSideSon		= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[(dim << 1)+1])];
+			KdTreeNode2 *FrontSideSon	= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[dim << 1])];
+			KdTreeNode2 *BackSideSon		= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[(dim << 1)+1])];
 
 			unsigned int d_near = 0, d_far = 0;
 			__m128 d;
@@ -277,7 +277,7 @@ void SSERenderPipeline::InitShadowPacket2x2(void)
 // SSERenderPipeline::IsectPacket
 //		Intersection check
 // ------------------------------------------------------------------------------------------------
-void SSERenderPipeline::IsectShadowPacket2x2( const KdTreeNode *node )
+void SSERenderPipeline::IsectShadowPacket2x2( const KdTreeNode2 *node )
 {
 	int i;
 
@@ -290,7 +290,7 @@ void SSERenderPipeline::IsectShadowPacket2x2( const KdTreeNode *node )
 
 	for (i = baseOffset; i < baseOffset+nObjs; i++) {
 		int     triID = m_Data->m_TriOffList[i];
-		TriAccel &acc = m_Data->m_TriAccList[triID];
+		TriAccel2 &acc = m_Data->m_TriAccList[triID];
 
 		// ---------------------------------------------------------------
 		// Mailbox
@@ -380,7 +380,7 @@ void SSERenderPipeline::TraceShadowPacket2x2( void )
 	const unsigned int* ray_dir = &raydir[rp->RayWay][0][0];		// Get precomputed the traversal order (front/back)
 															//      as offsets for a bundle of rays with equal directions
 	// kdtree start node, stack index
-	KdTreeNode* node = &m_Data->m_pKDTreeNodes[0];
+	KdTreeNode2* node = &m_Data->m_pKDTreeNodes[0];
 
 	unsigned int stackIndex = 0;
 
@@ -403,8 +403,8 @@ void SSERenderPipeline::TraceShadowPacket2x2( void )
 		while (IS_LEAF(*node) == 0) {
 			const __m128 node_split4 = _mm_set_ps1(SPLIT_POS(*node));
 			const unsigned int dim	= SPLIT_AXIS(*node);
-			KdTreeNode *FrontSideSon	= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[dim << 1])];
-			KdTreeNode *BackSideSon		= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[(dim << 1)+1])];
+			KdTreeNode2 *FrontSideSon	= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[dim << 1])];
+			KdTreeNode2 *BackSideSon		= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[(dim << 1)+1])];
 
 			unsigned int d_near = 0, d_far = 0;
 			__m128 d;

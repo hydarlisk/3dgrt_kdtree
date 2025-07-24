@@ -11,6 +11,9 @@
 #define FLT_MAX  3.402823466e+38F        /* max value */
 #endif
 
+//using namespace KDTConstructor;
+//using namespace KDTConverter;
+
 typedef struct __declspec(align(16)) _Hit {
 	float dist;				// hit distance
 	int tacc;				// triangle index + 1 (0 if there is no hit)

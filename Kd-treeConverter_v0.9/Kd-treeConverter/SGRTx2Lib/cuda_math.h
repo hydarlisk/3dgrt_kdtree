@@ -44,6 +44,7 @@
 #define CUTIL_MATH_H
 
 #include <cuda_runtime.h>
+#include <vector_types.h>
 
 ////////////////////////////////////////////////////////////////////////////////
 typedef unsigned int uint;

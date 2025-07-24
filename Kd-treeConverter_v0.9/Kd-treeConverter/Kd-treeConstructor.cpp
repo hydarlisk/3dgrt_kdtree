@@ -14,7 +14,8 @@
 #include "Kd-treeConverter.h"
 #include "Kd-treeConstructor.h"
 #include "MyMathUtility.h"
-using namespace KDTConverter;
+//using namespace KDTConverter;
+//using namespace KDTConstructor;
 
 static const unsigned int modulo[] = { 0,1,2,0,1 };
 
@@ -117,7 +118,7 @@ bool intersect_edge_plane(float *p0, float *p1, float *planePoint, float *planeN
 	float D =  fMyVecDotProduct(planeNorm, u);
 	float N = -fMyVecDotProduct(planeNorm, w);
 
-	// N==0ÀÌ¸é plane¿¡ ¿§Áö°¡ ºÙ¾î ÀÖ´Â°Å°í, ¾Æ´Ï¸é intersection¾È ÇÑ°Å.
+	// N==0ì´ë©´ planeì— ì—£ì§€ê°€ ë¶™ì–´ ìˆëŠ”ê±°ê³ , ì•„ë‹ˆë©´ intersectionì•ˆ í•œê±°.
 	if ( fabs( D ) < KD_TREE_EPSILON )
 		return false;
 
@@ -151,7 +152,7 @@ void clip_triangle(const int triangleSize, const SplitCost &bestCost, TriangleLi
 		BoundingBox currBBox = pTriangleInfos[i].AABB;
 
 		/**
-		 *	¸¸¾à »ï°¢ÇüÀÌ Split Plane°ú ±³Â÷ ÇÑ´Ù¸é,
+		 *	ë§Œì•½ ì‚¼ê°í˜•ì´ Split Planeê³¼ êµì°¨ í•œë‹¤ë©´,
 		 */
 		if( ( currBBox.min[ axis ] < bestCost.splitPos ) && 
 			( currBBox.max[ axis ] > bestCost.splitPos ) ) {
@@ -172,7 +173,7 @@ void clip_triangle(const int triangleSize, const SplitCost &bestCost, TriangleLi
 			float leftVec[4][3], rightVec[4][3];
 			//GPoint leftVec[4], rightVec[4];
 
-			//¿ŞÂÊ subBox¿¡ ÀÖ´Â°Ç ¿ŞÂÊ¿¡, ¿À¸¥ÂÊµµ ¸¶Âù°¡Áö·Î.
+			//ì™¼ìª½ subBoxì— ìˆëŠ”ê±´ ì™¼ìª½ì—, ì˜¤ë¥¸ìª½ë„ ë§ˆì°¬ê°€ì§€ë¡œ.
 			for( int nPoint = 0; nPoint < 3; nPoint++ ) {
 				if( p[nPoint][axis] < bestCost.splitPos ) {
 					leftVec[nLeft][0] = p[nPoint][0];
@@ -262,7 +263,7 @@ void push_triangles_to_child(const unsigned n_bEdge, const BoundEdge *bEdge,
 	int currLeftIndex = 0, currRightIndex = 0;
 
 	if (KD_TREE_PLANAR_TRIANGLE_ADD_MODE == BOTH_SIDE) {
-		// NlogN (in RTGPU) ¹æ½Ä
+		// NlogN (in RTGPU) ë°©ì‹
 		for ( unsigned int i = 0; i < n_bEdge; ++i ) {
 			if( !bEdge[i].isPlanar ) {
 
@@ -285,7 +286,7 @@ void push_triangles_to_child(const unsigned n_bEdge, const BoundEdge *bEdge,
 			}
 		}
 	} else if (KD_TREE_PLANAR_TRIANGLE_ADD_MODE == MINCOST_SIDE) {
-		// ±âÁ¸ SGRTx2 ¹æ½Ä (»ó¶ô&Çõ ¹æ¹ı)
+		// ê¸°ì¡´ SGRTx2 ë°©ì‹ (ìƒë½&í˜ ë°©ë²•)
 		for ( unsigned int i = 0; i < n_bEdge; ++i ) {
 			if( !bEdge[i].isPlanar ) {
 
@@ -321,7 +322,7 @@ void try_to_split(const int axis, BoundingBox &inBBox, const TriangleList *pTria
 		fCell_extent[1] = inBBox.max[1] - inBBox.min[1];
 		fCell_extent[2] = inBBox.max[2] - inBBox.min[2];
 
-	// ÀüÃ¼ Cell ³ĞÀÌÀÇ 1/2
+	// ì „ì²´ Cell ë„“ì´ì˜ 1/2
 	const double cell_area      = (fCell_extent[0] * fCell_extent[1]) + (fCell_extent[1] * fCell_extent[2]) + (fCell_extent[0] * fCell_extent[2]);
 	const double cell_area_rcp  = 1 / cell_area;
 	const double area_mul       = double( fCell_extent[axis1] ) + double( fCell_extent[axis2] );
@@ -331,44 +332,44 @@ void try_to_split(const int axis, BoundingBox &inBBox, const TriangleList *pTria
 	const float  cell_length    = cell_max - cell_min;
 
 	// ===========================================================
-	// ¸ğµç split candidate ¿¡ ´ëÇØ cost °è»ê
+	// ëª¨ë“  split candidate ì— ëŒ€í•´ cost ê³„ì‚°
 	// ===========================================================
 			/**
-			 * open			: triangle box ±âÁØÀ¸·Î min ¿¡ ÇØ´çÇÏ´Â °³¼ö
-			 * close		: triangle box ±âÁØÀ¸·Î max ¿¡ ÇØ´çÇÏ´Â °³¼ö
-			 * num_planars	: triangle box °¡ min = max °¡ µÇ´Â °ÍµéÀÇ °³¼ö(local ÀÓ)
-			 * local_open / local_close : ÇöÀç curr_bEdge.t ÀÎ split position ¿¡ ÇØ´çÇÏ´Â °³¼ö
+			 * open			: triangle box ê¸°ì¤€ìœ¼ë¡œ min ì— í•´ë‹¹í•˜ëŠ” ê°œìˆ˜
+			 * close		: triangle box ê¸°ì¤€ìœ¼ë¡œ max ì— í•´ë‹¹í•˜ëŠ” ê°œìˆ˜
+			 * num_planars	: triangle box ê°€ min = max ê°€ ë˜ëŠ” ê²ƒë“¤ì˜ ê°œìˆ˜(local ì„)
+			 * local_open / local_close : í˜„ì¬ curr_bEdge.t ì¸ split position ì— í•´ë‹¹í•˜ëŠ” ê°œìˆ˜
 			*/
 			int open = 0, close = 0, num_planars = 0, local_open = 0, local_close = 0;
 			int num_normalPositive = 0;
 
 	// ===========================================================
-	// edge Á¤º¸ Á¤·Ä
+	// edge ì •ë³´ ì •ë ¬
 	// ===========================================================
-	// nlogn ¹æ½ÄÃ³·³ Á¤·ÄÇÏÁö ¾ÊÀ½, edge ÀÇ type Àº °í·ÁÇÏÁö ¾Ê°í ¼ø¼öÈ÷ À§Ä¡·Î¸¸ Á¤·ÄÇÔ
+	// nlogn ë°©ì‹ì²˜ëŸ¼ ì •ë ¬í•˜ì§€ ì•ŠìŒ, edge ì˜ type ì€ ê³ ë ¤í•˜ì§€ ì•Šê³  ìˆœìˆ˜íˆ ìœ„ì¹˜ë¡œë§Œ ì •ë ¬í•¨
 	const unsigned n_bEdge = triangleSize * 2;
 	set_bound_edge( axis, pTriangles, n_bEdge, bEdge );
 
 
 	for ( unsigned int i = 0; i < n_bEdge; i++ ) {
-		// ÇöÀç bEdge[i] °¡ ÀÚ¸£°íÀÚ ÇÏ´Â plane candidate
+		// í˜„ì¬ bEdge[i] ê°€ ìë¥´ê³ ì í•˜ëŠ” plane candidate
 				BoundEdge curr_bEdge = bEdge[i];
 
-		//planar´Â open°ú close¿¡ µÑ ´Ù Æ÷ÇÔµÊ
-		// (¿ø·¡´Â 2°³(min/max)°¡ planar ÇÑ°³·Î °è»ê µÆÀ¸¹Ç·Î min->open, max->close ·Î °¢°¢ µé¾î°¨.)
+		//planarëŠ” openê³¼ closeì— ë‘˜ ë‹¤ í¬í•¨ë¨
+		// (ì›ë˜ëŠ” 2ê°œ(min/max)ê°€ planar í•œê°œë¡œ ê³„ì‚° ëìœ¼ë¯€ë¡œ min->open, max->close ë¡œ ê°ê° ë“¤ì–´ê°.)
 				open  += local_open  + num_planars;
 				close += local_close + num_planars;
-				local_open = 0;  local_close = 0; num_planars = 0; // num_planars µµ local °è»êÀÓ
+				local_open = 0;  local_close = 0; num_planars = 0; // num_planars ë„ local ê³„ì‚°ì„
 				num_normalPositive = 0;
 
-		//ÇöÀç axis¿Í side¿¡ ´ëÇØ Æ÷Áö¼Ç±¸ÇÔ
+		//í˜„ì¬ axisì™€ sideì— ëŒ€í•´ í¬ì§€ì…˜êµ¬í•¨
 				const float cur_position = curr_bEdge.t;
 
 				// ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ --
-				// Split plane candidate ¿Í °°Àº À§Ä¡ÀÇ edge µé¿¡ ´ëÇÑ Ã³¸®
+				// Split plane candidate ì™€ ê°™ì€ ìœ„ì¹˜ì˜ edge ë“¤ì— ëŒ€í•œ ì²˜ë¦¬
 				// ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ --
 				{
-					//¶È°°Àº°Ô ¿©·¯°³ ÀÖÀ» ¶§´Â Á¦ÀÏ ¿À¸¥ÂÊ¿¡¼­¸¸ SAH °è»êÀ» ÇÑ´Ù.
+					//ë˜‘ê°™ì€ê²Œ ì—¬ëŸ¬ê°œ ìˆì„ ë•ŒëŠ” ì œì¼ ì˜¤ë¥¸ìª½ì—ì„œë§Œ SAH ê³„ì‚°ì„ í•œë‹¤.
 					for ( unsigned int j = i; j < n_bEdge; j++ ) {
 						BoundEdge tmp_bEdge = bEdge[j];
 						if ( tmp_bEdge.t != cur_position) break;
@@ -378,13 +379,13 @@ void try_to_split(const int axis, BoundingBox &inBBox, const TriangleList *pTria
 							is_planar	= tmp_bEdge.isPlanar,
 							is_normalPositive = tmp_bEdge.isNormalPositive;
 
-						//Ä«¿îÆÃ
+						//ì¹´ìš´íŒ…
 						if (!is_planar) {
-							local_open	+= is_left ? 1 : 0; //!< box ÀÇ ¿ŞÂÊÀº local_open À» Áõ°¡
-							local_close	+= is_left ? 0 : 1; //!< box ÀÇ ¿À¸¥ÂÊÀº local_close ¸¦ Áõ°¡
+							local_open	+= is_left ? 1 : 0; //!< box ì˜ ì™¼ìª½ì€ local_open ì„ ì¦ê°€
+							local_close	+= is_left ? 0 : 1; //!< box ì˜ ì˜¤ë¥¸ìª½ì€ local_close ë¥¼ ì¦ê°€
 						}
 						else {
-							//ÇÃ¶ó³ªÇÏ´Ù¸é µû·Î Ä«¿îÆÃ
+							//í”Œë¼ë‚˜í•˜ë‹¤ë©´ ë”°ë¡œ ì¹´ìš´íŒ…
 							num_planars += is_left ? 1 : 0;	// only count it once
 							num_normalPositive += is_normalPositive ? 1 : 0;
 						}
@@ -411,13 +412,13 @@ void try_to_split(const int axis, BoundingBox &inBBox, const TriangleList *pTria
 				prob_r = (extent_r*area_mul + area_add)*cell_area_rcp;
 
 			const int
-				n_leftOnly		= close + local_close,  // close °¡ µÈ´Ù¸é ±× »ï°¢ÇüÀº ¿À¸¥ÂÊ¿¡ ÀÖÁöµµ ¾Ê°Ô µÊ (°ãÄ¡Áöµµ ¾ÊÀ½)
-				n_cross			= open  - n_leftOnly,   // open = n_leftOnly + n_cross (ÇöÀç local_open Àº Æ÷ÇÔÇÏÁö ¾ÊÀ½)
+				n_leftOnly		= close + local_close,  // close ê°€ ëœë‹¤ë©´ ê·¸ ì‚¼ê°í˜•ì€ ì˜¤ë¥¸ìª½ì— ìˆì§€ë„ ì•Šê²Œ ë¨ (ê²¹ì¹˜ì§€ë„ ì•ŠìŒ)
+				n_cross			= open  - n_leftOnly,   // open = n_leftOnly + n_cross (í˜„ì¬ local_open ì€ í¬í•¨í•˜ì§€ ì•ŠìŒ)
 				n_rightOnly		= triangleSize - (n_leftOnly + n_cross + num_planars);
 
-					// planar  ´Â local_open ¿¡ ÇØ´çÇÏ´Â °Í¸¸ Ä«¿îÆÃÇÔ.
-					// n_cross ´Â local_open Àº °í·ÁÇÏÁö ¾ÊÀ½. Áï, planar µµ °í·ÁÇÏÁö ¾ÊÀ½.
-					// ÀüÃ¼ triangle_size = n_leftOnly + n_rightOnly + n_cross + num_planars
+					// planar  ëŠ” local_open ì— í•´ë‹¹í•˜ëŠ” ê²ƒë§Œ ì¹´ìš´íŒ…í•¨.
+					// n_cross ëŠ” local_open ì€ ê³ ë ¤í•˜ì§€ ì•ŠìŒ. ì¦‰, planar ë„ ê³ ë ¤í•˜ì§€ ì•ŠìŒ.
+					// ì „ì²´ triangle_size = n_leftOnly + n_rightOnly + n_cross + num_planars
 
 			double ExpectedCost;
 			int nTri_left, nTri_right;
@@ -443,14 +444,14 @@ void try_to_split(const int axis, BoundingBox &inBBox, const TriangleList *pTria
 				nTri_right = tri_num_right;
 
 			// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-			// Cost function ÀÇ ÃÖ¼Ò°ª¿¡ µû¶ó
+			// Cost function ì˜ ìµœì†Œê°’ì— ë”°ë¼
 			// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 			} else {
 
-							// ¹è¿­[0] Àº planar °¡ ¿ŞÂÊ¿¡ µé¾î°¬À» °æ¿ì
-							// ¹è¿­[1] Àº planar °¡ ¿À¸¥ÂÊ¿¡ µé¾î°¬À» °æ¿ì
+							// ë°°ì—´[0] ì€ planar ê°€ ì™¼ìª½ì— ë“¤ì–´ê°”ì„ ê²½ìš°
+							// ë°°ì—´[1] ì€ planar ê°€ ì˜¤ë¥¸ìª½ì— ë“¤ì–´ê°”ì„ ê²½ìš°
 					
-							//ÃÖÁ¾ÀûÀÎ ¾çÂÊ °¹¼ö.
+							//ìµœì¢…ì ì¸ ì–‘ìª½ ê°¯ìˆ˜.
 							const int tri_num_left[2]	= { n_leftOnly+n_cross+num_planars, n_leftOnly+n_cross };
 							const int tri_num_right[2]	= { n_rightOnly+n_cross, n_rightOnly+n_cross+num_planars };
 
@@ -465,7 +466,7 @@ void try_to_split(const int axis, BoundingBox &inBBox, const TriangleList *pTria
 									double( tri_num_right[i] )	* prob_r ) * emptyBonus[i];
 							}
 
-				if( SAH[0] <= SAH[1] ) { // planar ¸¦ ¿ŞÂÊ¿¡ ³Ö´Â °ÍÀÌ ³´´Ù¸é,
+				if( SAH[0] <= SAH[1] ) { // planar ë¥¼ ì™¼ìª½ì— ë„£ëŠ” ê²ƒì´ ë‚«ë‹¤ë©´,
 					ExpectedCost	= SAH[0];
 					planar_side		= BoundEdge::START;
 					nTri_left		= tri_num_left[0];
@@ -609,14 +610,14 @@ void build_kd_tree_recursive(BoundEdge *bEdge, const TriangleList *pTriangleInfo
 
 	// Calculate cost function (in case of trying to partition)
 	if( inNodeLevel < v_KD_TREE_MAX_LEVEL && triangleSize > v_KD_TREE_MIN_TRIANGLE ){
-		// (¸ğµç Ãà¿¡ ´ëÇØ ¼öÇà)
+		// (ëª¨ë“  ì¶•ì— ëŒ€í•´ ìˆ˜í–‰)
 		for( int axis = 0; axis < 3; axis++ ){
 			try_to_split( axis, bbox, pTriangleInfos, triangleSize, bEdge, bestCost );
 		}
 	}
 
 	// ----------------------------------------------------------------------------
-	// Leaf node »ı¼º
+	// Leaf node ìƒì„±
 	// ----------------------------------------------------------------------------
 	if( !bestCost.is_valid() ) {
 		unsigned int iTriOffset;
@@ -626,14 +627,14 @@ void build_kd_tree_recursive(BoundEdge *bEdge, const TriangleList *pTriangleInfo
 			setLeafNode( inNode, triangleSize, g_iKdTree_TriOffset_Count );
 			g_iKdTree_TriOffset_Count += triangleSize;
 
-			// ¸Ş¸ğ¸® Ã¼Å© : Triangle Offset Size
+			// ë©”ëª¨ë¦¬ ì²´í¬ : Triangle Offset Size
 			if( g_iKdTree_TriOffset_Count >= g_iKdTree_TriOffset_CountAlloc ) {
 				_reAllocTriangleOffsetList(MyMAX( 2 * g_iKdTree_TriOffset_CountAlloc, 512 ), g_iKdTree_TriOffset_CountAlloc, &g_pKdTree_TriOffset_Array);
 			}
 		}
 	
 		/**
-		 *	leaf node°¡ ÂüÁ¶ÇÏ´Â triangleÀÇ offset À» offsetList ¸¶Áö¸·¿¡ Ãß°¡ÇØ ³Ö´Â´Ù.
+		 *	leaf nodeê°€ ì°¸ì¡°í•˜ëŠ” triangleì˜ offset ì„ offsetList ë§ˆì§€ë§‰ì— ì¶”ê°€í•´ ë„£ëŠ”ë‹¤.
 		 */
 		unsigned *currOffsetList = &g_pKdTree_TriOffset_Array[ iTriOffset ];
 
@@ -649,13 +650,13 @@ void build_kd_tree_recursive(BoundEdge *bEdge, const TriangleList *pTriangleInfo
 		g_iKdTree_MaxTriInLeafNode_Count = MyMAX( g_iKdTree_MaxTriInLeafNode_Count, triangleSize );
 
 		/** 
-		 *	´õÀÌ»ó pTriangleInfos ´Â ÇÊ¿ä¾øÀ¸¹Ç·Î ¸Ş¸ğ¸® °ø°£ Àı¾àÀ» À§ÇØ ¾ø¾Ø´Ù.
+		 *	ë”ì´ìƒ pTriangleInfos ëŠ” í•„ìš”ì—†ìœ¼ë¯€ë¡œ ë©”ëª¨ë¦¬ ê³µê°„ ì ˆì•½ì„ ìœ„í•´ ì—†ì•¤ë‹¤.
 		 */
 		delete[] pTriangleInfos;
 
 	} else
 	// ----------------------------------------------------------------------------
-	// Inner node »ı¼º
+	// Inner node ìƒì„±
 	// ----------------------------------------------------------------------------
 	{
 		unsigned int nodeNum;
@@ -665,7 +666,7 @@ void build_kd_tree_recursive(BoundEdge *bEdge, const TriangleList *pTriangleInfo
 
 			g_iKdTree_Node_Count += 2;
 
-			// ¸Ş¸ğ¸® Ã¼Å© : Node Size
+			// ë©”ëª¨ë¦¬ ì²´í¬ : Node Size
 			if( g_iKdTree_Node_Count >= g_iKdTree_Node_CountAlloc ) {
 				_reAllocKdtreeNodes(MyMAX( 2 * g_iKdTree_Node_CountAlloc, 512 ), g_iKdTree_Node_CountAlloc, &g_pKdTree_Node_Array);
 			}
@@ -693,24 +694,24 @@ void build_kd_tree_recursive(BoundEdge *bEdge, const TriangleList *pTriangleInfo
 
 		const unsigned n_bEdge = 2 * triangleSize;
 
-		// TriangleInfo ºÎÅÍ bEdge ¸¦ »ı¼º ¹× Á¤·Ä
+		// TriangleInfo ë¶€í„° bEdge ë¥¼ ìƒì„± ë° ì •ë ¬
 		set_bound_edge( bestCost.axis, pTriangleInfos, n_bEdge, bEdge );
 
-		// bEdge ·Î ºÎÅÍ pLeftTriangle, pRightTriangle À» »ı¼º
+		// bEdge ë¡œ ë¶€í„° pLeftTriangle, pRightTriangle ì„ ìƒì„±
 		push_triangles_to_child( n_bEdge, bEdge, pLeftTriangles, pRightTriangles, bestCost );
 
-		// °¢ child node ¿¡ ¸Â°Ô »ï°¢Çü clipping
+		// ê° child node ì— ë§ê²Œ ì‚¼ê°í˜• clipping
 		clip_triangle( bestCost.n_left,  bestCost, pLeftTriangles,  0 );
 		clip_triangle( bestCost.n_right, bestCost, pRightTriangles, 1 );
 
 		/** 
-		 *	´õÀÌ»ó pTriangleInfos ´Â ÇÊ¿ä¾øÀ¸¹Ç·Î ¸Ş¸ğ¸® °ø°£ Àı¾àÀ» À§ÇØ ¾ø¾Ø´Ù.
-		 *	¹İµå½Ã pushChildTriangles ¸¦ ¼öÇàÇÑ ÀÌÈÄ¿¡ ¾ø¾Ö¾ß ÇÑ´Ù.
+		 *	ë”ì´ìƒ pTriangleInfos ëŠ” í•„ìš”ì—†ìœ¼ë¯€ë¡œ ë©”ëª¨ë¦¬ ê³µê°„ ì ˆì•½ì„ ìœ„í•´ ì—†ì•¤ë‹¤.
+		 *	ë°˜ë“œì‹œ pushChildTriangles ë¥¼ ìˆ˜í–‰í•œ ì´í›„ì— ì—†ì• ì•¼ í•œë‹¤.
 		 */
 		delete[] pTriangleInfos;
 		/**
-		 *	Left, Right Àç±Í Å½»ö. 
-		 *	pLeftTriangles, pRightTriangles ´Â build_kd_tree_recursive ÇÔ¼ö ¾È¿¡¼­ »ç¿ëÇÏ°í ¹Ù·Î ¾ø¾Ø´Ù.
+		 *	Left, Right ì¬ê·€ íƒìƒ‰. 
+		 *	pLeftTriangles, pRightTriangles ëŠ” build_kd_tree_recursive í•¨ìˆ˜ ì•ˆì—ì„œ ì‚¬ìš©í•˜ê³  ë°”ë¡œ ì—†ì•¤ë‹¤.
 		 */
 		build_kd_tree_recursive( bEdge, pLeftTriangles,  bestCost.n_left,  leftnBounds,  inNodeLevel + 1, &g_pKdTree_Node_Array[ nodeNum ] );
 		build_kd_tree_recursive( bEdge, pRightTriangles, bestCost.n_right, rightnBounds, inNodeLevel + 1, &g_pKdTree_Node_Array[ nodeNum + 1 ] );

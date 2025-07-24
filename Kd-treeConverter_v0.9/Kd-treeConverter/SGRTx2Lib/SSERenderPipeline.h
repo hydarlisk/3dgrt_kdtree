@@ -52,10 +52,10 @@ public:
 		virtual void InitPacket1x1  (int nIdx );
 		virtual void RenderPacket1x1( unsigned int quad, int nIdx );
 		virtual void TracePacket1x1 ( unsigned int quad, int nIdx );
-		virtual void IsectPacket1x1 ( const KdTreeNode *node, int nIdx );
+		virtual void IsectPacket1x1 ( const KdTreeNode2 *node, int nIdx );
 		virtual void InitShadowPacket1x1  ( void );
 		virtual void TraceShadowPacket1x1 ( unsigned int quad );
-		virtual void IsectShadowPacket1x1 ( const KdTreeNode *node );
+		virtual void IsectShadowPacket1x1 ( const KdTreeNode2 *node );
 		virtual void Render1x1 ( int nThreadID = -1 );
 		virtual void checkVisibility1x1(const GPoint* opos, const GPoint* lpos);
 		virtual void shading1x1 (int nIdx);
@@ -73,16 +73,16 @@ public:
 		void InitPacket2x2  ( const int nIdx );
 		void RenderPacket2x2( const int nIdx );
 		void TracePacket2x2 ( const int nIdx );
-		void IsectPacket2x2 ( const KdTreeNode *node, const int nIdx );
+		void IsectPacket2x2 ( const KdTreeNode2 *node, const int nIdx );
 		void InitShadowPacket2x2  ( void );
 		void TraceShadowPacket2x2 ( void );
-		void IsectShadowPacket2x2 ( const KdTreeNode *node );
+		void IsectShadowPacket2x2 ( const KdTreeNode2 *node );
 		void Render2x2 ( int nThreadID = -1 );
 		void checkVisibility2x2(const _sse_vec &opos, const GPoint* lpos, const __m128 &shadingmask);
 		void Shading2x2 ( const int nIdx );
 	protected:
 		/*virtual void FindLeafNode2x2( _sse_2x2_raypacket *rp, _sse_2x2_isect *is,
-			float &t_near, float &t_far_, const unsigned int* ray_dir, KdTreeNode* node, 
+			float &t_near, float &t_far_, const unsigned int* ray_dir, KdTreeNode2* node, 
 			unsigned int &stackIndex, 
 			_sse_float &rcpRayDir );*/
 	protected:
@@ -99,17 +99,17 @@ public:
 		void InitPacket4x4  ( int nIdx );
 		void RenderPacket4x4( int nIdx );
 		void TracePacket4x4 ( int nIdx );
-		void IsectPacket4x4 ( const KdTreeNode *node, int nIdx );
-		void IsectPacket_P  ( const KdTreeNode *node, int nIdx );			// for pluecker? testing
+		void IsectPacket4x4 ( const KdTreeNode2 *node, int nIdx );
+		void IsectPacket_P  ( const KdTreeNode2 *node, int nIdx );			// for pluecker? testing
 		void InitShadowPacket4x4  ( void );
 		void TraceShadowPacket4x4 ( void );
-		void IsectShadowPacket4x4 ( const KdTreeNode *node );
+		void IsectShadowPacket4x4 ( const KdTreeNode2 *node );
 		void Render4x4 ( int nThreadID = -1);
 		void checkVisibility4x4(const _sse_vec opos[], const GPoint* lpos, const __m128 shadingmask[]);
 		void Shading4x4 (const int nIdx);
 	protected:
 		/*virtual void FindLeafNode4x4( _sse_4x4_raypacket *rp, _sse_4x4_isect *is,
-			float &t_near, float &t_far_, const unsigned int* ray_dir, KdTreeNode* node, 
+			float &t_near, float &t_far_, const unsigned int* ray_dir, KdTreeNode2* node, 
 			unsigned int &stackIndex, 
 			_sse_float &rcpRayDir );*/
 	protected:
@@ -224,17 +224,17 @@ public:
 
 			// Isect -------------------------
 			 void Split_FCull_Init   ( __m128 &term1, __m128 &term2, const int baseOffset, int nIdx );
-			 bool Split_FCull_TriEdge( int &check_aperture, const TriAccel &acc, int negmaxabsdir );
+			 bool Split_FCull_TriEdge( int &check_aperture, const TriAccel2 &acc, int negmaxabsdir );
 
-			 void Split_Isect4x4__PriRay ( const KdTreeNode *node, int nIdx, int temp );
-			 void Split_Isect4x4__SecRay ( const KdTreeNode *node, int nIdx );
-			 void Split_Isect4x4__ShwRay ( const KdTreeNode *node, int temp );
-			__forceinline bool Split_Isect4x4_PlaneTest_PriRay (TriAccel &acc1, int nIdx, RMASK4 &Mask_Hit, RDATA4 &f, int temp);
-			__forceinline bool Split_Isect4x4_TriUVTest_PriRay (TriAccel &acc1, int nIdx, RMASK4 &Mask_Hit, RDATA4 &f, RDATA4 &lambda, RDATA4 &mue, int temp );
-			__forceinline bool Split_Isect4x4_PlaneTest_SecRay (TriAccel &acc1, int nIdx, RMASK4 &Mask_Hit, RDATA4 &f);
-			__forceinline bool Split_Isect4x4_TriUVTest_SecRay (TriAccel &acc1, int nIdx, RMASK4 &Mask_Hit, RDATA4 &f, RDATA4 &lambda, RDATA4 &mue );
-			__forceinline bool Split_Isect4x4_PlaneTest_ShwRay (TriAccel &acc1, int nIdx, RMASK4 &Mask_Hit, RDATA4 &f);
-			__forceinline bool Split_Isect4x4_TriUVTest_ShwRay (TriAccel &acc1, int nIdx, RMASK4 &Mask_Hit, RDATA4 &f, RDATA4 &lambda, RDATA4 &mue );
+			 void Split_Isect4x4__PriRay ( const KdTreeNode2 *node, int nIdx, int temp );
+			 void Split_Isect4x4__SecRay ( const KdTreeNode2 *node, int nIdx );
+			 void Split_Isect4x4__ShwRay ( const KdTreeNode2 *node, int temp );
+			__forceinline bool Split_Isect4x4_PlaneTest_PriRay (TriAccel2 &acc1, int nIdx, RMASK4 &Mask_Hit, RDATA4 &f, int temp);
+			__forceinline bool Split_Isect4x4_TriUVTest_PriRay (TriAccel2 &acc1, int nIdx, RMASK4 &Mask_Hit, RDATA4 &f, RDATA4 &lambda, RDATA4 &mue, int temp );
+			__forceinline bool Split_Isect4x4_PlaneTest_SecRay (TriAccel2 &acc1, int nIdx, RMASK4 &Mask_Hit, RDATA4 &f);
+			__forceinline bool Split_Isect4x4_TriUVTest_SecRay (TriAccel2 &acc1, int nIdx, RMASK4 &Mask_Hit, RDATA4 &f, RDATA4 &lambda, RDATA4 &mue );
+			__forceinline bool Split_Isect4x4_PlaneTest_ShwRay (TriAccel2 &acc1, int nIdx, RMASK4 &Mask_Hit, RDATA4 &f);
+			__forceinline bool Split_Isect4x4_TriUVTest_ShwRay (TriAccel2 &acc1, int nIdx, RMASK4 &Mask_Hit, RDATA4 &f, RDATA4 &lambda, RDATA4 &mue );
 
 			// Shading -----------------------
 			 void Split_Shading4x4 (const int nIdx);
@@ -267,15 +267,15 @@ public:
 			void Split_Trace2x2__ShwRay ( int temp );
 
 			// Isect -------------------------
-			void Split_Isect2x2__PriRay ( const KdTreeNode *node, int nIdx, int temp );
-			void Split_Isect2x2__SecRay ( const KdTreeNode *node, int nIdx );
-			void Split_Isect2x2__ShwRay ( const KdTreeNode *node, int temp );
-			bool Split_Isect2x2_PlaneTest_PriRay (TriAccel &acc1, int nIdx, RMASK &Mask_Hit, RDATA &f, int temp);
-			bool Split_Isect2x2_TriUVTest_PriRay (TriAccel &acc1, int nIdx, RMASK &Mask_Hit, RDATA &f, RDATA &lambda, RDATA &mue, int temp );
-			bool Split_Isect2x2_PlaneTest_SecRay (TriAccel &acc1, int nIdx, RMASK &Mask_Hit, RDATA &f);
-			bool Split_Isect2x2_TriUVTest_SecRay (TriAccel &acc1, int nIdx, RMASK &Mask_Hit, RDATA &f, RDATA &lambda, RDATA &mue );
-			bool Split_Isect2x2_PlaneTest_ShwRay (TriAccel &acc1, int nIdx, RMASK &Mask_Hit, RDATA &f);
-			bool Split_Isect2x2_TriUVTest_ShwRay (TriAccel &acc1, int nIdx, RMASK &Mask_Hit, RDATA &f, RDATA &lambda, RDATA &mue );
+			void Split_Isect2x2__PriRay ( const KdTreeNode2 *node, int nIdx, int temp );
+			void Split_Isect2x2__SecRay ( const KdTreeNode2 *node, int nIdx );
+			void Split_Isect2x2__ShwRay ( const KdTreeNode2 *node, int temp );
+			bool Split_Isect2x2_PlaneTest_PriRay (TriAccel2 &acc1, int nIdx, RMASK &Mask_Hit, RDATA &f, int temp);
+			bool Split_Isect2x2_TriUVTest_PriRay (TriAccel2 &acc1, int nIdx, RMASK &Mask_Hit, RDATA &f, RDATA &lambda, RDATA &mue, int temp );
+			bool Split_Isect2x2_PlaneTest_SecRay (TriAccel2 &acc1, int nIdx, RMASK &Mask_Hit, RDATA &f);
+			bool Split_Isect2x2_TriUVTest_SecRay (TriAccel2 &acc1, int nIdx, RMASK &Mask_Hit, RDATA &f, RDATA &lambda, RDATA &mue );
+			bool Split_Isect2x2_PlaneTest_ShwRay (TriAccel2 &acc1, int nIdx, RMASK &Mask_Hit, RDATA &f);
+			bool Split_Isect2x2_TriUVTest_ShwRay (TriAccel2 &acc1, int nIdx, RMASK &Mask_Hit, RDATA &f, RDATA &lambda, RDATA &mue );
 
 			// Shading -----------------------
 			void Split_Shading2x2 (const int nIdx);
@@ -308,15 +308,15 @@ public:
 			void Split_Trace1x1__ShwRay ( unsigned int quad , int temp);
 
 			// Isect -------------------------
-			void Split_Isect1x1__PriRay ( const KdTreeNode *node, int nIdx, int temp );
-			void Split_Isect1x1__SecRay ( const KdTreeNode *node, int nIdx );
-			void Split_Isect1x1__ShwRay ( const KdTreeNode *node, int temp);
-			bool Split_Isect1x1_PlaneTest_PriRay(TriAccel &acc, int nIdx, float &f, int temp);
-			bool Split_Isect1x1_TriUVTest_PriRay(TriAccel &acc, int nIdx, float &f, float &lambda, float &mue, int temp);
-			bool Split_Isect1x1_PlaneTest_SecRay(TriAccel &acc, int nIdx, float &f);
-			bool Split_Isect1x1_TriUVTest_SecRay(TriAccel &acc, int nIdx, float &f, float &lambda, float &mue);
-			bool Split_Isect1x1_PlaneTest_ShwRay(TriAccel &acc, int nIdx, float &f);
-			bool Split_Isect1x1_TriUVTest_ShwRay(TriAccel &acc, int nIdx, float &f, float &lambda, float &mue);
+			void Split_Isect1x1__PriRay ( const KdTreeNode2 *node, int nIdx, int temp );
+			void Split_Isect1x1__SecRay ( const KdTreeNode2 *node, int nIdx );
+			void Split_Isect1x1__ShwRay ( const KdTreeNode2 *node, int temp);
+			bool Split_Isect1x1_PlaneTest_PriRay(TriAccel2 &acc, int nIdx, float &f, int temp);
+			bool Split_Isect1x1_TriUVTest_PriRay(TriAccel2 &acc, int nIdx, float &f, float &lambda, float &mue, int temp);
+			bool Split_Isect1x1_PlaneTest_SecRay(TriAccel2 &acc, int nIdx, float &f);
+			bool Split_Isect1x1_TriUVTest_SecRay(TriAccel2 &acc, int nIdx, float &f, float &lambda, float &mue);
+			bool Split_Isect1x1_PlaneTest_ShwRay(TriAccel2 &acc, int nIdx, float &f);
+			bool Split_Isect1x1_TriUVTest_ShwRay(TriAccel2 &acc, int nIdx, float &f, float &lambda, float &mue);
 
 			// Shading -----------------------
 			void Split_Shading1x1 (int nIdx);
@@ -400,12 +400,12 @@ public:
 		int getLastHit(GBVH_RayPacket& prays, GBoundingBox& aabb, unsigned int &first);
 
 		// ray - tri intersection test
-		bool Split_Isect1x1_PlaneTest_PriRay(TriAccel &acc, int nIdx, float &f, float t);
-		bool BVH_Split_Isect1x1_PlaneTest_PriRay( _sse_1x1_raypacket& ray, TriAccel &acc, float &f, float t );
-		bool BVH_Split_Isect1x1_TriUVTest_PriRay( _sse_1x1_raypacket& ray, TriAccel &acc, float &f, float &lambda, float &mue );
+		bool Split_Isect1x1_PlaneTest_PriRay(TriAccel2 &acc, int nIdx, float &f, float t);
+		bool BVH_Split_Isect1x1_PlaneTest_PriRay( _sse_1x1_raypacket& ray, TriAccel2 &acc, float &f, float t );
+		bool BVH_Split_Isect1x1_TriUVTest_PriRay( _sse_1x1_raypacket& ray, TriAccel2 &acc, float &f, float &lambda, float &mue );
 
-		bool temp_Split_Isect1x1_PlaneTest_ShwRay( TriAccel &acc, float &f );
-		bool temp_Split_Isect1x1_TriUVTest_ShwRay( TriAccel &acc, float &f, float &lambda, float &mue );
+		bool temp_Split_Isect1x1_PlaneTest_ShwRay( TriAccel2 &acc, float &f );
+		bool temp_Split_Isect1x1_TriUVTest_ShwRay( TriAccel2 &acc, float &f, float &lambda, float &mue );
 
 		// Shading -----------------------
 		void BVH_Shading1x1 (int nIdx);
@@ -433,7 +433,7 @@ public:
 		void Grid_Rendering(void);
 		bool grid_isect(int polyIdx, float tMin, GBoundingBox* cellBox, float& _t_far);
 	//	bool grid_frustum_cull(GGridPacket localPacket, int triId);
-	//	float grid_cull_hit(int rayFlag, TriAccel &acc);
+	//	float grid_cull_hit(int rayFlag, TriAccel2 &acc);
 
 	// Grid Spatial structure ~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~
 	//-------------------------------------------------------------------------------

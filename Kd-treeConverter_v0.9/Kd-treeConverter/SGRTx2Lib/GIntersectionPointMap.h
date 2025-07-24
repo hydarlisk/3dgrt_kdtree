@@ -1,5 +1,5 @@
 #pragma once
-
+#include "cudaRenderCommon.cuh"
 #include "GBase.h"
 #include "GDimension.h"
 #include "GPoint.h"

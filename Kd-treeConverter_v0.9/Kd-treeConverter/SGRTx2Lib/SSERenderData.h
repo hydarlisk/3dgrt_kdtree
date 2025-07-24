@@ -25,7 +25,7 @@ public:
 
 	unsigned int		m_TriObjCnt;		// 전체 삼각형 개수
 	GTriangleWrapper**	m_TriObjList;		// 전체 삼각형 리스트
-	TriAccel*			m_TriAccList;		// Barycentric Triangle Accel (for intersection test)
+	TriAccel2*			m_TriAccList;		// Barycentric Triangle Accel (for intersection test)
 	TriAccel_P*			m_TriAccList_P;		// Pluecker    Triangle Accel (for intersection test)
 	
 	GBoundingBox		m_SceneBBox;
@@ -36,7 +36,7 @@ public:
 	//-------------------------------------------------------------------------------------
 	GError setKDTreeNodeData( kdtreeNode *pRootNode, int nodeCount, GBoundingBox sceneBox );
 	GError setTriangleOffsetList( unsigned int *pTriangleOffsetList, int offsetCount );
-	KdTreeNode*			m_pKDTreeNodes;		// Pointer of Kd-Tree root node 
+	KdTreeNode2*			m_pKDTreeNodes;		// Pointer of Kd-Tree root node 
 	unsigned int*		m_TriOffList;		// Kd-Tree 의 모든 leaf node 에 있는 Triangle ID list
 
 	//-------------------------------------------------------------------------------------

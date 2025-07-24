@@ -118,38 +118,38 @@ public:
 protected:
 	GError uninitialize();
 	void buildKDTree(
-			BoundEdge *bEdge, const TriangleInfo *pTriangleInfos, unsigned int triangleSize,
+			BoundEdge2 *bEdge, const TriangleInfo *pTriangleInfos, unsigned int triangleSize,
 			GBoundingBox bbox, unsigned int inNodeLevel, kdtreeNode *inNode );
 
-	inline cuPlueckerTriangleInfo toCuPlueckerTriangleInfo( GTriangleWrapper &tri );
+	inline cuPlueckerTriangleInfo toCuPlueckerTriangleInfo(GTriangleWrapper& tri);
 	inline cuWaldTriangleInfo toCuWaldTriangleInfo( GTriangleWrapper &tri );
 	inline void setInnerNode( kdtreeNode* pNode, int _splitAxis, unsigned int _firstChildOffset, float _splitPos );
 	inline void setLeafNode( kdtreeNode* pNode, unsigned int _objectSize, unsigned int _objectListOffset );
 
 	void setBoundEdgeList( const int axis, const TriangleInfo *pTriangleInfo, 
-						   const unsigned int n_bEdge, BoundEdge *bEdge );
+						   const unsigned int n_bEdge, BoundEdge2 *bEdge );
 	void setBoundEdgeList2( const int axis, const TriangleInfo *pTriangleInfo, 
-						   const unsigned int n_bEdge, BoundEdge *bEdge, spbean *bean );
+						   const unsigned int n_bEdge, BoundEdge2 *bEdge, spbean *bean );
 
 	//! Not function pointer as parameter
 	void setSplitFunction( SPLIT_FUNCTION SplitFunctionEnum );
 	void splitWithSAH( const int axis, GBoundingBox inBBox, 
 								 const TriangleInfo *pTriangles, const int triangleSize, 
-								 BoundEdge *bEdge,  SplitCost &bestCost, bool emptyTestOnly = false );
+								 BoundEdge2 *bEdge,  SplitCost &bestCost, bool emptyTestOnly = false );
 	void splitWithSAH_ExtraCost( const int axis, GBoundingBox inBBox, 
 								 const TriangleInfo *pTriangles, const int triangleSize, 
-								 BoundEdge *bEdge,  SplitCost &bestCost, bool emptyTestOnly = false );
+								 BoundEdge2 *bEdge,  SplitCost &bestCost, bool emptyTestOnly = false );
 	void splitWithVisibility( const int axis, GBoundingBox inBBox, 
 								 const TriangleInfo *pTriangles, const int triangleSize, 
-								 BoundEdge *bEdge,  SplitCost &bestCost, bool emptyTestOnly = false );
+								 BoundEdge2 *bEdge,  SplitCost &bestCost, bool emptyTestOnly = false );
 	void tryEmptySplit( const int axis, GBoundingBox inBBox, 
 				   const TriangleInfo *pTriangleInfos, 
-				   const int triangleSize, BoundEdge *bEdge,  SplitCost &bestCost, bool emptyTestOnly = false );
+				   const int triangleSize, BoundEdge2 *bEdge,  SplitCost &bestCost, bool emptyTestOnly = false );
 
 	//! Function Pointer
 	void (GKDTreeStructure::*splitFunction)( const int axis, GBoundingBox inBBox, 
 				   const TriangleInfo *pTriangleInfos, 
-				   const int triangleSize, BoundEdge *bEdge,  SplitCost &bestCost, bool emptyTestOnly );
+				   const int triangleSize, BoundEdge2 *bEdge,  SplitCost &bestCost, bool emptyTestOnly );
 
 	bool interSectEdgePlane( GPoint &p0,	
 						     GPoint &p1, 
@@ -163,7 +163,7 @@ protected:
 					    int side );
 
 	inline void pushChildTriangles( const unsigned n_bEdge, 
-								    const BoundEdge *bEdge, 
+								    const BoundEdge2 *bEdge, 
 								    TriangleInfo *pLeftTriangles, 
 								    TriangleInfo *pRightTriangles, 
 								    const SplitCost &bestCost );

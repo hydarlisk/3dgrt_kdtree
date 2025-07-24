@@ -10,7 +10,7 @@
 
 #include "Kd-treeConverter.h"
 #include "MyMathUtility.h"
-using namespace KDTConverter;
+//using namespace KDTConverter;
 
 int fetch_face_numbers_SL_mesh_geom_file(const char *filename) {
 	int tmp;

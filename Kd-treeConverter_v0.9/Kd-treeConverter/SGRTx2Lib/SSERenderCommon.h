@@ -24,9 +24,8 @@ typedef __declspec(align(16)) struct _sse_4x4_raypacket_bvh_t {
 // BVH
 // ------------------------------------------------------------------
 
-
 typedef float Pixel;
-typedef kdtreeNode  KdTreeNode;
+typedef kdtreeNode  KdTreeNode2;
 typedef GScene		Scene;
 typedef GVector		vector3;
 
@@ -36,10 +35,10 @@ typedef GVector		vector3;
 
 
 // -----------------------------------------------------------
-// TriAccel
+// TriAccel2
 // -----------------------------------------------------------
 class GPolygonObject;
-class TriAccel
+class TriAccel2
 {
 public:
 	// plane
@@ -277,7 +276,7 @@ typedef struct __declspec(align(16)) _sse_1x1_kdstack_t
 {
 	float t_far_;										// 4
 	float t_near;										// 4
-	KdTreeNode* node;									// 4
+	KdTreeNode2* node;									// 4
 	unsigned int depth;									// 4
 } _sse_1x1_kdstack;
 
@@ -285,7 +284,7 @@ typedef struct __declspec(align(64)) _sse_2x2_kdstack_t
 {
 	union { __m128 t_far_4; float t_far_[4]; };			// 16
 	union { __m128 t_near4; float t_near[4]; };			// 16
-	KdTreeNode* node;									// 4
+	KdTreeNode2* node;									// 4
 	unsigned int depth;									// 4
 	char pad[8];										// 8
 } _sse_2x2_kdstack;
@@ -294,7 +293,7 @@ typedef struct __declspec(align(16)) _sse_4x4_kdstack_t
 {
 	union { __m128 t_far_4[4]; float t_far_[16]; };		// 64
 	union { __m128 t_near4[4]; float t_near[16]; };		// 64
-	KdTreeNode* node;									// 4
+	KdTreeNode2* node;									// 4
 	unsigned int depth;									// 4
 	char pad[8];										// 8
 } _sse_4x4_kdstack;

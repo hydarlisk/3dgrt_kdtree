@@ -47,10 +47,10 @@ public:
 		void InitPacket1x1  (int nIdx );
 		void RenderPacket1x1( unsigned int quad, int nIdx );
 		void TracePacket1x1 ( unsigned int quad, int nIdx );
-		void IsectPacket1x1 ( const KdTreeNode *node, int nIdx );
+		void IsectPacket1x1 ( const KdTreeNode2 *node, int nIdx );
 		void InitShadowPacket1x1  ( void );
 		void TraceShadowPacket1x1 ( unsigned int quad );
-		void IsectShadowPacket1x1 ( const KdTreeNode *node );
+		void IsectShadowPacket1x1 ( const KdTreeNode2 *node );
 		void Render1x1 ( int nThreadID = -1 );
 		void checkVisibility1x1(const GPoint* lpos);
 		__forceinline void shading1x1 (int nIdx);
@@ -66,11 +66,11 @@ public:
 		void InitPacket4x4  ( int nIdx );
 		void RenderPacket4x4( int nIdx );
 		void TracePacket4x4 ( int nIdx );
-		void IsectPacket4x4 ( const KdTreeNode *node, int nIdx );
-		void IsectPacket_P  ( const KdTreeNode *node, int nIdx );			// for pluecker? testing
+		void IsectPacket4x4 ( const KdTreeNode2 *node, int nIdx );
+		void IsectPacket_P  ( const KdTreeNode2 *node, int nIdx );			// for pluecker? testing
 		void InitShadowPacket4x4  ( void );
 		void TraceShadowPacket4x4 ( void );
-		void IsectShadowPacket4x4 ( const KdTreeNode *node );
+		void IsectShadowPacket4x4 ( const KdTreeNode2 *node );
 		void Render4x4 ( int nThreadID = -1);
 		void checkVisibility4x4(const GPoint* lpos, const __m128 shadingmask[]);
 		__forceinline void shading4x4 (const int nIdx);
@@ -91,10 +91,10 @@ public:
 		void InitPacket2x2  ( const int nIdx );
 		void RenderPacket2x2( const int nIdx );
 		void TracePacket2x2 ( const int nIdx );
-		void IsectPacket2x2 ( const KdTreeNode *node, const int nIdx );
+		void IsectPacket2x2 ( const KdTreeNode2 *node, const int nIdx );
 		void InitShadowPacket2x2  ( void );
 		void TraceShadowPacket2x2 ( void );
-		void IsectShadowPacket2x2 ( const KdTreeNode *node );
+		void IsectShadowPacket2x2 ( const KdTreeNode2 *node );
 		void Render2x2 ( int nThreadID = -1 );
 		void checkVisibility2x2(const GPoint* lpos, const __m128 shadingmask);
 		__forceinline void shading2x2 ( const int nIdx );
@@ -118,7 +118,7 @@ public:
 		void InitPacket4x4Q  ( _sse_4x4_traceData *traceData );
 		void RenderPacket4x4Q( _sse_4x4_traceData *traceData );
 		void TracePacket4x4Q ( _sse_4x4_traceData *traceData );
-		void IsectPacket4x4Q ( const KdTreeNode *node, _sse_4x4_traceData *traceData );
+		void IsectPacket4x4Q ( const KdTreeNode2 *node, _sse_4x4_traceData *traceData );
 		__forceinline void shading4x4Q ( _sse_4x4_traceData *traceData );
 	protected:
 		int m_BlockX, m_BlockY;								// tile Count

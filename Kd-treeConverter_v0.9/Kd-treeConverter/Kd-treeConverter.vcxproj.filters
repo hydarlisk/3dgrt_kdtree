@@ -264,6 +264,12 @@
     <ClCompile Include="SGRTx2Lib\SSERenderPipeline4x4.cpp">
       <Filter>SGRTx2Lib\Pipeline\CPURenderPipeline</Filter>
     </ClCompile>
+    <ClCompile Include="cuRenderHost.cpp">
+      <Filter>CUDA</Filter>
+    </ClCompile>
+    <ClCompile Include="cuInteropUtils.cpp">
+      <Filter>CUDA</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Kd-treeConverter.h">
@@ -485,6 +491,15 @@
     <ClInclude Include="SGRTx2Lib\SSERenderPipeline.h">
       <Filter>SGRTx2Lib\Pipeline\CPURenderPipeline</Filter>
     </ClInclude>
+    <ClInclude Include="cuCommonDefs.cuh">
+      <Filter>CUDA</Filter>
+    </ClInclude>
+    <ClInclude Include="cuRenderHost.h">
+      <Filter>CUDA</Filter>
+    </ClInclude>
+    <ClInclude Include="cuInteropUtils.h">
+      <Filter>CUDA</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cudaRayTracingKernel.cu">
@@ -505,9 +520,6 @@
     <CudaCompile Include="SGRTx2Lib\cudaRenderPipelineCommonKernel.cu">
       <Filter>SGRTx2Lib\Pipeline\cudaRenderPipeline</Filter>
     </CudaCompile>
-    <CudaCompile Include="SGRTx2Lib\cuda_math.h">
-      <Filter>SGRTx2Lib\Pipeline\cudaRenderPipeline</Filter>
-    </CudaCompile>
     <CudaCompile Include="SGRTx2Lib\cudaPhotonMapping.h">
       <Filter>SGRTx2Lib\Pipeline\cudaRenderPipeline</Filter>
     </CudaCompile>
@@ -522,6 +534,15 @@
     </CudaCompile>
     <CudaCompile Include="SGRTx2Lib\cudaRenderPipeline.cuh">
       <Filter>SGRTx2Lib\Pipeline\cudaRenderPipeline</Filter>
+    </CudaCompile>
+    <CudaCompile Include="SGRTx2Lib\cuda_math.h">
+      <Filter>SGRTx2Lib\Pipeline\cudaRenderPipeline</Filter>
+    </CudaCompile>
+    <CudaCompile Include="cuRenderKernel.cu">
+      <Filter>CUDA</Filter>
+    </CudaCompile>
+    <CudaCompile Include="cudaKDTreeTracer.cu">
+      <Filter>CUDA</Filter>
     </CudaCompile>
   </ItemGroup>
   <ItemGroup>

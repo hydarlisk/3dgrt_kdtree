@@ -99,7 +99,7 @@ void SSERenderPipelineQ::InitPacket4x4Q(_sse_4x4_traceData *traceData)
 // SSERenderPipelineQ::IsectPacket4x4Q
 //		Intersection check
 // ------------------------------------------------------------------------------------------------
-void SSERenderPipelineQ::IsectPacket4x4Q( const KdTreeNode *node, _sse_4x4_traceData *traceData )
+void SSERenderPipelineQ::IsectPacket4x4Q( const KdTreeNode2 *node, _sse_4x4_traceData *traceData )
 {
 	int i, j;
 
@@ -112,7 +112,7 @@ void SSERenderPipelineQ::IsectPacket4x4Q( const KdTreeNode *node, _sse_4x4_trace
 
 	for (i = baseOffset; i < baseOffset+nObjs; i++) {
 		int     triID = m_Data->m_TriOffList[i];
-		TriAccel &acc = m_Data->m_TriAccList[triID];
+		TriAccel2 &acc = m_Data->m_TriAccList[triID];
 
 		union { __m128 Mask_Hit[4]; __m128i iMask_Hit[4]; };
 
@@ -234,7 +234,7 @@ void SSERenderPipelineQ::TracePacket4x4Q( _sse_4x4_traceData *traceData )
 	const unsigned int* ray_dir = &raydir[rp->RayWay][0][0];	// Get precomputed the traversal order (front/back)
 																//      as offsets for a bundle of rays with equal directions
 	// kdtree start node, stack index
-	KdTreeNode* node = &m_Data->m_pKDTreeNodes[0];
+	KdTreeNode2* node = &m_Data->m_pKDTreeNodes[0];
 
 	unsigned int stackIndex = 0;
 
@@ -261,8 +261,8 @@ void SSERenderPipelineQ::TracePacket4x4Q( _sse_4x4_traceData *traceData )
 		while (IS_LEAF(*node) == 0) {
 			const __m128 node_split4 = _mm_set_ps1(SPLIT_POS(*node));
 			const unsigned int dim	= SPLIT_AXIS(*node);
-			KdTreeNode *FrontSideSon	= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[dim << 1])];
-			KdTreeNode *BackSideSon		= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[(dim << 1)+1])];
+			KdTreeNode2 *FrontSideSon	= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[dim << 1])];
+			KdTreeNode2 *BackSideSon		= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[(dim << 1)+1])];
 
 			unsigned int d_near = 0, d_far = 0;
 			__m128 d[4];

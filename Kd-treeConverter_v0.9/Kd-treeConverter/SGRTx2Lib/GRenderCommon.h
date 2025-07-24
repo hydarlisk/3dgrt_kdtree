@@ -3,6 +3,7 @@
 #include "GBase.h"
 #include "GScene.h"
 #include "cudaRenderPipeline.h"
+#include "cudaRenderPipeline.cu"
 
 /**
  *	공통으로 사용할 수 있는 함수들

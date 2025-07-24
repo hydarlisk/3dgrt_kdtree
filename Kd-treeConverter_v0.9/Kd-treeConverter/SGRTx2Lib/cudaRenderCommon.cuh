@@ -1,3 +1,4 @@
+#pragma once
 #ifndef _CUDA_RENDERCOMMON_CUH_
 #define _CUDA_RENDERCOMMON_CUH_
 
@@ -31,8 +32,9 @@
 
 #include "GKDTreeNode.h"
 #include "GError.h"
-#include "cuda_runtime.h"
-#include "device_functions.h"
+#include <cuda_runtime.h>
+//#include "cudaRenderPipeline.h"
+//#include "device_functions.h"
 
 #define SHORT_STACK_DEPTH	7					
 #define CUDA_MAX_LIGHT		10
@@ -81,10 +83,10 @@ typedef struct __align__(16) _curay
 	//float4 info;		//	info.x 가 previous triangle index 를 가지는것. 나머지는 padding.
 	
 	//__HOST__ __device__ inline void init() {
-	//	info.x = int_as_float( -1 );
+	//	info.x = int_as_float_H( -1 );
 	//}
 	//__HOST__ __device__ inline void setPrevTriIndex( int index ) {
-	//	info.x = int_as_float( index );
+	//	info.x = int_as_float_H( index );
 	//}
 	//__HOST__ __device__ inline int getPrevTriIndex() const 
 	//{	return float_as_int( info.x );			}
@@ -152,9 +154,9 @@ typedef struct __align__(16) cu_object_material {
 	float roughness;				//	roughness.
 	float refractionIndex;			//	굴절률
 	float textureNumber;			//	texture 가 존재한다면 texture 번호. -1 이면 없는것.
-									//	float 로 형태로 주고받으므로. int_as_float, float_as_int 로 상호변환.
+									//	float 로 형태로 주고받으므로. int_as_float_H, float_as_int 로 상호변환.
 	float light;					//	광원인지 여부. 0.0 이면 광원아님. 그 이외의 값이면 광원.
-	float iObjectID;				//	물체의 고유번호. int_as_float, float_as_int 로 상호변환.
+	float iObjectID;				//	물체의 고유번호. int_as_float_H, float_as_int 로 상호변환.
 //	float pad;
 		
 } cuObjectMaterial;
@@ -272,7 +274,7 @@ typedef struct
 	float3 secondaryNormal;
 } cuSamplingMap;
 
-#define MAKE_PIXEL_ATTR_ASFLOAT( OID, SHADOW, SELECTED, TEXTURE )		( int_as_float( OID << 16 | SHADOW << 8 | SELECTED << 4 | TEXTURE ) )
+#define MAKE_PIXEL_ATTR_ASFLOAT( OID, SHADOW, SELECTED, TEXTURE )		( int_as_float_H( OID << 16 | SHADOW << 8 | SELECTED << 4 | TEXTURE ) )
 #define GET_OID_ATTR( ATTR )						( ATTR >> 16 )
 #define GET_TEXTURE_ATTR( ATTR )					( ATTR & 0x000000f )
 #define GET_SELECTED_ATTR( ATTR )					( ATTR & 0x00000f0 )

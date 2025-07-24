@@ -41,8 +41,10 @@ public:
 	float calArea();
 	void  calCentroid(GVector& cen);
 
-	void getPoint( GPoint &p0, GPoint &p1, GPoint &p2 );
-
+	void getPoint(GPoint& p0, GPoint& p1, GPoint& p2);
+	//shyun
+	void setPoint(GPoint& p0, GPoint& p1, GPoint& p2);
+	//shyun end
 	GVector calBarycentricNormal( float alpha, float beta, float gamma );
 	GPoint  calBarycentricPosition( float alpha, float beta, float gamma );
 	GPoint  calBarycentricUV( float alpha, float beta, float gamma );

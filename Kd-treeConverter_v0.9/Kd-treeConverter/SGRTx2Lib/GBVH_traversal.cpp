@@ -318,7 +318,7 @@ RECURSECHILD:
 						can = tmpcan;
 						*/
 					float f;
-					TriAccel &acc = m_Data->m_TriAccList[svpolyidx[i]];
+					TriAccel2 &acc = m_Data->m_TriAccList[svpolyidx[i]];
 					
 					if( !temp_Split_Isect1x1_PlaneTest_ShwRay( acc, f ) ) continue;				
 
@@ -383,7 +383,7 @@ RECURSECHILD:
 						can = tmpcan;
 						*/
 					float f;
-					TriAccel &acc = m_Data->m_TriAccList[svpolyidx[i]];
+					TriAccel2 &acc = m_Data->m_TriAccList[svpolyidx[i]];
 					//if( !temp_Split_Isect1x1_PlaneTest_PriRay(ray, acc, 0, f, can.t) ) continue;
 					if( !Split_Isect1x1_PlaneTest_PriRay(acc, 0, f, can.t) ) continue;
 
@@ -459,7 +459,7 @@ RECURSECHILD:
 						prays.getRay(ray, j);
 						
 						float f;
-						TriAccel &acc = m_Data->m_TriAccList[svpolyidx[i]];
+						TriAccel2 &acc = m_Data->m_TriAccList[svpolyidx[i]];
 						if( !BVH_Split_Isect1x1_PlaneTest_PriRay(ray, acc, f, can[j].t) ) continue;
 
 						float lambda, mue;
@@ -1300,7 +1300,7 @@ SSERenderPipeline::testIntersection(TMIntCandidate* pCan, float* pT, const unsig
 static const unsigned int modulo[] =  {0,1,2,0,1};
 #define ku modulo[k+1]
 #define kv modulo[k+2]
-bool SSERenderPipeline::Split_Isect1x1_PlaneTest_PriRay( TriAccel &acc, int nIdx, float &f, float t )
+bool SSERenderPipeline::Split_Isect1x1_PlaneTest_PriRay( TriAccel2 &acc, int nIdx, float &f, float t )
 {
 	_sse_1x1_raypacket	*rp	= &m_RayPk1x1[nIdx];
 	//_sse_1x1_isect		*is	= &m_Isect1x1[nIdx];
@@ -1320,7 +1320,7 @@ bool SSERenderPipeline::Split_Isect1x1_PlaneTest_PriRay( TriAccel &acc, int nIdx
 }
 
 bool 
-SSERenderPipeline::BVH_Split_Isect1x1_PlaneTest_PriRay( _sse_1x1_raypacket& ray, TriAccel &acc, float &f, float t )
+SSERenderPipeline::BVH_Split_Isect1x1_PlaneTest_PriRay( _sse_1x1_raypacket& ray, TriAccel2 &acc, float &f, float t )
 {
 	const unsigned int k	= acc.k;
 
@@ -1337,7 +1337,7 @@ SSERenderPipeline::BVH_Split_Isect1x1_PlaneTest_PriRay( _sse_1x1_raypacket& ray,
 }
 
 bool
-SSERenderPipeline::BVH_Split_Isect1x1_TriUVTest_PriRay( _sse_1x1_raypacket& ray, TriAccel &acc, float &f, float &lambda, float &mue )
+SSERenderPipeline::BVH_Split_Isect1x1_TriUVTest_PriRay( _sse_1x1_raypacket& ray, TriAccel2 &acc, float &f, float &lambda, float &mue )
 {
 	const unsigned int k	= acc.k;
 
@@ -1360,7 +1360,7 @@ SSERenderPipeline::BVH_Split_Isect1x1_TriUVTest_PriRay( _sse_1x1_raypacket& ray,
 // SHADOWRAY - TRI intersection test
 //////////////////////////////////////////////////////////////////////////////////
 bool 
-SSERenderPipeline::temp_Split_Isect1x1_PlaneTest_ShwRay( TriAccel &acc, float &f )
+SSERenderPipeline::temp_Split_Isect1x1_PlaneTest_ShwRay( TriAccel2 &acc, float &f )
 {
 	_sse_1x1_raypacket	*rp	= &m_ShadowRayPk1x1[0];
 	_sse_1x1_isect		*is	= &m_ShadowIsect1x1[0];
@@ -1380,7 +1380,7 @@ SSERenderPipeline::temp_Split_Isect1x1_PlaneTest_ShwRay( TriAccel &acc, float &f
 }
 
 bool
-SSERenderPipeline::temp_Split_Isect1x1_TriUVTest_ShwRay( TriAccel &acc, float &f, float &lambda, float &mue )
+SSERenderPipeline::temp_Split_Isect1x1_TriUVTest_ShwRay( TriAccel2 &acc, float &f, float &lambda, float &mue )
 {
 	_sse_1x1_raypacket	*rp	= &m_ShadowRayPk1x1[0];
 	_sse_1x1_isect		*is	= &m_ShadowIsect1x1[0];

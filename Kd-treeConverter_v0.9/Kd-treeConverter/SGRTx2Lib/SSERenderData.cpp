@@ -56,7 +56,7 @@ SSESceneData::~SSESceneData()
 //		TriAcc precomputation
 //		KdTree & Triangle Object data setting
 // *=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
-GError SSESceneData::setKDTreeNodeData( KdTreeNode *pRootNode, int nodeCount, GBoundingBox sceneBox  )
+GError SSESceneData::setKDTreeNodeData( KdTreeNode2 *pRootNode, int nodeCount, GBoundingBox sceneBox  )
 {
 	m_pKDTreeNodes		= pRootNode;
 	m_nKDTreeNodeCount	= nodeCount;
@@ -74,7 +74,7 @@ GError SSESceneData::setTriangleObjectList( GTriangleWrapperList *pSceneTriangle
 {
 	m_TriObjCnt		= pSceneTriangleList->size();
 	m_TriObjList	= (GTriangleWrapper**)	_aligned_malloc(m_TriObjCnt	* sizeof(GTriangleWrapper*), 16);
-	m_TriAccList	= (TriAccel*)			_aligned_malloc(m_TriObjCnt	* sizeof(TriAccel), 16);
+	m_TriAccList	= (TriAccel2*)			_aligned_malloc(m_TriObjCnt	* sizeof(TriAccel2), 16);
 //	m_TriAccList_P	= (TriAccel_P*)			_aligned_malloc(m_TriObjCnt	* sizeof(TriAccel_P), 16);
 
 	unsigned int i;

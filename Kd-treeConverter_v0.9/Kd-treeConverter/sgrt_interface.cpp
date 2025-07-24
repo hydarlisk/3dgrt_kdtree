@@ -14,11 +14,13 @@
 #include <math.h>
 #include <cstdlib>
 #include <cmath>
-#include "SGRTx2Lib/cudaRenderCommon.cuh"
-#include "SGRTx2Lib/GScene.h"
-#include "SGRTx2Lib/GGPUExperimentalRayTracer.h"
+//#include "SGRTx2Lib/cudaRenderCommon.cuh"
+//#include "SGRTx2Lib/cudaRenderPipelineCommonKernel.cu"
+//#include "SGRTx2Lib/GScene.h"
+//#include "SGRTx2Lib/GKDTreeStructure.h"
+//#include "SGRTx2Lib/GGPUExperimentalRayTracer.h"
 
-using namespace KDTConverter;
+//using namespace KDTConverter;
 
 //void SGRT_RenderFromCompositeObject(const CompositeObject* obj) {
 //    const int width = 1280, height = 720;
@@ -100,6 +102,56 @@ using namespace KDTConverter;
 //    printf("[SGRT] Scene ready.\n");
 //}
 
+void convertCompositeObjectToGSceneAndKdTree(const CompositeObject& compObj, GScene& outScene) {
+    // 폴리곤 오브젝트 생성
+    GPolygonObject* obj = new GPolygonObject();
+
+    // TriangleWrapperList 생성
+    GTriangleWrapperList* wrapperList = new GTriangleWrapperList();
+
+    const ExtendedVertex* ev = compObj.extended_vertices;
+
+    for (int i = 0; i < compObj.n_triangles; ++i) {
+        GTriangleWrapper* tri;
+        GPoint v0(ev[3 * i + 0].vertex[0], ev[3 * i + 0].vertex[1], ev[3 * i + 0].vertex[2]);
+        GPoint v1(ev[3 * i + 1].vertex[0], ev[3 * i + 1].vertex[1], ev[3 * i + 1].vertex[2]);
+        GPoint v2(ev[3 * i + 2].vertex[0], ev[3 * i + 2].vertex[1], ev[3 * i + 2].vertex[2]);
+
+        tri->setPoint(v0, v1, v2);
+        wrapperList->addTriangleWrapper(tri);
+    }
+
+    obj->getTriangleList(wrapperList, 0, 0);
+    outScene.addObject(obj);
+    //outScene.setKdTreeLoadFilePath;
+
+    printf("Convert Composite Object to GScene Done.\n");
+}
+
+void UploadCompositeObjectToDevice(const CompositeObject& compObj) {
+    // 1. AABB
+    cuBoundingBox aabb;
+    aabb.min_max[0] = make_float4(compObj.AABB[XMIN], compObj.AABB[YMIN], compObj.AABB[ZMIN], 0.0f);
+    aabb.min_max[1] = make_float4(compObj.AABB[XMAX], compObj.AABB[YMAX], compObj.AABB[ZMAX], 0.0f);
+    cudaMemcpyToSymbol(g_SceneBBox, aabb, sizeof(cuBoundingBox));  // AABB로 직접 변환 필요
+
+    ExtendedVertex* d_vertices;
+    cudaMalloc(&d_vertices, sizeof(compObj.extended_vertices) * sizeof(ExtendedVertex));
+    cudaMemcpy(d_vertices, compObj.vertices, compObj.numVertices * sizeof(ExtendedVertex), cudaMemcpyHostToDevice);
+    cudaMemcpyToSymbol(g_Vertices, &d_vertices, sizeof(ExtendedVertex*));
+
+    // 2. kd-tree 노드 -> inKdTreeNodeTex
+    cudaBindTexture(NULL, inKdTreeNodeTex, compObj.kdTreeNodes, sizeof(kdtreeNode) * compObj.kdTreeNodeCount);
+
+    // 3. Object offset list -> inObjectOffsetListTex
+    cudaBindTexture(NULL, inObjectOffsetListTex, compObj.objIndexList, sizeof(uint32_t) * compObj.objListSize);
+
+    // 4. Triangle 데이터 / Material 데이터 등
+    // getObjectMaterial(), singlePassIntersectRoutine() 에서 접근 가능한 글로벌 배열에 업로드
+    cudaMemcpyToSymbol(devTriangleData, compObj.triangleList, sizeof(Triangle) * compObj.triangleCount);
+    cudaMemcpyToSymbol(devMaterialList, compObj.materialList, sizeof(Material) * compObj.triangleCount);
+}
+
 // 임시: CompositeObject를 SGRTx2Lib의 GScene으로 변환
 // 필요한 데이터 타입: ExtendedVertex, GTriangle 등은 SGRTx2Lib 내부 구조 기반
 GScene* convertCompositeObjectToScene(CompositeObject* obj)
@@ -110,76 +162,134 @@ GScene* convertCompositeObjectToScene(CompositeObject* obj)
     GScene* scene = new GScene();
 
     // 2) GTriangleWrapperList 생성
-    //    - GTriangleWrapperList는 SGRTx2Lib에 존재
     GTriangleWrapperList* triList = new GTriangleWrapperList();
 
-    // 3. 각 삼각형을 GTriangleWrapper로 변환
+    // 3. 삼각형을 GTriangleWrapper로 변환
     for (int i = 0; i < obj->n_triangles; ++i) {
-        const KDTConverter::TriAccel& tri = obj->kd_tree->tri_accel_list[i];
+        const TriAccel& tri = obj->kd_tree->tri_accel_list[i];
 
         int idx0 = tri.indexInObject + 0;
         int idx1 = tri.indexInObject + 1;
         int idx2 = tri.indexInObject + 2;
 
-        float* v0 = new float[3] {
-            obj->extended_vertices[idx0].vertex[0],
-                obj->extended_vertices[idx0].vertex[1],
-                obj->extended_vertices[idx0].vertex[2]
-            };
-        float* v1 = new float[3] {
-            obj->extended_vertices[idx1].vertex[0],
-                obj->extended_vertices[idx1].vertex[1],
-                obj->extended_vertices[idx1].vertex[2]
-            };
-        float* v2 = new float[3] {
-            obj->extended_vertices[idx2].vertex[0],
-                obj->extended_vertices[idx2].vertex[1],
-                obj->extended_vertices[idx2].vertex[2]
-            };
+        // 동적 wrapper 생성
+        GTriangleWrapper* wrapper = new GTriangleWrapper();
 
-        GTriangleWrapper wrapper;
-        wrapper.p0 = v0;
-        wrapper.p1 = v1;
-        wrapper.p2 = v2;
-        wrapper.indexInObject = i;
-        wrapper.m_mailBoxId = -1;
+        // vertex 복사
+        memcpy(wrapper->p0, obj->extended_vertices[idx0].vertex, sizeof(float) * 3);
+        memcpy(wrapper->p1, obj->extended_vertices[idx1].vertex, sizeof(float) * 3);
+        memcpy(wrapper->p2, obj->extended_vertices[idx2].vertex, sizeof(float) * 3);
 
-        triList->addTriangleWrapper(&wrapper);
+        wrapper->indexInObject = i;
+        wrapper->m_mailBoxId = -1;
+
+        triList->addTriangleWrapper(wrapper);
     }
 
-    // 4) GKDTreeStructure 생성 및 데이터 복사
+    // 4) GKDTreeStructure 생성 및 설정
     GKDTreeStructure* kd = new GKDTreeStructure(scene);
 
-    // 4-1) KdTree 노드 복사
     kd->setKdTreeNodeCount(obj->kd_tree->tree_node_count);
     kd->setKdTreeNode(new kdtreeNode[kd->getKdTreeNodeCount()]);
     memcpy(kd->getKdTreeNode(),
         obj->kd_tree->tree,
-        sizeof(kdtreeNode) * kd->getKdTreeNodeCount());
+        sizeof(kdtreeNode)* kd->getKdTreeNodeCount());
 
-    // 4-2) Triangle offset 리스트 복사
     kd->setTriangleOffset(obj->kd_tree->tri_offset_count);
     kd->setTriangleOffsetList(new unsigned int[kd->getTriangleOffset()]);
     memcpy(kd->getTriangleOffsetList(),
         obj->kd_tree->tri_offset_list,
-        sizeof(unsigned int) * kd->getTriangleOffset());
+        sizeof(unsigned int)* kd->getTriangleOffset());
 
+    kd->setBBoxMin(GPoint(obj->AABB[0], obj->AABB[1], obj->AABB[2]));
+    kd->setBBoxMax(GPoint(obj->AABB[3], obj->AABB[4], obj->AABB[5]));
 
-    // 4-3) 씬 전체 AABB 설정
-    kd->setBBoxMin(
-        GPoint(obj->AABB[0], obj->AABB[1], obj->AABB[2]));
-    kd->setBBoxMax(
-        GPoint(obj->AABB[3], obj->AABB[4], obj->AABB[5]));
-
-    // 4-4) 래퍼 리스트 연결
     kd->setSceneTriangleCount(obj->n_triangles);
     kd->setSceneTriangleList(triList);
 
-    // 5) Scene에 Kd-tree 연결
+    // 5) Scene에 연결
     scene->setSceneKDTree(kd);
 
     return scene;
 }
+//GScene* convertCompositeObjectToScene(CompositeObject* obj)
+//{
+//    if (!obj || obj->n_triangles <= 0) return nullptr;
+//
+//    // 1) GScene 생성
+//    GScene* scene = new GScene();
+//
+//    // 2) GTriangleWrapperList 생성
+//    //    - GTriangleWrapperList는 SGRTx2Lib에 존재
+//    GTriangleWrapperList* triList = new GTriangleWrapperList();
+//
+//    // 3. 각 삼각형을 GTriangleWrapper로 변환
+//    for (int i = 0; i < obj->n_triangles; ++i) {
+//        const TriAccel& tri = obj->kd_tree->tri_accel_list[i];
+//
+//        int idx0 = tri.indexInObject + 0;
+//        int idx1 = tri.indexInObject + 1;
+//        int idx2 = tri.indexInObject + 2;
+//
+//        float* v0 = new float[3] {
+//            obj->extended_vertices[idx0].vertex[0],
+//                obj->extended_vertices[idx0].vertex[1],
+//                obj->extended_vertices[idx0].vertex[2]
+//            };
+//        float* v1 = new float[3] {
+//            obj->extended_vertices[idx1].vertex[0],
+//                obj->extended_vertices[idx1].vertex[1],
+//                obj->extended_vertices[idx1].vertex[2]
+//            };
+//        float* v2 = new float[3] {
+//            obj->extended_vertices[idx2].vertex[0],
+//                obj->extended_vertices[idx2].vertex[1],
+//                obj->extended_vertices[idx2].vertex[2]
+//            };
+//
+//        GTriangleWrapper wrapper;
+//        wrapper.p0 = v0;
+//        wrapper.p1 = v1;
+//        wrapper.p2 = v2;
+//        wrapper.indexInObject = i;
+//        wrapper.m_mailBoxId = -1;
+//
+//        triList->addTriangleWrapper(&wrapper);
+//    }
+//
+//    // 4) GKDTreeStructure 생성 및 데이터 복사
+//    GKDTreeStructure* kd = new GKDTreeStructure(scene);
+//
+//    // 4-1) KdTree 노드 복사
+//    kd->setKdTreeNodeCount(obj->kd_tree->tree_node_count);
+//    kd->setKdTreeNode(new kdtreeNode[kd->getKdTreeNodeCount()]);
+//    memcpy(kd->getKdTreeNode(),
+//        obj->kd_tree->tree,
+//        sizeof(kdtreeNode) * kd->getKdTreeNodeCount());
+//
+//    // 4-2) Triangle offset 리스트 복사
+//    kd->setTriangleOffset(obj->kd_tree->tri_offset_count);
+//    kd->setTriangleOffsetList(new unsigned int[kd->getTriangleOffset()]);
+//    memcpy(kd->getTriangleOffsetList(),
+//        obj->kd_tree->tri_offset_list,
+//        sizeof(unsigned int) * kd->getTriangleOffset());
+//
+//
+//    // 4-3) 씬 전체 AABB 설정
+//    kd->setBBoxMin(
+//        GPoint(obj->AABB[0], obj->AABB[1], obj->AABB[2]));
+//    kd->setBBoxMax(
+//        GPoint(obj->AABB[3], obj->AABB[4], obj->AABB[5]));
+//
+//    // 4-4) 래퍼 리스트 연결
+//    kd->setSceneTriangleCount(obj->n_triangles);
+//    kd->setSceneTriangleList(triList);
+//
+//    // 5) Scene에 Kd-tree 연결
+//    scene->setSceneKDTree(kd);
+//
+//    return scene;
+//}
 
 //void upload_composite_object_to_cuda(CompositeObject* h_obj, CompositeObject* d_obj_out) {
 //    // ExtendedVertex

@@ -91,7 +91,7 @@ void SSERenderPipeline::InitShadowPacket1x1(void)
 // SSERenderPipeline::IsectPacket
 //		Intersection check
 // ------------------------------------------------------------------------------------------------
-void SSERenderPipeline::IsectShadowPacket1x1( const KdTreeNode *node )
+void SSERenderPipeline::IsectShadowPacket1x1( const KdTreeNode2 *node )
 {
 	int i;
 
@@ -113,7 +113,7 @@ void SSERenderPipeline::IsectShadowPacket1x1( const KdTreeNode *node )
 		COUNT_INSTRUCTION( -1, INTERSECTION_CHECK, COMPARISON, 1 );
 		COUNT_INSTRUCTION( -1, INTERSECTION_CHECK, LOAD, 2 );
 		int     triID = m_Data->m_TriOffList[i];
-		TriAccel &acc = m_Data->m_TriAccList[triID];
+		TriAccel2 &acc = m_Data->m_TriAccList[triID];
 
 		// ---------------------------------------------------------------
 		// Mailbox
@@ -217,7 +217,7 @@ void SSERenderPipeline::TraceShadowPacket1x1( unsigned int quad )
 	const unsigned int* ray_dir = &raydir[quad][0][0];		// Get precomputed the traversal order (front/back)
 															//      as offsets for a bundle of rays with equal directions
 	// kdtree start node, stack index
-	KdTreeNode* node = &m_Data->m_pKDTreeNodes[0];
+	KdTreeNode2* node = &m_Data->m_pKDTreeNodes[0];
 
 	unsigned int stackIndex = 0;
 
@@ -275,8 +275,8 @@ void SSERenderPipeline::TraceShadowPacket1x1( unsigned int quad )
 			COUNT_INSTRUCTION( -1, TRAVERSE, ADD, 3 );
 			COUNT_INSTRUCTION( -1, TRAVERSE, LOAD, 6 );
 			COUNT_INSTRUCTION( -1, TRAVERSE, MOVE, 2 );
-			KdTreeNode *FrontSideSon	= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[dim << 1])];
-			KdTreeNode *BackSideSon		= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[(dim << 1)+1])];
+			KdTreeNode2 *FrontSideSon	= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[dim << 1])];
+			KdTreeNode2 *BackSideSon		= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[(dim << 1)+1])];
 
 			unsigned int d_near = 0, d_far = 0;
 			float d;
@@ -390,7 +390,7 @@ void SSERenderPipeline::checkVisibility1x1(const GPoint* objectPos, const GPoint
 // SSERenderPipeline::IsectPacket
 //		Intersection check
 // ------------------------------------------------------------------------------------------------
-void SSERenderPipeline::IsectPacket1x1( const KdTreeNode *node, int nIdx )
+void SSERenderPipeline::IsectPacket1x1( const KdTreeNode2 *node, int nIdx )
 {
 	COUNT_INSTRUCTION( nIdx, INTERSECTION_CHECK, FUNCTION_ENTER, 1 );
 	int i;
@@ -413,7 +413,7 @@ void SSERenderPipeline::IsectPacket1x1( const KdTreeNode *node, int nIdx )
 		COUNT_INSTRUCTION( nIdx, INTERSECTION_CHECK, COMPARISON, 1 );
 		COUNT_INSTRUCTION( nIdx, INTERSECTION_CHECK, LOAD, 2 );
 		int     triID = m_Data->m_TriOffList[i];
-		TriAccel &acc = m_Data->m_TriAccList[triID];
+		TriAccel2 &acc = m_Data->m_TriAccList[triID];
 
 		// ---------------------------------------------------------------
 		// Mailbox
@@ -532,7 +532,7 @@ void SSERenderPipeline::TracePacket1x1( unsigned int quad, int nIdx )
 	const unsigned int* ray_dir = &raydir[quad][0][0];		// Get precomputed the traversal order (front/back)
 															//      as offsets for a bundle of rays with equal directions
 	// kdtree start node, stack index
-	KdTreeNode* node = &m_Data->m_pKDTreeNodes[0];
+	KdTreeNode2* node = &m_Data->m_pKDTreeNodes[0];
 
 	unsigned int stackIndex = 0;
 
@@ -592,8 +592,8 @@ void SSERenderPipeline::TracePacket1x1( unsigned int quad, int nIdx )
 			COUNT_INSTRUCTION( nIdx, TRAVERSE, MOVE, 4 );
 			const float node_split = SPLIT_POS(*node);
 			const unsigned int dim = SPLIT_AXIS(*node);
-			KdTreeNode *FrontSideSon	= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[dim << 1])];
-			KdTreeNode *BackSideSon		= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[(dim << 1)+1])];
+			KdTreeNode2 *FrontSideSon	= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[dim << 1])];
+			KdTreeNode2 *BackSideSon		= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[(dim << 1)+1])];
 
 			COUNT_INSTRUCTION( nIdx, TRAVERSE, MOVE, 2 );
 			unsigned int d_near = 0, d_far = 0;

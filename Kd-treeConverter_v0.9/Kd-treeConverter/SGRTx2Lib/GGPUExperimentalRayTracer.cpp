@@ -1,3 +1,4 @@
+#include "cudaRenderCommon.cuh"
 #include "GGPUExperimentalRayTracer.h"
 #include "GGPUExperimentalRayTracer.h"
 #include "GSpatialStructure.h"

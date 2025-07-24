@@ -25,16 +25,18 @@
 #include "MyMathUtility.h"
 
 //shyun
-#include "sgrt_interface.h"
-#include "cudaRayTracingKernel.cu"
-#include "SGRTx2Lib/GGPURayTracer.h"
-#include "SGRTx2Lib/GGPUExperimentalRayTracer.h"
-using namespace KDTConverter;
-
+//#include "sgrt_interface.h"
+//#include "cudaRayTracingKernel.cu"
+//#include "SGRTx2Lib/GKDTreeStructure.h"
+//#include "SGRTx2Lib/GGPURayTracer.h"
+//#include "SGRTx2Lib/GGPUExperimentalRayTracer.h"
+//using namespace KDTConverter;
+//using namespace KDTConstructor;
+bool render_gaussian = false;
 float* g_render_framebuffer = nullptr;
 int g_render_width = 800;
 int g_render_height = 600;
-int g_cuda_rendering_done = 0;
+bool g_cuda_rendering_done = false;
 //shyun end
 UIParameters uip;
 Camera camera;
@@ -332,24 +334,132 @@ typedef enum _SL_KDT_CONFIG_command_ID {
 	CMD_I_GEOMETRY_FILENAME, CMD_MESH_FILE_LIST, CMD_END, CMD_KD_TREE_TRAVL_COST, CMD_KD_TREE_ISECT_COST, 
 	CMD_KD_TREE_MAX_LEVEL, CMD_KD_TREE_MIN_TRIANGLE, CMD_KD_TREE_EMTPY_BONUS, CMD_COMMENT, CMD_NULL
 } SL_KDT_CONFIG_command_ID;
- 
-SL_KDT_CONFIG_command_ID query_SL_KDT_CONFIG_command_ID(const char *command) {
-	int i;
 
-	if (command[0] == '#') return CMD_COMMENT;
+bool read_OBJ_geom_file(const char* filename, MeshGeom* mesh_geom) {
+	std::ifstream file(filename);
+	if (!file.is_open()) {
+		fprintf(stderr, "[OBJ] Cannot open file: %s\n", filename);
+		return false;
+	}
 
-	for (i = 0; i < N_SL_KDT_CONFIG_COMMANDS; i++)
-	if (strstr(command, SL_KDT_CONFIG_commands[i]))
-		return (SL_KDT_CONFIG_command_ID)i;
+	std::vector<float> vertices;
+	std::vector<unsigned int> indices;
 
-	return CMD_NULL;
+	std::string line;
+	while (std::getline(file, line)) {
+		std::istringstream iss(line);
+
+		if (line.substr(0, 2) == "v ") {
+			char v;
+			float x, y, z;
+			iss >> v >> x >> y >> z;
+
+			// 초기화할 때 normal 값도 기본값 0.0f로 넣음
+			vertices.push_back(x);
+			vertices.push_back(y);
+			vertices.push_back(z);
+			vertices.push_back(0.0f); // normal.x
+			vertices.push_back(0.0f); // normal.y
+			vertices.push_back(0.0f); // normal.z
+		}
+		else if (line.substr(0, 2) == "f ") {
+			char f;
+			int i1, i2, i3;
+			iss >> f >> i1 >> i2 >> i3;
+
+			// obj는 1-based index
+			indices.push_back(i1 - 1);
+			indices.push_back(i2 - 1);
+			indices.push_back(i3 - 1);
+		}
+	}
+
+	file.close();
+
+	if (vertices.empty() || indices.empty()) {
+		fprintf(stderr, "[OBJ] Invalid obj file or no geometry found.\n");
+		return false;
+	}
+
+	// MeshGeom 구조체에 복사
+	mesh_geom->nvertices = (int)(vertices.size() / 6);
+	mesh_geom->nfaces = (int)(indices.size() / 3);
+
+	mesh_geom->vertices = (float*)malloc(vertices.size() * sizeof(float));
+	memcpy(mesh_geom->vertices, vertices.data(), vertices.size() * sizeof(float));
+
+	mesh_geom->faces = (unsigned int*)malloc(indices.size() * sizeof(unsigned int));
+	memcpy(mesh_geom->faces, indices.data(), indices.size() * sizeof(unsigned int));
+
+	// AABB 계산
+	float xmin = FLT_MAX, xmax = -FLT_MAX;
+	float ymin = FLT_MAX, ymax = -FLT_MAX;
+	float zmin = FLT_MAX, zmax = -FLT_MAX;
+
+	for (int i = 0; i < mesh_geom->nvertices; ++i) {
+		float* v = &mesh_geom->vertices[i * 6];
+		if (v[0] < xmin) xmin = v[0];
+		if (v[0] > xmax) xmax = v[0];
+		if (v[1] < ymin) ymin = v[1];
+		if (v[1] > ymax) ymax = v[1];
+		if (v[2] < zmin) zmin = v[2];
+		if (v[2] > zmax) zmax = v[2];
+	}
+
+	mesh_geom->AABB[XMIN] = xmin;
+	mesh_geom->AABB[XMAX] = xmax;
+	mesh_geom->AABB[YMIN] = ymin;
+	mesh_geom->AABB[YMAX] = ymax;
+	mesh_geom->AABB[ZMIN] = zmin;
+	mesh_geom->AABB[ZMAX] = zmax;
+
+	return true;
 }
-typedef struct _S_Element {
-	char string[256];
-	int id;
-	struct _S_Element *next;
-} S_Element;
-S_Element *filelist;
+
+int read_OBJ_and_build_kdtree(const char* obj_filename)
+{
+	printf("> Reading OBJ File and building KD-tree: %s\n\n", obj_filename);
+
+	MeshGeom mesh_geom;
+	if (!read_OBJ_geom_file(obj_filename, &mesh_geom)) {
+		fprintf(stderr, "Failed to read OBJ file: %s\n", obj_filename);
+		return 0;
+	}
+
+	// Initialize uip.poly_model
+	uip.poly_model.n_triangles = 0;
+	for (int i = 0; i < 6; ++i) {
+		uip.poly_model.AABB[i] = (i % 2 == 0) ? FLT_MAX : -FLT_MAX;
+	}
+
+	// Allocate space for ExtendedVertex
+	if ((uip.poly_model.extended_vertices = (ExtendedVertex*)malloc(3 * mesh_geom.nfaces * sizeof(ExtendedVertex))) == NULL) {
+		fprintf(stderr, "Memory allocation failed for extended_vertices\n");
+		return 0;
+	}
+
+	append_mesh_geom_to_composite_object(&uip.poly_model, &mesh_geom, 0, uip.poly_model.AABB);
+	printf("[DEBUG] n_triangles: %d\n", uip.poly_model.n_triangles);
+	for (int i = 0; i < 3; ++i) {
+		printf("Vertex[%d]: %f %f %f\n", i,
+			uip.poly_model.extended_vertices[i].vertex[0],
+			uip.poly_model.extended_vertices[i].vertex[1],
+			uip.poly_model.extended_vertices[i].vertex[2]);
+	}
+	// KD-tree 생성
+	if (uip.poly_model.kd_tree != NULL)
+		delete uip.poly_model.kd_tree;
+
+	uip.poly_model.kd_tree = new KdTree();
+
+	//build_kd_tree_for_composite_object(&uip.poly_model);
+	//printf("> KD-tree built successfully!\n");
+
+	free(mesh_geom.vertices);
+	free(mesh_geom.faces);
+
+	return 1;
+}
 
 bool load_obj_to_composite_object(const char* filename, CompositeObject* c_object) {
 	std::ifstream infile(filename);
@@ -419,6 +529,24 @@ bool load_obj_to_composite_object(const char* filename, CompositeObject* c_objec
 		c_object->AABB[ZMIN], c_object->AABB[ZMAX]);
 	return true;
 }
+
+SL_KDT_CONFIG_command_ID query_SL_KDT_CONFIG_command_ID(const char *command) {
+	int i;
+
+	if (command[0] == '#') return CMD_COMMENT;
+
+	for (i = 0; i < N_SL_KDT_CONFIG_COMMANDS; i++)
+	if (strstr(command, SL_KDT_CONFIG_commands[i]))
+		return (SL_KDT_CONFIG_command_ID)i;
+
+	return CMD_NULL;
+}
+typedef struct _S_Element {
+	char string[256];
+	int id;
+	struct _S_Element *next;
+} S_Element;
+S_Element *filelist;
 
 void append_mesh_geom_to_composite_object(CompositeObject *c_object, 
 											MeshGeom *mesh_geom, int mat_type, float *AABB) {
@@ -641,86 +769,111 @@ void main_menu_action(int selection) {
 	char full_kd_tree_file_name[512];
 	char full_i_geometry_file_name[512];
 
-	switch(selection) {
-		case 100:
-	//		uip.SL_KDT_CONFIG_filename = "../../Data/Configurations/YP_ALL.SL_KDT_config";
-	//		uip.SL_KDT_CONFIG_filename = "../../Data/Configurations/AN_ALL.SL_KDT_config";
-	//		uip.SL_KDT_CONFIG_filename = "../../Data/Configurations/YP_ALL_LED.SL_KDT_config";
-	//  	uip.SL_KDT_CONFIG_filename = "../../Data/Configurations/TL/TL_ALL.SL_KDT_config";
-			uip.SL_KDT_CONFIG_filename = "../../Data/Configurations/TL/TL_SOME_LED.SL_KDT_config";
-	//		.SL_KDT_CONFIG_filename = "../../Data/Configurations/TL/TL_ALL_LED.SL_KDT_config";
-	//      uip.SL_KDT_CONFIG_filename = "../../Data/Configurations/AN_ALL_LED.SL_KDT_config";
-			read_SL_KDT_CONFIG_file();
-			uip.composite_object_read = 1;
+	switch (selection) {
+	case 0:
+		render_gaussian = !render_gaussian;
+		printf(render_gaussian ? "->true\n":"->false\n");
+		break;
+	case 100:
+		render_gaussian = false;
+		//		uip.SL_KDT_CONFIG_filename = "../../Data/Configurations/YP_ALL.SL_KDT_config";
+		//		uip.SL_KDT_CONFIG_filename = "../../Data/Configurations/AN_ALL.SL_KDT_config";
+		//		uip.SL_KDT_CONFIG_filename = "../../Data/Configurations/YP_ALL_LED.SL_KDT_config";
+		//  	uip.SL_KDT_CONFIG_filename = "../../Data/Configurations/TL/TL_ALL.SL_KDT_config";
+		uip.SL_KDT_CONFIG_filename = "../../Data/Configurations/TL/TL_SOME_LED.SL_KDT_config";
+		//		.SL_KDT_CONFIG_filename = "../../Data/Configurations/TL/TL_ALL_LED.SL_KDT_config";
+		//      uip.SL_KDT_CONFIG_filename = "../../Data/Configurations/AN_ALL_LED.SL_KDT_config";
+		read_SL_KDT_CONFIG_file();
+		uip.composite_object_read = 1;
 
-			if (0) {
-				fprintf(stdout, "m_m_a: kd_tree_dump_dir = %s.\n", uip.kd_tree_dump_dir);
-				fprintf(stdout, "m_m_a: kd_tree_file_name = %s.\n", uip.kd_tree_filename);
-				if (uip.kd_tree_dump_format == KD_TREE_DUMP_IN_BINARY)
-					fprintf(stdout, "m_m_a: kd_tree_dump_format = BINARY\n");
-				else
-					fprintf(stdout, "m_m_a: kd_tree_dump_format = ASCII\n");
-			}
-			load_poly_model_into_OpenGL();
+		if (0) {
+			fprintf(stdout, "m_m_a: kd_tree_dump_dir = %s.\n", uip.kd_tree_dump_dir);
+			fprintf(stdout, "m_m_a: kd_tree_file_name = %s.\n", uip.kd_tree_filename);
+			if (uip.kd_tree_dump_format == KD_TREE_DUMP_IN_BINARY)
+				fprintf(stdout, "m_m_a: kd_tree_dump_format = BINARY\n");
+			else
+				fprintf(stdout, "m_m_a: kd_tree_dump_format = ASCII\n");
+		}
+		load_poly_model_into_OpenGL();
 
-			glutPostRedisplay();
-			break;
-		case 200:
-			build_kd_tree_for_composite_object(&uip.poly_model);
-			break;
-		case 300:
-			strcpy(full_kd_tree_file_name, uip.kd_tree_dump_dir);
-			strcat(full_kd_tree_file_name, "/");
-			strcat(full_kd_tree_file_name, uip.kd_tree_filename);
+		glutPostRedisplay();
+		break;
+	case 200:
+		build_kd_tree_for_composite_object(&uip.poly_model);
+		break;
+	case 300:
+		strcpy(full_kd_tree_file_name, uip.kd_tree_dump_dir);
+		strcat(full_kd_tree_file_name, "/");
+		strcat(full_kd_tree_file_name, uip.kd_tree_filename);
 
-			strcpy(full_i_geometry_file_name, uip.kd_tree_dump_dir);
-			strcat(full_i_geometry_file_name, "/");
-			strcat(full_i_geometry_file_name, uip.i_geometry_filename);
+		strcpy(full_i_geometry_file_name, uip.kd_tree_dump_dir);
+		strcat(full_i_geometry_file_name, "/");
+		strcat(full_i_geometry_file_name, uip.i_geometry_filename);
 
-		
+		if (render_gaussian) {
+			dump_kd_tree_for_composite_object(
+				&uip.poly_model,
+				"../../Data/Obj/hotdog_tree.kdt",         // 저장할 kd-tree
+				KD_TREE_DUMP_IN_BINARY,    // 저장 포맷
+				"../../Data/Obj/hotdog_igeom.bin"         // 저장할 geometry
+			);
+		}
+		else {
 			dump_kd_tree_for_composite_object(&uip.poly_model, full_kd_tree_file_name,
 				uip.kd_tree_dump_format, full_i_geometry_file_name);
-			break;
+		}
+		break;
 		case 400:
 			strcpy(full_kd_tree_file_name, uip.kd_tree_dump_dir);
 			printf("uip.kd_tree_dump_dir:%s\n", uip.kd_tree_dump_dir);
 			strcat(full_kd_tree_file_name, "/");
 			strcat(full_kd_tree_file_name, uip.kd_tree_filename);
 			printf("uip.kd_tree_filename:%s\n", uip.kd_tree_filename);
-			printf("full_kd_tree_file_name:%s\n", full_kd_tree_file_name);
-			strcpy(full_kd_tree_file_name, "../../Data/Obj/hotdog_tree.kdt");
+			if (render_gaussian) {
+				strcpy(full_kd_tree_file_name, "../../Data/Obj/hotdog_tree.kdt");
+				uip.kd_tree_dump_format = KD_TREE_DUMP_IN_BINARY;
+			}
 			printf("full_kd_tree_file_name:%s\n", full_kd_tree_file_name);
 			read_kd_tree_from_file(&uip.poly_model, full_kd_tree_file_name, uip.kd_tree_dump_format);
 			glutPostRedisplay();
 			break;
 		case 500: {
+			render_gaussian = true;
 			const char* obj_path = "../../Data/Obj/hotdog_3dgrt.obj";  // obj 경로
-			CompositeObject obj_model;
 
-			if (!load_obj_to_composite_object(obj_path, &obj_model)) {
-				fprintf(stderr, "Failed to load .obj file.\n");
-				break;
+			if (!read_OBJ_and_build_kdtree(obj_path)) {
+				fprintf(stderr, "Failed to load obj and build Kd-tree\n");
+				return;
 			}
 
-			fprintf(stdout, "Successfully loaded .obj model. Building Kd-tree...\n");
-			build_kd_tree_for_composite_object(&obj_model);
+			//CompositeObject obj_model;
+			//if (!load_obj_to_composite_object(obj_path, &obj_model)) {
+			//	fprintf(stderr, "Failed to load .obj file.\n");
+			//	break;
+			//}
+			//uip.poly_model = obj_model;
 
-			dump_kd_tree_for_composite_object(
-				&obj_model,
-				"../../Data/Obj/hotdog_tree.kdt",         // 저장할 kd-tree
-				KD_TREE_DUMP_IN_BINARY,    // 저장 포맷
-				"../../Data/Obj/hotdog_igeom.bin"         // 저장할 geometry
-			);
-
-			uip.poly_model = obj_model;
 			uip.composite_object_read = 1;
 
-			printf("uip, AABB: X [%f, %f] Y [%f, %f] Z [%f, %f]\n",
-				uip.poly_model.AABB[XMIN], uip.poly_model.AABB[XMAX],
-				uip.poly_model.AABB[YMIN], uip.poly_model.AABB[YMAX],
-				uip.poly_model.AABB[ZMIN], uip.poly_model.AABB[ZMAX]);
+			//fprintf(stdout, "Successfully loaded .obj model. Building Kd-tree...\n");
+			//build_kd_tree_for_composite_object(&obj_model);
 
+			//dump_kd_tree_for_composite_object(
+			//	&obj_model,
+			//	"../../Data/Obj/hotdog_tree.kdt",         // 저장할 kd-tree
+			//	KD_TREE_DUMP_IN_BINARY,    // 저장 포맷
+			//	"../../Data/Obj/hotdog_igeom.bin"         // 저장할 geometry
+			//);
+
+
+			//printf("uip, AABB: X [%f, %f] Y [%f, %f] Z [%f, %f]\n",
+			//	uip.poly_model.AABB[XMIN], uip.poly_model.AABB[XMAX],
+			//	uip.poly_model.AABB[YMIN], uip.poly_model.AABB[YMAX],
+			//	uip.poly_model.AABB[ZMIN], uip.poly_model.AABB[ZMAX]);
+
+			load_poly_model_into_OpenGL();
 			glutPostRedisplay();
+			printf("draw DONE\n");
 			break;
 		}
 		case 600: {
@@ -730,13 +883,41 @@ void main_menu_action(int selection) {
 				fprintf(stderr, "CompositeObject not loaded.\n");
 				break;
 			}
-			if (&uip.poly_model == NULL) {
-				fprintf(stdout, "Dosen't exist kd-tree\n");
+			if (uip.poly_model.n_triangles == 0) {
+				fprintf(stdout, "No triangles in CompositeObject\n");
 				break;
 			}
-
 			//TODO: CUDA rendering*****************************************
-			CompositeObject* compObj = &uip.poly_model;
+			//initCudaRendering(uip.poly_model, g_render_framebuffer, &g_cuda_rendering_done);
+
+			/*GScene* scene = new GScene();
+			scene->setKdTreeLoadFilePath("../../Data/Obj/hotdog_tree.kdt");
+			scene->convertRenderScene();
+			GKDTreeStructure* kdTree = new GKDTreeStructure(scene);
+			kdTree->initialize();
+			scene->setSceneKDTree(kdTree);
+
+			GGPUExperimentalRayTracer* rayTracer = new GGPUExperimentalRayTracer();
+
+			rayTracer->rendering(scene, false);*/
+			
+
+			/*CompositeObject& obj = uip.poly_model;
+			GScene scn;
+
+			convertCompositeObjectToGSceneAndKdTree(obj, scn);
+			GKDTreeStructure* kdTree = new GKDTreeStructure(&scn);
+			kdTree->initialize();
+			scn.setSceneKDTree(kdTree);
+
+			GGPUExperimentalRayTracer* rayTracer = new GGPUExperimentalRayTracer();
+
+			rayTracer->rendering(&scn, false);*/
+
+			/*UploadCompositeObjectToDevice(uip.poly_model);
+			LaunchRenderKernel(g_render_framebuffer, g_render_width, g_render_height);*/
+
+			/*CompositeObject* compObj = &uip.poly_model;
 			GScene* scene = convertCompositeObjectToScene(compObj);
 			if (!scene) {
 				printf("[SGRT] Failed to convert CompositeObject to GScene.\n");
@@ -745,16 +926,16 @@ void main_menu_action(int selection) {
 
 			scene->convertRenderScene();
 
-			GGPUExperimentalRayTracer tracer;
+			GGPUExperimentalRayTracer* tracer;
 			//tracer.setScene(scene);//TODO
-			GError err = tracer.rendering(scene, false);
+			GError err = tracer->rendering(scene, false);
 
 			if (err != errorNo)
 				printf("[SGRT] Rendering failed: %d\n", err);
 			else
 				printf("[SGRT] Rendering succeeded.\n");
 
-			delete scene;
+			delete scene;*/
 
 			/*GScene* scene = convertCompositeObjectToGScene(&uip.poly_model);
 			GGPUExperimentalRayTracer raytracer;
@@ -844,6 +1025,7 @@ void main_menu_action(int selection) {
 			cudaMemcpy(h_framebuffer, d_framebuffer, sizeof(float) * 800 * 600 * 3, cudaMemcpyDeviceToHost);
 			//save_as_ppm(h_framebuffer, 800, 600, "output_kdtree.ppm");*/
 			//*************************************************************
+			break;
 		}
 		case 999:
 			exit(0);
@@ -859,12 +1041,13 @@ void register_callbacks_and_create_menu(void) {
 	glutMouseFunc(mousepress); 
 	glutMotionFunc(mousemove);
    
-	uip.main_menu_ID = glutCreateMenu(main_menu_action);     
+	uip.main_menu_ID = glutCreateMenu(main_menu_action);
+	glutAddMenuEntry("ChangeMode", 0);
 	glutAddMenuEntry("1. Read SL_KDT_Config File and Prepair I-Geometry", 100); 
 	glutAddMenuEntry("2. Construct Kd-tree from I-Geometry", 200);  
 	glutAddMenuEntry("3. Dump Kd-tree and I-Geometry to Files", 300);
 	glutAddMenuEntry("4. Read Kd-tree from File", 400);
-	glutAddMenuEntry("5. Read & Construct & Dump & Rendering .obj File and Prepair I-Geometry", 500);
+	glutAddMenuEntry("5. Read .obj File and Prepair I-Geometry", 500);
 	//glutAddMenuEntry("6. CUDA Rendering", 600);
 	glutAddMenuEntry("Exit", 999); 
 

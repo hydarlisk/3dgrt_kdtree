@@ -1,3 +1,4 @@
+#pragma once
 #define M_PI 3.14159f
 
 /** 
@@ -47,6 +48,7 @@
 #include <cuda_runtime.h>
 #include <texture_types.h>
 #include <texture_fetch_functions.h>
+#include <cuda_texture_types.h>
 #include "cuda_math.h"
 
 #include "GKDTreeNode.h"
@@ -190,7 +192,7 @@ struct traceStack {
 struct cached_lmemStack {
 	traceStack lmemStack;
 	unsigned _top, cacheQuant, baseOffset;
-	cached_lmemStack() : _top(shortStackDepth-1), cacheQuant(0) {}
+	__host__ __device__ cached_lmemStack() : _top(shortStackDepth-1), cacheQuant(0) {}
 	__device__ inline void init(const unsigned smem_baseOffset) 
 	{ baseOffset = smem_baseOffset*shortStackDepth; }
 	__device__ inline cu_traceState top() const { 
@@ -226,7 +228,7 @@ struct cached_lmemStack {
 //심플 버전. bank conflict 고려 안함.
 struct shortStack {
 	unsigned _top, quant, baseOffset;
-	shortStack() : _top(shortStackDepth-1), quant(0) {}
+	__host__ __device__ shortStack() : _top(shortStackDepth-1), quant(0) {}
 	__device__ inline void init(const unsigned smem_baseOffset) 
 	{ baseOffset = smem_baseOffset*(shortStackDepth); }
 	__device__ inline cu_traceState top() { return smemBuffer[baseOffset + _top];}

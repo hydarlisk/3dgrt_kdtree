@@ -181,176 +181,436 @@
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="cuInteropUtils.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="cuRenderHost.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="Kd-treeConstructor.cpp" />
     <ClCompile Include="Kd-treeConverter.cpp" />
     <ClCompile Include="Kd-treeConverterMain.cpp" />
     <ClCompile Include="MyMathUtility.cpp" />
     <ClCompile Include="OpenGLStuffs.cpp" />
     <ClCompile Include="RayTraversal.cpp" />
-    <ClCompile Include="SGRTx2Lib\GBaseThread.cpp" />
-    <ClCompile Include="SGRTx2Lib\GBoundingBox.cpp" />
-    <ClCompile Include="SGRTx2Lib\GCamera.cpp" />
-    <ClCompile Include="SGRTx2Lib\GColor.cpp" />
-    <ClCompile Include="SGRTx2Lib\GCriticalSection.cpp" />
-    <ClCompile Include="SGRTx2Lib\GDimension.cpp" />
-    <ClCompile Include="SGRTx2Lib\GDistributedPhotonRayTracer.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+    <ClCompile Include="SGRTx2Lib\GBaseThread.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="SGRTx2Lib\GErrorManager.cpp" />
-    <ClCompile Include="SGRTx2Lib\GEvent.cpp" />
-    <ClCompile Include="SGRTx2Lib\GGLUtil.cpp" />
-    <ClCompile Include="SGRTx2Lib\GGPUExperimentalRayTracer.cpp" />
-    <ClCompile Include="SGRTx2Lib\GGPURayTracer.cpp" />
-    <ClCompile Include="SGRTx2Lib\GGPURayTracerForPaper.cpp" />
-    <ClCompile Include="SGRTx2Lib\GImageBuffer.cpp" />
-    <ClCompile Include="SGRTx2Lib\GIntersectionPointMap.cpp" />
-    <ClCompile Include="SGRTx2Lib\GKDTreeOption.cpp" />
-    <ClCompile Include="SGRTx2Lib\GKDTreeStructure.cpp" />
-    <ClCompile Include="SGRTx2Lib\GLogManager.cpp" />
-    <ClCompile Include="SGRTx2Lib\GMaterial.cpp" />
-    <ClCompile Include="SGRTx2Lib\GMatrix4.cpp" />
-    <ClCompile Include="SGRTx2Lib\GObject.cpp" />
-    <ClCompile Include="SGRTx2Lib\GObjectNumberGenerator.cpp" />
-    <ClCompile Include="SGRTx2Lib\GOBJFileLoader.cpp" />
-    <ClCompile Include="SGRTx2Lib\GOpenGLContext.cpp" />
-    <ClCompile Include="SGRTx2Lib\GOpenGLPipelineRenderer.cpp" />
+    <ClCompile Include="SGRTx2Lib\GBoundingBox.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GCamera.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GColor.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GCriticalSection.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GDimension.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GDistributedPhotonRayTracer.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GErrorManager.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GEvent.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GGLUtil.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GGPUExperimentalRayTracer.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GGPURayTracer.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GGPURayTracerForPaper.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GImageBuffer.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GIntersectionPointMap.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GKDTreeOption.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GKDTreeStructure.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GLogManager.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GMaterial.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GMatrix4.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GObject.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GObjectNumberGenerator.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GOBJFileLoader.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GOpenGLContext.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GOpenGLPipelineRenderer.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="SGRTx2Lib\GPhotonMappingOption.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="SGRTx2Lib\GPhotonMapRayTracer.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="SGRTx2Lib\GPoint.cpp" />
-    <ClCompile Include="SGRTx2Lib\GPolygonGeometry.cpp" />
-    <ClCompile Include="SGRTx2Lib\GPolygonObject.cpp" />
-    <ClCompile Include="SGRTx2Lib\GRayProfiler.cpp" />
-    <ClCompile Include="SGRTx2Lib\GRayProfilerOption.cpp" />
-    <ClCompile Include="SGRTx2Lib\GRayProfilerPipeline.cpp" />
-    <ClCompile Include="SGRTx2Lib\GRayTracerProfiler.cpp" />
-    <ClCompile Include="SGRTx2Lib\GRenderCommon.cpp" />
-    <ClCompile Include="SGRTx2Lib\GRenderer.cpp" />
-    <ClCompile Include="SGRTx2Lib\GRenderOption.cpp" />
-    <ClCompile Include="SGRTx2Lib\GRenderSystem.cpp" />
-    <ClCompile Include="SGRTx2Lib\GScene.cpp" />
-    <ClCompile Include="SGRTx2Lib\GSceneManager.cpp" />
-    <ClCompile Include="SGRTx2Lib\GTexture.cpp" />
-    <ClCompile Include="SGRTx2Lib\GTextureManager.cpp" />
-    <ClCompile Include="SGRTx2Lib\GThread.cpp" />
-    <ClCompile Include="SGRTx2Lib\GThreadContext.cpp" />
-    <ClCompile Include="SGRTx2Lib\GThreadManager.cpp" />
-    <ClCompile Include="SGRTx2Lib\GThreadWork.cpp" />
-    <ClCompile Include="SGRTx2Lib\GTimer.cpp" />
-    <ClCompile Include="SGRTx2Lib\GTriangleWrapper.cpp" />
-    <ClCompile Include="SGRTx2Lib\GTriangleWrapperList.cpp" />
-    <ClCompile Include="SGRTx2Lib\GUtil.cpp" />
-    <ClCompile Include="SGRTx2Lib\GViewerModeRenderer.cpp" />
-    <ClCompile Include="SGRTx2Lib\SSERenderData.cpp" />
-    <ClCompile Include="SGRTx2Lib\SSERenderPipeline.cpp" />
-    <ClCompile Include="SGRTx2Lib\SSERenderPipeline1x1.cpp" />
-    <ClCompile Include="SGRTx2Lib\SSERenderPipeline2x2.cpp" />
-    <ClCompile Include="SGRTx2Lib\SSERenderPipeline4x4.cpp" />
-    <ClCompile Include="sgrt_interface.cpp" />
+    <ClCompile Include="SGRTx2Lib\GPoint.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GPolygonGeometry.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GPolygonObject.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GRayProfiler.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GRayProfilerOption.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GRayProfilerPipeline.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GRayTracerProfiler.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GRenderCommon.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GRenderer.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GRenderOption.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GRenderSystem.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GScene.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GSceneManager.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GTexture.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GTextureManager.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GThread.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GThreadContext.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GThreadManager.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GThreadWork.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GTimer.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GTriangleWrapper.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GTriangleWrapperList.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GUtil.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\GViewerModeRenderer.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\SSERenderData.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\SSERenderPipeline.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\SSERenderPipeline1x1.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\SSERenderPipeline2x2.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SGRTx2Lib\SSERenderPipeline4x4.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="sgrt_interface.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="SLMeshDataIO.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="cuCommonDefs.cuh">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="cuInteropUtils.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="cuRenderHost.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
     <ClInclude Include="Kd-treeConstructor.h" />
     <ClInclude Include="Kd-treeConverter.h" />
     <ClInclude Include="Kd-treeConverterMain.h" />
     <ClInclude Include="MyMathUtility.h" />
     <ClInclude Include="OpenGLStuffs.h" />
     <ClInclude Include="RayTraversal.h" />
+    <CudaCompile Include="cudaKDTreeTracer.cu">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </CudaCompile>
+    <CudaCompile Include="cuRenderKernel.cu">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </CudaCompile>
     <CudaCompile Include="SGRTx2Lib\cudaPhotonMapping.cuh">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <TargetMachinePlatform Condition="'$(Configuration)|$(Platform)'=='Release|x64'">64</TargetMachinePlatform>
     </CudaCompile>
     <CudaCompile Include="SGRTx2Lib\cudaPhotonMapping.h">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <TargetMachinePlatform Condition="'$(Configuration)|$(Platform)'=='Release|x64'">64</TargetMachinePlatform>
     </CudaCompile>
     <CudaCompile Include="SGRTx2Lib\cudaRenderCommon.cuh">
       <TargetMachinePlatform Condition="'$(Configuration)|$(Platform)'=='Release|x64'">64</TargetMachinePlatform>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </CudaCompile>
     <CudaCompile Include="SGRTx2Lib\cudaRenderPipeline.cuh">
       <TargetMachinePlatform Condition="'$(Configuration)|$(Platform)'=='Release|x64'">64</TargetMachinePlatform>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </CudaCompile>
     <CudaCompile Include="SGRTx2Lib\cudaRenderPipeline.h">
       <TargetMachinePlatform Condition="'$(Configuration)|$(Platform)'=='Release|x64'">64</TargetMachinePlatform>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </CudaCompile>
     <CudaCompile Include="SGRTx2Lib\cuda_math.h">
       <TargetMachinePlatform Condition="'$(Configuration)|$(Platform)'=='Release|x64'">64</TargetMachinePlatform>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </ExcludedFromBuild>
     </CudaCompile>
-    <ClInclude Include="SGRTx2Lib\GBase.h" />
-    <ClInclude Include="SGRTx2Lib\GBaseThread.h" />
-    <ClInclude Include="SGRTx2Lib\GBoundingBox.h" />
-    <ClInclude Include="SGRTx2Lib\GCamera.h" />
-    <ClInclude Include="SGRTx2Lib\GClassMacro.h" />
-    <ClInclude Include="SGRTx2Lib\GColor.h" />
-    <ClInclude Include="SGRTx2Lib\GCriticalSection.h" />
-    <ClInclude Include="SGRTx2Lib\GDimension.h" />
-    <ClInclude Include="SGRTx2Lib\GDistributedPhotonRayTracer.h">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+    <ClInclude Include="SGRTx2Lib\GBase.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClInclude>
-    <ClInclude Include="SGRTx2Lib\GError.h" />
-    <ClInclude Include="SGRTx2Lib\GErrorManager.h" />
-    <ClInclude Include="SGRTx2Lib\GEvent.h" />
-    <ClInclude Include="SGRTx2Lib\GGLUtil.h" />
-    <ClInclude Include="SGRTx2Lib\GGPUExperimentalRayTracer.h" />
-    <ClInclude Include="SGRTx2Lib\GGPURayTracer.h" />
-    <ClInclude Include="SGRTx2Lib\GGPURayTracerForPaper.h" />
-    <ClInclude Include="SGRTx2Lib\GGridBox.h" />
-    <ClInclude Include="SGRTx2Lib\GImageBuffer.h" />
-    <ClInclude Include="SGRTx2Lib\GIntersectionPointMap.h" />
-    <ClInclude Include="SGRTx2Lib\GKDTreeNode.h" />
-    <ClInclude Include="SGRTx2Lib\GKDTreeOption.h" />
-    <ClInclude Include="SGRTx2Lib\GKDTreeStructure.h" />
-    <ClInclude Include="SGRTx2Lib\GLogListener.h" />
-    <ClInclude Include="SGRTx2Lib\GLogManager.h" />
-    <ClInclude Include="SGRTx2Lib\GMaterial.h" />
-    <ClInclude Include="SGRTx2Lib\GMatrix4.h" />
-    <ClInclude Include="SGRTx2Lib\GObject.h" />
-    <ClInclude Include="SGRTx2Lib\GObjectNumberGenerator.h" />
-    <ClInclude Include="SGRTx2Lib\GOBJFileLoader.h" />
-    <ClInclude Include="SGRTx2Lib\GOpenGLContext.h" />
-    <ClInclude Include="SGRTx2Lib\GOpenGLPipelineRenderer.h" />
+    <ClInclude Include="SGRTx2Lib\GBaseThread.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GBoundingBox.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GCamera.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GClassMacro.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GColor.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GCriticalSection.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GDimension.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GDistributedPhotonRayTracer.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GError.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GErrorManager.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GEvent.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GGLUtil.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GGPUExperimentalRayTracer.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GGPURayTracer.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GGPURayTracerForPaper.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GGridBox.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GImageBuffer.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GIntersectionPointMap.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GKDTreeNode.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GKDTreeOption.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GKDTreeStructure.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GLogListener.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GLogManager.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GMaterial.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GMatrix4.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GObject.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GObjectNumberGenerator.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GOBJFileLoader.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GOpenGLContext.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GOpenGLPipelineRenderer.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
     <ClInclude Include="SGRTx2Lib\GPhotonMappingOption.h">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClInclude>
     <ClInclude Include="SGRTx2Lib\GPhotonMapRayTracer.h">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClInclude>
-    <ClInclude Include="SGRTx2Lib\GPoint.h" />
-    <ClInclude Include="SGRTx2Lib\GPolygonGeometry.h" />
-    <ClInclude Include="SGRTx2Lib\GPolygonObject.h" />
-    <ClInclude Include="SGRTx2Lib\GRAY.h" />
-    <ClInclude Include="SGRTx2Lib\GRayProfiler.h" />
-    <ClInclude Include="SGRTx2Lib\GRayProfilerOption.h" />
-    <ClInclude Include="SGRTx2Lib\GRayProfilerPipeline.h" />
-    <ClInclude Include="SGRTx2Lib\GRayTracerProfiler.h" />
-    <ClInclude Include="SGRTx2Lib\GRenderCommon.h" />
-    <ClInclude Include="SGRTx2Lib\GRenderer.h" />
-    <ClInclude Include="SGRTx2Lib\GRenderOption.h" />
-    <ClInclude Include="SGRTx2Lib\GRenderSystem.h" />
-    <ClInclude Include="SGRTx2Lib\GScene.h" />
-    <ClInclude Include="SGRTx2Lib\GSceneManager.h" />
-    <ClInclude Include="SGRTx2Lib\GSpatialStructure.h" />
-    <ClInclude Include="SGRTx2Lib\GTexture.h" />
-    <ClInclude Include="SGRTx2Lib\GTextureManager.h" />
-    <ClInclude Include="SGRTx2Lib\GThread.h" />
-    <ClInclude Include="SGRTx2Lib\GThreadContext.h" />
-    <ClInclude Include="SGRTx2Lib\GThreadingOption.h" />
-    <ClInclude Include="SGRTx2Lib\GThreadManager.h" />
-    <ClInclude Include="SGRTx2Lib\GThreadWork.h" />
-    <ClInclude Include="SGRTx2Lib\GTimer.h" />
-    <ClInclude Include="SGRTx2Lib\GTriangleWrapper.h" />
-    <ClInclude Include="SGRTx2Lib\GTriangleWrapperList.h" />
-    <ClInclude Include="SGRTx2Lib\GUtil.h" />
-    <ClInclude Include="SGRTx2Lib\GViewerModeRenderer.h" />
-    <ClInclude Include="SGRTx2Lib\SSERenderCommon.h" />
-    <ClInclude Include="SGRTx2Lib\SSERenderData.h" />
-    <ClInclude Include="SGRTx2Lib\SSERenderPipeline.h" />
-    <ClInclude Include="SGRTx2Lib\SSE_common.h" />
-    <ClInclude Include="SGRTx2Lib\SSE_math.h" />
-    <ClInclude Include="sgrt_interface.h" />
+    <ClInclude Include="SGRTx2Lib\GPoint.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GPolygonGeometry.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GPolygonObject.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GRAY.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GRayProfiler.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GRayProfilerOption.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GRayProfilerPipeline.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GRayTracerProfiler.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GRenderCommon.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GRenderer.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GRenderOption.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GRenderSystem.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GScene.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GSceneManager.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GSpatialStructure.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GTexture.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GTextureManager.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GThread.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GThreadContext.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GThreadingOption.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GThreadManager.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GThreadWork.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GTimer.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GTriangleWrapper.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GTriangleWrapperList.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GUtil.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\GViewerModeRenderer.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\SSERenderCommon.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\SSERenderData.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\SSERenderPipeline.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\SSE_common.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\SSE_math.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="sgrt_interface.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
     <ClInclude Include="SLMeshDataIO.h" />
   </ItemGroup>
   <ItemGroup>
@@ -359,21 +619,24 @@
       <TargetMachinePlatform Condition="'$(Configuration)|$(Platform)'=='Release|x64'">64</TargetMachinePlatform>
     </CudaCompile>
     <CudaCompile Include="SGRTx2Lib\cudaPhotonMapping.cu">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <TargetMachinePlatform Condition="'$(Configuration)|$(Platform)'=='Release|x64'">64</TargetMachinePlatform>
     </CudaCompile>
     <CudaCompile Include="SGRTx2Lib\cudaPhotonMappingKernel.cu">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <TargetMachinePlatform Condition="'$(Configuration)|$(Platform)'=='Release|x64'">64</TargetMachinePlatform>
     </CudaCompile>
     <CudaCompile Include="SGRTx2Lib\cudaRenderPipeline.cu">
       <TargetMachinePlatform Condition="'$(Configuration)|$(Platform)'=='Release|x64'">64</TargetMachinePlatform>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </CudaCompile>
     <CudaCompile Include="SGRTx2Lib\cudaRenderPipelineCommonKernel.cu">
       <TargetMachinePlatform Condition="'$(Configuration)|$(Platform)'=='Release|x64'">64</TargetMachinePlatform>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </CudaCompile>
     <CudaCompile Include="SGRTx2Lib\cudaRenderPipelineKernel.cu">
       <TargetMachinePlatform Condition="'$(Configuration)|$(Platform)'=='Release|x64'">64</TargetMachinePlatform>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </CudaCompile>
   </ItemGroup>
   <ItemGroup>

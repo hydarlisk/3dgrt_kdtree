@@ -14,6 +14,8 @@
 #define MAX_FOVY 90.0
 #define EPSILON 0.00001
 
+//using namespace KDTConverter;
+//using namespace KDTConstructor;
 
 typedef enum { FLAT_SHADING, SMOOTH_SHADING } OpenGLShadingMode;
 typedef enum { LINE, FILL } OpenGLPolygonMode;
@@ -45,3 +47,5 @@ typedef struct _UIParameters {
 
 	int composite_object_read;
 } UIParameters;
+
+void append_mesh_geom_to_composite_object(CompositeObject* c_object, MeshGeom* mesh_geom, int mat_type, float* AABB);

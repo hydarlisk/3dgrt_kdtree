@@ -1,8 +1,10 @@
+#include "cudaRenderCommon.cuh"
 #include "GKDTreeStructure.h"
 #include "GPolygonObject.h"
 #include <math.h>
 #include "assert.h"
 #include "cudaRenderPipeline.h"
+#include "cudaRenderPipeline.cu"
 #include "GTextureManager.h"
 #include "GlobalOption.h"
 
@@ -119,8 +121,8 @@ GError GKDTreeStructure::initialize()
 		pTriangleInfos[ i ].boundingBox = m_pSceneTriangleList->getTriangleWrapper( i )->m_BBox;
 	}
 
-	BoundEdge *bEdge = new BoundEdge[ m_iSceneTriangleCount * 2 ];
-	memset( bEdge, 0x00, sizeof( BoundEdge ) * m_iSceneTriangleCount * 2 );
+	BoundEdge2 *bEdge = new BoundEdge2[ m_iSceneTriangleCount * 2 ];
+	memset( bEdge, 0x00, sizeof( BoundEdge2 ) * m_iSceneTriangleCount * 2 );
 	
 	m_iAllocatedkdNodeCount = 524288;
 	m_pKDTreeNodes = new kdtreeNode[ m_iAllocatedkdNodeCount ];
@@ -540,7 +542,7 @@ int GKDTreeStructure::getTriangleCount()
 	return m_iSceneTriangleCount;
 }
 
-void GKDTreeStructure::buildKDTree(	BoundEdge *bEdge, const TriangleInfo *pTriangleInfos, 
+void GKDTreeStructure::buildKDTree(	BoundEdge2 *bEdge, const TriangleInfo *pTriangleInfos, 
 								    unsigned int triangleSize, GBoundingBox bbox, 
 									unsigned int inNodeLevel, kdtreeNode *inNode )
 {
@@ -685,8 +687,8 @@ inline void GKDTreeStructure::setLeafNode( kdtreeNode* pNode, unsigned int _obje
 
 int GKDTreeStructure::compare(const void *elem0, const void *elem1)
 {
-	const BoundEdge* obj0 = (const BoundEdge *)elem0;
-	const BoundEdge* obj1 = (const BoundEdge *)elem1;
+	const BoundEdge2* obj0 = (const BoundEdge2 *)elem0;
+	const BoundEdge2* obj1 = (const BoundEdge2 *)elem1;
 
 	return obj0->t == obj1->t ?
 		(obj0->triangleInfo->offset > obj1->triangleInfo->offset ? 1 : -1)
@@ -696,17 +698,17 @@ int GKDTreeStructure::compare(const void *elem0, const void *elem1)
 
 void GKDTreeStructure::setBoundEdgeList( const int axis, 
 										 const TriangleInfo *pTriangleInfo, 
-										 const unsigned int n_bEdge, BoundEdge *bEdge )
+										 const unsigned int n_bEdge, BoundEdge2 *bEdge )
 {
 	int index = 0;
 
 	for( unsigned int i = 0; i < n_bEdge; ) {
 		GBoundingBox worldbound = pTriangleInfo[index].boundingBox;
-		bEdge[i].type = BoundEdge::START;	bEdge[i].triangleInfo = &pTriangleInfo[index];
+		bEdge[i].type = BoundEdge2::START;	bEdge[i].triangleInfo = &pTriangleInfo[index];
 		bEdge[i].t = worldbound.m_Min[axis];
 		bEdge[i].isPlanar = ( worldbound.m_Min[axis] == worldbound.m_Max[axis] );
 		i++;
-		bEdge[i].type = BoundEdge::END;		bEdge[i].triangleInfo = &pTriangleInfo[index];
+		bEdge[i].type = BoundEdge2::END;		bEdge[i].triangleInfo = &pTriangleInfo[index];
 		bEdge[i].t = worldbound.m_Max[axis];
 		bEdge[i].isPlanar = ( worldbound.m_Min[axis] == worldbound.m_Max[axis] );
 		i++; index++;
@@ -715,22 +717,22 @@ void GKDTreeStructure::setBoundEdgeList( const int axis,
 	/**
 	 *	bound edge sorting
 	 */
-	qsort( &( bEdge[0] ), n_bEdge, sizeof( BoundEdge ), compare );
+	qsort( &( bEdge[0] ), n_bEdge, sizeof( BoundEdge2 ), compare );
 }
 
 void GKDTreeStructure::setBoundEdgeList2( const int axis, 
 										 const TriangleInfo *pTriangleInfo, 
-										 const unsigned int n_bEdge, BoundEdge *bEdge, spbean *bean )
+										 const unsigned int n_bEdge, BoundEdge2 *bEdge, spbean *bean )
 {
 	int index = 0, i, j;
 
 	for( i = 0; i < (int)n_bEdge; ) {
 		GBoundingBox worldbound = pTriangleInfo[index].boundingBox;
-		bEdge[i].type = BoundEdge::START;	bEdge[i].triangleInfo = &pTriangleInfo[index];
+		bEdge[i].type = BoundEdge2::START;	bEdge[i].triangleInfo = &pTriangleInfo[index];
 		bEdge[i].t = worldbound.m_Min[axis];
 		bEdge[i].isPlanar = ( worldbound.m_Min[axis] == worldbound.m_Max[axis] );
 		i++;
-		bEdge[i].type = BoundEdge::END;		bEdge[i].triangleInfo = &pTriangleInfo[index];
+		bEdge[i].type = BoundEdge2::END;		bEdge[i].triangleInfo = &pTriangleInfo[index];
 		bEdge[i].t = worldbound.m_Max[axis];
 		bEdge[i].isPlanar = ( worldbound.m_Min[axis] == worldbound.m_Max[axis] );
 		i++; index++;
@@ -739,13 +741,13 @@ void GKDTreeStructure::setBoundEdgeList2( const int axis,
 	/**
 	 *	bound edge sorting
 	 */
-	qsort( &( bEdge[0] ), n_bEdge, sizeof( BoundEdge ), compare );
+	qsort( &( bEdge[0] ), n_bEdge, sizeof( BoundEdge2 ), compare );
 
 	for( i = 0 ; i < (int)n_bEdge ; i++ )
 		bean[i].flag = -1;
 
 	for( i = 0 ; i < (int)n_bEdge; i++){
-		if(bEdge[i].type == BoundEdge::START){
+		if(bEdge[i].type == BoundEdge2::START){
 			for( j = i+1 ; j < (int)n_bEdge ; j++){
 				bean[j - 1].flag = 1;
 				bean[j - 1].t = bEdge[j-1].t;
@@ -759,7 +761,7 @@ void GKDTreeStructure::setBoundEdgeList2( const int axis,
 
 void GKDTreeStructure::tryEmptySplit( const int axis, GBoundingBox inBBox, 
 								 const TriangleInfo *pTriangles, const int triangleSize, 
-								 BoundEdge *bEdge,  SplitCost &bestCost, bool emptyTestOnly )
+								 BoundEdge2 *bEdge,  SplitCost &bestCost, bool emptyTestOnly )
 {
 	const int axis1 = ( axis + 1 ) % 3, axis2 = ( axis + 2 ) % 3;
 	GVector cell_extent( inBBox.m_Max - inBBox.m_Min );
@@ -796,7 +798,7 @@ void GKDTreeStructure::tryEmptySplit( const int axis, GBoundingBox inBBox,
 
 		for ( unsigned int i = 0; i < n_bEdge; i++ ) {
 
-			BoundEdge curr_bEdge = bEdge[i];
+			BoundEdge2 curr_bEdge = bEdge[i];
 
 			//planar는 open과 close에 둘 다 포함됨
 			open += local_open + num_planars;
@@ -809,11 +811,11 @@ void GKDTreeStructure::tryEmptySplit( const int axis, GBoundingBox inBBox,
 				//똑같은게 여러개 있을 때는 제일 오른쪽에서만 SAH 계산을 한다.
 				for ( j = i; j < (int)n_bEdge; j++ )
 				{
-					BoundEdge tmp_bEdge = bEdge[j];
+					BoundEdge2 tmp_bEdge = bEdge[j];
 					if ( tmp_bEdge.t != cur_position) break;
 
 					const bool
-						is_left		= (tmp_bEdge.type == BoundEdge::START),
+						is_left		= (tmp_bEdge.type == BoundEdge2::START),
 						is_planar	= tmp_bEdge.isPlanar;//(axis);
 
 					//카운팅
@@ -838,7 +840,7 @@ void GKDTreeStructure::tryEmptySplit( const int axis, GBoundingBox inBBox,
 			{
 				float cur_position2 = cur_position;
 /*
-				if(curr_bEdge.type == BoundEdge::START ){
+				if(curr_bEdge.type == BoundEdge2::START ){
 					j = i;
 					while(  j >= 0 && fabs(curr_bEdge.t - bean[j].t) < 0.000001 ) j--;					
 					for( ; j >= 0 ; j--){
@@ -851,7 +853,7 @@ void GKDTreeStructure::tryEmptySplit( const int axis, GBoundingBox inBBox,
 				}
 
 */
-				if(curr_bEdge.type == BoundEdge::END ){
+				if(curr_bEdge.type == BoundEdge2::END ){
 					j = i + 1;
 					while(  j < (int)n_bEdge -1 && fabs(curr_bEdge.t - bean[j].t) < 0.000001 ) j++;
 					j--;
@@ -877,13 +879,13 @@ void GKDTreeStructure::tryEmptySplit( const int axis, GBoundingBox inBBox,
 
 				//작은 셀이거나, 한쪽이 비어 있다면 다른쪽 셀로 planar가 간다.
 
-				int planar_side = area_l < area_r ? BoundEdge::START : BoundEdge::END;
+				int planar_side = area_l < area_r ? BoundEdge2::START : BoundEdge2::END;
 				if ((n_leftOnly+n_cross == 0) | (n_rightOnly+n_cross == 0))
-					planar_side = n_leftOnly == 0 ? BoundEdge::END : BoundEdge::START;
+					planar_side = n_leftOnly == 0 ? BoundEdge2::END : BoundEdge2::START;
 				//플라나를 한쪽으로 다 밀었으므로 없는 셀은 갯수를 0으로 세팅
 				const int
-					num_planar_left		= planar_side == BoundEdge::START ? num_planars : 0,
-					num_planar_right	= planar_side == BoundEdge::END ? num_planars : 0;
+					num_planar_left		= planar_side == BoundEdge2::START ? num_planars : 0,
+					num_planar_right	= planar_side == BoundEdge2::END ? num_planars : 0;
 
 				//최종적인 양쪽 갯수.
 				const int
@@ -951,7 +953,7 @@ void GKDTreeStructure::setSplitFunction( SPLIT_FUNCTION SplitFunctionEnum )
 
 void GKDTreeStructure::splitWithSAH( const int axis, GBoundingBox inBBox, 
 								 const TriangleInfo *pTriangles, const int triangleSize, 
-								 BoundEdge *bEdge,  SplitCost &bestCost, bool emptyTestOnly )
+								 BoundEdge2 *bEdge,  SplitCost &bestCost, bool emptyTestOnly )
 {
 	/**
 	 * 2009. 12. 02.
@@ -1015,7 +1017,7 @@ void GKDTreeStructure::splitWithSAH( const int axis, GBoundingBox inBBox,
 
 		for ( unsigned int i = 0; i < n_bEdge; i++ ) {
 
-			BoundEdge curr_bEdge = bEdge[i];
+			BoundEdge2 curr_bEdge = bEdge[i];
 
 			//planar는 open과 close에 둘 다 포함됨
 			// (원래는 2개(min/max)가 planar 한개로 계산 됐으므로 min->open, max->close 로 각각 들어감.)
@@ -1029,11 +1031,11 @@ void GKDTreeStructure::splitWithSAH( const int axis, GBoundingBox inBBox,
 				//똑같은게 여러개 있을 때는 제일 오른쪽에서만 SAH 계산을 한다.
 				for ( unsigned int j = i; j < n_bEdge; j++ )
 				{
-					BoundEdge tmp_bEdge = bEdge[j];
+					BoundEdge2 tmp_bEdge = bEdge[j];
 					if ( tmp_bEdge.t != cur_position) break;
 
 					const bool
-						is_left		= (tmp_bEdge.type == BoundEdge::START),
+						is_left		= (tmp_bEdge.type == BoundEdge2::START),
 						is_planar	= tmp_bEdge.isPlanar;//(axis);
 
 					//카운팅
@@ -1078,15 +1080,15 @@ void GKDTreeStructure::splitWithSAH( const int axis, GBoundingBox inBBox,
 				*/
 				{
 					//// 기본적으로 planar 삼각형들은 작은 곳으로 들어감 
-					//int planar_side = area_l < area_r ? BoundEdge::START : BoundEdge::END;
+					//int planar_side = area_l < area_r ? BoundEdge2::START : BoundEdge2::END;
 					//// 하지만 만약 planar 가 더 큰 곳으로 들어가서 다른 곳이 empty 가 될 경우는 더 큰 곳으로 들어감
 					//if ((n_leftOnly+n_cross == 0) || (n_rightOnly+n_cross == 0))
-					//	planar_side = n_leftOnly == 0 ? BoundEdge::END : BoundEdge::START;
+					//	planar_side = n_leftOnly == 0 ? BoundEdge2::END : BoundEdge2::START;
 
 					////플라나를 한쪽으로 다 밀었으므로 없는 셀은 갯수를 0으로 세팅
 					//const int
-					//	num_planar_left		= planar_side == BoundEdge::START ? num_planars : 0,
-					//	num_planar_right	= planar_side == BoundEdge::END ? num_planars : 0;
+					//	num_planar_left		= planar_side == BoundEdge2::START ? num_planars : 0,
+					//	num_planar_right	= planar_side == BoundEdge2::END ? num_planars : 0;
 
 					////최종적인 양쪽 갯수.
 					//const int
@@ -1157,7 +1159,7 @@ void GKDTreeStructure::splitWithSAH( const int axis, GBoundingBox inBBox,
 					if( SAH[0] <= SAH[1] ) //! planar 를 왼쪽에 넣는 것이 낫다면,
 					{
 						cost = SAH[0];
-						planar_side = BoundEdge::START;
+						planar_side = BoundEdge2::START;
 
 						num_left = cost_num_left[0];
 						num_right = cost_num_right[0];
@@ -1165,7 +1167,7 @@ void GKDTreeStructure::splitWithSAH( const int axis, GBoundingBox inBBox,
 					else
 					{
 						cost = SAH[1];
-						planar_side = BoundEdge::END;
+						planar_side = BoundEdge2::END;
 						num_left = cost_num_left[1];
 						num_right = cost_num_right[1];
 					}
@@ -1193,7 +1195,7 @@ void GKDTreeStructure::splitWithSAH( const int axis, GBoundingBox inBBox,
 
 void GKDTreeStructure::splitWithSAH_ExtraCost( const int axis, GBoundingBox inBBox, 
 								 const TriangleInfo *pTriangles, const int triangleSize, 
-								 BoundEdge *bEdge,  SplitCost &bestCost, bool emptyTestOnly )
+								 BoundEdge2 *bEdge,  SplitCost &bestCost, bool emptyTestOnly )
 {
 	const int axis1 = ( axis + 1 ) % 3, axis2 = ( axis + 2 ) % 3;
 	GVector cell_extent( inBBox.m_Max - inBBox.m_Min );
@@ -1228,7 +1230,7 @@ void GKDTreeStructure::splitWithSAH_ExtraCost( const int axis, GBoundingBox inBB
 
 		for ( unsigned int i = 0; i < n_bEdge; i++ ) {
 
-			BoundEdge curr_bEdge = bEdge[i];
+			BoundEdge2 curr_bEdge = bEdge[i];
 
 			//planar는 open과 close에 둘 다 포함됨
 			open += local_open + num_planars;
@@ -1241,11 +1243,11 @@ void GKDTreeStructure::splitWithSAH_ExtraCost( const int axis, GBoundingBox inBB
 				//똑같은게 여러개 있을 때는 제일 오른쪽에서만 SAH 계산을 한다.
 				for ( unsigned int j = i; j < n_bEdge; j++ )
 				{
-					BoundEdge tmp_bEdge = bEdge[j];
+					BoundEdge2 tmp_bEdge = bEdge[j];
 					if ( tmp_bEdge.t != cur_position) break;
 
 					const bool
-						is_left		= (tmp_bEdge.type == BoundEdge::START),
+						is_left		= (tmp_bEdge.type == BoundEdge2::START),
 						is_planar	= tmp_bEdge.isPlanar;//(axis);
 
 					//카운팅
@@ -1282,13 +1284,13 @@ void GKDTreeStructure::splitWithSAH_ExtraCost( const int axis, GBoundingBox inBB
 
 				//작은 셀이거나, 한쪽이 비어 있다면 다른쪽 셀로 planar가 간다.
 
-				int planar_side = area_l < area_r ? BoundEdge::START : BoundEdge::END;	
+				int planar_side = area_l < area_r ? BoundEdge2::START : BoundEdge2::END;	
 				if ((n_leftOnly+n_cross == 0) | (n_rightOnly+n_cross == 0))
-					planar_side = n_leftOnly == 0 ? BoundEdge::END : BoundEdge::START;
+					planar_side = n_leftOnly == 0 ? BoundEdge2::END : BoundEdge2::START;
 				//플라나를 한쪽으로 다 밀었으므로 없는 셀은 갯수를 0으로 세팅
 				const int
-					num_planar_left		= planar_side == BoundEdge::START ? num_planars : 0,
-					num_planar_right	= planar_side == BoundEdge::END ? num_planars : 0;
+					num_planar_left		= planar_side == BoundEdge2::START ? num_planars : 0,
+					num_planar_right	= planar_side == BoundEdge2::END ? num_planars : 0;
 
 				//최종적인 양쪽 갯수.
 				const int
@@ -1347,7 +1349,7 @@ void GKDTreeStructure::splitWithSAH_ExtraCost( const int axis, GBoundingBox inBB
 
 void GKDTreeStructure::splitWithVisibility( const int axis, GBoundingBox inBBox, 
 								 const TriangleInfo *pTriangles, const int triangleSize, 
-								 BoundEdge *bEdge,  SplitCost &bestCost, bool emptyTestOnly )
+								 BoundEdge2 *bEdge,  SplitCost &bestCost, bool emptyTestOnly )
 {
 	const int axis1 = ( axis + 1 ) % 3, axis2 = ( axis + 2 ) % 3;
 	GVector cell_extent( inBBox.m_Max - inBBox.m_Min );
@@ -1382,7 +1384,7 @@ void GKDTreeStructure::splitWithVisibility( const int axis, GBoundingBox inBBox,
 
 		for ( unsigned int i = 0; i < n_bEdge; i++ ) {
 
-			BoundEdge curr_bEdge = bEdge[i];
+			BoundEdge2 curr_bEdge = bEdge[i];
 
 			//planar는 open과 close에 둘 다 포함됨
 			open += local_open + num_planars;
@@ -1395,11 +1397,11 @@ void GKDTreeStructure::splitWithVisibility( const int axis, GBoundingBox inBBox,
 				//똑같은게 여러개 있을 때는 제일 오른쪽에서만 SAH 계산을 한다.
 				for ( unsigned int j = i; j < n_bEdge; j++ )
 				{
-					BoundEdge tmp_bEdge = bEdge[j];
+					BoundEdge2 tmp_bEdge = bEdge[j];
 					if ( tmp_bEdge.t != cur_position) break;
 
 					const bool
-						is_left		= (tmp_bEdge.type == BoundEdge::START),
+						is_left		= (tmp_bEdge.type == BoundEdge2::START),
 						is_planar	= tmp_bEdge.isPlanar;//(axis);
 
 					//카운팅
@@ -1436,13 +1438,13 @@ void GKDTreeStructure::splitWithVisibility( const int axis, GBoundingBox inBBox,
 
 				//작은 셀이거나, 한쪽이 비어 있다면 다른쪽 셀로 planar가 간다.
 
-				int planar_side = area_l < area_r ? BoundEdge::START : BoundEdge::END;	
+				int planar_side = area_l < area_r ? BoundEdge2::START : BoundEdge2::END;	
 				if ((n_leftOnly+n_cross == 0) | (n_rightOnly+n_cross == 0))
-					planar_side = n_leftOnly == 0 ? BoundEdge::END : BoundEdge::START;
+					planar_side = n_leftOnly == 0 ? BoundEdge2::END : BoundEdge2::START;
 				//플라나를 한쪽으로 다 밀었으므로 없는 셀은 갯수를 0으로 세팅
 				const int
-					num_planar_left		= planar_side == BoundEdge::START ? num_planars : 0,
-					num_planar_right	= planar_side == BoundEdge::END ? num_planars : 0;
+					num_planar_left		= planar_side == BoundEdge2::START ? num_planars : 0,
+					num_planar_right	= planar_side == BoundEdge2::END ? num_planars : 0;
 
 				//최종적인 양쪽 갯수.
 				const int
@@ -1487,7 +1489,7 @@ void GKDTreeStructure::splitWithVisibility( const int axis, GBoundingBox inBBox,
 }
 
 inline void GKDTreeStructure::pushChildTriangles( const unsigned n_bEdge, 
-												  const BoundEdge *bEdge, 
+												  const BoundEdge2 *bEdge, 
 												  TriangleInfo *pLeftTriangles, 
 												  TriangleInfo *pRightTriangles, 
 												  const SplitCost &bestCost )
@@ -1497,19 +1499,19 @@ inline void GKDTreeStructure::pushChildTriangles( const unsigned n_bEdge,
 	for ( unsigned int i = 0; i < n_bEdge; ++i ) {
 		if( !bEdge[i].isPlanar ) {
 
-			if( bEdge[i].t < bestCost.splitPos && bEdge[i].type == BoundEdge::START )
+			if( bEdge[i].t < bestCost.splitPos && bEdge[i].type == BoundEdge2::START )
 				pLeftTriangles[ currLeftIndex++ ] = *(bEdge[i].triangleInfo);
-			else if(bEdge[i].t > bestCost.splitPos && bEdge[i].type == BoundEdge::END)
+			else if(bEdge[i].t > bestCost.splitPos && bEdge[i].type == BoundEdge2::END)
 				pRightTriangles[currRightIndex++] = *(bEdge[i].triangleInfo);
 
-		} else if(bEdge[i].type == BoundEdge::START) {
+		} else if(bEdge[i].type == BoundEdge2::START) {
 
 			if(bEdge[i].t < bestCost.splitPos)
 				pLeftTriangles[ currLeftIndex++ ] = *(bEdge[i].triangleInfo);
 			else if(bEdge[i].t > bestCost.splitPos)
 				pRightTriangles[ currRightIndex++ ] = *(bEdge[i].triangleInfo);
 			else { 
-				if(bestCost.planar_side == BoundEdge::START)
+				if(bestCost.planar_side == BoundEdge2::START)
 					pLeftTriangles[ currLeftIndex++ ] = *(bEdge[i].triangleInfo);
 				else 
 				pRightTriangles[ currRightIndex++ ] = *(bEdge[i].triangleInfo);
@@ -1711,8 +1713,8 @@ bool GKDTreeStructure::loadfromFile_EmptySAH( const char *filename )
 		pTriangleInfos[ i ].boundingBox = m_pSceneTriangleList->getTriangleWrapper( i )->m_BBox;
 	}
 
-	BoundEdge *bEdge = new BoundEdge[ m_iSceneTriangleCount * 2 ];
-	memset( bEdge, 0x00, sizeof( BoundEdge ) * m_iSceneTriangleCount * 2 );
+	BoundEdge2 *bEdge = new BoundEdge2[ m_iSceneTriangleCount * 2 ];
+	memset( bEdge, 0x00, sizeof( BoundEdge2 ) * m_iSceneTriangleCount * 2 );
 
 	int i;
 	char data[1024] = { 0x00, };
@@ -1736,7 +1738,7 @@ bool GKDTreeStructure::loadfromFile_EmptySAH( const char *filename )
 	}
 	m_pKDTreeNodes = new kdtreeNode[ m_iAllocatedkdNodeCount ];
 
-	KdTreeNode* n = (KdTreeNode*)m_pKDTreeNodes;
+	KdTreeNode2* n = (KdTreeNode2*)m_pKDTreeNodes;
 	for ( i = 0; i < nTreeNodeCount; i++, n++ )	{
 		fgets( data, 1024, f );
 		if (data[0] == 'L') {
@@ -1794,17 +1796,17 @@ bool GKDTreeStructure::loadfromFile_EmptySAH( const char *filename )
 	const int    stackmax   = (nTreeNodeCount + 1)/2;		// 이미 구성된 Empty SAH tree 의 최대 가능한 level 크기
 	unsigned int stackIndex = 0;
 	GBoundingBox*	pStack_BBox  = (GBoundingBox*) malloc (stackmax * sizeof (GBoundingBox));
-	KdTreeNode**	pStack_Node  = (kdtreeNode**)  malloc (stackmax * sizeof (kdtreeNode*));
+	KdTreeNode2**	pStack_Node  = (kdtreeNode**)  malloc (stackmax * sizeof (kdtreeNode*));
 	int*			pStack_Depth = (int*)  malloc (stackmax * sizeof (int));
 	GBoundingBox	curBBox		 = m_SceneBBox;
-	KdTreeNode*		curNode		 = (KdTreeNode*)m_pKDTreeNodes;
+	KdTreeNode2*		curNode		 = (KdTreeNode2*)m_pKDTreeNodes;
 
 	while (1) {
 		while (IS_LEAF(*curNode) == 0) {
 			const float node_split = SPLIT_POS(*curNode);
 			const unsigned int dim = SPLIT_AXIS(*curNode);
-			KdTreeNode *FrontSideSon	= &m_pKDTreeNodes[FIRST_CHILD_OFFSET(*curNode)];
-			KdTreeNode *BackSideSon		= &m_pKDTreeNodes[FIRST_CHILD_OFFSET(*curNode) + 1];
+			KdTreeNode2 *FrontSideSon	= &m_pKDTreeNodes[FIRST_CHILD_OFFSET(*curNode)];
+			KdTreeNode2 *BackSideSon		= &m_pKDTreeNodes[FIRST_CHILD_OFFSET(*curNode) + 1];
 
 			GBoundingBox FrontSideBBox	= curBBox;	FrontSideBBox.m_Max[ dim ] = node_split;
 			GBoundingBox BackSideBBox	= curBBox;	BackSideBBox.m_Min[ dim ]  = node_split;
@@ -1932,8 +1934,8 @@ bool GKDTreeStructure::loadfromFile_SAH( const char *filename )
 		pTriangleInfos[ i ].boundingBox = m_pSceneTriangleList->getTriangleWrapper( i )->m_BBox;
 	}
 
-	BoundEdge *bEdge = new BoundEdge[ m_iSceneTriangleCount * 2 ];
-	memset( bEdge, 0x00, sizeof( BoundEdge ) * m_iSceneTriangleCount * 2 );
+	BoundEdge2 *bEdge = new BoundEdge2[ m_iSceneTriangleCount * 2 ];
+	memset( bEdge, 0x00, sizeof( BoundEdge2 ) * m_iSceneTriangleCount * 2 );
 #endif
 
 
@@ -1950,7 +1952,7 @@ bool GKDTreeStructure::loadfromFile_SAH( const char *filename )
 	m_iAllocatedkdNodeCount = m_iKDTreeNodeCount = nTreeNodeCount;
 	m_pKDTreeNodes = new kdtreeNode[ m_iAllocatedkdNodeCount ];
 
-	KdTreeNode* n = (KdTreeNode*)m_pKDTreeNodes;
+	KdTreeNode2* n = (KdTreeNode2*)m_pKDTreeNodes;
 	for ( i = 0; i < nTreeNodeCount; i++, n++ )	{
 		fgets( data, 1024, f );
 		if (data[0] == 'L') {
@@ -2006,7 +2008,7 @@ bool GKDTreeStructure::saveStructureToFile( const char *filename )
 	int nTreeNodeCount = m_iKDTreeNodeCount;
 	fwrite( &nTreeNodeCount, 4, 1, f );						// 전체 node 개수 write(4)
 
-	KdTreeNode* node = &m_pKDTreeNodes[0];
+	KdTreeNode2* node = &m_pKDTreeNodes[0];
 
 	for ( i = 0; i < nTreeNodeCount; i++, node++ ) {
 		if (IS_LEAF(*node) == 0) {
@@ -2033,7 +2035,7 @@ bool GKDTreeStructure::saveStructureToFile( const char *filename )
 	int nTreeNodeCount = m_iKDTreeNodeCount;
 	fprintf(f, "n%d\n", nTreeNodeCount);
 
-	KdTreeNode* node = &m_pKDTreeNodes[0];
+	KdTreeNode2* node = &m_pKDTreeNodes[0];
 
 	for ( i = 0; i < nTreeNodeCount; i++, node++ ) {
 		if (IS_LEAF(*node) == 0) {

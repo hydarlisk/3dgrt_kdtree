@@ -1,6 +1,7 @@
 #include "cudaRenderPipelineCommonKernel.cu"
 #include "cudaPhotonMapping.cuh"
 #include "cuda_math.h"
+#include <cuda_texture_types.h>
 
 #define VALID_COSINE_VALUE		0.6f
 #define E						2.71828183f

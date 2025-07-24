@@ -39,7 +39,21 @@ void GTriangleWrapper::getPoint( GPoint &point0, GPoint &point1, GPoint &point2 
 	point1.setPoint( p1[0], p1[1], p1[2] );
 	point2.setPoint( p2[0], p2[1], p2[2] );
 }
-
+//shyun
+void GTriangleWrapper::setPoint(GPoint& point0, GPoint& point1, GPoint& point2)
+{
+	//p0 = point0.getPoint();
+	p0[0] = point0.getPoint()[0];
+	p0[1] = point0.getPoint()[1];
+	p0[2] = point0.getPoint()[2];
+	p1[0] = point1.getPoint()[0];
+	p1[1] = point1.getPoint()[1];
+	p1[2] = point1.getPoint()[2];
+	p2[0] = point2.getPoint()[0];
+	p2[1] = point2.getPoint()[1];
+	p2[2] = point2.getPoint()[2];
+}
+//shyun end
 GVector GTriangleWrapper::calBarycentricNormal( float alpha, float beta, float gamma )
 {
 	return m_pObject->calBarycentricNormal( indexInObject, alpha, beta, gamma );

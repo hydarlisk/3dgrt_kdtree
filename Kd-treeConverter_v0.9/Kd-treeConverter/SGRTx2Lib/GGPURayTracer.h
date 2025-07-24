@@ -7,6 +7,7 @@
 #include "GIntersectionPointMap.h"
 #include "GKDTreeStructure.h"
 #include "cudaRenderPipeline.h"
+#include "cudaRenderPipeline.cu"
 
 /**
  *	기본적으로 Path Tracing 을 사용하는 렌더러

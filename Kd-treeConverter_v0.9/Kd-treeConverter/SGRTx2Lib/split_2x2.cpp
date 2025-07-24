@@ -94,7 +94,7 @@ void SSERenderPipeline::Split_InitPkt2x2_ShwRay(void)
 // SSERenderPipeline::IsectPacket
 //		Intersection check
 // ------------------------------------------------------------------------------------------------
-bool SSERenderPipeline::Split_Isect2x2_PlaneTest_PriRay( TriAccel &acc, int nIdx, RMASK &Mask_Hit, RDATA &f, int temp )
+bool SSERenderPipeline::Split_Isect2x2_PlaneTest_PriRay( TriAccel2 &acc, int nIdx, RMASK &Mask_Hit, RDATA &f, int temp )
 {
 	_sse_2x2_raypacket	*rp	= &m_RayPk2x2[nIdx];
 	_sse_2x2_isect		*is	= &m_Isect2x2[nIdx];
@@ -118,7 +118,7 @@ bool SSERenderPipeline::Split_Isect2x2_PlaneTest_PriRay( TriAccel &acc, int nIdx
 	return true;
 }
 
-bool SSERenderPipeline::Split_Isect2x2_TriUVTest_PriRay( TriAccel &acc, int nIdx, RMASK &Mask_Hit, RDATA &f, RDATA &lambda, RDATA &mue, int temp )
+bool SSERenderPipeline::Split_Isect2x2_TriUVTest_PriRay( TriAccel2 &acc, int nIdx, RMASK &Mask_Hit, RDATA &f, RDATA &lambda, RDATA &mue, int temp )
 {
 	_sse_2x2_raypacket	*rp	= &m_RayPk2x2[nIdx];
 	_sse_2x2_isect		*is	= &m_Isect2x2[nIdx];
@@ -144,7 +144,7 @@ bool SSERenderPipeline::Split_Isect2x2_TriUVTest_PriRay( TriAccel &acc, int nIdx
 	return true;
 }
 
-bool SSERenderPipeline::Split_Isect2x2_PlaneTest_SecRay( TriAccel &acc, int nIdx, RMASK &Mask_Hit, RDATA &f )
+bool SSERenderPipeline::Split_Isect2x2_PlaneTest_SecRay( TriAccel2 &acc, int nIdx, RMASK &Mask_Hit, RDATA &f )
 {
 	_sse_2x2_raypacket	*rp	= &m_RayPk2x2[nIdx];
 	_sse_2x2_isect		*is	= &m_Isect2x2[nIdx];
@@ -168,7 +168,7 @@ bool SSERenderPipeline::Split_Isect2x2_PlaneTest_SecRay( TriAccel &acc, int nIdx
 	return true;
 }
 
-bool SSERenderPipeline::Split_Isect2x2_TriUVTest_SecRay( TriAccel &acc, int nIdx, RMASK &Mask_Hit, RDATA &f, RDATA &lambda, RDATA &mue )
+bool SSERenderPipeline::Split_Isect2x2_TriUVTest_SecRay( TriAccel2 &acc, int nIdx, RMASK &Mask_Hit, RDATA &f, RDATA &lambda, RDATA &mue )
 {
 	_sse_2x2_raypacket	*rp	= &m_RayPk2x2[nIdx];
 	_sse_2x2_isect		*is	= &m_Isect2x2[nIdx];
@@ -195,7 +195,7 @@ bool SSERenderPipeline::Split_Isect2x2_TriUVTest_SecRay( TriAccel &acc, int nIdx
 }
 
 
-bool SSERenderPipeline::Split_Isect2x2_PlaneTest_ShwRay( TriAccel &acc, int nIdx, RMASK &Mask_Hit, RDATA &f )
+bool SSERenderPipeline::Split_Isect2x2_PlaneTest_ShwRay( TriAccel2 &acc, int nIdx, RMASK &Mask_Hit, RDATA &f )
 {
 	_sse_2x2_raypacket	*rp	= &m_ShadowRayPk2x2[0];
 	_sse_2x2_isect		*is	= &m_ShadowIsect2x2[0];
@@ -219,7 +219,7 @@ bool SSERenderPipeline::Split_Isect2x2_PlaneTest_ShwRay( TriAccel &acc, int nIdx
 	return true;
 }
 
-bool SSERenderPipeline::Split_Isect2x2_TriUVTest_ShwRay( TriAccel &acc, int nIdx, RMASK &Mask_Hit, RDATA &f, RDATA &lambda, RDATA &mue )
+bool SSERenderPipeline::Split_Isect2x2_TriUVTest_ShwRay( TriAccel2 &acc, int nIdx, RMASK &Mask_Hit, RDATA &f, RDATA &lambda, RDATA &mue )
 {
 	_sse_2x2_raypacket	*rp	= &m_ShadowRayPk2x2[0];
 	_sse_2x2_isect		*is	= &m_ShadowIsect2x2[0];
@@ -245,7 +245,7 @@ bool SSERenderPipeline::Split_Isect2x2_TriUVTest_ShwRay( TriAccel &acc, int nIdx
 	return true;
 }
 
-void SSERenderPipeline::Split_Isect2x2__PriRay( const KdTreeNode *node, int nIdx, int temp )
+void SSERenderPipeline::Split_Isect2x2__PriRay( const KdTreeNode2 *node, int nIdx, int temp )
 {
 	int i;
 
@@ -258,7 +258,7 @@ void SSERenderPipeline::Split_Isect2x2__PriRay( const KdTreeNode *node, int nIdx
 
 	for (i = baseOffset; i < baseOffset+nObjs; i++) {
 		int     triID = m_Data->m_TriOffList[i];
-		TriAccel &acc = m_Data->m_TriAccList[triID];
+		TriAccel2 &acc = m_Data->m_TriAccList[triID];
 
 		RMASK Mask_Hit;
 
@@ -306,7 +306,7 @@ void SSERenderPipeline::Split_Isect2x2__PriRay( const KdTreeNode *node, int nIdx
 	}
 }
 
-void SSERenderPipeline::Split_Isect2x2__SecRay( const KdTreeNode *node, int nIdx )
+void SSERenderPipeline::Split_Isect2x2__SecRay( const KdTreeNode2 *node, int nIdx )
 {
 	int i;
 
@@ -319,7 +319,7 @@ void SSERenderPipeline::Split_Isect2x2__SecRay( const KdTreeNode *node, int nIdx
 
 	for (i = baseOffset; i < baseOffset+nObjs; i++) {
 		int     triID = m_Data->m_TriOffList[i];
-		TriAccel &acc = m_Data->m_TriAccList[triID];
+		TriAccel2 &acc = m_Data->m_TriAccList[triID];
 
 		RMASK Mask_Hit;
 
@@ -367,7 +367,7 @@ void SSERenderPipeline::Split_Isect2x2__SecRay( const KdTreeNode *node, int nIdx
 	}
 }
 
-void SSERenderPipeline::Split_Isect2x2__ShwRay( const KdTreeNode *node, int temp )
+void SSERenderPipeline::Split_Isect2x2__ShwRay( const KdTreeNode2 *node, int temp )
 {
 	int i;
 
@@ -380,7 +380,7 @@ void SSERenderPipeline::Split_Isect2x2__ShwRay( const KdTreeNode *node, int temp
 
 	for (i = baseOffset; i < baseOffset+nObjs; i++) {
 		int     triID = m_Data->m_TriOffList[i];
-		TriAccel &acc = m_Data->m_TriAccList[triID];
+		TriAccel2 &acc = m_Data->m_TriAccList[triID];
 
 		RMASK Mask_Hit;
 
@@ -452,7 +452,7 @@ void SSERenderPipeline::Split_Trace2x2__PriRay( int nIdx, int temp )
 	const unsigned int* ray_dir = &raydir[rp->RayWay][0][0];	// Get precomputed the traversal order (front/back)
 																//      as offsets for a bundle of rays with equal directions
 	// kdtree start node, stack index
-	KdTreeNode* node = &m_Data->m_pKDTreeNodes[0];
+	KdTreeNode2* node = &m_Data->m_pKDTreeNodes[0];
 
 	unsigned int stackIndex = 0;
 
@@ -503,8 +503,8 @@ void SSERenderPipeline::Split_Trace2x2__PriRay( int nIdx, int temp )
 		while (IS_LEAF(*node) == 0) {
 			const __m128 node_split4 = _mm_set_ps1(SPLIT_POS(*node));
 			const unsigned int dim	= SPLIT_AXIS(*node);
-			KdTreeNode *FrontSideSon	= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[dim << 1])];
-			KdTreeNode *BackSideSon		= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[(dim << 1)+1])];
+			KdTreeNode2 *FrontSideSon	= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[dim << 1])];
+			KdTreeNode2 *BackSideSon		= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[(dim << 1)+1])];
 
 			unsigned int d_near = 0, d_far = 0;
 			__m128 d;
@@ -580,7 +580,7 @@ void SSERenderPipeline::Split_Trace2x2__SecRay( int nIdx )
 	const unsigned int* ray_dir = &raydir[rp->RayWay][0][0];	// Get precomputed the traversal order (front/back)
 																//      as offsets for a bundle of rays with equal directions
 	// kdtree start node, stack index
-	KdTreeNode* node = &m_Data->m_pKDTreeNodes[0];
+	KdTreeNode2* node = &m_Data->m_pKDTreeNodes[0];
 
 	unsigned int stackIndex = 0;
 
@@ -631,8 +631,8 @@ void SSERenderPipeline::Split_Trace2x2__SecRay( int nIdx )
 		while (IS_LEAF(*node) == 0) {
 			const __m128 node_split4 = _mm_set_ps1(SPLIT_POS(*node));
 			const unsigned int dim	= SPLIT_AXIS(*node);
-			KdTreeNode *FrontSideSon	= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[dim << 1])];
-			KdTreeNode *BackSideSon		= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[(dim << 1)+1])];
+			KdTreeNode2 *FrontSideSon	= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[dim << 1])];
+			KdTreeNode2 *BackSideSon		= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[(dim << 1)+1])];
 
 			unsigned int d_near = 0, d_far = 0;
 			__m128 d;
@@ -708,7 +708,7 @@ void SSERenderPipeline::Split_Trace2x2__ShwRay( int temp )
 	const unsigned int* ray_dir = &raydir[rp->RayWay][0][0];	// Get precomputed the traversal order (front/back)
 																//      as offsets for a bundle of rays with equal directions
 	// kdtree start node, stack index
-	KdTreeNode* node = &m_Data->m_pKDTreeNodes[0];
+	KdTreeNode2* node = &m_Data->m_pKDTreeNodes[0];
 
 	unsigned int stackIndex = 0;
 
@@ -759,8 +759,8 @@ void SSERenderPipeline::Split_Trace2x2__ShwRay( int temp )
 		while (IS_LEAF(*node) == 0) {
 			const __m128 node_split4 = _mm_set_ps1(SPLIT_POS(*node));
 			const unsigned int dim	= SPLIT_AXIS(*node);
-			KdTreeNode *FrontSideSon	= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[dim << 1])];
-			KdTreeNode *BackSideSon		= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[(dim << 1)+1])];
+			KdTreeNode2 *FrontSideSon	= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[dim << 1])];
+			KdTreeNode2 *BackSideSon		= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[(dim << 1)+1])];
 
 			unsigned int d_near = 0, d_far = 0;
 			__m128 d;

@@ -8,11 +8,16 @@
  *
  *	by graphicsian.
  */
+#include "GKDTreeNode.h"
 #include "GBoundingBox.h"
 #include "GTriangleWrapper.h"
 #include <cuda_runtime.h>
 
 typedef uint2 kdtreeNode;
+//typedef struct __KdTreeNode {
+//	// 8 bytes
+//	unsigned int x; unsigned int y;
+//} kdtreeNode;
 
 typedef struct _triinfo_ {
 	int offset;
@@ -25,7 +30,7 @@ typedef struct _bound_edge_ {
 	enum { START, END } type;
 	const TriangleInfo *triangleInfo;
 	bool isPlanar;
-} BoundEdge;
+} BoundEdge2;
 
 
 #if 1

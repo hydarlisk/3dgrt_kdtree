@@ -12,7 +12,7 @@
 
 #include "Kd-treeConverter.h"
 #include "RayTraversal.h"
-using namespace KDTConverter;
+//using namespace KDTConverter;
 
 #pragma warning ( disable : 4068 )
 #pragma warning ( disable : 949 )
@@ -446,10 +446,10 @@ void TraceRay(int nIdx, KdTree *a_kd_tree, Hit *a_is)
 // ---------------------------------------------------------------------------
 // Shading
 // ---------------------------------------------------------------------------
-void Shading (int nIdx)
+void Shading(int nIdx)
 {
-	Ray *rp	= &g_Ray[nIdx];
-	Hit *is	= &g_Hit[nIdx];
+	Ray* rp = &g_Ray[nIdx];
+	Hit* is = &g_Hit[nIdx];
 
 	// Background color
 	is->color[0] = is->color[1] = is->color[2] = 0.2f;
@@ -462,10 +462,10 @@ void Shading (int nIdx)
 	hit_p[1] = rp->of[1] + rp->df[1] * is->dist;
 	hit_p[2] = rp->of[2] + rp->df[2] * is->dist;
 
-	bool bIsEnableShadow       = true;
+	bool bIsEnableShadow = true;
 	bool bIsEnableLocalShading = true;
-	bool bIsUseTexture         = false;
-	int  iMaxReflectionDepth   = 1;
+	bool bIsUseTexture = false;
+	int  iMaxReflectionDepth = 1;
 
 	// global ambient
 	float global_ambient[3];
@@ -484,7 +484,7 @@ void Shading (int nIdx)
 	mat_cDiff[0] = 1.0f;
 	mat_cDiff[1] = 1.0f;
 	mat_cDiff[2] = 1.0f;
-	
+
 	// specular color
 	float mat_cSpec[3];
 	mat_cSpec[0] = 1.0f;
@@ -508,15 +508,14 @@ void Shading (int nIdx)
 
 	// reflection ratio
 	float mat_fRefl = 0.3f;
-	
+
 	// refraction ratio
 	float mat_fRefr = 0.0f;
-	
+
 	// refraction index
 	float mat_fRIdx = 0.7f;
-	
-	unsigned int obj_num;
 
+	unsigned int obj_num;
 
 #if 0
 	const int triID      = is->tacc -1;

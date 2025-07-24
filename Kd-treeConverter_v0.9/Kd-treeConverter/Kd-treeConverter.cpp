@@ -11,11 +11,12 @@
 #include <string.h>
 
 #include "Kd-treeConverter.h"
-#include "Kd-treeConverterMain.h"
+//#include "Kd-treeConverterMain.h"
 #include "Kd-treeConstructor.h"
 #include "RayTraversal.h"
 #include "MyMathUtility.h"
-using namespace KDTConverter;
+//using namespace KDTConstructor;
+//using namespace KDTConverter;
 int build_kd_tree_for_composite_object(CompositeObject *c_object) {
 	// Returns 1 if a kd-tree was constructed successfully, or 0 otherwise.
 	// Input: "c_object->n_triangles" & "c_object->extended_vertices"
@@ -237,7 +238,8 @@ int read_kd_tree_from_file(CompositeObject *c_object, const char *filename, int 
 	c_object->kd_tree->tri_offset_list = g_pKdTree_TriOffset_Array;
 	c_object->kd_tree->tri_offset_count = g_iKdTree_TriOffset_Count;
 	c_object->kd_tree->tri_accel_list = pTriAcc;
-
+	printf("->n_triangles: %d\n", c_object->n_triangles);
+	if (pTriAcc == NULL) printf("triaccNULL\n");
 
 	fprintf(stdout, "Reading Kd-tree is completed.\n");
 

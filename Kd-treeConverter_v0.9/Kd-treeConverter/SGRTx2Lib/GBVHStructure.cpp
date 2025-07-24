@@ -108,8 +108,8 @@ GBVHStructure::initialize()
 		pTriangleInfos[ i ].boundingBox = m_pSceneTriangleList->getTriangleWrapper( i )->m_BBox;
 	}
 
-	BoundEdge *bEdge = new BoundEdge[ m_iSceneTriangleCount * 2 ];
-	memset( bEdge, 0x00, sizeof( BoundEdge ) * m_iSceneTriangleCount * 2 );
+	BoundEdge2 *bEdge = new BoundEdge2[ m_iSceneTriangleCount * 2 ];
+	memset( bEdge, 0x00, sizeof( BoundEdge2 ) * m_iSceneTriangleCount * 2 );
 	
 	m_iAllocatedkdNodeCount = 524288;
 	m_pKDTreeNodes = new kdtreeNode[ m_iAllocatedkdNodeCount ];

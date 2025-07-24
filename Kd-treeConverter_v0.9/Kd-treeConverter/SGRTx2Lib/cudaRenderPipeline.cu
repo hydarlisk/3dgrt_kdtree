@@ -88,8 +88,26 @@ GError cudaRenderPipeline::initialize( cuScene pScene, int maxray )
 {
 	GError error;
 	
-	int argc = 1;	char *argv[] ={"init"};
-	CUT_DEVICE_INIT(argc, argv);
+	/*int argc = 1;	char *argv[] ={"init"};
+	CUT_DEVICE_INIT(argc, argv);*/
+	int deviceCount = 0;
+	cudaError_t err = cudaGetDeviceCount(&deviceCount);
+	if (err != cudaSuccess || deviceCount == 0) {
+		fprintf(stderr, "[CUDA INIT] No CUDA devices found: %s\n", cudaGetErrorString(err));
+		exit(EXIT_FAILURE);
+	}
+
+	int device = 0;  // 기본 디바이스 선택 (원하면 변경 가능)
+	err = cudaSetDevice(device);
+	if (err != cudaSuccess) {
+		fprintf(stderr, "[CUDA INIT] Failed to set CUDA device %d: %s\n", device, cudaGetErrorString(err));
+		exit(EXIT_FAILURE);
+	}
+
+	cudaDeviceProp prop;
+	cudaGetDeviceProperties(&prop, device);
+	printf("[CUDA INIT] Using CUDA device %d: %s\n", device, prop.name);
+	//CUT_DEVICE_INIT 대체 shyun
 	
 	if ( ( error = setSceneInfo( pScene ) ) != errorNo )
 		return error;
@@ -571,20 +589,20 @@ GError cudaRenderPipeline::setKDTreeNodeData( kdtreeNode *pKDTreeNodes, int node
 	/**
 	 *	KD Tree Node Data.
 	 */
-	CUDA_SAFE_CALL( cudaMalloc( (void**) &m_pDeviceKDTreeNodes, sizeof( kdtreeNode ) * nodeCount ) );
+	cudaMalloc( (void**) &m_pDeviceKDTreeNodes, sizeof( kdtreeNode ) * nodeCount );
 	if ( checkError( "setKDTreeData" ) != cudaSuccess )
 		return errorCudaError;
 
-	CUDA_SAFE_CALL( cudaMemcpy(  m_pDeviceKDTreeNodes, pKDTreeNodes, 
-					sizeof( kdtreeNode ) * nodeCount, cudaMemcpyHostToDevice ) );
-	CUDA_SAFE_CALL( cudaBindTexture(0, inKdTreeNodeTex,  m_pDeviceKDTreeNodes ) );
+	cudaMemcpy(  m_pDeviceKDTreeNodes, pKDTreeNodes, 
+					sizeof( kdtreeNode ) * nodeCount, cudaMemcpyHostToDevice );
+	cudaBindTexture(0, inKdTreeNodeTex, m_pDeviceKDTreeNodes);
 	if ( checkError( "setKDTreeData" ) != cudaSuccess )
 		return errorCudaError;
 
 	/**
 	 *	BBox 정보를 constant 로 넘긴다.
 	 */
-	CUDA_SAFE_CALL( cudaMemcpyToSymbol( g_SceneBBox, &sceneBox, sizeof( GBoundingBox ) ) );
+	cudaMemcpyToSymbol( g_SceneBBox, &sceneBox, sizeof( GBoundingBox ) );
 	cudaError_t error = checkError( "g_SceneBBox" );	
 	if ( error != cudaSuccess ) {
 		return errorCudaError;

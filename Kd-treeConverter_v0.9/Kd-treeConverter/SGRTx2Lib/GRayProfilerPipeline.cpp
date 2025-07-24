@@ -275,7 +275,7 @@ void GRayProfilerPipeline::TracePacket1x1( unsigned int quad, int nIdx )
 	const unsigned int* ray_dir = &raydir[quad][0][0];		// Get precomputed the traversal order (front/back)
 	//      as offsets for a bundle of rays with equal directions
 	// kdtree start node, stack index
-	KdTreeNode* node = &m_Data->m_pKDTreeNodes[0];
+	KdTreeNode2* node = &m_Data->m_pKDTreeNodes[0];
 
 	unsigned int stackIndex = 0;
 
@@ -320,8 +320,8 @@ void GRayProfilerPipeline::TracePacket1x1( unsigned int quad, int nIdx )
 		while (IS_LEAF(*node) == 0) {
 			const float node_split = SPLIT_POS(*node);
 			const unsigned int dim = SPLIT_AXIS(*node); // 11 은 아니므로, 00, 01, 10 중에 하나
-			KdTreeNode *FrontSideSon	= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[dim << 1])];
-			KdTreeNode *BackSideSon		= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[(dim << 1)+1])];
+			KdTreeNode2 *FrontSideSon	= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[dim << 1])];
+			KdTreeNode2 *BackSideSon		= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[(dim << 1)+1])];
 
 			unsigned int d_near = 0, d_far = 0;
 
@@ -616,7 +616,7 @@ void GRayProfilerPipeline::Render1x1( int nThreadID )
 // SSERenderPipeline::IsectPacket
 //		Intersection check
 // ------------------------------------------------------------------------------------------------
-void GRayProfilerPipeline::IsectPacket1x1( const KdTreeNode *node, int nIdx )
+void GRayProfilerPipeline::IsectPacket1x1( const KdTreeNode2 *node, int nIdx )
 {
 	GRayProfiler *pTestRayProfiler = &m_pOption->m_TestRayProfiler;
 
@@ -630,7 +630,7 @@ void GRayProfilerPipeline::IsectPacket1x1( const KdTreeNode *node, int nIdx )
 
 	for (i = baseOffset; i < baseOffset+nObjs; i++) {
 		int     triID = m_Data->m_TriOffList[i];
-		TriAccel &acc = m_Data->m_TriAccList[triID];
+		TriAccel2 &acc = m_Data->m_TriAccList[triID];
 
 		// ---------------------------------------------------------------
 		// Mailbox
@@ -952,7 +952,7 @@ void GRayProfilerPipeline::shading1x1 (int nIdx) {
 // SSERenderPipeline::IsectPacket
 //		Intersection check
 // ------------------------------------------------------------------------------------------------
-void GRayProfilerPipeline::IsectShadowPacket1x1( const KdTreeNode *node )
+void GRayProfilerPipeline::IsectShadowPacket1x1( const KdTreeNode2 *node )
 {
 	GRayProfiler *pTestRayProfiler = &m_pOption->m_TestRayProfiler;
 	int i;
@@ -965,7 +965,7 @@ void GRayProfilerPipeline::IsectShadowPacket1x1( const KdTreeNode *node )
 
 	for (i = baseOffset; i < baseOffset+nObjs; i++) {
 		int     triID = m_Data->m_TriOffList[i];
-		TriAccel &acc = m_Data->m_TriAccList[triID];
+		TriAccel2 &acc = m_Data->m_TriAccList[triID];
 
 		// ---------------------------------------------------------------
 		// Mailbox
@@ -1065,7 +1065,7 @@ void GRayProfilerPipeline::TraceShadowPacket1x1( unsigned int quad )
 	const unsigned int* ray_dir = &raydir[quad][0][0];		// Get precomputed the traversal order (front/back)
 	//      as offsets for a bundle of rays with equal directions
 	// kdtree start node, stack index
-	KdTreeNode* node = &m_Data->m_pKDTreeNodes[0];
+	KdTreeNode2* node = &m_Data->m_pKDTreeNodes[0];
 
 	unsigned int stackIndex = 0;
 
@@ -1086,8 +1086,8 @@ void GRayProfilerPipeline::TraceShadowPacket1x1( unsigned int quad )
 			//COUNT_INSTRUCTION( COMPARISON, 1 );
 			const float node_split = SPLIT_POS(*node);
 			const unsigned int dim = SPLIT_AXIS(*node);
-			KdTreeNode *FrontSideSon	= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[dim << 1])];
-			KdTreeNode *BackSideSon		= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[(dim << 1)+1])];
+			KdTreeNode2 *FrontSideSon	= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[dim << 1])];
+			KdTreeNode2 *BackSideSon		= &m_Data->m_pKDTreeNodes[(FIRST_CHILD_OFFSET(*node) + ray_dir[(dim << 1)+1])];
 
 			unsigned int d_near = 0, d_far = 0;
 			float d;

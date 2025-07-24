@@ -6,7 +6,7 @@
 
 #include <stdio.h>
 #include "Kd-treeConverter.h"
-using namespace KDTConverter;
+//using namespace KDTConverter;
 
 #define KD_TREE_EPSILON        0.00001f
 
@@ -19,7 +19,7 @@ using namespace KDTConverter;
 
 typedef enum { BOTH_SIDE, MINCOST_SIDE } PlanarTriangleAddMode;
 #define KD_TREE_PLANAR_TRIANGLE_ADD_MODE  MINCOST_SIDE
-
+//namespace KDTConstructor {
 typedef struct _BoundingBox {
 	union {
 		struct {
@@ -106,3 +106,4 @@ void build_kd_tree_recursive(BoundEdge *bEdge, const TriangleList *pTriangleInfo
                              BoundingBox &bbox, unsigned int inNodeLevel, KdTreeNode *inNode);
 
 void build_TriAccList(CompositeObject *poly_model, TriAccel *pTriAcc);
+//}

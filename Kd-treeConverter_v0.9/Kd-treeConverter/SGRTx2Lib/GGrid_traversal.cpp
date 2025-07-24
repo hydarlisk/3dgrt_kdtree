@@ -157,7 +157,7 @@ void SSERenderPipeline::Grid_Rendering(void){
 bool SSERenderPipeline::grid_isect(int polyIdx, float tMin, GBoundingBox* cellBox, float& _t_far){
 	_sse_1x1_raypacket	*rp	= &m_RayPk1x1[0];
 	_sse_1x1_isect		*is	= &m_Isect1x1[0];
-	TriAccel &acc = m_Data->m_TriAccList[polyIdx];
+	TriAccel2 &acc = m_Data->m_TriAccList[polyIdx];
 
 	if(!acc.isTransparent && m_bBackFaceCulling){
 		if(vector3(rp->d.f).innerProduct(acc.N) < 0){

@@ -7,6 +7,7 @@
 #include "GIntersectionPointMap.h"
 #include "GKDTreeStructure.h"
 #include "cudaRenderPipeline.h"
+#include "cudaRenderPipeline.cu"
 
 /**
  *	다른 논문과의 속도 비교를 위한 GPU 버전 클래스.

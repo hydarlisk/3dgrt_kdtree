@@ -7,6 +7,7 @@
 #include "GIntersectionPointMap.h"
 #include "GKDTreeStructure.h"
 #include "cudaRenderPipeline.h"
+#include "cudaRenderPipeline.cu"
 
 /**
  *	여러가지 속도 테스트를 위한 CUDA GPU RayTracer

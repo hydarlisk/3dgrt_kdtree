@@ -1,3 +1,4 @@
+#include "cudaRenderCommon.cuh"
 #include "GGPURayTracer.h"
 #include "GSpatialStructure.h"
 #include "GKDTreeStructure.h"

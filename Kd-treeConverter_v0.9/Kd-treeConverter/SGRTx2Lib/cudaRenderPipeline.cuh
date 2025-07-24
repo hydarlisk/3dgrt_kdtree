@@ -1,3 +1,4 @@
+#pragma once
 /**
  *	Cuda 로 Rendering 을 수행하기 위해서
  *	여러가지를 관리하는 class.
@@ -10,8 +11,8 @@
 #ifndef _CUDA_RENDER_PIPELINE_CUH_
 #define _CUDA_RENDER_PIPELINE_CUH_
 
-#include "GBase.h"
 #include "cudaRenderCommon.cuh"
+#include "GBase.h"
 
 class cudaRenderPipeline {
 
