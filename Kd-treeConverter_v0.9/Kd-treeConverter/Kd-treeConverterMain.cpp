@@ -25,11 +25,13 @@
 #include "MyMathUtility.h"
 
 //shyun
-//#include "sgrt_interface.h"
+#include "sgrt_interface.h"
+#include "cudaRenderer.cu"
+//#include "cudaKDTreeTracer.cu"
 //#include "cudaRayTracingKernel.cu"
-//#include "SGRTx2Lib/GKDTreeStructure.h"
-//#include "SGRTx2Lib/GGPURayTracer.h"
-//#include "SGRTx2Lib/GGPUExperimentalRayTracer.h"
+#include "SGRTx2Lib/GKDTreeStructure.h"
+#include "SGRTx2Lib/GGPURayTracer.h"
+#include "SGRTx2Lib/GGPUExperimentalRayTracer.h"
 //using namespace KDTConverter;
 //using namespace KDTConstructor;
 bool render_gaussian = false;
@@ -60,19 +62,23 @@ void load_poly_model_into_OpenGL(void) {
 }
  
 void display(void) {
+	// CUDA 렌더링이 완료되었으면 프레임버퍼를 화면에 그립니다.
 	if (g_cuda_rendering_done && g_render_framebuffer != nullptr) {
 		glDisable(GL_LIGHTING);
 		glDisable(GL_DEPTH_TEST);
 
+		glMatrixMode(GL_PROJECTION); // 2D 렌더링을 위해 Projection 행렬을 초기화
+		glLoadIdentity();
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
 
-		glRasterPos2f(-1.0f, -1.0f); // 좌하단 기준
+		// glDrawPixels는 좌하단이 기준이므로 y좌표를 뒤집을 필요가 없음
+		glRasterPos2f(-1.0f, -1.0f);
 		glDrawPixels(g_render_width, g_render_height, GL_RGB, GL_FLOAT, g_render_framebuffer);
 
 		glEnable(GL_DEPTH_TEST);
 		glutSwapBuffers();
-		return;
+		return; // CUDA 결과를 그렸으므로 나머지 OpenGL 렌더링은 건너뜁니다.
 	}
 
 	int i;
@@ -171,6 +177,9 @@ void keyboard(unsigned char key, int x, int y) {
 }
 
 void reshape(int width, int height) {
+	g_render_width = width;   // 전역 변수 업데이트
+	g_render_height = height; // 전역 변수 업데이트
+
 	glViewport(0, 0, width, height);
 
 	camera.aspect = (double) width/ height;
@@ -772,7 +781,7 @@ void main_menu_action(int selection) {
 	switch (selection) {
 	case 0:
 		render_gaussian = !render_gaussian;
-		printf(render_gaussian ? "->true\n":"->false\n");
+		printf(render_gaussian ? "->Gaussian Mode\n":"I-Geom Mode\n");
 		break;
 	case 100:
 		render_gaussian = false;
@@ -888,18 +897,33 @@ void main_menu_action(int selection) {
 				break;
 			}
 			//TODO: CUDA rendering*****************************************
+			launchCudaRender(
+				uip.poly_model,
+				camera,
+				g_render_width,
+				g_render_height,
+				g_render_framebuffer,
+				g_cuda_rendering_done
+			);
+
+			if (g_cuda_rendering_done) {
+				printf("CUDA Rendering seems to be done. Refreshing display...\n");
+				glutPostRedisplay();
+			}
+			
 			//initCudaRendering(uip.poly_model, g_render_framebuffer, &g_cuda_rendering_done);
 
-			/*GScene* scene = new GScene();
-			scene->setKdTreeLoadFilePath("../../Data/Obj/hotdog_tree.kdt");
-			scene->convertRenderScene();
-			GKDTreeStructure* kdTree = new GKDTreeStructure(scene);
-			kdTree->initialize();
-			scene->setSceneKDTree(kdTree);
+			//GScene* scene = new GScene();
+			//scene->setKdTreeLoadFilePath("../../Data/Obj/hotdog_tree.kdt");
+			//scene->convertRenderScene();
+			//scene->buildObjectKdTree();
+			//GKDTreeStructure* kdTree = new GKDTreeStructure(scene);
+			//kdTree->initialize();
+			//scene->setSceneKDTree(kdTree);
 
-			GGPUExperimentalRayTracer* rayTracer = new GGPUExperimentalRayTracer();
+			//GGPUExperimentalRayTracer* rayTracer = new GGPUExperimentalRayTracer();
 
-			rayTracer->rendering(scene, false);*/
+			//rayTracer->rendering(scene, false);
 			
 
 			/*CompositeObject& obj = uip.poly_model;

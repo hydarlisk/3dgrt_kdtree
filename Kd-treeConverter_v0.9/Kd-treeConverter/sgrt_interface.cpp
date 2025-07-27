@@ -14,11 +14,11 @@
 #include <math.h>
 #include <cstdlib>
 #include <cmath>
-//#include "SGRTx2Lib/cudaRenderCommon.cuh"
-//#include "SGRTx2Lib/cudaRenderPipelineCommonKernel.cu"
-//#include "SGRTx2Lib/GScene.h"
-//#include "SGRTx2Lib/GKDTreeStructure.h"
-//#include "SGRTx2Lib/GGPUExperimentalRayTracer.h"
+#include "SGRTx2Lib/cudaRenderCommon.cuh"
+#include "SGRTx2Lib/cudaRenderPipelineCommonKernel.cu"
+#include "SGRTx2Lib/GScene.h"
+#include "SGRTx2Lib/GKDTreeStructure.h"
+#include "SGRTx2Lib/GGPUExperimentalRayTracer.h"
 
 //using namespace KDTConverter;
 

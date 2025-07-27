@@ -18,9 +18,6 @@
  *
  *	by graphicsian.
  */
-#ifndef __RENDER_PIPELINE_KERNEL_CU_
-#define __RENDER_PIPELINE_KERNEL_CU_
-
 //#include "SGRTx2Lib/GKDTreeNode.h"
 //#include "SGRTx2Lib/cuda_math.h"
 #include <cuda.h>
@@ -30,13 +27,14 @@
 #include <cstdlib>
 #include <cmath>
 #include "sgrt_interface.h"
-#include "RayTraversal.h"
 //#include "cuCommonDefs.cuh"
 #include "SGRTx2Lib/cuda_math.h"
 //#include <cutil.h>
-#include "SGRTx2Lib/cudaRenderPipelineCommonKernel.cu"
+//#include "SGRTx2Lib/cudaRenderPipelineCommonKernel.cu"
 //#include "SGRTx2Lib/cudaRenderPipelineKernel.cu"
 
+int g_render_width = 800;
+int g_render_height = 600;
 
 // CUDA 에러 체크 함수
 void checkCudaErrors(cudaError err) {
@@ -560,7 +558,7 @@ void copyCompositeObjectToCUDA(const CompositeObject* hostObject, CUDACompositeO
 }
 
 // CUDA 초기화 및 렌더링 함수
-void initCudaRendering(CompositeObject& compositeObject, float* frameBuffer, bool* renderFlag) {
+void initCudaRendering_Orig(CompositeObject& compositeObject, float* frameBuffer, bool* renderFlag) {
 	// 1. CUDA 디바이스 초기화 (필요한 경우)
 
 	// 2. CUDACompositeObject 생성 및 데이터 복사

@@ -168,6 +168,28 @@ typedef struct __align__(16)
 } cuIntersectionPoint;
 
 /**
+ *	cuda 내에서 intersection point 를 체크하기 위해서 사용하는
+ *	구조체.
+ */
+typedef struct __align__(16)
+{
+	unsigned int triIndex;			//	obj list 안에서 몇 번째 삼각형인지.
+	unsigned short objectIndex;		//	삼각형이 포함된 object index. object material 에 접근할때 필요.
+	unsigned short bSelected;		//	삼각형이 선택되었는지 여부. for selective adaptive supersampling.
+	float tHit, beta, gamma;		//	
+
+	__HOST__ __device__ inline void init(float _tHit = FLT_MAX)
+	{
+		triIndex = unsigned(-1);	tHit = _tHit;
+	}
+	__HOST__ __device__ inline bool isHit(void) const
+	{
+		return triIndex != unsigned(-1);
+	}
+
+} cuIntersectionCheck;
+
+/**
  *	카메라 정보. constant memory 로 올림.
  */
 typedef struct _camera_info {
