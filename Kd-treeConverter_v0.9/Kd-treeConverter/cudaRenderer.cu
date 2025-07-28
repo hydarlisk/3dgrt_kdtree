@@ -4,7 +4,36 @@
 #include <device_launch_parameters.h>
 
 #include "CudaRenderer.h"
+#include "SGRTx2Lib/cuda_math.h"
+//#include "SGRTx2Lib/cudaRenderCommon.cuh"
 #define M_PI 3.14159f
+
+/**
+ *	ray check 너무 앞에서 만나면 무시하기 위한 epsilon
+ */
+#define RAY_START_EPSILON		EPSILON3
+#define BARYCENTRY_EPSILON		EPSILON7
+
+#define EPSILON3 1e-3f
+#define EPSILON4 1e-4f
+#define EPSILON5 1e-5f
+#define EPSILON7 1e-7f
+
+#define AIR_INDEX	1.0f
+
+#define BLOOMING_THREAD_DIM					128
+#define SHADING_THREAD_DIM					128
+#define PRIMARY_RAY_THREAD_DIM				128
+#define INTERSECTION_THREAD_DIM				128
+
+#define ADAPTIVE_THREADS					256
+#define SUBPIXEL_CAPABILITY					64			// 주의 반드시 ADAPTIVE_THREADS / 4개를 써야한다.!!!
+
+#define USE_CONTRAST_COMPARE							// contrast 로 비교할지, luminance 로 비교할지
+
+#define COLOR_WEIGHT_THREADHOLD				0.01f
+#define EDGE_THRESHOLD						0.3f
+#define DETECTOR_NORMAL_THREADHOLD			0.4f
 
 // =================================================================================
 // 1. 제공된 SGRTx2Lib 커널 및 관련 구조체/헬퍼 함수
@@ -29,17 +58,90 @@ __constant__ SceneInfo g_SceneInfo;
 __constant__ CameraInfo g_CameraInfo;
 __constant__ float3 g_SceneBBox[2]; // Scene의 AABB
 
-// 광선(Ray) 구조체
-struct cuRay {
-    float3 pos;
-    float3 dir;
+__constant__ unsigned shortStackDepth;
 
-    __device__ float2 get_dir_pos(const unsigned axis) const {
-        if (axis == 0) return make_float2(pos.x, dir.x);
-        if (axis == 1) return make_float2(pos.y, dir.y);
-        return make_float2(pos.z, dir.z);
+extern __shared__ cu_traceState smemBuffer[];
+
+// 광선(Ray) 구조체
+/**
+ *	추적할 ray 정보를 표현.
+ *	self intersection 을 피하기 위해서 이전에 intersect 된 삼각형의 id 를 가지게 한다.
+ *	EPSILON 으로 처리할수도 있지만, 삼각형이 조밀한 경우 문제가 될 수 있으므로 id 기반으로
+ *	처리하자.
+ */
+typedef struct __align__(16) _curay
+{
+    float3 dir;
+    float pad;			//	texture float4 로 데이터를 넘기므로 float 하나 padding.
+    float3 pos;
+    float pad2;			//	texture float4 로 데이터를 넘겨야 하므로 padding 해야 함.
+
+    //float4 info;		//	info.x 가 previous triangle index 를 가지는것. 나머지는 padding.
+
+    //__host__ __device__ inline void init() {
+    //	info.x = int_as_float_H( -1 );
+    //}
+    //__host__ __device__ inline void setPrevTriIndex( int index ) {
+    //	info.x = int_as_float_H( index );
+    //}
+    //__host__ __device__ inline int getPrevTriIndex() const 
+    //{	return float_as_int( info.x );			}
+
+    __host__ __device__ inline float2 get_dir_pos(unsigned i) const
+    {
+        float2 ret;
+        switch (i) {
+        case 0:     ret.x = pos.x; ret.y = dir.x; return ret;
+        case 1:     ret.x = pos.y; ret.y = dir.y; return ret;
+        default:    ret.x = pos.z; ret.y = dir.z; return ret;
+        }
     }
-};
+    __host__ __device__ inline float3 dir_perm_x(void) const
+    {
+        return make_float3(dir.x, dir.y, dir.z);
+    }
+    __host__ __device__ inline float3 dir_perm_y(void) const
+    {
+        return make_float3(dir.y, dir.z, dir.x);
+    }
+    __host__ __device__ inline float3 dir_perm_z(void) const
+    {
+        return make_float3(dir.z, dir.x, dir.y);
+    }
+    __host__ __device__ inline float3 pos_perm_x(void) const
+    {
+        return make_float3(pos.x, pos.y, pos.z);
+    }
+    __host__ __device__ inline float3 pos_perm_y(void) const
+    {
+        return make_float3(pos.y, pos.z, pos.x);
+    }
+    __host__ __device__ inline float3 pos_perm_z(void) const
+    {
+        return make_float3(pos.z, pos.x, pos.y);
+    }
+
+} cuRay;
+//struct cuRay {
+//    float3 pos;
+//    float3 dir;
+//
+//    __device__ float2 get_dir_pos(const unsigned axis) const {
+//        if (axis == 0) return make_float2(pos.x, dir.x);
+//        if (axis == 1) return make_float2(pos.y, dir.y);
+//        return make_float2(pos.z, dir.z);
+//    }
+//};
+
+typedef struct _cu_boundingbox_
+{
+    float4 min_max[2];
+    //__host__ __device__ inline void setMin(const float4 &minbbox)
+    //{	min_max[0] = minbbox;	}
+    //__host__ __device__ inline void setMax(const float4 &maxbbox)
+    //{	min_max[1] = maxbbox;	}
+
+} cuBoundingBox;
 
 // 교차점(Intersection) 정보 구조체
 struct cuIntersectionCheck {
@@ -53,6 +155,126 @@ struct cuIntersectionCheck {
     __device__ bool isHit() const { return triIndex != -1; }
 };
 
+/**
+ *	intersection point 정보. cuda 안에서
+ *	shading 을 하기위해서 geometry 정보 자체를
+ *	담는다. 절대 float3,2,4 를 혼용해서 쓰지 말것. 이유는 맨위를 보시라.
+ */
+typedef struct __align__(16)
+{
+    unsigned int triIndex;			//	obj list 안에서 몇 번째 삼각형인지.
+    unsigned int objectIndex;		//	삼각형이 포함된 object index. object material 에 접근할때 필요.
+    unsigned int rayIndex;			//	이 intersection point 가 어떤 ray 의 결과인지.
+    //	(left,top) 부터 순서대로. SuperSampling 까지 포함해서 계산된 index 이다.
+    unsigned int boundDepth;		//	이 ray 의 현재 bounding depth.
+
+    float3 pos, dir, normal;		//	intersection point 정보.
+    float u, v;						//	texture 좌표.
+    float3 colorWeight;				//	이 intersection point 의 color 가 최종 이미지에 영향을 줄값.
+    float shadowCount;				//	해당지역에 그림자가 생겼는지여부. adaptive sampling 을 위해서. 생기면 -1, 아니면 1
+    short bTexture;					//	texture 유무.
+    short bSelected;				//	선택된 지역인지 여부.
+
+    __host__ __device__ inline void init()
+    {
+        triIndex = unsigned(-1);
+    }
+    __host__ __device__ inline bool isHit(void) const
+    {
+        return triIndex != unsigned(-1);
+    }
+
+} cuIntersectionPoint;
+
+/**
+ *	intersection 을 계산하기 위한 triangle 정보. wald 방법
+ *	internal2.w 를 object index 를 위한 값으로 사용한다.
+ */
+struct  __align__(16) cuWaldTriangleInfo {
+
+    float4 internal0, internal1, internal2;
+
+    __host__ __device__ unsigned k() const { return float_as_int(internal0.x); }
+    __host__ __device__ float n_u() const { return internal0.y; }
+    __host__ __device__ float n_v() const { return internal0.z; }
+    __host__ __device__ float n_d() const { return internal0.w; }
+    __host__ __device__ float vert_ku() const { return internal1.x; }
+    __host__ __device__ float vert_kv() const { return internal1.y; }
+    __host__ __device__ float b_nu() const { return internal1.z; }
+    __host__ __device__ float b_nv() const { return internal1.w; }
+    __host__ __device__ float c_nu() const { return internal2.x; }
+    __host__ __device__ float c_nv() const { return internal2.y; }
+
+    __host__ __device__ bool isTransparent() const {
+        return (float_as_int(internal2.z) == 1 || float_as_int(internal2.z) == -1);
+    }
+
+    /** wald 방법에서 n' 를 구할때 나눈값이 양수인지 여부. */
+    __host__ __device__ bool isPositiveDir() const { return (float_as_int(internal2.z) > 0); }
+
+    struct perm_t { float3 dir, pos; };
+    __host__ __device__ inline perm_t get_perm(const cuRay & ray) const {
+        perm_t perm;
+        unsigned const axis = k();
+        switch (axis)
+        {
+        case 0:
+            perm.dir = ray.dir_perm_x();
+            perm.pos = ray.pos_perm_x();
+            return perm;
+        case 1:
+            perm.dir = ray.dir_perm_y();
+            perm.pos = ray.pos_perm_y();
+            return perm;
+        default:
+            perm.dir = ray.dir_perm_z();
+            perm.pos = ray.pos_perm_z();
+            return perm;
+        }
+    }
+
+    /** selective supersampling 을 위해서.. 하위3바이트는 object id, 상위 1byte 는 물체선택여부 */
+    __host__ __device__ inline int getObjectIndex(void) const
+    {
+        return (float_as_int(internal2.w) & 0x00ffffff);
+    }
+
+    /** selective supersampling 을 위해서.. 하위3바이트는 object id, 상위 1byte 는 물체선택여부 */
+    __host__ __device__ inline int isSelection(void) const
+    {
+        return ((float_as_int(internal2.w) & 0xff000000) > 0);
+    }
+};
+
+//심플 버전. bank conflict 고려 안함.
+struct shortStack {
+    unsigned _top, quant, baseOffset;
+    __host__ __device__ shortStack() : _top(shortStackDepth - 1), quant(0) {}
+    __device__ inline void init(const unsigned smem_baseOffset)
+    {
+        baseOffset = smem_baseOffset * (shortStackDepth);
+    }
+    __device__ inline cu_traceState top() { return smemBuffer[baseOffset + _top]; }
+    //	__device__ inline void push(unsigned id, float t_min, float t_max) { 
+    __device__ inline void push(unsigned id, float t_max) {
+        //_top=(_top+1)%shortStackDepth; 
+        if (++_top == shortStackDepth)
+            _top = 0;
+        quant = min(quant + 1, shortStackDepth);
+        smemBuffer[baseOffset + _top].nodeID = id;
+        //		smemBuffer[baseOffset + _top].tMin = t_min;		
+        smemBuffer[baseOffset + _top].tMax = t_max;
+    }
+    __device__ inline int empty() { return quant == 0; }
+    __device__ inline int full() { return quant == shortStackDepth; }
+    __device__ inline void pop() {
+        if (_top == 0)
+            _top = shortStackDepth;
+        --_top; --quant;
+        //	_top=(_top-1)%shortStackDepth;	--quant; 
+    }
+};
+
 // Kd-tree 텍스처 참조 선언
 texture<uint2, 1, cudaReadModeElementType> inKdTreeNodeTex;
 texture<uint, 1, cudaReadModeElementType> inObjectOffsetListTex;
@@ -61,6 +283,162 @@ texture<float4, 1, cudaReadModeElementType> inWaldTriangleTex;
 // --- 여기에 singlePassIntersectRoutine, singlePassIntersect, singlePassRayTracingKernel_ShadowOff 등
 // --- 제공된 모든 __device__ 및 __global__ 함수를 붙여넣으세요.
 // --- (내용이 길어 생략합니다. 반드시 이전 질문의 커널 코드를 모두 복사해와야 합니다.)
+
+/**
+ *	reflection
+ */
+__device__ float3 reflection(float3 ray, float3 normal)
+{
+    /**
+     *	물체의 뒷면에 맞은경우 normal 을 뒤집는다.
+     */
+    float rdotn = dot(ray, normal);
+    return normalize(2.0f * rdotn * normal - ray);
+    //	return normalize( 2.0f * normal * dot( ray, normal ) - ray );
+}
+
+__device__ float3 refraction(float3 dir, float3 normal, float refractionIndex)
+{
+    float ddotn, ddotn2, n_div_nt, n_div_nt2;
+    float sqrt_part;
+    float in_sqrt;
+    float3 nextDir;
+
+    dir = -1.0f * dir;
+
+    if (refractionIndex == AIR_INDEX)
+    {
+        nextDir = dir;
+        return nextDir;
+    }
+
+    ddotn = dot(normal, dir);
+
+    if (ddotn == 0.)
+    {
+        nextDir = dir;
+        return nextDir;
+    }
+    if (ddotn < 0.)
+        //normal case (from air to obj.)
+    {
+        n_div_nt = AIR_INDEX / refractionIndex;
+    }
+    else
+        //(from obj. to air)
+    {
+        n_div_nt = refractionIndex / AIR_INDEX;
+    }
+
+    ddotn2 = ddotn * ddotn;
+
+    n_div_nt2 = n_div_nt * n_div_nt;
+    //check in_sqrt : temperal code
+    in_sqrt = 1.0f - n_div_nt2 * (1.0f - ddotn2);
+    in_sqrt = fabs(in_sqrt);
+    sqrt_part = (float)sqrt(in_sqrt);
+
+    if (n_div_nt < 1.0) {
+        nextDir = n_div_nt * (dir - normal * ddotn) - normal * sqrt_part;
+    }
+    else {
+        nextDir = n_div_nt * (dir - normal * ddotn) + normal * sqrt_part;
+    }
+
+    return normalize(nextDir);
+}
+
+__device__ inline bool BoundsRayIntersect(const cuBoundingBox& box, const cuRay& ray, float& tmin, float& tmax)
+{
+    float l1 = 0.0f;
+    float l2 = 0.0f;
+
+    //	if ( ray.dir.x != 0.0f ) {
+    l1 = __fdividef(box.min_max[0].x - ray.pos.x, ray.dir.x);
+    l2 = __fdividef(box.min_max[1].x - ray.pos.x, ray.dir.x);
+    tmin = fmaxf(fminf(l1, l2), tmin);
+    tmax = fminf(fmaxf(l1, l2), tmax);
+    //	}
+
+    //	if ( ray.dir.y != 0.0f ) {
+    l1 = __fdividef(box.min_max[0].y - ray.pos.y, ray.dir.y);
+    l2 = __fdividef(box.min_max[1].y - ray.pos.y, ray.dir.y);
+    tmin = fmaxf(fminf(l1, l2), tmin);
+    tmax = fminf(fmaxf(l1, l2), tmax);
+    //	}
+
+    //	if ( ray.dir.z != 0.0f ) {
+    l1 = __fdividef(box.min_max[0].z - ray.pos.z, ray.dir.z);
+    l2 = __fdividef(box.min_max[1].z - ray.pos.z, ray.dir.z);
+    tmin = fmaxf(fminf(l1, l2), tmin);
+    tmax = fminf(fmaxf(l1, l2), tmax);
+    //	}
+
+    return ((tmax >= tmin) & (tmax >= 0.f));
+}
+
+__device__ inline float3 calSinglePassDirectIllumination_ShadowOff(
+    cuIntersectionPoint& intersectResult,
+    cuObjectMaterial& material,
+    const float3& diffuse)
+{
+    //cuLight* pLight = NULL;
+    float3 L, N, R;
+    float3 color = make_float3(0.0f, 0.0f, 0.0f);
+    N = intersectResult.normal;
+
+    if (material.transparency > 0.0f && dot(intersectResult.dir, N) < 0.0f) {
+        N = -1.0f * N;
+    }
+
+    R = reflection(intersectResult.dir, N);
+
+    color = material.ambient_emission;
+
+    //for (int i = 0; i < constantLightCount; ++i) {
+
+    //    pLight = (constantLightInfo + i);
+
+    //    L = normalize(pLight->pos - intersectResult.pos);
+    //    color += pLight->color * (diffuse * max(0.0f, dot(L, N)) +
+    //        material.specular * powf(max(0.0f, dot(R, L)), material.roughness));
+
+    //}
+
+    return color;
+
+}
+
+/**
+ *	Texture 가 존재하는 경우 현재 diffuse color 를 texture 내의 u, v 상의
+ *	color 로 대체.
+ */
+__device__ inline void calTextureColor(cuIntersectionPoint& intersectResult,
+    cuObjectMaterial& material, float3& diffuse)
+{
+    int texture = float_as_int(material.textureNumber);
+    intersectResult.bTexture = fetchTexture(texture, intersectResult.u, intersectResult.v, diffuse);
+}
+
+/**
+ *	low-discrepancy sampling.
+ */
+__device__ float radicalInverse(int i, int base) {
+
+    float val = 0;
+    float invBase = 1.0f / base;
+    float invBi = invBase;
+
+    while (i > 0) {
+        int d_i = (i % base);
+        val += d_i * invBi;
+        i /= base;
+        invBi *= invBase;
+    }
+
+    return val;
+
+}
 
 /**
  *	WALD Intersection method.
@@ -165,6 +543,68 @@ __device__ inline void singlePassIntersect(cuRay& currRay, cuIntersectionCheck& 
         }
     }
 }
+
+/**
+ *	intersection point 데이터를 생성한다.
+ */
+__device__ void makeIntersectionPoint(cuRay* pRay, cuIntersectionCheck* pHit,
+    cuIntersectionPoint* pCurrIsectResult)
+{
+    /**
+     *	구조체 cuTriangleGeometry 를 texture 로
+     *	로딩한것에서 값을 가져온다. texture는 float4 로 만들었기
+     *	때문에 구조체의 값을 가져오기 위해서 계산을 잘해야 한다.
+     */
+    float3 n0, n1, n2;
+    float2 uv0, uv1, uv2;
+    float4 temp;
+
+    temp = tex1Dfetch(inTriangleGeometryTex, 4 * pHit->triIndex + 0);
+    n0.x = temp.x; n0.y = temp.y; n0.z = temp.z; n1.x = temp.w;
+    temp = tex1Dfetch(inTriangleGeometryTex, 4 * pHit->triIndex + 1);
+    n1.y = temp.x; n1.z = temp.y; n2.x = temp.z; n2.y = temp.w;
+    temp = tex1Dfetch(inTriangleGeometryTex, 4 * pHit->triIndex + 2);
+    n2.z = temp.x; uv0.x = temp.y; uv0.y = temp.z; uv1.x = temp.w;
+    temp = tex1Dfetch(inTriangleGeometryTex, 4 * pHit->triIndex + 3);
+    uv1.y = temp.x; uv2.x = temp.y; uv2.y = temp.z;
+
+    /**
+     *	삼각형 정보, ray 정보 채움.
+     */
+    pCurrIsectResult->triIndex = pHit->triIndex;
+    pCurrIsectResult->objectIndex = pHit->objectIndex;
+    pCurrIsectResult->bSelected = pHit->bSelected;
+    pCurrIsectResult->dir.x = -pRay->dir.x;
+    pCurrIsectResult->dir.y = -pRay->dir.y;
+    pCurrIsectResult->dir.z = -pRay->dir.z;
+
+    temp.w = 1.0f - pHit->beta - pHit->gamma;
+
+    /**
+     *	boundDepth, rayIndex 와 colorWeight 정보는 ray 를 생성할때
+     *	기록해 두었으므로	여기서 업데이트 하면 안된다.
+     */
+     //pCurrIsectResult->boundDepth;
+     //pCurrIsectResult->rayIndex;
+     //pCurrIsectResult->colorWeight;
+
+     /**
+      *	position과 barycentric normal 을 계산한다.
+      */
+    pCurrIsectResult->pos.x = pRay->pos.x + pHit->tHit * pRay->dir.x;
+    pCurrIsectResult->pos.y = pRay->pos.y + pHit->tHit * pRay->dir.y;
+    pCurrIsectResult->pos.z = pRay->pos.z + pHit->tHit * pRay->dir.z;
+
+    pCurrIsectResult->normal = normalize(
+        n0 * (temp.w) +
+        n1 * (pHit->beta) + n2 * (pHit->gamma));
+    float2 tex = uv0 * (temp.w) + uv1 * (pHit->beta) + uv2 * (pHit->gamma);
+
+    /** 지금은 텍스쳐 좌표는 2차원 값만 씀. */
+    pCurrIsectResult->u = tex.x;
+    pCurrIsectResult->v = tex.y;
+}
+
 
 /**
  *	Single Pass 로 RayTracing 을 수행.

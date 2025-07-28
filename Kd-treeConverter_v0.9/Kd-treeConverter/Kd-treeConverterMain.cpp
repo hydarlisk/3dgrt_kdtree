@@ -271,7 +271,7 @@ void mousemove(int x, int y) {
 			glLoadIdentity();
  			glMultMatrixf(camera.mat);
  			glTranslatef(-camera.pos[X], -camera.pos[Y], -camera.pos[Z]);
-			printf("camera.pos: %f %f %f\n", camera.pos[0], camera.pos[1], camera.pos[2]);
+			fprintf(stdout, "camera.pos: %f %f %f\n", camera.pos[0], camera.pos[1], camera.pos[2]);
 
 			glutPostRedisplay();
 		}
@@ -897,6 +897,10 @@ void main_menu_action(int selection) {
 				break;
 			}
 			//TODO: CUDA rendering*****************************************
+
+
+
+			//cudaRenderer.h
 			launchCudaRender(
 				uip.poly_model,
 				camera,
