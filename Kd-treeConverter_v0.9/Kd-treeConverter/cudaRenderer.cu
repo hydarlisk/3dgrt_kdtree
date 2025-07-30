@@ -127,7 +127,7 @@ __device__ bool BoundsRayIntersect(const float3 minB, const float3 maxB, const c
 }
 
 // =================================================================================
-// 2. 텍스처 및 상수 메모리 선언
+// 2. 텍스춰 및 상수 메모리 선언
 // =================================================================================
 texture<uint2, 1, cudaReadModeElementType> inKdTreeNodeTex;
 texture<uint, 1, cudaReadModeElementType> inObjectOffsetListTex;
@@ -317,8 +317,28 @@ __global__ void singlePassRayTracingKernel_ShadowOff(float* pFrameBuffer, int ma
 // 4. Host-Side Public Render Function
 // =================================================================================
 
+bool initCuda() {
+    int deviceCount = 0;
+    cudaError_t err = cudaGetDeviceCount(&deviceCount);
+    if (err != cudaSuccess || deviceCount == 0) {
+        std::cerr << "[CUDA Init] No CUDA devices found." << std::endl;
+        return false;
+    }
+    err = cudaSetDevice(0);
+    if (err != cudaSuccess) {
+        std::cerr << "[CUDA Init] Failed to set device 0." << std::endl;
+        return false;
+    }
+    std::cout << "[CUDA Init] CUDA device initialized successfully." << std::endl;
+    return true;
+}
+
 void renderWithCuda(const CompositeObject& object, const Camera& camera, int width, int height, float*& out_framebuffer, bool& is_done) {
     is_done = false;
+    //int num_gpus;
+    //cudaGetDeviceCount(&num_gpus);
+    //printf("numgpu:%d\n", num_gpus);
+    //cudaSetDevice(0);
     std::cout << "--- Minimal CUDA Renderer Started ---" << std::endl;
 
     KdTree* kdTree = object.kd_tree;
@@ -345,7 +365,8 @@ void renderWithCuda(const CompositeObject& object, const Camera& camera, int wid
 
     // 1. 데이터 패킹 (Host)
     // TriAccel -> float4[4] (n_u, n_v, n_d, k | b_nu, b_nv, b_d, idx | c_nu, c_nv, c_d, matID | N.x, N.y, N.z, pad)
-    std::vector<float4> h_triangles(object.n_triangles * 4);
+    //std::vector<float4> h_triangles(object.n_triangles * 4);
+    float4* h_triangles = (float4*)malloc(sizeof(float4) * (object.n_triangles * 4));
     //printf("Data packing start\n");
     for (int i = 0; i < object.n_triangles; ++i) {
         const TriAccel& src = kdTree->tri_accel_list[i];
@@ -363,19 +384,30 @@ void renderWithCuda(const CompositeObject& object, const Camera& camera, int wid
 
     // 2. GPU 메모리 할당 및 데이터 전송
     cudaError_t err;
-    cudaArray* d_kdtree_nodes, * d_tri_offsets, * d_tri_accel;
+    //cudaArray* d_kdtree_nodes, * d_tri_offsets, * d_tri_accel;
+    uint2* d_kdtree_nodes;
+    unsigned int* d_tri_offsets;
+    float4* d_tri_accel;
 
+    printf("kdtree node count: %d\n", kdTree->tree_node_count);
     cudaChannelFormatDesc node_desc = cudaCreateChannelDesc<uint2>();
-    err = cudaMallocArray(&d_kdtree_nodes, &node_desc, kdTree->tree_node_count, 1);
-    err = cudaMemcpyToArray(d_kdtree_nodes, 0, 0, kdTree->tree, kdTree->tree_node_count * sizeof(kdtreeNode), cudaMemcpyHostToDevice);
+    //CUDA_CHECK(cudaMallocArray(&d_kdtree_nodes, &node_desc, kdTree->tree_node_count, 0));
+    //CUDA_CHECK(cudaMemcpyToArray(d_kdtree_nodes, 0, 0, kdTree->tree, kdTree->tree_node_count * sizeof(kdtreeNode), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMalloc(&d_kdtree_nodes, kdTree->tree_node_count * sizeof(uint2)));
+    CUDA_CHECK(cudaMemcpy(d_kdtree_nodes, kdTree->tree, kdTree->tree_node_count * sizeof(kdtreeNode), cudaMemcpyHostToDevice));
 
     cudaChannelFormatDesc offset_desc = cudaCreateChannelDesc<uint>();
-    err = cudaMallocArray(&d_tri_offsets, &offset_desc, kdTree->tri_offset_count, 1);
-    err = cudaMemcpyToArray(d_tri_offsets, 0, 0, kdTree->tri_offset_list, kdTree->tri_offset_count * sizeof(unsigned int), cudaMemcpyHostToDevice);
+    //CUDA_CHECK(cudaMallocArray(&d_tri_offsets, &offset_desc, kdTree->tri_offset_count, 0));
+    //CUDA_CHECK(cudaMemcpyToArray(d_tri_offsets, 0, 0, kdTree->tri_offset_list, kdTree->tri_offset_count * sizeof(unsigned int), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMalloc(&d_tri_offsets, kdTree->tri_offset_count * sizeof(uint)));
+    CUDA_CHECK(cudaMemcpy(d_tri_offsets, kdTree->tri_offset_list, kdTree->tri_offset_count * sizeof(unsigned int), cudaMemcpyHostToDevice));
 
     cudaChannelFormatDesc tri_desc = cudaCreateChannelDesc<float4>();
-    err = cudaMallocArray(&d_tri_accel, &tri_desc, object.n_triangles * 4, 1);
-    err = cudaMemcpyToArray(d_tri_accel, 0, 0, h_triangles.data(), h_triangles.size() * sizeof(float4), cudaMemcpyHostToDevice);
+    //CUDA_CHECK(cudaMallocArray(&d_tri_accel, &tri_desc, object.n_triangles * 4, 0));
+    //CUDA_CHECK(cudaMemcpyToArray(d_tri_accel, 0, 0, h_triangles.data(), h_triangles.size() * sizeof(float4), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMalloc(&d_tri_accel, object.n_triangles * sizeof(float4)));
+    //CUDA_CHECK(cudaMemcpy(d_tri_accel, h_triangles.data(), h_triangles.size() * sizeof(float4), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_tri_accel, h_triangles, object.n_triangles * sizeof(float4), cudaMemcpyHostToDevice));
     err = cudaGetLastError();
     if (err != cudaSuccess) {
         std::cerr << "[CUDA Error] Kernel launch failed: " << cudaGetErrorString(err) << std::endl;
@@ -383,18 +415,24 @@ void renderWithCuda(const CompositeObject& object, const Camera& camera, int wid
     printf("2. gpu memcpy done\n");
     
     // 3. 텍스처 바인딩
-    cudaBindTextureToArray(inKdTreeNodeTex, d_kdtree_nodes);
-    cudaBindTextureToArray(inObjectOffsetListTex, d_tri_offsets);
-    cudaBindTextureToArray(inTriAccelTex, d_tri_accel);
+    //cudaBindTextureToArray(inKdTreeNodeTex, d_kdtree_nodes);
+    //cudaBindTextureToArray(inObjectOffsetListTex, d_tri_offsets);
+    //cudaBindTextureToArray(inTriAccelTex, d_tri_accel);
+    //CUDA_CHECK(cudaBindTextureToArray(&inKdTreeNodeTex, d_kdtree_nodes, &node_desc));
+    //CUDA_CHECK(cudaBindTextureToArray(&inObjectOffsetListTex, d_tri_offsets, &offset_desc));
+    //CUDA_CHECK(cudaBindTextureToArray(&inTriAccelTex, d_tri_accel, &tri_desc));
+    CUDA_CHECK(cudaBindTexture(0, &inKdTreeNodeTex, d_kdtree_nodes, &node_desc, kdTree->tree_node_count * sizeof(kdtreeNode)));
+    CUDA_CHECK(cudaBindTexture(0, &inObjectOffsetListTex, d_tri_offsets, &offset_desc, kdTree->tri_offset_count * sizeof(unsigned int)));
+    CUDA_CHECK(cudaBindTexture(0, &inTriAccelTex, d_tri_accel, &tri_desc, object.n_triangles * sizeof(float4)));
     err = cudaGetLastError();
     if (err != cudaSuccess) {
         std::cerr << "[CUDA Error] Kernel launch failed: " << cudaGetErrorString(err) << std::endl;
     }
-    printf("3. texture Bind\n");
+    printf("3. texture Bind done\n");
     
     // 4. 상수 메모리 설정
     SceneInfo h_scene_info = { width, height };
-    cudaMemcpyToSymbol(&g_SceneInfo, &h_scene_info, sizeof(SceneInfo));
+    CUDA_CHECK(cudaMemcpyToSymbol(&g_SceneInfo, &h_scene_info, sizeof(SceneInfo)));
 
     CameraInfo h_camera_info;
     h_camera_info.eye = make_float3(camera.pos[0], camera.pos[1], camera.pos[2]);
@@ -410,12 +448,12 @@ void renderWithCuda(const CompositeObject& object, const Camera& camera, int wid
     h_camera_info.startPoint = h_camera_info.eye - n_axis * camera.near_c
         - h_camera_info.u * (plane_width * 0.5f)
         + h_camera_info.v * (plane_height * 0.5f);
-    cudaMemcpyToSymbol(&g_CameraInfo, &h_camera_info, sizeof(CameraInfo));
+    CUDA_CHECK(cudaMemcpyToSymbol(&g_CameraInfo, &h_camera_info, sizeof(CameraInfo)));
 
     float3 h_bbox_min = make_float3(object.AABB[XMIN], object.AABB[YMIN], object.AABB[ZMIN]);
     float3 h_bbox_max = make_float3(object.AABB[XMAX], object.AABB[YMAX], object.AABB[ZMAX]);
-    cudaMemcpyToSymbol(&g_SceneBBoxMin, &h_bbox_min, sizeof(float3));
-    cudaMemcpyToSymbol(&g_SceneBBoxMax, &h_bbox_max, sizeof(float3));
+    CUDA_CHECK(cudaMemcpyToSymbol(&g_SceneBBoxMin, &h_bbox_min, sizeof(float3)));
+    CUDA_CHECK(cudaMemcpyToSymbol(&g_SceneBBoxMax, &h_bbox_max, sizeof(float3)));
 
     cuObjectMaterial h_material;
     h_material.ambient_emission = make_float3(0.1f, 0.1f, 0.1f);
@@ -425,7 +463,7 @@ void renderWithCuda(const CompositeObject& object, const Camera& camera, int wid
     h_material.transparency = 0.0f;
     h_material.roughness = 32.0f;
     h_material.refractionIndex = 1.0f;
-    cudaMemcpyToSymbol(g_materials, &h_material, sizeof(cuObjectMaterial));
+    CUDA_CHECK(cudaMemcpyToSymbol(g_materials, &h_material, sizeof(cuObjectMaterial)));
     err = cudaGetLastError();
     if (err != cudaSuccess) {
         std::cerr << "[CUDA Error] Kernel launch failed: " << cudaGetErrorString(err) << std::endl;
@@ -435,8 +473,8 @@ void renderWithCuda(const CompositeObject& object, const Camera& camera, int wid
     // 5. 커널 실행
     float* d_framebuffer;
     size_t framebuffer_size = width * height * 3 * sizeof(float);
-    cudaMalloc(&d_framebuffer, framebuffer_size);
-    cudaMemset(d_framebuffer, 0, framebuffer_size);
+    CUDA_CHECK(cudaMalloc(&d_framebuffer, framebuffer_size));
+    CUDA_CHECK(cudaMemset(d_framebuffer, 0, framebuffer_size));
 
     dim3 threads(16, 16);
     dim3 blocks((width + threads.x - 1) / threads.x, (height + threads.y - 1) / threads.y);
@@ -455,16 +493,21 @@ void renderWithCuda(const CompositeObject& object, const Camera& camera, int wid
     // 6. 결과 복사 및 메모리 해제
     if (out_framebuffer) delete[] out_framebuffer;
     out_framebuffer = new float[width * height * 3];
-    cudaMemcpy(out_framebuffer, d_framebuffer, framebuffer_size, cudaMemcpyDeviceToHost);
+    CUDA_CHECK(cudaMemcpy(out_framebuffer, d_framebuffer, framebuffer_size, cudaMemcpyDeviceToHost));
     is_done = true;
     err = cudaGetLastError();
     if (err != cudaSuccess) {
         std::cerr << "[CUDA Error] Kernel launch failed: " << cudaGetErrorString(err) << std::endl;
     }
+    free(h_triangles);
+
     cudaFree(d_framebuffer);
-    cudaFreeArray(d_kdtree_nodes);
-    cudaFreeArray(d_tri_offsets);
-    cudaFreeArray(d_tri_accel);
+    //cudaFreeArray(d_kdtree_nodes);
+    //cudaFreeArray(d_tri_offsets);
+    //cudaFreeArray(d_tri_accel);
+    cudaFree(d_kdtree_nodes);
+    cudaFree(d_tri_offsets);
+    cudaFree(d_tri_accel);
     cudaUnbindTexture(inKdTreeNodeTex);
     cudaUnbindTexture(inObjectOffsetListTex);
     cudaUnbindTexture(inTriAccelTex);

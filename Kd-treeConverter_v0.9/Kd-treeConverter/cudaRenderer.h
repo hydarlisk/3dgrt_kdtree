@@ -20,6 +20,8 @@ inline float uint_as_float_H(const unsigned int a) { return *(float*)&(a); }
 //	return f;
 //}
 
+bool initCuda();
+
 /**
  * @brief CompositeObject를 CUDA로 렌더링하는 유일한 Public 함수.
  * @param object 렌더링할 CompositeObject (Kd-tree 포함).

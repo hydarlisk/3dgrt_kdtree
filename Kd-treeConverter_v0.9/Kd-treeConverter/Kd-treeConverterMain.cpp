@@ -25,6 +25,7 @@
 #include "MyMathUtility.h"
 
 //shyun
+#include <cuda_gl_interop.h>
 //#include "sgrt_interface.h"
 //#include "SGRT_Integration.h"
 #include "test.h"
@@ -38,8 +39,8 @@
 //using namespace KDTConstructor;
 bool render_gaussian = false;
 float* g_render_framebuffer = nullptr;
-int g_render_width = 800;
-int g_render_height = 600;
+int g_render_width = MAIN_WINDOW_WIDTH;
+int g_render_height = MAIN_WINDOW_HEIGHT;
 bool g_cuda_rendering_done = false;
 //shyun end
 UIParameters uip;
@@ -61,6 +62,9 @@ void load_poly_model_into_OpenGL(void) {
 	glVertexPointer(3, GL_FLOAT, sizeof(ExtendedVertex), BUFFER_OFFSET(0));
 	glNormalPointer(GL_FLOAT, sizeof(ExtendedVertex), BUFFER_OFFSET(3));
 	*/
+	camera.pos[0] = uip.poly_model.AABB[XMAX];
+	camera.pos[1] = uip.poly_model.AABB[YMAX];
+	camera.pos[2] = uip.poly_model.AABB[ZMAX];
 }
  
 void display(void) {
@@ -908,7 +912,11 @@ void main_menu_action(int selection) {
 				break;
 			}
 			//TODO: CUDA rendering*****************************************
+			
+			//test.h
 			//kernelTestFuncion();
+			//cudaCopyTest();
+			//printf("test done\n");
 
 			/*//SGRT
 			renderWithSGRT(
@@ -949,17 +957,17 @@ void main_menu_action(int selection) {
 			/*/cudaKDTreeTracer
 			initCudaRendering(uip.poly_model, g_render_framebuffer, &g_cuda_rendering_done);*/
 
-			//GScene* scene = new GScene();
-			//scene->setKdTreeLoadFilePath("../../Data/Obj/hotdog_tree.kdt");
-			//scene->convertRenderScene();
-			//scene->buildObjectKdTree();
-			//GKDTreeStructure* kdTree = new GKDTreeStructure(scene);
-			//kdTree->initialize();
-			//scene->setSceneKDTree(kdTree);
+			/*GScene* scene = new GScene();
+			scene->setKdTreeLoadFilePath("../../Data/Obj/hotdog_tree.kdt");
+			scene->convertRenderScene();
+			scene->buildObjectKdTree();
+			GKDTreeStructure* kdTree = new GKDTreeStructure(scene);
+			kdTree->initialize();
+			scene->setSceneKDTree(kdTree);
 
-			//GGPUExperimentalRayTracer* rayTracer = new GGPUExperimentalRayTracer();
+			GGPUExperimentalRayTracer* rayTracer = new GGPUExperimentalRayTracer();
 
-			//rayTracer->rendering(scene, false);
+			rayTracer->rendering(scene, false);*/
 			
 
 			/*CompositeObject& obj = uip.poly_model;
@@ -1188,7 +1196,7 @@ void show_greetings(void) {
 }
 
 void main(int argc, char **argv) {
-
+	cudaGLSetGLDevice(0);
 	init_KDT_system();
 	glutInit (&argc, argv); 
 	glutInitDisplayMode(GLUT_RGB | GLUT_DEPTH | GLUT_DOUBLE);   
@@ -1196,6 +1204,12 @@ void main(int argc, char **argv) {
 	glutInitContextVersion(4, 0);
 	glutInitContextProfile(GLUT_COMPATIBILITY_PROFILE);
 	uip.main_window_ID = glutCreateWindow("SL Mesh-to-Kd-Tree Converter SW: Verion 1.0_glut");
+
+	if (!initCuda()) {
+		fprintf(stderr, "Failed to initialize CUDA. Exiting.\n");
+		exit(1);
+	}
+
 	initialize_glew(); 
 	register_callbacks_and_create_menu();
 

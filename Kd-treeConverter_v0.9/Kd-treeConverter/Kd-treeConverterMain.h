@@ -4,8 +4,8 @@
   Date: November 1, 2014
  **************************************************************/
 
-#define MAIN_WINDOW_WIDTH 300
-#define MAIN_WINDOW_HEIGHT 200
+#define MAIN_WINDOW_WIDTH 900
+#define MAIN_WINDOW_HEIGHT 600
 
 #define SMALL_OFFSET 1.0
 #define ZOOM_SENSITIVITY 0.25
