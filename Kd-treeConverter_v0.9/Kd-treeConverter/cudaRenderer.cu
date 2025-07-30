@@ -14,6 +14,14 @@
 #include <texture_indirect_functions.h>
 #include <vector_types.h>
 
+#define CUDA_CHECK(ans) { gpuAssert((ans), __FILE__, __LINE__); }
+inline void gpuAssert(cudaError_t code, const char* file, int line) {
+    if (code != cudaSuccess) {
+        fprintf(stderr, "CUDA ERROR: %s (%s:%d)\n", cudaGetErrorString(code), file, line);
+        exit(code);
+    }
+}
+
 // =================================================================================
 // 1. CUDA 커널 및 디바이스 헬퍼 함수/구조체 (SGRT 파일들에서 필요한 부분만 추출)
 // =================================================================================
@@ -93,9 +101,6 @@ struct shortStack {
 };
 
 // --- Device-side Helper Functions ---
-//__device__ __host__ inline float uint_as_float_H(const unsigned int a) {
-//    return __uint_as_float(a);
-//}
 
 __device__ float3 reflection(float3 I, float3 N) {
     return I - 2.0f * N * dot(I, N);
@@ -324,24 +329,36 @@ void renderWithCuda(const CompositeObject& object, const Camera& camera, int wid
 
     printf("0. exist KD-Tree\n");
 
+    printf("[DEBUG] object.n_triangles = %d\n", object.n_triangles);
+    if (kdTree == nullptr) {
+        printf("[FATAL] kdTree == nullptr\n");
+        return;
+    }
+    if (kdTree->tri_accel_list == nullptr) {
+        printf("[FATAL] tri_accel_list == nullptr\n");
+        return;
+    }
+    if (kdTree->tri_accel_list + object.n_triangles <= kdTree->tri_accel_list) {
+        printf("[FATAL] tri_accel_list too small or corrupt pointer\n");
+        return;
+    }
+
     // 1. 데이터 패킹 (Host)
     // TriAccel -> float4[4] (n_u, n_v, n_d, k | b_nu, b_nv, b_d, idx | c_nu, c_nv, c_d, matID | N.x, N.y, N.z, pad)
     std::vector<float4> h_triangles(object.n_triangles * 4);
-    printf("Data packing start\n");
+    //printf("Data packing start\n");
     for (int i = 0; i < object.n_triangles; ++i) {
         const TriAccel& src = kdTree->tri_accel_list[i];
-        printf("Data packing %d - 0\n", i);
-        h_triangles[i * 4 + 0] = make_float4(src.n_u, src.n_v, src.n_d, src.k);
-        printf("src.k: %u\n");
-        printf("Data packing %d - 1, src.indexInObject: %d\n",i);
+        //printf("Data packing %d - 0, src.k: % u\n", i, src.k);
+        h_triangles[i * 4 + 0] = make_float4(src.n_u, src.n_v, src.n_d, uint_as_float_H(src.k));
+        //printf("Data packing %d - 1, src.indexInObject: %d\n",i);
         h_triangles[i * 4 + 1] = make_float4(src.b_nu, src.b_nv, src.b_d, int_as_float_H(src.indexInObject));
-        printf("Data packing %d - 2, src.material_ID: %d\n", i);
+        //printf("Data packing %d - 2, src.material_ID: %d\n", i);
         h_triangles[i * 4 + 2] = make_float4(src.c_nu, src.c_nv, src.c_d, int_as_float_H(src.material_ID));
-        printf("Data packing %d - 3\n", i);
+        //printf("Data packing %d - 3\n", i);
         h_triangles[i * 4 + 3] = make_float4(src.N[0], src.N[1], src.N[2], 0.0f);
-        printf("Data packing %d - 4\n", i);
+        //printf("Data packing %d - 4\n", i);
     }
-
     printf("1. Data packing done\n");
 
     // 2. GPU 메모리 할당 및 데이터 전송
@@ -359,14 +376,20 @@ void renderWithCuda(const CompositeObject& object, const Camera& camera, int wid
     cudaChannelFormatDesc tri_desc = cudaCreateChannelDesc<float4>();
     err = cudaMallocArray(&d_tri_accel, &tri_desc, object.n_triangles * 4, 1);
     err = cudaMemcpyToArray(d_tri_accel, 0, 0, h_triangles.data(), h_triangles.size() * sizeof(float4), cudaMemcpyHostToDevice);
-    
+    err = cudaGetLastError();
+    if (err != cudaSuccess) {
+        std::cerr << "[CUDA Error] Kernel launch failed: " << cudaGetErrorString(err) << std::endl;
+    }
     printf("2. gpu memcpy done\n");
     
     // 3. 텍스처 바인딩
     cudaBindTextureToArray(inKdTreeNodeTex, d_kdtree_nodes);
     cudaBindTextureToArray(inObjectOffsetListTex, d_tri_offsets);
     cudaBindTextureToArray(inTriAccelTex, d_tri_accel);
-    
+    err = cudaGetLastError();
+    if (err != cudaSuccess) {
+        std::cerr << "[CUDA Error] Kernel launch failed: " << cudaGetErrorString(err) << std::endl;
+    }
     printf("3. texture Bind\n");
     
     // 4. 상수 메모리 설정
@@ -403,7 +426,10 @@ void renderWithCuda(const CompositeObject& object, const Camera& camera, int wid
     h_material.roughness = 32.0f;
     h_material.refractionIndex = 1.0f;
     cudaMemcpyToSymbol(g_materials, &h_material, sizeof(cuObjectMaterial));
-
+    err = cudaGetLastError();
+    if (err != cudaSuccess) {
+        std::cerr << "[CUDA Error] Kernel launch failed: " << cudaGetErrorString(err) << std::endl;
+    }
     printf("4. const memory set done\n");
 
     // 5. 커널 실행
@@ -431,7 +457,10 @@ void renderWithCuda(const CompositeObject& object, const Camera& camera, int wid
     out_framebuffer = new float[width * height * 3];
     cudaMemcpy(out_framebuffer, d_framebuffer, framebuffer_size, cudaMemcpyDeviceToHost);
     is_done = true;
-
+    err = cudaGetLastError();
+    if (err != cudaSuccess) {
+        std::cerr << "[CUDA Error] Kernel launch failed: " << cudaGetErrorString(err) << std::endl;
+    }
     cudaFree(d_framebuffer);
     cudaFreeArray(d_kdtree_nodes);
     cudaFreeArray(d_tri_offsets);
@@ -439,6 +468,10 @@ void renderWithCuda(const CompositeObject& object, const Camera& camera, int wid
     cudaUnbindTexture(inKdTreeNodeTex);
     cudaUnbindTexture(inObjectOffsetListTex);
     cudaUnbindTexture(inTriAccelTex);
-
+    printf("6. free done\n");
+    err = cudaGetLastError();
+    if (err != cudaSuccess) {
+        std::cerr << "[CUDA Error] Kernel launch failed: " << cudaGetErrorString(err) << std::endl;
+    }
     std::cout << "--- Minimal CUDA Renderer Finished ---" << std::endl;
 }

@@ -4,6 +4,7 @@
 #include "Kd-treeConverter.h"
 #include "OpenGLStuffs.h"
 //#include <vector_types.h>
+#include <cstring>
 
 // 전방 선언
 //struct _CompositeObject;
@@ -12,11 +13,12 @@
 inline float fminf(const float a, const float b) { return (b > a) ? a : b; }
 inline float fmaxf(const float a, const float b) { return (b < a) ? a : b; }
 inline float int_as_float_H(const int a) { return *(float*)&(a); }
-//inline float uint_as_float_H(const unsigned int a) { return *(float*)&(a); }
-inline float uint_as_float_H(unsigned int a) {
-	float f = a;
-	return f;
-}
+inline float uint_as_float_H(const unsigned int a) { return *(float*)&(a); }
+//inline float uint_as_float_H(unsigned int a) {
+//	float f;
+//	std::memcpy(&f, &a, sizeof(float));
+//	return f;
+//}
 
 /**
  * @brief CompositeObject를 CUDA로 렌더링하는 유일한 Public 함수.

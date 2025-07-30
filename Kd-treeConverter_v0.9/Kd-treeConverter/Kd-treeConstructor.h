@@ -105,5 +105,5 @@ void uninitialize_kd_tree(void);
 void build_kd_tree_recursive(BoundEdge *bEdge, const TriangleList *pTriangleInfos, unsigned int triangleSize,
                              BoundingBox &bbox, unsigned int inNodeLevel, KdTreeNode *inNode);
 
-void build_TriAccList(CompositeObject *poly_model, TriAccel *pTriAcc);
+void build_TriAccList(CompositeObject *poly_model, TriAccel*& pTriAcc);
 //}

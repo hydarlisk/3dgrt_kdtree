@@ -811,6 +811,11 @@ void main_menu_action(int selection) {
 		break;
 	case 200:
 		build_kd_tree_for_composite_object(&uip.poly_model);
+		if (uip.poly_model.kd_tree->tri_accel_list == NULL) printf("tri_accel_list NULL\n");
+		else {
+			printf("triangle num: %d\n", uip.poly_model.n_triangles);
+			printf("tri_accel_list size: %d", sizeof(uip.poly_model.kd_tree->tri_accel_list) / sizeof(*(uip.poly_model.kd_tree->tri_accel_list)));
+		}
 		break;
 	case 300:
 		strcpy(full_kd_tree_file_name, uip.kd_tree_dump_dir);

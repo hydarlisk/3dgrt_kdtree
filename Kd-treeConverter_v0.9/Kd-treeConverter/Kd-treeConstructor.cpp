@@ -722,11 +722,18 @@ void build_kd_tree_recursive(BoundEdge *bEdge, const TriangleList *pTriangleInfo
 	}
 }
 
-void build_TriAccList(CompositeObject *poly_model, TriAccel *pTriAcc)
+void build_TriAccList(CompositeObject *poly_model, TriAccel*& pTriAcc)
 {
 	int iTriangleSize  = poly_model->n_triangles;
+	printf("build_TriAccList triangle:%d\n", iTriangleSize);
 
-	pTriAcc = (TriAccel*) _aligned_malloc(iTriangleSize * sizeof(TriAccel), 16);
+	//pTriAcc = (TriAccel*) _aligned_malloc(iTriangleSize * sizeof(TriAccel), 16);
+
+	// pTriAcc가 NULL인지 확인 (메모리 할당 실패 여부 검사)
+	if (pTriAcc == NULL) {
+		fprintf(stderr, "ERROR: Failed to allocate memory for TriAccel list! (size: %d)\n", iTriangleSize);
+		return; // 함수를 안전하게 종료
+	}
 
 	float A[3], B[3], C[3];
 	float b[3], c[3];
@@ -794,5 +801,9 @@ void build_TriAccList(CompositeObject *poly_model, TriAccel *pTriAcc)
 		// Need to be modified
 		float fTransparency = 0.0f;
 		pTriAcc[i].isTransparent = (fTransparency > 0)?1:0;
+
+		//printf("k(%d): %u\n", i, pTriAcc[i].k);
 	}
+	//printf("k(%d): %u\n", 315728, pTriAcc[315728].k);
+	printf("build_TriAccList triacc:%d\n", sizeof(pTriAcc)/sizeof(*pTriAcc));
 }

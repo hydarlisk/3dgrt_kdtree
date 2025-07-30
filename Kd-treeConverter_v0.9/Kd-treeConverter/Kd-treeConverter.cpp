@@ -48,6 +48,7 @@ int build_kd_tree_for_composite_object(CompositeObject *c_object) {
 	fprintf(stdout, "\n  - Building a kd-tree triangle accerlaration list\n");
 	// build triangle acceleration
 	TriAccel *pTriAcc = NULL;
+	pTriAcc = (TriAccel*)_aligned_malloc(c_object->n_triangles * sizeof(TriAccel), 16);
 	build_TriAccList(c_object, pTriAcc);
 	fprintf(stdout, "  - Done!\n");
 
