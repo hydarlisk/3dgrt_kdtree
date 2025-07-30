@@ -4,10 +4,11 @@
 #include <math.h>
 #include <cstdlib>
 #include <cmath>
-#include "sgrt_interface.h"
-#include "RayTraversal.h"
-#include "cuCommonDefs.cuh"
-#include "SGRTx2Lib/cuda_math.h"
+#include "cudaKDTreeTracer.h"
+//#include "sgrt_interface.h"
+//#include "RayTraversal.h"
+//#include "cuCommonDefs.cuh"
+//#include "SGRTx2Lib/cuda_math.h"
 
 int g_render_width = 800;
 int g_render_height = 600;
@@ -24,7 +25,7 @@ void checkCudaErrors(cudaError err) {
 __global__ void rayTraceKernel(float* framebuffer, CompositeObject scene) {
 	int x = blockIdx.x * blockDim.x + threadIdx.x;
 	int y = blockIdx.y * blockDim.y + threadIdx.y;
-	int idx = y * WIDTH + x;
+	int idx = y * g_render_width + x;
 
 	cuRay ray = generateRay(x, y);
 	cuIntersectionCheck isect;

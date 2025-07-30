@@ -264,6 +264,9 @@
     <ClCompile Include="SGRTx2Lib\SSERenderPipeline4x4.cpp">
       <Filter>SGRTx2Lib\Pipeline\CPURenderPipeline</Filter>
     </ClCompile>
+    <ClCompile Include="SGRT_Integration.cpp">
+      <Filter>CUDA</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Kd-treeConverter.h">
@@ -491,6 +494,18 @@
     <ClInclude Include="cudaRenderer.h">
       <Filter>CUDA</Filter>
     </ClInclude>
+    <ClInclude Include="SGRT_Integration.h">
+      <Filter>CUDA</Filter>
+    </ClInclude>
+    <ClInclude Include="test.h">
+      <Filter>CUDA</Filter>
+    </ClInclude>
+    <ClInclude Include="cudaKDTreeTracer.h">
+      <Filter>CUDA</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRTx2Lib\cudaRenderPipeline.h">
+      <Filter>SGRTx2Lib\Pipeline\cudaRenderPipeline</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cudaRayTracingKernel.cu">
@@ -514,9 +529,6 @@
     <CudaCompile Include="SGRTx2Lib\cudaPhotonMapping.h">
       <Filter>SGRTx2Lib\Pipeline\cudaRenderPipeline</Filter>
     </CudaCompile>
-    <CudaCompile Include="SGRTx2Lib\cudaRenderPipeline.h">
-      <Filter>SGRTx2Lib\Pipeline\cudaRenderPipeline</Filter>
-    </CudaCompile>
     <CudaCompile Include="SGRTx2Lib\cudaPhotonMapping.cuh">
       <Filter>SGRTx2Lib\Pipeline\cudaRenderPipeline</Filter>
     </CudaCompile>
@@ -526,14 +538,17 @@
     <CudaCompile Include="SGRTx2Lib\cudaRenderPipeline.cuh">
       <Filter>SGRTx2Lib\Pipeline\cudaRenderPipeline</Filter>
     </CudaCompile>
-    <CudaCompile Include="SGRTx2Lib\cuda_math.h">
-      <Filter>SGRTx2Lib\Pipeline\cudaRenderPipeline</Filter>
-    </CudaCompile>
     <CudaCompile Include="cudaRenderer.cu">
       <Filter>CUDA</Filter>
     </CudaCompile>
     <CudaCompile Include="cudaKDTreeTracer.cu">
       <Filter>CUDA</Filter>
+    </CudaCompile>
+    <CudaCompile Include="test.cu">
+      <Filter>CUDA</Filter>
+    </CudaCompile>
+    <CudaCompile Include="SGRTx2Lib\cuda_math.h">
+      <Filter>SGRTx2Lib\Pipeline\cudaRenderPipeline</Filter>
     </CudaCompile>
   </ItemGroup>
   <ItemGroup>

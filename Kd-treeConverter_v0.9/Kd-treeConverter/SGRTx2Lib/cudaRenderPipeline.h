@@ -1,7 +1,9 @@
+#pragma once
 #ifndef _CUDA_RENDER_PIPELINE_H_
 #define _CUDA_RENDER_PIPELINE_H_
 
 #include <cuda_runtime.h>
+#include <stdlib.h>
 /** 
  *	CUDA 에 사용되는 구조체를 CPU 에서 값을 채우기
  *	위해서 cudaRenderPipeline.cuh 를 공유해야 하는데,
@@ -12,7 +14,12 @@
 
 inline float fminf(const float a, const float b) { return (b > a) ? a : b; }
 inline float fmaxf(const float a, const float b) { return (b < a) ? a : b; }
-inline float int_as_float_H(const int a) { return *(float *)&(a); }
+inline float int_as_float_H(const int a) { return *(float*)&(a); }
+//inline float uint_as_float_H(const unsigned int a) { return *(float*)&(a); }
+__host__ inline float uint_as_float_H(unsigned int a) {
+    float f = a;
+    return f;
+}
 //__host__ __device__ inline int float_as_int(const float a) { return *(int *)&(a); }
 //union {
 //    float f;

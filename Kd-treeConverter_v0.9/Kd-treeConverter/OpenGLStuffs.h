@@ -1,3 +1,4 @@
+#pragma once
 /**************************************************************
   File name: OpenGLStuffs.h
   Version: 1.0

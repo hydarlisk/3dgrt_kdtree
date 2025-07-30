@@ -12,6 +12,7 @@
 #include <cuda_runtime.h>
 //#include <cutil.h>
 #include "cudaRenderPipelineCommonKernel.cu"
+#include "cudaRenderPipeline.h"
 
 
 /**------------------------------------------------------------------------------------------

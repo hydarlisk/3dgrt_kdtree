@@ -274,7 +274,7 @@ typedef struct
 	float3 secondaryNormal;
 } cuSamplingMap;
 
-#define MAKE_PIXEL_ATTR_ASFLOAT( OID, SHADOW, SELECTED, TEXTURE )		( int_as_float_H( OID << 16 | SHADOW << 8 | SELECTED << 4 | TEXTURE ) )
+#define MAKE_PIXEL_ATTR_ASFLOAT( OID, SHADOW, SELECTED, TEXTURE )		( int_as_float( OID << 16 | SHADOW << 8 | SELECTED << 4 | TEXTURE ) )
 #define GET_OID_ATTR( ATTR )						( ATTR >> 16 )
 #define GET_TEXTURE_ATTR( ATTR )					( ATTR & 0x000000f )
 #define GET_SELECTED_ATTR( ATTR )					( ATTR & 0x00000f0 )

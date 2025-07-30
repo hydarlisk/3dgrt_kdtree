@@ -47,6 +47,16 @@
 #define SHORT_STACK_DEPTH	7
 #define USE_CULLING_OPTION						//	Back Face Culling 유무.
 
+__constant__ unsigned shortStackDepth;
+
+// stack의 element 형식.
+typedef struct
+{
+	unsigned nodeID;
+	//	float tMin, tMax; 
+	float tMax;
+}cu_traceState;
+
 //심플 버전. bank conflict 고려 안함.
 struct shortStack {
 	unsigned _top, quant, baseOffset;

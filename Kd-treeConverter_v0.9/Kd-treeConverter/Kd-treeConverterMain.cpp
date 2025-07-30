@@ -25,13 +25,15 @@
 #include "MyMathUtility.h"
 
 //shyun
-#include "sgrt_interface.h"
-#include "cudaRenderer.cu"
-//#include "cudaKDTreeTracer.cu"
+//#include "sgrt_interface.h"
+//#include "SGRT_Integration.h"
+#include "test.h"
+#include "cudaRenderer.h"
+//#include "cudaKDTreeTracer.h"
 //#include "cudaRayTracingKernel.cu"
-#include "SGRTx2Lib/GKDTreeStructure.h"
-#include "SGRTx2Lib/GGPURayTracer.h"
-#include "SGRTx2Lib/GGPUExperimentalRayTracer.h"
+//#include "SGRTx2Lib/GKDTreeStructure.h"
+//#include "SGRTx2Lib/GGPURayTracer.h"
+//#include "SGRTx2Lib/GGPUExperimentalRayTracer.h"
 //using namespace KDTConverter;
 //using namespace KDTConstructor;
 bool render_gaussian = false;
@@ -896,12 +898,15 @@ void main_menu_action(int selection) {
 				fprintf(stdout, "No triangles in CompositeObject\n");
 				break;
 			}
+			if (uip.poly_model.kd_tree == NULL) {
+				fprintf(stdout, "No kd-tree in CompositeObject\n");
+				break;
+			}
 			//TODO: CUDA rendering*****************************************
+			//kernelTestFuncion();
 
-
-
-			//cudaRenderer.h
-			launchCudaRender(
+			/*//SGRT
+			renderWithSGRT(
 				uip.poly_model,
 				camera,
 				g_render_width,
@@ -911,11 +916,33 @@ void main_menu_action(int selection) {
 			);
 
 			if (g_cuda_rendering_done) {
-				printf("CUDA Rendering seems to be done. Refreshing display...\n");
+				printf("SGRT rendering complete. Refreshing display...\n");
 				glutPostRedisplay();
 			}
+			else {
+				fprintf(stderr, "SGRT rendering failed.\n");
+			}*/
+
+			//cudaRenderer.h
+			//renderWithCuda(const CompositeObject & object, const Camera & camera, int width, int height, float*& out_framebuffer, bool& is_done)
+			renderWithCuda(
+				uip.poly_model,
+				camera,
+				g_render_width,
+				g_render_height,
+				g_render_framebuffer,
+				g_cuda_rendering_done
+			);
+			if (g_cuda_rendering_done) {
+				printf("CUDA rendering complete. Refreshing display...\n");
+				glutPostRedisplay();
+			}
+			else {
+				fprintf(stderr, "CUDA rendering failed.\n");
+			}
 			
-			//initCudaRendering(uip.poly_model, g_render_framebuffer, &g_cuda_rendering_done);
+			/*/cudaKDTreeTracer
+			initCudaRendering(uip.poly_model, g_render_framebuffer, &g_cuda_rendering_done);*/
 
 			//GScene* scene = new GScene();
 			//scene->setKdTreeLoadFilePath("../../Data/Obj/hotdog_tree.kdt");
@@ -1076,7 +1103,7 @@ void register_callbacks_and_create_menu(void) {
 	glutAddMenuEntry("3. Dump Kd-tree and I-Geometry to Files", 300);
 	glutAddMenuEntry("4. Read Kd-tree from File", 400);
 	glutAddMenuEntry("5. Read .obj File and Prepair I-Geometry", 500);
-	//glutAddMenuEntry("6. CUDA Rendering", 600);
+	glutAddMenuEntry("6. CUDA Rendering", 600);
 	glutAddMenuEntry("Exit", 999); 
 
 	glutAttachMenu(GLUT_RIGHT_BUTTON); 

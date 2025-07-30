@@ -1,648 +1,267 @@
-#include <stdio.h>
-#include <vector>
-#include <cuda_runtime.h>
-#include <device_launch_parameters.h>
-
+#include <GL/glew.h>
+#include <GL/freeglut.h>
+#include "OpenGLStuffs.h"
 #include "CudaRenderer.h"
+//#include "SGRTx2Lib/cudaRenderPipeline.h"
 #include "SGRTx2Lib/cuda_math.h"
-//#include "SGRTx2Lib/cudaRenderCommon.cuh"
-#define M_PI 3.14159f
 
-/**
- *	ray check 너무 앞에서 만나면 무시하기 위한 epsilon
- */
-#define RAY_START_EPSILON		EPSILON3
-#define BARYCENTRY_EPSILON		EPSILON7
-
-#define EPSILON3 1e-3f
-#define EPSILON4 1e-4f
-#define EPSILON5 1e-5f
-#define EPSILON7 1e-7f
-
-#define AIR_INDEX	1.0f
-
-#define BLOOMING_THREAD_DIM					128
-#define SHADING_THREAD_DIM					128
-#define PRIMARY_RAY_THREAD_DIM				128
-#define INTERSECTION_THREAD_DIM				128
-
-#define ADAPTIVE_THREADS					256
-#define SUBPIXEL_CAPABILITY					64			// 주의 반드시 ADAPTIVE_THREADS / 4개를 써야한다.!!!
-
-#define USE_CONTRAST_COMPARE							// contrast 로 비교할지, luminance 로 비교할지
-
-#define COLOR_WEIGHT_THREADHOLD				0.01f
-#define EDGE_THRESHOLD						0.3f
-#define DETECTOR_NORMAL_THREADHOLD			0.4f
+#include <vector>
+#include <iostream>
+#include <cuda_runtime.h>
+#include <cuda_texture_types.h>
+#include <device_launch_parameters.h>
+#include <texture_fetch_functions.h>
+#include <texture_indirect_functions.h>
+#include <vector_types.h>
 
 // =================================================================================
-// 1. 제공된 SGRTx2Lib 커널 및 관련 구조체/헬퍼 함수
-// (이전 질문에서 제공된 코드를 그대로 사용합니다)
+// 1. CUDA 커널 및 디바이스 헬퍼 함수/구조체 (SGRT 파일들에서 필요한 부분만 추출)
 // =================================================================================
+#define M_PI 3.14159265358979323846f
+#define RAY_START_EPSILON 1e-4f
+#define BARYCENTRY_EPSILON 1e-7f
 
-// Scene, Camera 정보 (상수 메모리 사용)
-struct SceneInfo {
-    int iResolutionX, iResolutionY;
-    int iSuperSamplingX, iSuperSamplingY;
-    int iBlockSizeX, iBlockSizeY;
-};
-
-struct CameraInfo {
-    float3 eye;
-    float3 u, v;
-    float3 startPoint;
-    float stepX, stepY;
-};
-
-__constant__ SceneInfo g_SceneInfo;
-__constant__ CameraInfo g_CameraInfo;
-__constant__ float3 g_SceneBBox[2]; // Scene의 AABB
-
-__constant__ unsigned shortStackDepth;
-
-extern __shared__ cu_traceState smemBuffer[];
-
-// 광선(Ray) 구조체
-/**
- *	추적할 ray 정보를 표현.
- *	self intersection 을 피하기 위해서 이전에 intersect 된 삼각형의 id 를 가지게 한다.
- *	EPSILON 으로 처리할수도 있지만, 삼각형이 조밀한 경우 문제가 될 수 있으므로 id 기반으로
- *	처리하자.
- */
-typedef struct __align__(16) _curay
-{
-    float3 dir;
-    float pad;			//	texture float4 로 데이터를 넘기므로 float 하나 padding.
+// --- Device-side Data Structures ---
+struct cuRay {
     float3 pos;
-    float pad2;			//	texture float4 로 데이터를 넘겨야 하므로 padding 해야 함.
-
-    //float4 info;		//	info.x 가 previous triangle index 를 가지는것. 나머지는 padding.
-
-    //__host__ __device__ inline void init() {
-    //	info.x = int_as_float_H( -1 );
-    //}
-    //__host__ __device__ inline void setPrevTriIndex( int index ) {
-    //	info.x = int_as_float_H( index );
-    //}
-    //__host__ __device__ inline int getPrevTriIndex() const 
-    //{	return float_as_int( info.x );			}
-
-    __host__ __device__ inline float2 get_dir_pos(unsigned i) const
-    {
-        float2 ret;
-        switch (i) {
-        case 0:     ret.x = pos.x; ret.y = dir.x; return ret;
-        case 1:     ret.x = pos.y; ret.y = dir.y; return ret;
-        default:    ret.x = pos.z; ret.y = dir.z; return ret;
-        }
+    float3 dir;
+    __device__ float2 get_dir_pos(const unsigned axis) const {
+        if (axis == 0) return make_float2(pos.x, dir.x);
+        if (axis == 1) return make_float2(pos.y, dir.y);
+        return make_float2(pos.z, dir.z);
     }
-    __host__ __device__ inline float3 dir_perm_x(void) const
-    {
-        return make_float3(dir.x, dir.y, dir.z);
-    }
-    __host__ __device__ inline float3 dir_perm_y(void) const
-    {
-        return make_float3(dir.y, dir.z, dir.x);
-    }
-    __host__ __device__ inline float3 dir_perm_z(void) const
-    {
-        return make_float3(dir.z, dir.x, dir.y);
-    }
-    __host__ __device__ inline float3 pos_perm_x(void) const
-    {
-        return make_float3(pos.x, pos.y, pos.z);
-    }
-    __host__ __device__ inline float3 pos_perm_y(void) const
-    {
-        return make_float3(pos.y, pos.z, pos.x);
-    }
-    __host__ __device__ inline float3 pos_perm_z(void) const
-    {
-        return make_float3(pos.z, pos.x, pos.y);
-    }
+};
 
-} cuRay;
-//struct cuRay {
-//    float3 pos;
-//    float3 dir;
-//
-//    __device__ float2 get_dir_pos(const unsigned axis) const {
-//        if (axis == 0) return make_float2(pos.x, dir.x);
-//        if (axis == 1) return make_float2(pos.y, dir.y);
-//        return make_float2(pos.z, dir.z);
-//    }
-//};
-
-typedef struct _cu_boundingbox_
-{
-    float4 min_max[2];
-    //__host__ __device__ inline void setMin(const float4 &minbbox)
-    //{	min_max[0] = minbbox;	}
-    //__host__ __device__ inline void setMax(const float4 &maxbbox)
-    //{	min_max[1] = maxbbox;	}
-
-} cuBoundingBox;
-
-// 교차점(Intersection) 정보 구조체
 struct cuIntersectionCheck {
     float tHit;
     float beta, gamma;
     int triIndex;
     int objectIndex;
-    bool bSelected;
-
-    __device__ void init() { tHit = FLT_MAX; triIndex = -1; objectIndex = -1; bSelected = false; }
+    __device__ void init() { tHit = FLT_MAX; triIndex = -1; objectIndex = 0; }
     __device__ bool isHit() const { return triIndex != -1; }
 };
 
-/**
- *	intersection point 정보. cuda 안에서
- *	shading 을 하기위해서 geometry 정보 자체를
- *	담는다. 절대 float3,2,4 를 혼용해서 쓰지 말것. 이유는 맨위를 보시라.
- */
-typedef struct __align__(16)
-{
-    unsigned int triIndex;			//	obj list 안에서 몇 번째 삼각형인지.
-    unsigned int objectIndex;		//	삼각형이 포함된 object index. object material 에 접근할때 필요.
-    unsigned int rayIndex;			//	이 intersection point 가 어떤 ray 의 결과인지.
-    //	(left,top) 부터 순서대로. SuperSampling 까지 포함해서 계산된 index 이다.
-    unsigned int boundDepth;		//	이 ray 의 현재 bounding depth.
-
-    float3 pos, dir, normal;		//	intersection point 정보.
-    float u, v;						//	texture 좌표.
-    float3 colorWeight;				//	이 intersection point 의 color 가 최종 이미지에 영향을 줄값.
-    float shadowCount;				//	해당지역에 그림자가 생겼는지여부. adaptive sampling 을 위해서. 생기면 -1, 아니면 1
-    short bTexture;					//	texture 유무.
-    short bSelected;				//	선택된 지역인지 여부.
-
-    __host__ __device__ inline void init()
-    {
-        triIndex = unsigned(-1);
-    }
-    __host__ __device__ inline bool isHit(void) const
-    {
-        return triIndex != unsigned(-1);
-    }
-
-} cuIntersectionPoint;
-
-/**
- *	intersection 을 계산하기 위한 triangle 정보. wald 방법
- *	internal2.w 를 object index 를 위한 값으로 사용한다.
- */
-struct  __align__(16) cuWaldTriangleInfo {
-
-    float4 internal0, internal1, internal2;
-
-    __host__ __device__ unsigned k() const { return float_as_int(internal0.x); }
-    __host__ __device__ float n_u() const { return internal0.y; }
-    __host__ __device__ float n_v() const { return internal0.z; }
-    __host__ __device__ float n_d() const { return internal0.w; }
-    __host__ __device__ float vert_ku() const { return internal1.x; }
-    __host__ __device__ float vert_kv() const { return internal1.y; }
-    __host__ __device__ float b_nu() const { return internal1.z; }
-    __host__ __device__ float b_nv() const { return internal1.w; }
-    __host__ __device__ float c_nu() const { return internal2.x; }
-    __host__ __device__ float c_nv() const { return internal2.y; }
-
-    __host__ __device__ bool isTransparent() const {
-        return (float_as_int(internal2.z) == 1 || float_as_int(internal2.z) == -1);
-    }
-
-    /** wald 방법에서 n' 를 구할때 나눈값이 양수인지 여부. */
-    __host__ __device__ bool isPositiveDir() const { return (float_as_int(internal2.z) > 0); }
-
-    struct perm_t { float3 dir, pos; };
-    __host__ __device__ inline perm_t get_perm(const cuRay & ray) const {
-        perm_t perm;
-        unsigned const axis = k();
-        switch (axis)
-        {
-        case 0:
-            perm.dir = ray.dir_perm_x();
-            perm.pos = ray.pos_perm_x();
-            return perm;
-        case 1:
-            perm.dir = ray.dir_perm_y();
-            perm.pos = ray.pos_perm_y();
-            return perm;
-        default:
-            perm.dir = ray.dir_perm_z();
-            perm.pos = ray.pos_perm_z();
-            return perm;
-        }
-    }
-
-    /** selective supersampling 을 위해서.. 하위3바이트는 object id, 상위 1byte 는 물체선택여부 */
-    __host__ __device__ inline int getObjectIndex(void) const
-    {
-        return (float_as_int(internal2.w) & 0x00ffffff);
-    }
-
-    /** selective supersampling 을 위해서.. 하위3바이트는 object id, 상위 1byte 는 물체선택여부 */
-    __host__ __device__ inline int isSelection(void) const
-    {
-        return ((float_as_int(internal2.w) & 0xff000000) > 0);
-    }
+struct cuIntersectionPoint {
+    float3 pos, dir, normal;
+    float3 colorWeight;
+    __device__ void init() { colorWeight = make_float3(1.0f, 1.0f, 1.0f); }
 };
 
-//심플 버전. bank conflict 고려 안함.
+struct cuObjectMaterial {
+    float3 ambient_emission;
+    float3 diffuse;
+    float3 specular;
+    float reflection;
+    float transparency;
+    float roughness;
+    float refractionIndex;
+};
+
+// Kd-tree 노드 (GKDTreeNode.h에서 추출)
+typedef uint2 kdtreeNode;
+#define IS_LEAF(node)               (((node).x & 3) == 3)
+#define SPLIT_AXIS(node)            ( (node).x & 3)
+#define FIRST_CHILD_OFFSET(node)    ( (node).x >> 3)
+#define SPLIT_POS(node)             (*(float *)&((node).y))
+#define OBJECT_SIZE(node)           ( (node).x >> 3)
+#define OBJECTLIST_OFFSET(node)     ( (node).y)
+
+// 스택 (cudaRenderPipelineCommonKernel.cu에서 추출)
+#define SHORT_STACK_DEPTH 64
+typedef struct { unsigned nodeID; float tMax; } cu_traceState;
+extern __shared__ cu_traceState smemBuffer[];
+
 struct shortStack {
     unsigned _top, quant, baseOffset;
-    __host__ __device__ shortStack() : _top(shortStackDepth - 1), quant(0) {}
-    __device__ inline void init(const unsigned smem_baseOffset)
-    {
-        baseOffset = smem_baseOffset * (shortStackDepth);
+    __device__ void init(const unsigned smem_baseOffset) {
+        baseOffset = smem_baseOffset * SHORT_STACK_DEPTH;
+        _top = SHORT_STACK_DEPTH - 1;
+        quant = 0;
     }
-    __device__ inline cu_traceState top() { return smemBuffer[baseOffset + _top]; }
-    //	__device__ inline void push(unsigned id, float t_min, float t_max) { 
-    __device__ inline void push(unsigned id, float t_max) {
-        //_top=(_top+1)%shortStackDepth; 
-        if (++_top == shortStackDepth)
-            _top = 0;
-        quant = min(quant + 1, shortStackDepth);
+    __device__ cu_traceState top() { return smemBuffer[baseOffset + _top]; }
+    __device__ void push(unsigned id, float t_max) {
+        if (++_top == SHORT_STACK_DEPTH) _top = 0;
+        quant = min(quant + 1, SHORT_STACK_DEPTH);
         smemBuffer[baseOffset + _top].nodeID = id;
-        //		smemBuffer[baseOffset + _top].tMin = t_min;		
         smemBuffer[baseOffset + _top].tMax = t_max;
     }
-    __device__ inline int empty() { return quant == 0; }
-    __device__ inline int full() { return quant == shortStackDepth; }
-    __device__ inline void pop() {
-        if (_top == 0)
-            _top = shortStackDepth;
+    __device__ bool empty() { return quant == 0; }
+    __device__ void pop() {
+        if (_top == 0) _top = SHORT_STACK_DEPTH;
         --_top; --quant;
-        //	_top=(_top-1)%shortStackDepth;	--quant; 
     }
 };
 
-// Kd-tree 텍스처 참조 선언
+// --- Device-side Helper Functions ---
+//__device__ __host__ inline float uint_as_float_H(const unsigned int a) {
+//    return __uint_as_float(a);
+//}
+
+__device__ float3 reflection(float3 I, float3 N) {
+    return I - 2.0f * N * dot(I, N);
+}
+
+__device__ float3 refraction(float3 I, float3 N, float eta) {
+    float dotNI = dot(N, I);
+    float k = 1.0f - eta * eta * (1.0f - dotNI * dotNI);
+    if (k < 0.0f) return make_float3(0.0f, 0.0f, 0.0f);
+    return eta * I - (eta * dotNI + sqrtf(k)) * N;
+}
+
+__device__ bool BoundsRayIntersect(const float3 minB, const float3 maxB, const cuRay& ray, float& tmin, float& tmax) {
+    float3 invD = 1.0f / ray.dir;
+    float3 t0s = (minB - ray.pos) * invD;
+    float3 t1s = (maxB - ray.pos) * invD;
+    //float3 tsmaller = fminf(t0s, t1s);
+    float3 tsmaller = make_float3(fminf(t0s.x, t1s.x), fminf(t0s.y, t1s.y), fminf(t0s.z, t1s.z));
+    //float3 tbigger = fmaxf(t0s, t1s);
+    float3 tbigger = make_float3(fmaxf(t0s.x, t1s.x), fmaxf(t0s.y, t1s.y), fmaxf(t0s.z, t1s.z));
+    tmin = fmaxf(tmin, fmaxf(tsmaller.x, fmaxf(tsmaller.y, tsmaller.z)));
+    tmax = fminf(tmax, fminf(tbigger.x, fminf(tbigger.y, tbigger.z)));
+    return (tmin < tmax);
+}
+
+// =================================================================================
+// 2. 텍스처 및 상수 메모리 선언
+// =================================================================================
 texture<uint2, 1, cudaReadModeElementType> inKdTreeNodeTex;
 texture<uint, 1, cudaReadModeElementType> inObjectOffsetListTex;
-texture<float4, 1, cudaReadModeElementType> inWaldTriangleTex;
+texture<float4, 1, cudaReadModeElementType> inTriAccelTex;
 
-// --- 여기에 singlePassIntersectRoutine, singlePassIntersect, singlePassRayTracingKernel_ShadowOff 등
-// --- 제공된 모든 __device__ 및 __global__ 함수를 붙여넣으세요.
-// --- (내용이 길어 생략합니다. 반드시 이전 질문의 커널 코드를 모두 복사해와야 합니다.)
+struct SceneInfo { int resX, resY; };
+typedef struct _camera_info {
+    float3 eye;
+    float3 u, v, n;
+    float fnear;
+    float3 startPoint;		// 왼쪽상단 ray 의 position.
+    float stepX, stepY;		// ray 하나당 이동거리.
+} CameraInfo;
+__constant__ SceneInfo g_SceneInfo;
+__constant__ CameraInfo g_CameraInfo;
+__constant__ float3 g_SceneBBoxMin;
+__constant__ float3 g_SceneBBoxMax;
+__constant__ cuObjectMaterial g_materials[1]; // 단일 객체이므로 재질 1개만 사용
 
-/**
- *	reflection
- */
-__device__ float3 reflection(float3 ray, float3 normal)
-{
-    /**
-     *	물체의 뒷면에 맞은경우 normal 을 뒤집는다.
-     */
-    float rdotn = dot(ray, normal);
-    return normalize(2.0f * rdotn * normal - ray);
-    //	return normalize( 2.0f * normal * dot( ray, normal ) - ray );
+// =================================================================================
+// 3. CUDA 커널 코드 (사용자 제공 커널)
+// =================================================================================
+
+__device__ void getObjectMaterial(int objectIndex, cuObjectMaterial& material) {
+    // 상수 메모리에서 유일한 재질을 가져옴
+    material = g_materials[0];
 }
 
-__device__ float3 refraction(float3 dir, float3 normal, float refractionIndex)
-{
-    float ddotn, ddotn2, n_div_nt, n_div_nt2;
-    float sqrt_part;
-    float in_sqrt;
-    float3 nextDir;
+__device__ float3 calDirectIllumination(cuIntersectionPoint& point, cuObjectMaterial& material) {
+    // 간단한 램버트 음영. 광원은 (10,10,-10)에 흰색으로 가정
+    float3 lightPos = make_float3(10.0f, 10.0f, -10.0f);
+    float3 lightColor = make_float3(1.0f, 1.0f, 1.0f);
 
-    dir = -1.0f * dir;
+    float3 L = normalize(lightPos - point.pos);
+    float NdotL = fmaxf(0.0f, dot(point.normal, L));
 
-    if (refractionIndex == AIR_INDEX)
-    {
-        nextDir = dir;
-        return nextDir;
-    }
-
-    ddotn = dot(normal, dir);
-
-    if (ddotn == 0.)
-    {
-        nextDir = dir;
-        return nextDir;
-    }
-    if (ddotn < 0.)
-        //normal case (from air to obj.)
-    {
-        n_div_nt = AIR_INDEX / refractionIndex;
-    }
-    else
-        //(from obj. to air)
-    {
-        n_div_nt = refractionIndex / AIR_INDEX;
-    }
-
-    ddotn2 = ddotn * ddotn;
-
-    n_div_nt2 = n_div_nt * n_div_nt;
-    //check in_sqrt : temperal code
-    in_sqrt = 1.0f - n_div_nt2 * (1.0f - ddotn2);
-    in_sqrt = fabs(in_sqrt);
-    sqrt_part = (float)sqrt(in_sqrt);
-
-    if (n_div_nt < 1.0) {
-        nextDir = n_div_nt * (dir - normal * ddotn) - normal * sqrt_part;
-    }
-    else {
-        nextDir = n_div_nt * (dir - normal * ddotn) + normal * sqrt_part;
-    }
-
-    return normalize(nextDir);
+    return material.diffuse * lightColor * NdotL + material.ambient_emission;
 }
 
-__device__ inline bool BoundsRayIntersect(const cuBoundingBox& box, const cuRay& ray, float& tmin, float& tmax)
-{
-    float l1 = 0.0f;
-    float l2 = 0.0f;
+__device__ void makeIntersectionPoint(const cuRay* pRay, const cuIntersectionCheck* pHit, cuIntersectionPoint* pPoint) {
+    pPoint->pos = pRay->pos + pRay->dir * pHit->tHit;
 
-    //	if ( ray.dir.x != 0.0f ) {
-    l1 = __fdividef(box.min_max[0].x - ray.pos.x, ray.dir.x);
-    l2 = __fdividef(box.min_max[1].x - ray.pos.x, ray.dir.x);
-    tmin = fmaxf(fminf(l1, l2), tmin);
-    tmax = fminf(fmaxf(l1, l2), tmax);
-    //	}
+    // TriAccel로부터 Normal 벡터 가져오기
+    float4 N_packed = tex1Dfetch(inTriAccelTex, pHit->triIndex * 4 + 3);
+    pPoint->normal = normalize(make_float3(N_packed.x, N_packed.y, N_packed.z));
 
-    //	if ( ray.dir.y != 0.0f ) {
-    l1 = __fdividef(box.min_max[0].y - ray.pos.y, ray.dir.y);
-    l2 = __fdividef(box.min_max[1].y - ray.pos.y, ray.dir.y);
-    tmin = fmaxf(fminf(l1, l2), tmin);
-    tmax = fminf(fmaxf(l1, l2), tmax);
-    //	}
-
-    //	if ( ray.dir.z != 0.0f ) {
-    l1 = __fdividef(box.min_max[0].z - ray.pos.z, ray.dir.z);
-    l2 = __fdividef(box.min_max[1].z - ray.pos.z, ray.dir.z);
-    tmin = fmaxf(fminf(l1, l2), tmin);
-    tmax = fminf(fmaxf(l1, l2), tmax);
-    //	}
-
-    return ((tmax >= tmin) & (tmax >= 0.f));
+    // 광선 방향의 반대 방향
+    // pPoint->dir = -(pRay->dir);
+    pPoint->dir = make_float3(-(pRay->dir.x), -(pRay->dir.y), -(pRay->dir.z));
 }
 
-__device__ inline float3 calSinglePassDirectIllumination_ShadowOff(
-    cuIntersectionPoint& intersectResult,
-    cuObjectMaterial& material,
-    const float3& diffuse)
-{
-    //cuLight* pLight = NULL;
-    float3 L, N, R;
-    float3 color = make_float3(0.0f, 0.0f, 0.0f);
-    N = intersectResult.normal;
+__device__ void singlePassIntersectRoutine(const cuRay& ray, const int id, cuIntersectionCheck& hit, const float t_near, const float t_far) {
+    float4 d0 = tex1Dfetch(inTriAccelTex, id * 4 + 0); // n_u, n_v, n_d, k
+    float4 d1 = tex1Dfetch(inTriAccelTex, id * 4 + 1); // b_nu, b_nv, b_d, indexInObject
+    float4 d2 = tex1Dfetch(inTriAccelTex, id * 4 + 2); // c_nu, c_nv, c_d, material_ID
 
-    if (material.transparency > 0.0f && dot(intersectResult.dir, N) < 0.0f) {
-        N = -1.0f * N;
+    unsigned int k = float_as_uint(d0.w);
+    float n_u = d0.x, n_v = d0.y, n_d = d0.z;
+    float b_nu = d1.x, b_nv = d1.y;
+    float c_nu = d2.x, c_nv = d2.y;
+
+    float3 p_pos = ray.pos, p_dir = ray.dir;
+    if (k == 1) { // Y-major
+        p_pos = make_float3(ray.pos.y, ray.pos.z, ray.pos.x);
+        p_dir = make_float3(ray.dir.y, ray.dir.z, ray.dir.x);
+    }
+    else if (k == 2) { // Z-major
+        p_pos = make_float3(ray.pos.z, ray.pos.x, ray.pos.y);
+        p_dir = make_float3(ray.dir.z, ray.dir.x, ray.dir.y);
     }
 
-    R = reflection(intersectResult.dir, N);
+    float denum = p_dir.z + n_u * p_dir.x + n_v * p_dir.y;
+    float t = (n_d - (p_pos.z + n_u * p_pos.x + n_v * p_pos.y)) / denum;
 
-    color = material.ambient_emission;
+    if (t <= hit.tHit && t > t_near && t < t_far) {
+        float hu = p_pos.x + t * p_dir.x;
+        float hv = p_pos.y + t * p_dir.y;
+        float beta = hu * b_nu + hv * b_nv;
+        float gamma = hu * c_nu + hv * c_nv;
 
-    //for (int i = 0; i < constantLightCount; ++i) {
-
-    //    pLight = (constantLightInfo + i);
-
-    //    L = normalize(pLight->pos - intersectResult.pos);
-    //    color += pLight->color * (diffuse * max(0.0f, dot(L, N)) +
-    //        material.specular * powf(max(0.0f, dot(R, L)), material.roughness));
-
-    //}
-
-    return color;
-
-}
-
-/**
- *	Texture 가 존재하는 경우 현재 diffuse color 를 texture 내의 u, v 상의
- *	color 로 대체.
- */
-__device__ inline void calTextureColor(cuIntersectionPoint& intersectResult,
-    cuObjectMaterial& material, float3& diffuse)
-{
-    int texture = float_as_int(material.textureNumber);
-    intersectResult.bTexture = fetchTexture(texture, intersectResult.u, intersectResult.v, diffuse);
-}
-
-/**
- *	low-discrepancy sampling.
- */
-__device__ float radicalInverse(int i, int base) {
-
-    float val = 0;
-    float invBase = 1.0f / base;
-    float invBi = invBase;
-
-    while (i > 0) {
-        int d_i = (i % base);
-        val += d_i * invBi;
-        i /= base;
-        invBi *= invBase;
+        if (beta >= -BARYCENTRY_EPSILON && gamma >= -BARYCENTRY_EPSILON && (beta + gamma) <= 1.0f + BARYCENTRY_EPSILON) {
+            hit.tHit = t;
+            hit.beta = beta;
+            hit.gamma = gamma;
+            hit.triIndex = id;
+        }
     }
-
-    return val;
-
 }
 
-/**
- *	WALD Intersection method.
- */
-__device__ inline void singlePassIntersectRoutine(const cuRay& ray, const int id, cuIntersectionCheck& hit,
-    const float t_near, const float t_far)
-{
-    cuWaldTriangleInfo tri;
-    tri.internal0 = tex1Dfetch(inWaldTriangleTex, 3 * id);
-    tri.internal1 = tex1Dfetch(inWaldTriangleTex, 3 * id + 1);
-    tri.internal2 = tex1Dfetch(inWaldTriangleTex, 3 * id + 2);
-
-    cuWaldTriangleInfo::perm_t p = tri.get_perm(ray);
-    //const float dot = ( tri.n_d() - p.pos.x - tri.n_u() * p.pos.y - tri.n_v() * p.pos.z );
-    p.pos.x = (tri.n_d() - p.pos.x - tri.n_u() * p.pos.y - tri.n_v() * p.pos.z);
-    const float denum = (p.dir.x + tri.n_u() * p.dir.y + tri.n_v() * p.dir.z);
-    const float t = __fdividef(p.pos.x, denum);
-
-    if (isnan(t)) return;
-    if ((hit.tHit <= t) | (t < t_near - EPSILON4) | (t > t_far + EPSILON4)) return;
-
-    /**
-     *	culling 옵션이 있고, object 가 transparent 하지 않다면
-     *	앞면인지 뒷면인지 체크. 뒷면에 맞은거면 hit 처리 안함.
-     */
-    const float hu = p.pos.y + t * p.dir.y - tri.vert_ku();
-    const float hv = p.pos.z + t * p.dir.z - tri.vert_kv();
-    const float beta = hv * tri.b_nu() + hu * tri.b_nv();
-    const float gamma = hu * tri.c_nu() + hv * tri.c_nv();
-
-    /** 삼각형의 edge 와 부딪힐때, 수치오차가 있으므로 epsilon 을 좀 준다. */
-    //if ( isnan( beta * gamma ) ) return;
-    if ((beta < 0.f - BARYCENTRY_EPSILON) | (gamma < 0.f - BARYCENTRY_EPSILON) | ((1.0f - beta - gamma) < 0.0f - BARYCENTRY_EPSILON)) return;
-
-    hit.tHit = t;
-    hit.beta = beta;
-    hit.gamma = gamma;
-    hit.triIndex = id;
-    hit.objectIndex = tri.getObjectIndex();
-    hit.bSelected = tri.isSelection();
-}
-
-__device__ inline void singlePassIntersect(cuRay& currRay, cuIntersectionCheck& intersectionCheck)
-{
-    float t_scene_near = 0.0f, t_scene_far = FLT_MAX;
-    //float t_scene_near = currRay.mint, t_scene_far = currRay.maxt;
-    if (BoundsRayIntersect(g_SceneBBox, currRay, t_scene_near, t_scene_far))
-    {
-        float t_near = t_scene_near, t_far = t_scene_far;
+__device__ void singlePassIntersect(cuRay& currRay, cuIntersectionCheck& intersectionCheck) {
+    float t_near = 0.0f, t_far = FLT_MAX;
+    if (BoundsRayIntersect(g_SceneBBoxMin, g_SceneBBoxMax, currRay, t_near, t_far)) {
         const unsigned smem_baseOffset = umul24(threadIdx.y, blockDim.x) + threadIdx.x;
         shortStack stack;
         stack.init(smem_baseOffset);
 
         kdtreeNode node = tex1Dfetch(inKdTreeNodeTex, 0);
-        while (true)
-        {
-            while (!IS_LEAF(node))
-            {
-                //const int axis = SPLIT_AXIS(node);
-                //const float splitPos = SPLIT_POS(node);
-                const float2 pos_dir = currRay.get_dir_pos(SPLIT_AXIS(node));
-                //const float dir = pos_dir.y;			
-                const float t_split = __fdividef(SPLIT_POS(node) - pos_dir.x, pos_dir.y);
-                const unsigned sign = signbit(pos_dir.y);
+        while (true) {
+            while (!IS_LEAF(node)) {
+                const float t_split = (SPLIT_POS(node) - currRay.get_dir_pos(SPLIT_AXIS(node)).x) / currRay.get_dir_pos(SPLIT_AXIS(node)).y;
+                const unsigned sign = signbit(currRay.get_dir_pos(SPLIT_AXIS(node)).y);
                 const unsigned childOffset = FIRST_CHILD_OFFSET(node);
                 unsigned idx = childOffset + (sign ^ (t_split <= t_near));
-                //if(t_split <= t_near) 
-                //	idx = childOffset + (sign^1);
-                if (t_near < t_split && t_split < t_far) {
+
+                if (t_split > t_near && t_split < t_far) {
                     stack.push(childOffset + (sign ^ 1), t_far);
                     t_far = t_split;
                 }
                 node = tex1Dfetch(inKdTreeNodeTex, idx);
             }
 
-
             unsigned baseOffset = OBJECTLIST_OFFSET(node);
             int objectSize = OBJECT_SIZE(node) + baseOffset;
-
             for (; baseOffset < objectSize; baseOffset++) {
                 const unsigned objListOffset = tex1Dfetch(inObjectOffsetListTex, baseOffset);
-#if INTERSECTION_METHOD == 0
                 singlePassIntersectRoutine(currRay, objListOffset, intersectionCheck, t_near, t_far);
-#elif INTERSECTION_METHOD == 1
-                PlueckerIntersection(currRay, objListOffset, intersectionCheck, t_near, t_far, faceCCW, bCulling);
-#endif
             }
-            if (intersectionCheck.tHit <= t_far | t_far >= t_scene_far)
-                break;
-            if (stack.empty())
-            {
-                node = tex1Dfetch(inKdTreeNodeTex, 0);
-                t_near = t_far;		t_far = t_scene_far;
-            }
-            else
-            {
-                const cu_traceState& trace = stack.top(); stack.pop();
-                node = tex1Dfetch(inKdTreeNodeTex, trace.nodeID);
-                t_near = t_far;
-                t_far = trace.tMax;
-            }
+
+            if (intersectionCheck.isHit() || stack.empty()) break;
+
+            const cu_traceState& trace = stack.top();
+            stack.pop();
+            node = tex1Dfetch(inKdTreeNodeTex, trace.nodeID);
+            t_near = t_far;
+            t_far = trace.tMax;
         }
     }
 }
 
-/**
- *	intersection point 데이터를 생성한다.
- */
-__device__ void makeIntersectionPoint(cuRay* pRay, cuIntersectionCheck* pHit,
-    cuIntersectionPoint* pCurrIsectResult)
-{
-    /**
-     *	구조체 cuTriangleGeometry 를 texture 로
-     *	로딩한것에서 값을 가져온다. texture는 float4 로 만들었기
-     *	때문에 구조체의 값을 가져오기 위해서 계산을 잘해야 한다.
-     */
-    float3 n0, n1, n2;
-    float2 uv0, uv1, uv2;
-    float4 temp;
+__global__ void singlePassRayTracingKernel_ShadowOff(float* pFrameBuffer, int maxReflectionDepth) {
+    int x = blockIdx.x * blockDim.x + threadIdx.x;
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-    temp = tex1Dfetch(inTriangleGeometryTex, 4 * pHit->triIndex + 0);
-    n0.x = temp.x; n0.y = temp.y; n0.z = temp.z; n1.x = temp.w;
-    temp = tex1Dfetch(inTriangleGeometryTex, 4 * pHit->triIndex + 1);
-    n1.y = temp.x; n1.z = temp.y; n2.x = temp.z; n2.y = temp.w;
-    temp = tex1Dfetch(inTriangleGeometryTex, 4 * pHit->triIndex + 2);
-    n2.z = temp.x; uv0.x = temp.y; uv0.y = temp.z; uv1.x = temp.w;
-    temp = tex1Dfetch(inTriangleGeometryTex, 4 * pHit->triIndex + 3);
-    uv1.y = temp.x; uv2.x = temp.y; uv2.y = temp.z;
+    if (x >= g_SceneInfo.resX || y >= g_SceneInfo.resY) return;
 
-    /**
-     *	삼각형 정보, ray 정보 채움.
-     */
-    pCurrIsectResult->triIndex = pHit->triIndex;
-    pCurrIsectResult->objectIndex = pHit->objectIndex;
-    pCurrIsectResult->bSelected = pHit->bSelected;
-    pCurrIsectResult->dir.x = -pRay->dir.x;
-    pCurrIsectResult->dir.y = -pRay->dir.y;
-    pCurrIsectResult->dir.z = -pRay->dir.z;
-
-    temp.w = 1.0f - pHit->beta - pHit->gamma;
-
-    /**
-     *	boundDepth, rayIndex 와 colorWeight 정보는 ray 를 생성할때
-     *	기록해 두었으므로	여기서 업데이트 하면 안된다.
-     */
-     //pCurrIsectResult->boundDepth;
-     //pCurrIsectResult->rayIndex;
-     //pCurrIsectResult->colorWeight;
-
-     /**
-      *	position과 barycentric normal 을 계산한다.
-      */
-    pCurrIsectResult->pos.x = pRay->pos.x + pHit->tHit * pRay->dir.x;
-    pCurrIsectResult->pos.y = pRay->pos.y + pHit->tHit * pRay->dir.y;
-    pCurrIsectResult->pos.z = pRay->pos.z + pHit->tHit * pRay->dir.z;
-
-    pCurrIsectResult->normal = normalize(
-        n0 * (temp.w) +
-        n1 * (pHit->beta) + n2 * (pHit->gamma));
-    float2 tex = uv0 * (temp.w) + uv1 * (pHit->beta) + uv2 * (pHit->gamma);
-
-    /** 지금은 텍스쳐 좌표는 2차원 값만 씀. */
-    pCurrIsectResult->u = tex.x;
-    pCurrIsectResult->v = tex.y;
-}
-
-
-/**
- *	Single Pass 로 RayTracing 을 수행.
- */
-__global__ void singlePassRayTracingKernel_ShadowOff(float* pFrameBuffer,
-    int maxReflectionDepth,
-    int sampleX, int sampleY, bool bJittering)
-{
-    float3 dir;
-    float sx, sy;
-    float invSamplingX = __fdividef(1.0f, g_SceneInfo.iSuperSamplingX);
-    float invSamplingY = __fdividef(1.0f, g_SceneInfo.iSuperSamplingY);
-    int depth = 0;
-
-    float3 color = make_float3(0.0f, 0.0f, 0.0f);
-
-    int x = umul24(blockIdx.x, blockDim.x) + threadIdx.x;
-    int y = umul24(blockIdx.y, blockDim.y) + threadIdx.y;
-
-    if (x >= g_SceneInfo.iResolutionX || y >= g_SceneInfo.iResolutionY)
-        return;
-
-    /**
-     *	왼쪽,상단 포인트의 카메라 plane 상에서의 좌표.
-     */
-
-    if (g_SceneInfo.iSuperSamplingX > 1 && g_SceneInfo.iSuperSamplingY > 1 && bJittering) {
-        sx = (float)x + ((float)sampleX + radicalInverse(x * 256 + sampleX, 3)) * invSamplingX;
-        sy = (float)y + ((float)sampleY + radicalInverse(y * 256 + sampleY, 5)) * invSamplingY;
-    }
-    else {
-        sx = (float)x + ((float)sampleX + 0.5f) * invSamplingX;
-        sy = (float)y + ((float)sampleY + 0.5f) * invSamplingY;
-    }
-
-    dir = g_CameraInfo.startPoint +
-        g_CameraInfo.u * sx * g_CameraInfo.stepX -
-        g_CameraInfo.v * sy * g_CameraInfo.stepY;
+    // 1. Primary Ray Generation
+    float sx = (float)x + 0.5f;
+    float sy = (float)y + 0.5f;
+    float3 dir = g_CameraInfo.startPoint + g_CameraInfo.u * sx * g_CameraInfo.stepX - g_CameraInfo.v * sy * g_CameraInfo.stepY;
     dir = normalize(dir - g_CameraInfo.eye);
 
     cuRay currRay;
@@ -651,245 +270,175 @@ __global__ void singlePassRayTracingKernel_ShadowOff(float* pFrameBuffer,
 
     cuIntersectionPoint point;
     point.init();
-    point.colorWeight.x = 1.0f;
-    point.colorWeight.y = 1.0f;
-    point.colorWeight.z = 1.0f;
 
-    bool secondary;
+    float3 finalColor = make_float3(0.0f, 0.0f, 0.0f);
 
-    do {
-        secondary = false;
+    // 2. Recursive Ray Tracing Loop
+    for (int depth = 0; depth < maxReflectionDepth; ++depth) {
         cuIntersectionCheck currIsectCheck;
         currIsectCheck.init();
         singlePassIntersect(currRay, currIsectCheck);
 
-        /**
-         *	intersection check
-         */
         if (currIsectCheck.isHit()) {
-
             makeIntersectionPoint(&currRay, &currIsectCheck, &point);
-
             cuObjectMaterial material;
             getObjectMaterial(currIsectCheck.objectIndex, material);
 
-            /** texture 가 존재하면 diffuse color 를 texture 내의 u, v 에서 계산된 color 로 대체 */
-            float3 diffuse = material.diffuse;
-            calTextureColor(point, material, diffuse);
+            finalColor += point.colorWeight * calDirectIllumination(point, material);
 
-            color += point.colorWeight *
-                (1.0f - (material.transparency + material.reflection) * (maxReflectionDepth > depth))
-                * calSinglePassDirectIllumination_ShadowOff(point, material, diffuse);
-
-            if (maxReflectionDepth > depth && material.transparency > 0.0f) {
-
-                dir = refraction(point.dir, point.normal, material.refractionIndex);
-                point.colorWeight = point.colorWeight * material.transparency * diffuse;
-                currRay.dir.x = dir.x; currRay.dir.y = dir.y; currRay.dir.z = dir.z;
-                currRay.pos.x = point.pos.x + dir.x * RAY_START_EPSILON;
-                currRay.pos.y = point.pos.y + dir.y * RAY_START_EPSILON;
-                currRay.pos.z = point.pos.z + dir.z * RAY_START_EPSILON;
-
-                secondary = true;
-
+            // Reflection
+            if (material.reflection > 0.0f) {
+                point.colorWeight *= material.reflection;
+                currRay.dir = reflection(currRay.dir, point.normal);
+                currRay.pos = point.pos + currRay.dir * RAY_START_EPSILON;
             }
-            else if (maxReflectionDepth > depth && material.reflection > 0.0f) {
-
-                dir = reflection(point.dir, point.normal);
-                point.colorWeight = point.colorWeight * material.reflection * diffuse;
-                currRay.dir.x = dir.x; currRay.dir.y = dir.y; currRay.dir.z = dir.z;
-                currRay.pos.x = point.pos.x + dir.x * RAY_START_EPSILON;
-                currRay.pos.y = point.pos.y + dir.y * RAY_START_EPSILON;
-                currRay.pos.z = point.pos.z + dir.z * RAY_START_EPSILON;
-
-
-                secondary = true;
-
+            else {
+                break; // No more bounces
             }
-
-
         }
+        else {
+            // Background color (e.g., black)
+            break;
+        }
+    }
 
-        depth++;
-
-    } while (secondary);
-
-    int idx = 3 * ((g_SceneInfo.iResolutionY - y - 1) * g_SceneInfo.iResolutionX + x);
-    pFrameBuffer[idx + 0] += color.x * invSamplingX * invSamplingY;
-    pFrameBuffer[idx + 1] += color.y * invSamplingX * invSamplingY;
-    pFrameBuffer[idx + 2] += color.z * invSamplingX * invSamplingY;
+    int idx = 3 * ((g_SceneInfo.resY - y - 1) * g_SceneInfo.resX + x);
+    pFrameBuffer[idx + 0] = finalColor.x;
+    pFrameBuffer[idx + 1] = finalColor.y;
+    pFrameBuffer[idx + 2] = finalColor.z;
 }
 
 // =================================================================================
-// 2. Host -> Device 데이터 변환을 위한 코드
+// 4. Host-Side Public Render Function
 // =================================================================================
 
-// GPU 텍스처 포맷에 맞는 삼각형 데이터 구조
-struct PackedTriangle {
-    float4 data[3];
-};
-
-// GPU 텍스처 포맷에 맞는 Kd-tree 노드 구조
-typedef uint2 PackedKdNode;
-
-// TriAccel 구조체를 PackedTriangle로 변환
-void packTriangle(PackedTriangle& dest, const TriAccel& src) {
-    // data[0]: Plane equation & projection info
-    dest.data[0].x = src.n_u;
-    dest.data[0].y = src.n_v;
-    dest.data[0].z = src.n_d;
-    memcpy(&dest.data[0].w, (float*)src.k, sizeof(unsigned int)); // Bit-fields
-
-    // data[1]: Line equation for edge 'ac' & index info
-    dest.data[1].x = src.b_nu;
-    dest.data[1].y = src.b_nv;
-    dest.data[1].z = src.b_d;
-    memcpy(&dest.data[1].w, &src.indexInObject, sizeof(int));
-
-    // data[2]: Line equation for edge 'ab' & material ID
-    dest.data[2].x = src.c_nu;
-    dest.data[2].y = src.c_nv;
-    dest.data[2].z = src.c_d;
-    memcpy(&dest.data[2].w, &src.material_ID, sizeof(int));
-}
-
-// KdTreeNode 구조체를 PackedKdNode로 변환 (SGRT 형식에 맞춤)
-void packKdNode(PackedKdNode& dest, const KdTreeNode& src) {
-    // Kd-treeConverter의 KdTreeNode가 SGRT와 동일한 포맷을 사용한다고 가정
-    // src.x, src.y 를 dest.x, dest.y에 그대로 복사
-    dest.x = src.x;
-    dest.y = src.y;
-}
-
-
-// =================================================================================
-// 3. CudaRenderer.h 에 선언된 메인 렌더링 함수 구현
-// =================================================================================
-
-void launchCudaRender(const CompositeObject& object, const Camera& camera, int width, int height, float*& out_framebuffer, bool& is_done) {
-    printf("--- Launching CUDA Rendering ---\n");
+void renderWithCuda(const CompositeObject& object, const Camera& camera, int width, int height, float*& out_framebuffer, bool& is_done) {
     is_done = false;
+    std::cout << "--- Minimal CUDA Renderer Started ---" << std::endl;
 
-    // 0. Kd-tree 데이터 유효성 검사
     KdTree* kdTree = object.kd_tree;
-    if (!kdTree || kdTree->tree_node_count == 0 || object.n_triangles == 0) {
-        fprintf(stderr, "[CUDA] Error: Kd-tree data is not valid or empty.\n");
+    if (!kdTree || object.n_triangles == 0) {
+        std::cerr << "[CUDA Error] Object or Kd-tree is empty." << std::endl;
         return;
     }
 
-    // 1. Host에서 변환된 데이터용 메모리 할당 및 변환 수행
-    printf("[CUDA] Packing data for GPU...\n");
-    std::vector<PackedTriangle> host_packed_triangles(object.n_triangles);
+    printf("0. exist KD-Tree\n");
+
+    // 1. 데이터 패킹 (Host)
+    // TriAccel -> float4[4] (n_u, n_v, n_d, k | b_nu, b_nv, b_d, idx | c_nu, c_nv, c_d, matID | N.x, N.y, N.z, pad)
+    std::vector<float4> h_triangles(object.n_triangles * 4);
+    printf("Data packing start\n");
     for (int i = 0; i < object.n_triangles; ++i) {
-        packTriangle(host_packed_triangles[i], kdTree->tri_accel_list[i]);
+        const TriAccel& src = kdTree->tri_accel_list[i];
+        printf("Data packing %d - 0\n", i);
+        h_triangles[i * 4 + 0] = make_float4(src.n_u, src.n_v, src.n_d, src.k);
+        printf("src.k: %u\n");
+        printf("Data packing %d - 1, src.indexInObject: %d\n",i);
+        h_triangles[i * 4 + 1] = make_float4(src.b_nu, src.b_nv, src.b_d, int_as_float_H(src.indexInObject));
+        printf("Data packing %d - 2, src.material_ID: %d\n", i);
+        h_triangles[i * 4 + 2] = make_float4(src.c_nu, src.c_nv, src.c_d, int_as_float_H(src.material_ID));
+        printf("Data packing %d - 3\n", i);
+        h_triangles[i * 4 + 3] = make_float4(src.N[0], src.N[1], src.N[2], 0.0f);
+        printf("Data packing %d - 4\n", i);
     }
 
-    std::vector<PackedKdNode> host_packed_nodes(kdTree->tree_node_count);
-    for (int i = 0; i < kdTree->tree_node_count; ++i) {
-        packKdNode(host_packed_nodes[i], kdTree->tree[i]);
-    }
+    printf("1. Data packing done\n");
 
-    // 2. GPU 메모리 할당 (CUDA Array) 및 데이터 복사
-    printf("[CUDA] Allocating GPU memory and copying data...\n");
+    // 2. GPU 메모리 할당 및 데이터 전송
     cudaError_t err;
+    cudaArray* d_kdtree_nodes, * d_tri_offsets, * d_tri_accel;
 
-    // 삼각형 데이터
-    cudaChannelFormatDesc channelDescFloat4 = cudaCreateChannelDesc<float4>();
-    cudaArray* cuArrayTriangles;
-    size_t total_float4_for_tris = object.n_triangles * 3;
-    err = cudaMallocArray(&cuArrayTriangles, &channelDescFloat4, total_float4_for_tris, 1);
-    err = cudaMemcpyToArray(cuArrayTriangles, 0, 0, host_packed_triangles.data(), host_packed_triangles.size() * sizeof(PackedTriangle), cudaMemcpyHostToDevice);
+    cudaChannelFormatDesc node_desc = cudaCreateChannelDesc<uint2>();
+    err = cudaMallocArray(&d_kdtree_nodes, &node_desc, kdTree->tree_node_count, 1);
+    err = cudaMemcpyToArray(d_kdtree_nodes, 0, 0, kdTree->tree, kdTree->tree_node_count * sizeof(kdtreeNode), cudaMemcpyHostToDevice);
 
-    // Kd-tree 노드 데이터
-    cudaChannelFormatDesc channelDescUint2 = cudaCreateChannelDesc<uint2>();
-    cudaArray* cuArrayNodes;
-    err = cudaMallocArray(&cuArrayNodes, &channelDescUint2, kdTree->tree_node_count, 1);
-    err = cudaMemcpyToArray(cuArrayNodes, 0, 0, host_packed_nodes.data(), host_packed_nodes.size() * sizeof(PackedKdNode), cudaMemcpyHostToDevice);
+    cudaChannelFormatDesc offset_desc = cudaCreateChannelDesc<uint>();
+    err = cudaMallocArray(&d_tri_offsets, &offset_desc, kdTree->tri_offset_count, 1);
+    err = cudaMemcpyToArray(d_tri_offsets, 0, 0, kdTree->tri_offset_list, kdTree->tri_offset_count * sizeof(unsigned int), cudaMemcpyHostToDevice);
 
-    // 삼각형 오프셋 리스트
-    cudaChannelFormatDesc channelDescUint = cudaCreateChannelDesc<uint>();
-    cudaArray* cuArrayOffsets;
-    err = cudaMallocArray(&cuArrayOffsets, &channelDescUint, kdTree->tri_offset_count, 1);
-    err = cudaMemcpyToArray(cuArrayOffsets, 0, 0, kdTree->tri_offset_list, kdTree->tri_offset_count * sizeof(unsigned int), cudaMemcpyHostToDevice);
+    cudaChannelFormatDesc tri_desc = cudaCreateChannelDesc<float4>();
+    err = cudaMallocArray(&d_tri_accel, &tri_desc, object.n_triangles * 4, 1);
+    err = cudaMemcpyToArray(d_tri_accel, 0, 0, h_triangles.data(), h_triangles.size() * sizeof(float4), cudaMemcpyHostToDevice);
+    
+    printf("2. gpu memcpy done\n");
+    
+    // 3. 텍스처 바인딩
+    cudaBindTextureToArray(inKdTreeNodeTex, d_kdtree_nodes);
+    cudaBindTextureToArray(inObjectOffsetListTex, d_tri_offsets);
+    cudaBindTextureToArray(inTriAccelTex, d_tri_accel);
+    
+    printf("3. texture Bind\n");
+    
+    // 4. 상수 메모리 설정
+    SceneInfo h_scene_info = { width, height };
+    cudaMemcpyToSymbol(&g_SceneInfo, &h_scene_info, sizeof(SceneInfo));
 
-    // 3. CUDA Array를 텍스처에 바인딩
-    printf("[CUDA] Binding textures...\n");
-    err = cudaBindTextureToArray(inWaldTriangleTex, cuArrayTriangles);
-    err = cudaBindTextureToArray(inKdTreeNodeTex, cuArrayNodes);
-    err = cudaBindTextureToArray(inObjectOffsetListTex, cuArrayOffsets);
-
-    // 4. Scene/Camera 정보 등 상수 메모리 설정
-    printf("[CUDA] Setting up scene and camera...\n");
-    SceneInfo h_scene_info;
-    h_scene_info.iResolutionX = width;
-    h_scene_info.iResolutionY = height;
-    h_scene_info.iSuperSamplingX = 1;
-    h_scene_info.iSuperSamplingY = 1;
-    h_scene_info.iBlockSizeX = 16;
-    h_scene_info.iBlockSizeY = 16;
-    cudaMemcpyToSymbol(g_SceneInfo, &h_scene_info, sizeof(SceneInfo));
-
-    // Camera 정보 변환
     CameraInfo h_camera_info;
     h_camera_info.eye = make_float3(camera.pos[0], camera.pos[1], camera.pos[2]);
-    float3 look_at = make_float3(0, 0, 0); // AABB 중심으로 변경 가능
-    float3 up = make_float3(camera.vaxis[0], camera.vaxis[1], camera.vaxis[2]);
-    float aspect = (float)width / (float)height;
+    h_camera_info.u = make_float3(camera.uaxis[0], camera.uaxis[1], camera.uaxis[2]);
+    h_camera_info.v = make_float3(camera.vaxis[0], camera.vaxis[1], camera.vaxis[2]);
+    float3 n_axis = make_float3(camera.naxis[0], camera.naxis[1], camera.naxis[2]);
+
     float fov_rad = camera.fovy * (M_PI / 180.0f);
-
-    float3 view = normalize(look_at - h_camera_info.eye);
-    h_camera_info.u = normalize(cross(view, up));
-    h_camera_info.v = normalize(cross(h_camera_info.u, view));
-
-    float plane_height = 2.0f * tanf(fov_rad * 0.5f);
-    float plane_width = plane_height * aspect;
+    float plane_height = 2.0f * camera.near_c * tanf(fov_rad * 0.5f);
+    float plane_width = plane_height * camera.aspect;
     h_camera_info.stepX = plane_width / width;
     h_camera_info.stepY = plane_height / height;
+    h_camera_info.startPoint = h_camera_info.eye - n_axis * camera.near_c
+        - h_camera_info.u * (plane_width * 0.5f)
+        + h_camera_info.v * (plane_height * 0.5f);
+    cudaMemcpyToSymbol(&g_CameraInfo, &h_camera_info, sizeof(CameraInfo));
 
-    h_camera_info.startPoint = view - (h_camera_info.u * plane_width * 0.5f) + (h_camera_info.v * plane_height * 0.5f);
-    cudaMemcpyToSymbol(g_CameraInfo, &h_camera_info, sizeof(CameraInfo));
+    float3 h_bbox_min = make_float3(object.AABB[XMIN], object.AABB[YMIN], object.AABB[ZMIN]);
+    float3 h_bbox_max = make_float3(object.AABB[XMAX], object.AABB[YMAX], object.AABB[ZMAX]);
+    cudaMemcpyToSymbol(&g_SceneBBoxMin, &h_bbox_min, sizeof(float3));
+    cudaMemcpyToSymbol(&g_SceneBBoxMax, &h_bbox_max, sizeof(float3));
 
-    // Scene BBox 설정
-    float3 scene_bbox[2];
-    scene_bbox[0] = make_float3(object.AABB[XMIN], object.AABB[YMIN], object.AABB[ZMIN]);
-    scene_bbox[1] = make_float3(object.AABB[XMAX], object.AABB[YMAX], object.AABB[ZMAX]);
-    cudaMemcpyToSymbol(g_SceneBBox, scene_bbox, sizeof(float3) * 2);
+    cuObjectMaterial h_material;
+    h_material.ambient_emission = make_float3(0.1f, 0.1f, 0.1f);
+    h_material.diffuse = make_float3(0.8f, 0.7f, 0.6f);
+    h_material.specular = make_float3(0.2f, 0.2f, 0.2f);
+    h_material.reflection = 0.05f;
+    h_material.transparency = 0.0f;
+    h_material.roughness = 32.0f;
+    h_material.refractionIndex = 1.0f;
+    cudaMemcpyToSymbol(g_materials, &h_material, sizeof(cuObjectMaterial));
 
-    // 5. CUDA 커널 실행
-    printf("[CUDA] Launching kernel...\n");
-    size_t framebuffer_size = width * height * 3 * sizeof(float);
+    printf("4. const memory set done\n");
+
+    // 5. 커널 실행
     float* d_framebuffer;
+    size_t framebuffer_size = width * height * 3 * sizeof(float);
     cudaMalloc(&d_framebuffer, framebuffer_size);
     cudaMemset(d_framebuffer, 0, framebuffer_size);
 
-    dim3 threadsPerBlock(h_scene_info.iBlockSizeX, h_scene_info.iBlockSizeY);
-    dim3 numBlocks((width + threadsPerBlock.x - 1) / threadsPerBlock.x, (height + threadsPerBlock.y - 1) / threadsPerBlock.y);
+    dim3 threads(16, 16);
+    dim3 blocks((width + threads.x - 1) / threads.x, (height + threads.y - 1) / threads.y);
+    size_t shared_mem_size = threads.x * threads.y * SHORT_STACK_DEPTH * sizeof(cu_traceState);
 
-    singlePassRayTracingKernel_ShadowOff << <numBlocks, threadsPerBlock >> > (d_framebuffer, 1, 0, 0, false);
+    singlePassRayTracingKernel_ShadowOff <<< blocks, threads, shared_mem_size >>> (d_framebuffer, 3);
 
     cudaDeviceSynchronize();
     err = cudaGetLastError();
     if (err != cudaSuccess) {
-        fprintf(stderr, "[CUDA] Kernel launch failed: %s\n", cudaGetErrorString(err));
-        return; // 실패 시 여기서 종료
+        std::cerr << "[CUDA Error] Kernel launch failed: " << cudaGetErrorString(err) << std::endl;
     }
 
-    // 6. 결과 프레임버퍼를 Host로 복사
-    printf("[CUDA] Copying result back to host...\n");
-    if (out_framebuffer) delete[] out_framebuffer; // 이전 버퍼가 있으면 삭제
+    printf("5. kernel launch done\n");
+
+    // 6. 결과 복사 및 메모리 해제
+    if (out_framebuffer) delete[] out_framebuffer;
     out_framebuffer = new float[width * height * 3];
     cudaMemcpy(out_framebuffer, d_framebuffer, framebuffer_size, cudaMemcpyDeviceToHost);
+    is_done = true;
 
-    // 7. 할당 해제
-    printf("[CUDA] Cleaning up...\n");
     cudaFree(d_framebuffer);
-    cudaFreeArray(cuArrayTriangles);
-    cudaFreeArray(cuArrayNodes);
-    cudaFreeArray(cuArrayOffsets);
-    cudaUnbindTexture(inWaldTriangleTex);
+    cudaFreeArray(d_kdtree_nodes);
+    cudaFreeArray(d_tri_offsets);
+    cudaFreeArray(d_tri_accel);
     cudaUnbindTexture(inKdTreeNodeTex);
     cudaUnbindTexture(inObjectOffsetListTex);
+    cudaUnbindTexture(inTriAccelTex);
 
-    is_done = true;
-    printf("--- CUDA Rendering Finished ---\n");
+    std::cout << "--- Minimal CUDA Renderer Finished ---" << std::endl;
 }
