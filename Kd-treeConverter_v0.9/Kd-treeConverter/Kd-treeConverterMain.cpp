@@ -472,6 +472,10 @@ int read_OBJ_and_build_kdtree(const char* obj_filename)
 
 	free(mesh_geom.vertices);
 	free(mesh_geom.faces);
+	printf("AABB: X [%f, %f] Y [%f, %f] Z [%f, %f]\n",
+		uip.poly_model.AABB[XMIN], uip.poly_model.AABB[XMAX],
+		uip.poly_model.AABB[YMIN], uip.poly_model.AABB[YMAX],
+		uip.poly_model.AABB[ZMIN], uip.poly_model.AABB[ZMAX]);
 
 	return 1;
 }
@@ -810,7 +814,7 @@ void main_menu_action(int selection) {
 				fprintf(stdout, "m_m_a: kd_tree_dump_format = ASCII\n");
 		}
 		load_poly_model_into_OpenGL();
-
+		g_cuda_rendering_done = false;
 		glutPostRedisplay();
 		break;
 	case 200:
@@ -892,6 +896,7 @@ void main_menu_action(int selection) {
 			//	uip.poly_model.AABB[ZMIN], uip.poly_model.AABB[ZMAX]);
 
 			load_poly_model_into_OpenGL();
+			g_cuda_rendering_done = false;
 			glutPostRedisplay();
 			printf("draw DONE\n");
 			break;
@@ -913,10 +918,10 @@ void main_menu_action(int selection) {
 			}
 			//TODO: CUDA rendering*****************************************
 			
-			//test.h
-			//kernelTestFuncion();
-			//cudaCopyTest();
-			//printf("test done\n");
+			/*/test.h
+			kernelTestFuncion();
+			cudaCopyTest();
+			printf("test done\n");*/
 
 			/*//SGRT
 			renderWithSGRT(

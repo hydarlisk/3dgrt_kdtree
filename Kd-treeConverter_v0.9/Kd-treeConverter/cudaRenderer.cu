@@ -75,7 +75,7 @@ typedef uint2 kdtreeNode;
 #define OBJECTLIST_OFFSET(node)     ( (node).y)
 
 // 스택 (cudaRenderPipelineCommonKernel.cu에서 추출)
-#define SHORT_STACK_DEPTH 64
+#define SHORT_STACK_DEPTH 12
 typedef struct { unsigned nodeID; float tMax; } cu_traceState;
 extern __shared__ cu_traceState smemBuffer[];
 
@@ -118,12 +118,14 @@ __device__ bool BoundsRayIntersect(const float3 minB, const float3 maxB, const c
     float3 t0s = (minB - ray.pos) * invD;
     float3 t1s = (maxB - ray.pos) * invD;
     //float3 tsmaller = fminf(t0s, t1s);
-    float3 tsmaller = make_float3(fminf(t0s.x, t1s.x), fminf(t0s.y, t1s.y), fminf(t0s.z, t1s.z));
+    float3 tsmaller = min(t0s, t1s);
+    //float3 tsmaller = make_float3(fminf(t0s.x, t1s.x), fminf(t0s.y, t1s.y), fminf(t0s.z, t1s.z));
     //float3 tbigger = fmaxf(t0s, t1s);
-    float3 tbigger = make_float3(fmaxf(t0s.x, t1s.x), fmaxf(t0s.y, t1s.y), fmaxf(t0s.z, t1s.z));
+    float3 tbigger = max(t0s, t1s);
+    //float3 tbigger = make_float3(fmaxf(t0s.x, t1s.x), fmaxf(t0s.y, t1s.y), fmaxf(t0s.z, t1s.z));
     tmin = fmaxf(tmin, fmaxf(tsmaller.x, fmaxf(tsmaller.y, tsmaller.z)));
     tmax = fminf(tmax, fminf(tbigger.x, fminf(tbigger.y, tbigger.z)));
-    return (tmin < tmax);
+    return ((tmin < tmax) & (tmax >= 0.f));
 }
 
 // =================================================================================
@@ -217,14 +219,54 @@ __device__ void singlePassIntersectRoutine(const cuRay& ray, const int id, cuInt
     }
 }
 
+//__device__ void singlePassIntersectRoutine(const cuRay& ray, const int id, cuIntersectionCheck* hit, const float t_near, const float t_far) {
+//    float4 d0 = tex1Dfetch(inTriAccelTex, id * 4 + 0); // n_u, n_v, n_d, k
+//    float4 d1 = tex1Dfetch(inTriAccelTex, id * 4 + 1); // b_nu, b_nv, b_d, indexInObject
+//    float4 d2 = tex1Dfetch(inTriAccelTex, id * 4 + 2); // c_nu, c_nv, c_d, material_ID
+//
+//    unsigned int k = float_as_uint(d0.w);
+//    float n_u = d0.x, n_v = d0.y, n_d = d0.z;
+//    float b_nu = d1.x, b_nv = d1.y, b_d = d1.z;
+//    float c_nu = d2.x, c_nv = d2.y, c_d = d2.z;
+//
+//    float3 p_pos = ray.pos, p_dir = ray.dir;
+//    if (k == 1) { // Y-major
+//        p_pos = make_float3(ray.pos.y, ray.pos.z, ray.pos.x);
+//        p_dir = make_float3(ray.dir.y, ray.dir.z, ray.dir.x);
+//    }
+//    else if (k == 2) { // Z-major
+//        p_pos = make_float3(ray.pos.z, ray.pos.x, ray.pos.y);
+//        p_dir = make_float3(ray.dir.z, ray.dir.x, ray.dir.y);
+//    }
+//
+//    float denum = p_dir.z + n_u * p_dir.x + n_v * p_dir.y;
+//    float t = (n_d - (p_pos.z + n_u * p_pos.x + n_v * p_pos.y)) / denum;
+//
+//    if (t <= hit->tHit && t > t_near && t < t_far) {
+//        float hu = p_pos.x + t * p_dir.x;
+//        float hv = p_pos.y + t * p_dir.y;
+//        float beta = hu * b_nu + hv * b_nv + b_d;
+//        float gamma = hu * c_nu + hv * c_nv + c_d;
+//
+//        if (beta >= -BARYCENTRY_EPSILON && gamma >= -BARYCENTRY_EPSILON && (beta + gamma) <= 1.0f + BARYCENTRY_EPSILON) {
+//            hit->tHit = t;
+//            hit->beta = beta;
+//            hit->gamma = gamma;
+//            hit->triIndex = id;
+//        }
+//    }
+//}
+
+
 __device__ void singlePassIntersect(cuRay& currRay, cuIntersectionCheck& intersectionCheck) {
-    float t_near = 0.0f, t_far = FLT_MAX;
-    if (BoundsRayIntersect(g_SceneBBoxMin, g_SceneBBoxMax, currRay, t_near, t_far)) {
-        const unsigned smem_baseOffset = umul24(threadIdx.y, blockDim.x) + threadIdx.x;
+    float t_scene_near = 0.0f, t_scene_far = FLT_MAX;
+
+    if (BoundsRayIntersect(g_SceneBBoxMin, g_SceneBBoxMax, currRay, t_scene_near, t_scene_far)) {
+        float t_near = t_scene_near, t_far = t_scene_far;
+        const unsigned smem_baseOffset = threadIdx.y * blockDim.x + threadIdx.x;
         shortStack stack;
         stack.init(smem_baseOffset);
-
-        kdtreeNode node = tex1Dfetch(inKdTreeNodeTex, 0);
+        kdtreeNode node = tex1Dfetch<kdtreeNode>(inKdTreeNodeTex, 0);
         while (true) {
             while (!IS_LEAF(node)) {
                 const float t_split = (SPLIT_POS(node) - currRay.get_dir_pos(SPLIT_AXIS(node)).x) / currRay.get_dir_pos(SPLIT_AXIS(node)).y;
@@ -257,6 +299,57 @@ __device__ void singlePassIntersect(cuRay& currRay, cuIntersectionCheck& interse
     }
 }
 
+///**
+//* perform intersection-calculation the triangle and  of the Leaf node of kd-tree.
+//*/
+//__device__ inline void singlePassIntersect(const cuRay& currRay, cuIntersectionCheck* intersectionCheck) {
+//    float t_scene_near = FLT_MAX, t_scene_far = -FLT_MAX;
+//
+//    if (BoundsRayIntersect(g_SceneBBoxMin, g_SceneBBoxMax, currRay, t_scene_near, t_scene_far)) {
+//        float t_near = t_scene_near, t_far = t_scene_far;
+//        const unsigned smem_baseOffset = threadIdx.y * blockDim.x + threadIdx.x;
+//        shortStack stack;
+//        stack.init(smem_baseOffset);
+//        kdtreeNode node = tex1Dfetch<kdtreeNode>(inKdTreeNodeTex, 0);
+//        while (true) {
+//            while (!IS_LEAF(node)) {
+//                const unsigned childOffset = FIRST_CHILD_OFFSET(node);
+//
+//                const float2 pos_dir = currRay.get_dir_pos(SPLIT_AXIS(node));
+//
+//                const float t_split = __fdividef(SPLIT_POS(node) - pos_dir.x, pos_dir.y);
+//                const unsigned sign = signbit(pos_dir.y);
+//
+//                unsigned idx = childOffset + (sign ^ (t_split <= t_near));
+//
+//                if (t_near < t_split && t_split < t_far) {
+//                    stack.push(childOffset + (sign ^ 1), t_far);
+//                    t_far = t_split;
+//                }
+//                node = tex1Dfetch<kdtreeNode>(inKdTreeNodeTex, idx);
+//            }
+//            unsigned baseOffset = OBJECTLIST_OFFSET(node);
+//            int objectSize = OBJECT_SIZE(node) + baseOffset;
+//            for (; baseOffset < objectSize; baseOffset++) {
+//                const unsigned objListOffset = tex1Dfetch(inObjectOffsetListTex, baseOffset);
+//                singlePassIntersectRoutine(currRay, objListOffset, intersectionCheck, t_near, t_far);
+//            }
+//            if ((intersectionCheck->tHit <= t_far) | (t_far >= t_scene_far))
+//                break;
+//            if (stack.empty()) {
+//                node = tex1Dfetch<kdtreeNode>(inKdTreeNodeTex, 0);
+//                t_near = t_far; t_far = t_scene_far;
+//            }
+//            else {
+//                const cu_traceState& trace = stack.top(); stack.pop();
+//                node = tex1Dfetch<kdtreeNode>(inKdTreeNodeTex, trace.nodeID);
+//                t_near = t_far;
+//                t_far = trace.tMax;
+//            }
+//        }
+//    }
+//}
+
 __global__ void singlePassRayTracingKernel_ShadowOff(float* pFrameBuffer, int maxReflectionDepth) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -266,7 +359,9 @@ __global__ void singlePassRayTracingKernel_ShadowOff(float* pFrameBuffer, int ma
     // 1. Primary Ray Generation
     float sx = (float)x + 0.5f;
     float sy = (float)y + 0.5f;
-    float3 dir = g_CameraInfo.startPoint + g_CameraInfo.u * sx * g_CameraInfo.stepX - g_CameraInfo.v * sy * g_CameraInfo.stepY;
+    float3 dir = g_CameraInfo.startPoint
+               + g_CameraInfo.u * sx * g_CameraInfo.stepX
+               - g_CameraInfo.v * sy * g_CameraInfo.stepY;
     dir = normalize(dir - g_CameraInfo.eye);
 
     cuRay currRay;
@@ -303,6 +398,7 @@ __global__ void singlePassRayTracingKernel_ShadowOff(float* pFrameBuffer, int ma
         }
         else {
             // Background color (e.g., black)
+            finalColor = make_float3(0.0f, 1.0f, 0.0f);
             break;
         }
     }
@@ -405,12 +501,11 @@ void renderWithCuda(const CompositeObject& object, const Camera& camera, int wid
     cudaChannelFormatDesc tri_desc = cudaCreateChannelDesc<float4>();
     //CUDA_CHECK(cudaMallocArray(&d_tri_accel, &tri_desc, object.n_triangles * 4, 0));
     //CUDA_CHECK(cudaMemcpyToArray(d_tri_accel, 0, 0, h_triangles.data(), h_triangles.size() * sizeof(float4), cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMalloc(&d_tri_accel, object.n_triangles * sizeof(float4)));
-    //CUDA_CHECK(cudaMemcpy(d_tri_accel, h_triangles.data(), h_triangles.size() * sizeof(float4), cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(d_tri_accel, h_triangles, object.n_triangles * sizeof(float4), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMalloc(&d_tri_accel, object.n_triangles * 4 * sizeof(float4)));
+    CUDA_CHECK(cudaMemcpy(d_tri_accel, h_triangles, object.n_triangles * 4 * sizeof(float4), cudaMemcpyHostToDevice));
     err = cudaGetLastError();
     if (err != cudaSuccess) {
-        std::cerr << "[CUDA Error] Kernel launch failed: " << cudaGetErrorString(err) << std::endl;
+        std::cerr << "[CUDA Error] GPU memcpy failed: " << cudaGetErrorString(err) << std::endl;
     }
     printf("2. gpu memcpy done\n");
     
@@ -421,18 +516,22 @@ void renderWithCuda(const CompositeObject& object, const Camera& camera, int wid
     //CUDA_CHECK(cudaBindTextureToArray(&inKdTreeNodeTex, d_kdtree_nodes, &node_desc));
     //CUDA_CHECK(cudaBindTextureToArray(&inObjectOffsetListTex, d_tri_offsets, &offset_desc));
     //CUDA_CHECK(cudaBindTextureToArray(&inTriAccelTex, d_tri_accel, &tri_desc));
+    // 
     CUDA_CHECK(cudaBindTexture(0, &inKdTreeNodeTex, d_kdtree_nodes, &node_desc, kdTree->tree_node_count * sizeof(kdtreeNode)));
     CUDA_CHECK(cudaBindTexture(0, &inObjectOffsetListTex, d_tri_offsets, &offset_desc, kdTree->tri_offset_count * sizeof(unsigned int)));
-    CUDA_CHECK(cudaBindTexture(0, &inTriAccelTex, d_tri_accel, &tri_desc, object.n_triangles * sizeof(float4)));
-    err = cudaGetLastError();
+    CUDA_CHECK(cudaBindTexture(0, &inTriAccelTex, d_tri_accel, &tri_desc, object.n_triangles * 4 * sizeof(float4)));
+    //CUDA_CHECK(cudaBindTexture(nullptr, &inKdTreeNodeTex, d_kdtree_nodes, &node_desc, kdTree->tree_node_count * sizeof(kdtreeNode)));
+    //CUDA_CHECK(cudaBindTexture(nullptr, &inObjectOffsetListTex, d_tri_offsets, &offset_desc, kdTree->tri_offset_count * sizeof(unsigned int)));
+    //CUDA_CHECK(cudaBindTexture(nullptr, &inTriAccelTex, d_tri_accel, &tri_desc, object.n_triangles * 4 * sizeof(float4)));
+    //err = cudaGetLastError();
     if (err != cudaSuccess) {
-        std::cerr << "[CUDA Error] Kernel launch failed: " << cudaGetErrorString(err) << std::endl;
+        std::cerr << "[CUDA Error] texture bind failed: " << cudaGetErrorString(err) << std::endl;
     }
     printf("3. texture Bind done\n");
     
     // 4. 상수 메모리 설정
     SceneInfo h_scene_info = { width, height };
-    CUDA_CHECK(cudaMemcpyToSymbol(&g_SceneInfo, &h_scene_info, sizeof(SceneInfo)));
+    CUDA_CHECK(cudaMemcpyToSymbol(g_SceneInfo, &h_scene_info, sizeof(SceneInfo)));
 
     CameraInfo h_camera_info;
     h_camera_info.eye = make_float3(camera.pos[0], camera.pos[1], camera.pos[2]);
@@ -448,12 +547,12 @@ void renderWithCuda(const CompositeObject& object, const Camera& camera, int wid
     h_camera_info.startPoint = h_camera_info.eye - n_axis * camera.near_c
         - h_camera_info.u * (plane_width * 0.5f)
         + h_camera_info.v * (plane_height * 0.5f);
-    CUDA_CHECK(cudaMemcpyToSymbol(&g_CameraInfo, &h_camera_info, sizeof(CameraInfo)));
+    CUDA_CHECK(cudaMemcpyToSymbol(g_CameraInfo, &h_camera_info, sizeof(CameraInfo)));
 
     float3 h_bbox_min = make_float3(object.AABB[XMIN], object.AABB[YMIN], object.AABB[ZMIN]);
     float3 h_bbox_max = make_float3(object.AABB[XMAX], object.AABB[YMAX], object.AABB[ZMAX]);
-    CUDA_CHECK(cudaMemcpyToSymbol(&g_SceneBBoxMin, &h_bbox_min, sizeof(float3)));
-    CUDA_CHECK(cudaMemcpyToSymbol(&g_SceneBBoxMax, &h_bbox_max, sizeof(float3)));
+    CUDA_CHECK(cudaMemcpyToSymbol(g_SceneBBoxMin, &h_bbox_min, sizeof(float3)));
+    CUDA_CHECK(cudaMemcpyToSymbol(g_SceneBBoxMax, &h_bbox_max, sizeof(float3)));
 
     cuObjectMaterial h_material;
     h_material.ambient_emission = make_float3(0.1f, 0.1f, 0.1f);
@@ -466,7 +565,7 @@ void renderWithCuda(const CompositeObject& object, const Camera& camera, int wid
     CUDA_CHECK(cudaMemcpyToSymbol(g_materials, &h_material, sizeof(cuObjectMaterial)));
     err = cudaGetLastError();
     if (err != cudaSuccess) {
-        std::cerr << "[CUDA Error] Kernel launch failed: " << cudaGetErrorString(err) << std::endl;
+        std::cerr << "[CUDA Error] const memory set failed: " << cudaGetErrorString(err) << std::endl;
     }
     printf("4. const memory set done\n");
 
@@ -481,11 +580,11 @@ void renderWithCuda(const CompositeObject& object, const Camera& camera, int wid
     size_t shared_mem_size = threads.x * threads.y * SHORT_STACK_DEPTH * sizeof(cu_traceState);
 
     singlePassRayTracingKernel_ShadowOff <<< blocks, threads, shared_mem_size >>> (d_framebuffer, 3);
-
-    cudaDeviceSynchronize();
+    CUDA_CHECK(cudaGetLastError());        // launch 실패 확인
+    CUDA_CHECK(cudaDeviceSynchronize());   // 실행 중 오류 확인
     err = cudaGetLastError();
     if (err != cudaSuccess) {
-        std::cerr << "[CUDA Error] Kernel launch failed: " << cudaGetErrorString(err) << std::endl;
+        std::cerr << "[CUDA Error] Kernel launch failed: " << cudaGetErrorString(err) << std::endl; 
     }
 
     printf("5. kernel launch done\n");
@@ -499,6 +598,7 @@ void renderWithCuda(const CompositeObject& object, const Camera& camera, int wid
     if (err != cudaSuccess) {
         std::cerr << "[CUDA Error] Kernel launch failed: " << cudaGetErrorString(err) << std::endl;
     }
+
     free(h_triangles);
 
     cudaFree(d_framebuffer);
