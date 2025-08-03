@@ -256,62 +256,95 @@ void clip_triangle(const int triangleSize, const SplitCost &bestCost, TriangleLi
 	}
 }
 
-void push_triangles_to_child(const unsigned n_bEdge, const BoundEdge *bEdge, 
-                             TriangleList *pLeftTriangles, TriangleList *pRightTriangles,
-                             const SplitCost &bestCost )
+void push_triangles_to_child(const int triangleSize, const TriangleList* pTriangleInfos,
+	TriangleList* pLeftTriangles, TriangleList* pRightTriangles,
+	const SplitCost& bestCost)
 {
-	int currLeftIndex = 0, currRightIndex = 0;
+	int currLeftIndex = 0;
+	int currRightIndex = 0;
+	int axis = bestCost.axis;
+	float splitPos = bestCost.splitPos;
 
-	if (KD_TREE_PLANAR_TRIANGLE_ADD_MODE == BOTH_SIDE) {
-		// NlogN (in RTGPU) 방식
-		for ( unsigned int i = 0; i < n_bEdge; ++i ) {
-			if( !bEdge[i].isPlanar ) {
+	// 부모 노드의 모든 삼각형을 순회합니다.
+	for (int i = 0; i < triangleSize; i++) {
+		const BoundingBox& box = pTriangleInfos[i].AABB;
+		const float min_val = box.min[axis];
+		const float max_val = box.max[axis];
 
-				if( bEdge[i].t < bestCost.splitPos && bEdge[i].type == BoundEdge::START )
-					pLeftTriangles[ currLeftIndex++ ] = *(bEdge[i].triangleInfo);
-				else if(bEdge[i].t > bestCost.splitPos && bEdge[i].type == BoundEdge::END)
-					pRightTriangles[currRightIndex++] = *(bEdge[i].triangleInfo);
-
-			} else if(bEdge[i].type == BoundEdge::START) {
-
-				if(bEdge[i].t < bestCost.splitPos)
-					pLeftTriangles[ currLeftIndex++ ] = *(bEdge[i].triangleInfo);
-				else if(bEdge[i].t > bestCost.splitPos)
-					pRightTriangles[ currRightIndex++ ] = *(bEdge[i].triangleInfo);
-				else { 
-					pLeftTriangles[ currLeftIndex++ ] = *(bEdge[i].triangleInfo);
-					pRightTriangles[ currRightIndex++ ] = *(bEdge[i].triangleInfo);
-				}	
-
+		// 1. 삼각형이 분할 평면의 왼쪽에 걸치거나 왼쪽에 있다면 왼쪽 자식에 추가합니다.
+		if (min_val <= splitPos) {
+			// 안전장치: 할당된 배열 크기를 절대 넘어가지 않도록 방지합니다.
+			if (currLeftIndex < bestCost.n_left) {
+				pLeftTriangles[currLeftIndex++] = pTriangleInfos[i];
 			}
 		}
-	} else if (KD_TREE_PLANAR_TRIANGLE_ADD_MODE == MINCOST_SIDE) {
-		// 기존 SGRTx2 방식 (상락&혁 방법)
-		for ( unsigned int i = 0; i < n_bEdge; ++i ) {
-			if( !bEdge[i].isPlanar ) {
 
-				if( bEdge[i].t < bestCost.splitPos && bEdge[i].type == BoundEdge::START )
-					pLeftTriangles[ currLeftIndex++ ] = *(bEdge[i].triangleInfo);
-				else if(bEdge[i].t > bestCost.splitPos && bEdge[i].type == BoundEdge::END)
-					pRightTriangles[currRightIndex++] = *(bEdge[i].triangleInfo);
-
-			} else if(bEdge[i].type == BoundEdge::START) {
-
-				if(bEdge[i].t < bestCost.splitPos)
-					pLeftTriangles[ currLeftIndex++ ] = *(bEdge[i].triangleInfo);
-				else if(bEdge[i].t > bestCost.splitPos)
-					pRightTriangles[ currRightIndex++ ] = *(bEdge[i].triangleInfo);
-				else { 
-					if(bestCost.planar_side == BoundEdge::START)
-						pLeftTriangles[ currLeftIndex++ ] = *(bEdge[i].triangleInfo);
-					else 
-						pRightTriangles[ currRightIndex++ ] = *(bEdge[i].triangleInfo);
-				}	
-
+		// 2. 삼각형이 분할 평면의 오른쪽에 걸치거나 오른쪽에 있다면 오른쪽 자식에 추가합니다.
+		if (max_val >= splitPos) {
+			// 안전장치: 할당된 배열 크기를 절대 넘어가지 않도록 방지합니다.
+			if (currRightIndex < bestCost.n_right) {
+				pRightTriangles[currRightIndex++] = pTriangleInfos[i];
 			}
 		}
 	}
 }
+
+//void push_triangles_to_child(const unsigned n_bEdge, const BoundEdge *bEdge, 
+//                             TriangleList *pLeftTriangles, TriangleList *pRightTriangles,
+//                             const SplitCost &bestCost )
+//{
+//	int currLeftIndex = 0, currRightIndex = 0;
+//
+//	if (KD_TREE_PLANAR_TRIANGLE_ADD_MODE == BOTH_SIDE) {
+//		// NlogN (in RTGPU) 방식
+//		for ( unsigned int i = 0; i < n_bEdge; ++i ) {
+//			if( !bEdge[i].isPlanar ) {
+//
+//				if( bEdge[i].t < bestCost.splitPos && bEdge[i].type == BoundEdge::START )
+//					pLeftTriangles[ currLeftIndex++ ] = *(bEdge[i].triangleInfo);
+//				else if(bEdge[i].t > bestCost.splitPos && bEdge[i].type == BoundEdge::END)
+//					pRightTriangles[currRightIndex++] = *(bEdge[i].triangleInfo);
+//
+//			} else if(bEdge[i].type == BoundEdge::START) {
+//
+//				if(bEdge[i].t < bestCost.splitPos)
+//					pLeftTriangles[ currLeftIndex++ ] = *(bEdge[i].triangleInfo);
+//				else if(bEdge[i].t > bestCost.splitPos)
+//					pRightTriangles[ currRightIndex++ ] = *(bEdge[i].triangleInfo);
+//				else { 
+//					pLeftTriangles[ currLeftIndex++ ] = *(bEdge[i].triangleInfo);
+//					pRightTriangles[ currRightIndex++ ] = *(bEdge[i].triangleInfo);
+//				}	
+//
+//			}
+//		}
+//	} else if (KD_TREE_PLANAR_TRIANGLE_ADD_MODE == MINCOST_SIDE) {
+//		// 기존 SGRTx2 방식 (상락&혁 방법)
+//		for ( unsigned int i = 0; i < n_bEdge; ++i ) {
+//			if( !bEdge[i].isPlanar ) {
+//
+//				if( bEdge[i].t < bestCost.splitPos && bEdge[i].type == BoundEdge::START )
+//					pLeftTriangles[ currLeftIndex++ ] = *(bEdge[i].triangleInfo);
+//				else if(bEdge[i].t > bestCost.splitPos && bEdge[i].type == BoundEdge::END)
+//					pRightTriangles[currRightIndex++] = *(bEdge[i].triangleInfo);
+//
+//			} else if(bEdge[i].type == BoundEdge::START) {
+//
+//				if(bEdge[i].t < bestCost.splitPos)
+//					pLeftTriangles[ currLeftIndex++ ] = *(bEdge[i].triangleInfo);
+//				else if(bEdge[i].t > bestCost.splitPos)
+//					pRightTriangles[ currRightIndex++ ] = *(bEdge[i].triangleInfo);
+//				else { 
+//					if(bestCost.planar_side == BoundEdge::START)
+//						pLeftTriangles[ currLeftIndex++ ] = *(bEdge[i].triangleInfo);
+//					else 
+//						pRightTriangles[ currRightIndex++ ] = *(bEdge[i].triangleInfo);
+//				}	
+//
+//			}
+//		}
+//	}
+//}
 
 void try_to_split(const int axis, BoundingBox &inBBox, const TriangleList *pTriangles, const int triangleSize,
                         BoundEdge *bEdge,  SplitCost &bestCost)
@@ -567,6 +600,7 @@ bool initialize_kd_tree(CompositeObject *poly_model) {
 		}
 
 	if (bError) {
+		printf("init kd-tree bError");
 		uninitialize_kd_tree();
 		return 0;
 	}
@@ -652,7 +686,7 @@ void build_kd_tree_recursive(BoundEdge *bEdge, const TriangleList *pTriangleInfo
 		/** 
 		 *	더이상 pTriangleInfos 는 필요없으므로 메모리 공간 절약을 위해 없앤다.
 		 */
-		delete[] pTriangleInfos;
+		//delete[] pTriangleInfos;
 
 	} else
 	// ----------------------------------------------------------------------------
@@ -675,7 +709,8 @@ void build_kd_tree_recursive(BoundEdge *bEdge, const TriangleList *pTriangleInfo
 		BoundingBox leftnBounds, rightnBounds;
 		leftnBounds  = bbox;  leftnBounds.max[ bestCost.axis ]  = bestCost.splitPos;
 		rightnBounds = bbox;  rightnBounds.min[ bestCost.axis ] = bestCost.splitPos;
-
+		//임시 삭제
+		/*
 		  TriangleList *pLeftTriangles  = new TriangleList[ bestCost.n_left ];
 		  TriangleList *pRightTriangles = new TriangleList[ bestCost.n_right ];
 	//	TriangleList *pLeftTriangles = (TriangleList *) malloc(sizeof(TriangleList)*bestCost.n_left);
@@ -692,29 +727,58 @@ void build_kd_tree_recursive(BoundEdge *bEdge, const TriangleList *pTriangleInfo
 			}
 		}
 
-		const unsigned n_bEdge = 2 * triangleSize;
+		const unsigned n_bEdge = 2 * triangleSize;*/
+
+		// 1. bestCost의 부정확한 개수 대신, 실제 필요한 삼각형 개수를 정확히 다시 계산합니다.
+		int n_left_actual = 0;
+		int n_right_actual = 0;
+		int axis = bestCost.axis;
+		float splitPos = bestCost.splitPos;
+
+		for (int i = 0; i < triangleSize; i++) {
+			const BoundingBox& box = pTriangleInfos[i].AABB;
+			if (box.min[axis] <= splitPos) {
+				n_left_actual++;
+			}
+			if (box.max[axis] >= splitPos) {
+				n_right_actual++;
+			}
+		}
+
+		// 2. 새로 계산한 정확한 개수만큼 메모리를 할당합니다.
+		TriangleList* pLeftTriangles = new TriangleList[n_left_actual];
+		TriangleList* pRightTriangles = new TriangleList[n_right_actual];
+
+		// 3. push_triangles_to_child 함수가 올바른 개수를 참조하도록 bestCost 값을 갱신합니다.
+		bestCost.n_left = n_left_actual;
+		bestCost.n_right = n_right_actual;
 
 		// TriangleInfo 부터 bEdge 를 생성 및 정렬
-		set_bound_edge( bestCost.axis, pTriangleInfos, n_bEdge, bEdge );
+		//set_bound_edge( bestCost.axis, pTriangleInfos, n_bEdge, bEdge );
 
 		// bEdge 로 부터 pLeftTriangle, pRightTriangle 을 생성
-		push_triangles_to_child( n_bEdge, bEdge, pLeftTriangles, pRightTriangles, bestCost );
+		//push_triangles_to_child( n_bEdge, bEdge, pLeftTriangles, pRightTriangles, bestCost );
+		push_triangles_to_child(triangleSize, pTriangleInfos, pLeftTriangles, pRightTriangles, bestCost);
 
 		// 각 child node 에 맞게 삼각형 clipping
-		clip_triangle( bestCost.n_left,  bestCost, pLeftTriangles,  0 );
-		clip_triangle( bestCost.n_right, bestCost, pRightTriangles, 1 );
+		//clip_triangle( bestCost.n_left,  bestCost, pLeftTriangles,  0 );
+		//clip_triangle( bestCost.n_right, bestCost, pRightTriangles, 1 );
 
 		/** 
 		 *	더이상 pTriangleInfos 는 필요없으므로 메모리 공간 절약을 위해 없앤다.
 		 *	반드시 pushChildTriangles 를 수행한 이후에 없애야 한다.
 		 */
-		delete[] pTriangleInfos;
+		//delete[] pTriangleInfos;
 		/**
 		 *	Left, Right 재귀 탐색. 
 		 *	pLeftTriangles, pRightTriangles 는 build_kd_tree_recursive 함수 안에서 사용하고 바로 없앤다.
 		 */
 		build_kd_tree_recursive( bEdge, pLeftTriangles,  bestCost.n_left,  leftnBounds,  inNodeLevel + 1, &g_pKdTree_Node_Array[ nodeNum ] );
 		build_kd_tree_recursive( bEdge, pRightTriangles, bestCost.n_right, rightnBounds, inNodeLevel + 1, &g_pKdTree_Node_Array[ nodeNum + 1 ] );
+
+		// ADD THE FOLLOWING TWO LINES TO FIX THE MEMORY LEAK
+		delete[] pLeftTriangles;
+		delete[] pRightTriangles;
 	}
 
 	if (DEBUG_FLAG) {

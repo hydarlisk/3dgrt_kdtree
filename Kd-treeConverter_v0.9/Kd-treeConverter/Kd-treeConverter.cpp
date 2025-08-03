@@ -231,6 +231,7 @@ int read_kd_tree_from_file(CompositeObject *c_object, const char *filename, int 
 
 	// build triangle acceleration
 	TriAccel *pTriAcc = NULL;
+	pTriAcc = (TriAccel*)_aligned_malloc(c_object->n_triangles * sizeof(TriAccel), 16);
 	build_TriAccList(c_object, pTriAcc);
 
 	c_object->kd_tree = new KdTree;

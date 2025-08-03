@@ -33,10 +33,13 @@ typedef __declspec(align(16)) struct _TriAccel {
 	float n_u;		// normal.u / normal.k
 	float n_v;		// normal.v / normal.k
 	float n_d;		// constant of plane equation
-	struct {
-		unsigned int k: 2;				// projection dimension
-		unsigned int isTransparent: 1;	// transparent material 
-		unsigned int mbox: 29;			// mail box
+	union {
+		struct {
+			unsigned int k : 2;				// projection dimension
+			unsigned int isTransparent : 1;	// transparent material 
+			unsigned int mbox : 29;			// mail box
+		};
+		unsigned int paccked_flags;
 	};
 
 	// line equation for line ac

@@ -42,6 +42,8 @@ float* g_render_framebuffer = nullptr;
 int g_render_width = MAIN_WINDOW_WIDTH;
 int g_render_height = MAIN_WINDOW_HEIGHT;
 bool g_cuda_rendering_done = false;
+bool g_cuda_interactive_mode = false; // CUDA 인터랙티브 모드 활성화 플래그
+bool g_camera_dirty = true;           // 카메라가 변경되었는지 확인하는 플래그
 //shyun end
 UIParameters uip;
 Camera camera;
@@ -62,14 +64,14 @@ void load_poly_model_into_OpenGL(void) {
 	glVertexPointer(3, GL_FLOAT, sizeof(ExtendedVertex), BUFFER_OFFSET(0));
 	glNormalPointer(GL_FLOAT, sizeof(ExtendedVertex), BUFFER_OFFSET(3));
 	*/
-	camera.pos[0] = uip.poly_model.AABB[XMAX];
-	camera.pos[1] = uip.poly_model.AABB[YMAX];
-	camera.pos[2] = uip.poly_model.AABB[ZMAX];
+	//camera.pos[0] = uip.poly_model.AABB[XMAX];
+	//camera.pos[1] = uip.poly_model.AABB[YMAX];
+	//camera.pos[2] = uip.poly_model.AABB[ZMAX];
 }
  
 void display(void) {
 	// CUDA 렌더링이 완료되었으면 프레임버퍼를 화면에 그립니다.
-	if (g_cuda_rendering_done && g_render_framebuffer != nullptr) {
+	if ((g_cuda_interactive_mode || g_cuda_rendering_done) && g_render_framebuffer != nullptr) {
 		glDisable(GL_LIGHTING);
 		glDisable(GL_DEPTH_TEST);
 
@@ -95,9 +97,9 @@ void display(void) {
  
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
-	glTranslatef(-(uip.poly_model.AABB[XMIN]+uip.poly_model.AABB[XMAX])/2.0,
-					-(uip.poly_model.AABB[YMIN]+uip.poly_model.AABB[YMAX])/2.0, 
-					-(uip.poly_model.AABB[ZMIN]+uip.poly_model.AABB[ZMAX])/2.0);
+	//glTranslatef(-(uip.poly_model.AABB[XMIN]+uip.poly_model.AABB[XMAX])/2.0,
+	//				-(uip.poly_model.AABB[YMIN]+uip.poly_model.AABB[YMAX])/2.0, 
+	//				-(uip.poly_model.AABB[ZMIN]+uip.poly_model.AABB[ZMAX])/2.0);
 
 	draw_axes(100.0);
 
@@ -219,6 +221,7 @@ void mousemove(int x, int y) {
 	float R[16], tmpx, tmpy, tmpz;
  
 	if (uip.left_button_pressed) {
+		g_camera_dirty = true; //shyun
 		delx = x - uip.prevx, dely = uip.prevy - y;
 		uip.prevx = x, uip.prevy = y;
 
@@ -790,8 +793,9 @@ void main_menu_action(int selection) {
 
 	switch (selection) {
 	case 0:
-		render_gaussian = !render_gaussian;
-		printf(render_gaussian ? "->Gaussian Mode\n":"I-Geom Mode\n");
+		g_cuda_rendering_done = !g_cuda_rendering_done;
+		printf(g_cuda_rendering_done ? "->CUDA Rendering\n":"I-Geom Rendering\n");
+		glutPostRedisplay();
 		break;
 	case 100:
 		render_gaussian = false;
@@ -1100,6 +1104,18 @@ void main_menu_action(int selection) {
 			//*************************************************************
 			break;
 		}
+		case 700:
+			g_cuda_interactive_mode = !g_cuda_interactive_mode; // 인터랙티브 모드 토글
+			if (g_cuda_interactive_mode) {
+				g_camera_dirty = true; // 모드를 켜는 즉시 한 번 렌더링하도록 설정
+				printf("CUDA Interactive Mode: ON\n");
+			}
+			else {
+				printf("CUDA Interactive Mode: OFF\n");
+				// 인터랙티브 모드를 끄면 다시 OpenGL 뷰로 돌아가도록 화면 갱신
+				glutPostRedisplay();
+			}
+			break;
 		case 999:
 			exit(0);
 			clean_up_system();
@@ -1121,7 +1137,8 @@ void register_callbacks_and_create_menu(void) {
 	glutAddMenuEntry("3. Dump Kd-tree and I-Geometry to Files", 300);
 	glutAddMenuEntry("4. Read Kd-tree from File", 400);
 	glutAddMenuEntry("5. Read .obj File and Prepair I-Geometry", 500);
-	glutAddMenuEntry("6. CUDA Rendering", 600);
+	glutAddMenuEntry("6. CUDA Rendering (One-shot)", 600);
+	glutAddMenuEntry("7. CUDA Rendering (Interactive Toggle)", 700); // 메뉴 추가
 	glutAddMenuEntry("Exit", 999); 
 
 	glutAttachMenu(GLUT_RIGHT_BUTTON); 
@@ -1200,6 +1217,18 @@ void show_greetings(void) {
 	fprintf(stdout, "/***********************************************************/\n\n");
 }
 
+void idle() {
+	// 인터랙티브 모드가 켜져 있고, 카메라가 변경되었을 때만 다시 렌더링
+	if (g_cuda_interactive_mode && g_camera_dirty) {
+		g_camera_dirty = false; // 플래그 리셋
+
+		// CUDA 렌더링 실행 (기존 렌더링 함수 재사용)
+		renderWithCuda(uip.poly_model, camera, g_render_width, g_render_height, g_render_framebuffer, g_cuda_rendering_done);
+
+		glutPostRedisplay(); // 화면 갱신 요청
+	}
+}
+
 void main(int argc, char **argv) {
 	cudaGLSetGLDevice(0);
 	init_KDT_system();
@@ -1212,11 +1241,13 @@ void main(int argc, char **argv) {
 
 	if (!initCuda()) {
 		fprintf(stderr, "Failed to initialize CUDA. Exiting.\n");
+		system("pause");
 		exit(1);
 	}
 
 	initialize_glew(); 
 	register_callbacks_and_create_menu();
+	glutIdleFunc(idle);
 
 	init_OpenGL_RC(); 
 	print_OpenGL_GLSL_GLEW_version();
