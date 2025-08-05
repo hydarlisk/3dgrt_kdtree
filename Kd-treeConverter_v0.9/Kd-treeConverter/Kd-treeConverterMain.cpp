@@ -26,10 +26,12 @@
 
 //shyun
 #include <cuda_gl_interop.h>
+#include <vector>
 //#include "sgrt_interface.h"
 //#include "SGRT_Integration.h"
 #include "test.h"
 #include "cudaRenderer.h"
+//#include "SGRTx2Lib/cuda_math.h"
 //#include "cudaKDTreeTracer.h"
 //#include "cudaRayTracingKernel.cu"
 //#include "SGRTx2Lib/GKDTreeStructure.h"
@@ -44,6 +46,18 @@ int g_render_height = MAIN_WINDOW_HEIGHT;
 bool g_cuda_rendering_done = false;
 bool g_cuda_interactive_mode = false; // CUDA 인터랙티브 모드 활성화 플래그
 bool g_camera_dirty = true;           // 카메라가 변경되었는지 확인하는 플래그
+
+#include <sys/stat.h>
+
+void check_ply_file_size(const char* filename) {
+	struct stat st;
+	if (stat(filename, &st) != 0) {
+		printf("Failed to stat file\n");
+		return;
+	}
+	printf("Actual file size: %lld bytes\n", (long long)st.st_size);
+}
+
 //shyun end
 UIParameters uip;
 Camera camera;
@@ -64,9 +78,6 @@ void load_poly_model_into_OpenGL(void) {
 	glVertexPointer(3, GL_FLOAT, sizeof(ExtendedVertex), BUFFER_OFFSET(0));
 	glNormalPointer(GL_FLOAT, sizeof(ExtendedVertex), BUFFER_OFFSET(3));
 	*/
-	//camera.pos[0] = uip.poly_model.AABB[XMAX];
-	//camera.pos[1] = uip.poly_model.AABB[YMAX];
-	//camera.pos[2] = uip.poly_model.AABB[ZMAX];
 }
  
 void display(void) {
@@ -97,9 +108,9 @@ void display(void) {
  
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
-	//glTranslatef(-(uip.poly_model.AABB[XMIN]+uip.poly_model.AABB[XMAX])/2.0,
-	//				-(uip.poly_model.AABB[YMIN]+uip.poly_model.AABB[YMAX])/2.0, 
-	//				-(uip.poly_model.AABB[ZMIN]+uip.poly_model.AABB[ZMAX])/2.0);
+	glTranslatef(-(uip.poly_model.AABB[XMIN]+uip.poly_model.AABB[XMAX])/2.0,
+					-(uip.poly_model.AABB[YMIN]+uip.poly_model.AABB[YMAX])/2.0, 
+					-(uip.poly_model.AABB[ZMIN]+uip.poly_model.AABB[ZMAX])/2.0);
 
 	draw_axes(100.0);
 
@@ -353,6 +364,123 @@ typedef enum _SL_KDT_CONFIG_command_ID {
 	CMD_KD_TREE_MAX_LEVEL, CMD_KD_TREE_MIN_TRIANGLE, CMD_KD_TREE_EMTPY_BONUS, CMD_COMMENT, CMD_NULL
 } SL_KDT_CONFIG_command_ID;
 
+//shyun
+
+// 특정 PLY 파일을 읽고 CompositeObject를 생성하도록 수정된 함수
+/*int read_PLY_binary_and_build_kdtree(const char* filename) {
+	char full_path[_MAX_PATH];
+	if (_fullpath(full_path, filename, _MAX_PATH) != NULL) {
+		printf("Attempting to open file at absolute path: %s\n", full_path);
+	}
+
+	FILE* fp = fopen(filename, "rb");
+	if (!fp) {
+		fprintf(stderr, "Cannot open binary PLY file: %s\n", filename);
+		return 0;
+	}
+
+	// 1. 헤더를 파싱하여 정점과 면의 개수 파악
+	char line[1024];
+	int num_vertices = 0, num_faces = 0;
+	long data_start_pos = 0;
+
+	while (fgets(line, sizeof(line), fp)) {
+		if (strncmp(line, "element vertex", 14) == 0) {
+			sscanf(line, "element vertex %d", &num_vertices);
+		}
+		else if (strncmp(line, "element face", 12) == 0) {
+			sscanf(line, "element face %d", &num_faces);
+		}
+		else if (strncmp(line, "end_header", 10) == 0) {
+			data_start_pos = ftell(fp);
+			break;
+		}
+	}
+	printf("Header parsing finished. Vertices: %d, Faces: %d\n", num_vertices, num_faces);
+
+	if (num_vertices == 0 && num_faces == 0) {
+		fprintf(stderr, "PLY header parsing failed or file is empty.\n");
+		fclose(fp);
+		return 0;
+	}
+	printf("Reading %d vertices and %d faces.\n", num_vertices, num_faces);
+
+	// 2. 파일로부터 모든 정점과 면 데이터 읽기
+	fseek(fp, data_start_pos, SEEK_SET);
+
+	std::vector<FullPLYVertex> vertices(num_vertices);
+	if (fread(vertices.data(), sizeof(FullPLYVertex), num_vertices, fp) != (size_t)num_vertices) {
+		fprintf(stderr, "Failed to read vertex data.\n");
+		fclose(fp);
+		return 0;
+	}
+
+	std::vector<PLYFace> faces(num_faces);
+	for (int i = 0; i < num_faces; ++i) {
+		if (fread(&faces[i].num_vertices, 1, 1, fp) != 1 || faces[i].num_vertices != 3) {
+			fprintf(stderr, "Error: File contains non-triangular faces or face read error.\n");
+			fclose(fp);
+			return 0;
+		}
+		if (fread(faces[i].indices, sizeof(unsigned int), 3, fp) != 3) {
+			fprintf(stderr, "Failed to read face indices.\n");
+			fclose(fp);
+			return 0;
+		}
+	}
+	fclose(fp);
+
+	// 3. CompositeObject 구조체 채우기
+	CompositeObject* obj = &uip.poly_model;
+	obj->n_triangles = num_faces;
+	obj->extended_vertices = (ExtendedVertex*)malloc(sizeof(ExtendedVertex) * 3 * num_faces);
+	if (!obj->extended_vertices) {
+		fprintf(stderr, "Memory allocation failed for extended_vertices.\n");
+		return 0;
+	}
+
+	// AABB 초기화
+	for (int i = 0; i < 3; ++i) {
+		obj->AABB[i] = FLT_MAX;
+		obj->AABB[i + 3] = -FLT_MAX;
+	}
+
+	// 면을 순회하며 필요한 정점 데이터 복사
+	for (int i = 0; i < num_faces; ++i) {
+		for (int j = 0; j < 3; ++j) {
+			unsigned int vertex_index = faces[i].indices[j];
+			FullPLYVertex& v = vertices[vertex_index];
+			ExtendedVertex* ev = &obj->extended_vertices[i * 3 + j];
+
+			// 위치와 법선 벡터 복사
+			ev->vertex[0] = v.x;
+			ev->vertex[1] = v.y;
+			ev->vertex[2] = v.z;
+			ev->normal[0] = v.nx;
+			ev->normal[1] = v.ny;
+			ev->normal[2] = v.nz;
+
+			// 기본 재질 ID 설정
+			ev->material_ID = 0;
+
+			// AABB (Axis-Aligned Bounding Box) 업데이트
+			for (int k = 0; k < 3; ++k) {
+				if (ev->vertex[k] < obj->AABB[k])     obj->AABB[k] = ev->vertex[k];
+				if (ev->vertex[k] > obj->AABB[k + 3]) obj->AABB[k + 3] = ev->vertex[k];
+			}
+		}
+	}
+
+	// 이제 객체는 kd-tree를 만들 준비가 되었습니다.
+	//build_kd_tree_for_composite_object(obj);
+	uip.composite_object_read = 1;
+
+	printf("Successfully converted PLY to CompositeObject.\n");
+	return 1;
+}
+*/
+
+
 bool read_OBJ_geom_file(const char* filename, MeshGeom* mesh_geom) {
 	std::ifstream file(filename);
 	if (!file.is_open()) {
@@ -483,7 +611,7 @@ int read_OBJ_and_build_kdtree(const char* obj_filename)
 	return 1;
 }
 
-bool load_obj_to_composite_object(const char* filename, CompositeObject* c_object) {
+/*bool load_obj_to_composite_object(const char* filename, CompositeObject* c_object) {
 	std::ifstream infile(filename);
 	if (!infile.is_open()) {
 		fprintf(stderr, "Failed to open OBJ file: %s\n", filename);
@@ -550,7 +678,8 @@ bool load_obj_to_composite_object(const char* filename, CompositeObject* c_objec
 		c_object->AABB[YMIN], c_object->AABB[YMAX],
 		c_object->AABB[ZMIN], c_object->AABB[ZMAX]);
 	return true;
-}
+}*/
+//shyun end
 
 SL_KDT_CONFIG_command_ID query_SL_KDT_CONFIG_command_ID(const char *command) {
 	int i;
@@ -841,9 +970,9 @@ void main_menu_action(int selection) {
 		if (render_gaussian) {
 			dump_kd_tree_for_composite_object(
 				&uip.poly_model,
-				"../../Data/Obj/hotdog_tree.kdt",         // 저장할 kd-tree
+				KDTREE_PATH,         // 저장할 kd-tree
 				KD_TREE_DUMP_IN_BINARY,    // 저장 포맷
-				"../../Data/Obj/hotdog_igeom.bin"         // 저장할 geometry
+				IGEOM_PATH         // 저장할 geometry
 			);
 		}
 		else {
@@ -858,7 +987,7 @@ void main_menu_action(int selection) {
 			strcat(full_kd_tree_file_name, uip.kd_tree_filename);
 			printf("uip.kd_tree_filename:%s\n", uip.kd_tree_filename);
 			if (render_gaussian) {
-				strcpy(full_kd_tree_file_name, "../../Data/Obj/hotdog_tree.kdt");
+				strcpy(full_kd_tree_file_name, KDTREE_PATH);
 				uip.kd_tree_dump_format = KD_TREE_DUMP_IN_BINARY;
 			}
 			printf("full_kd_tree_file_name:%s\n", full_kd_tree_file_name);
@@ -867,15 +996,24 @@ void main_menu_action(int selection) {
 			break;
 		case 500: {
 			render_gaussian = true;
-			const char* obj_path = "../../Data/Obj/hotdog_3dgrt.obj";  // obj 경로
-
-			if (!read_OBJ_and_build_kdtree(obj_path)) {
-				fprintf(stderr, "Failed to load obj and build Kd-tree\n");
+			const char* file_path = MODEL_PATH;  // obj 경로
+#if SCENE_NUM < 1
+			if (!read_OBJ_and_build_kdtree(file_path)) {
+				fprintf(stderr, "Failed to load obj file\n");
 				return;
 			}
+#else
+			GPUParticle* d_particles = nullptr;
+			int n_particles = 0;
+			check_ply_file_size(file_path);
+			if (!read_ply_and_upload_gaussians(file_path, d_particles, n_particles)) {
+				fprintf(stderr, "Failed to load ply.\n");
+				return;
+			}
+#endif
 
 			//CompositeObject obj_model;
-			//if (!load_obj_to_composite_object(obj_path, &obj_model)) {
+			//if (!load_obj_to_composite_object(file_path, &obj_model)) {
 			//	fprintf(stderr, "Failed to load .obj file.\n");
 			//	break;
 			//}
@@ -888,9 +1026,9 @@ void main_menu_action(int selection) {
 
 			//dump_kd_tree_for_composite_object(
 			//	&obj_model,
-			//	"../../Data/Obj/hotdog_tree.kdt",         // 저장할 kd-tree
+			//	KDTREE_PATH,         // 저장할 kd-tree
 			//	KD_TREE_DUMP_IN_BINARY,    // 저장 포맷
-			//	"../../Data/Obj/hotdog_igeom.bin"         // 저장할 geometry
+			//	IGEOM_PATH         // 저장할 geometry
 			//);
 
 
@@ -962,12 +1100,9 @@ void main_menu_action(int selection) {
 			else {
 				fprintf(stderr, "CUDA rendering failed.\n");
 			}
-			
-			/*/cudaKDTreeTracer
-			initCudaRendering(uip.poly_model, g_render_framebuffer, &g_cuda_rendering_done);*/
 
 			/*GScene* scene = new GScene();
-			scene->setKdTreeLoadFilePath("../../Data/Obj/hotdog_tree.kdt");
+			scene->setKdTreeLoadFilePath(KDTREE_PATH);
 			scene->convertRenderScene();
 			scene->buildObjectKdTree();
 			GKDTreeStructure* kdTree = new GKDTreeStructure(scene);

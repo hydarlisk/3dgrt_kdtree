@@ -13,10 +13,35 @@
 #define MIN_FOVY 0.5
 #define MAX_FOVY 90.0
 #define EPSILON 0.00001
+//shyun
+#define SCENE_NUM 0
 
-//using namespace KDTConverter;
-//using namespace KDTConstructor;
-
+#if SCENE_NUM == 0
+	#define MODEL_PATH "../../Data/Obj/hotdog_3dgrt.obj"
+	#define KDTREE_PATH "../../Data/Obj/hotdog_tree.kdt"
+	#define IGEOM_PATH "../../Data/Obj/hotdog_igeom.bin"
+#elif SCENE_NUM == 1
+	#define MODEL_PATH "../../Data/ply/hotdog/hotdog_3dgrt.ply"
+	#define KDTREE_PATH "../../Data/ply/hotdog/hotdog_tree.kdt"
+	#define IGEOM_PATH "../../Data/ply/hotdog/hotdog_igeom.bin"
+#elif SCENE_NUM == 2
+	#define MODEL_PATH "../../Data/ply/lego/lego_3dgrt.ply"
+	#define KDTREE_PATH "../../Data/ply/lego/lego_tree.kdt"
+	#define IGEOM_PATH "../../Data/ply/lego/lego_igeom.bin"
+#elif SCENE_NUM == 3
+	#define MODEL_PATH "../../Data/ply/bonsai/bonsai_3dgrt.ply"
+	#define KDTREE_PATH "../../Data/ply/bonsai/bonsai_tree.kdt"
+	#define IGEOM_PATH "../../Data/ply/bonsai/bonsai_igeom.bin"
+#elif SCENE_NUM == 4
+	#define MODEL_PATH "../../Data/ply/chair/chair_3dgrt.ply"
+	#define KDTREE_PATH "../../Data/ply/chair/chair_tree.kdt"
+	#define IGEOM_PATH "../../Data/ply/chair/chair_igeom.bin"
+#elif SCENE_NUM == 5
+	#define MODEL_PATH "../../Data/ply/flowers/flowers_3dgrt.ply"
+	#define KDTREE_PATH "../../Data/ply/flowers/flowers_tree.kdt"
+	#define IGEOM_PATH "../../Data/ply/flowers/flowers_igeom.bin"
+#endif
+//shyun end
 typedef enum { FLAT_SHADING, SMOOTH_SHADING } OpenGLShadingMode;
 typedef enum { LINE, FILL } OpenGLPolygonMode;
  

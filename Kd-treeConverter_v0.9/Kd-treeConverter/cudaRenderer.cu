@@ -14,6 +14,18 @@
 #include <texture_indirect_functions.h>
 #include <vector_types.h>
 
+#pragma pack(push, 1)
+struct FullPLYVertex {
+    float x, y, z;           // position
+    float nx, ny, nz;        // normal (optional)
+    float f_dc[3];           // base color (RGB)
+    float f_rest[45];        // SH 계수
+    float opacity;
+    float scale[3];          // xyz 스케일
+    float rot[4];            // quaternion
+};
+#pragma pack(pop)
+
 #define CUDA_CHECK(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 inline void gpuAssert(cudaError_t code, const char* file, int line) {
     if (code != cudaSuccess) {
@@ -45,7 +57,8 @@ struct cuIntersectionCheck {
     float beta, gamma;
     int triIndex;
     int objectIndex;
-    __device__ void init() { tHit = FLT_MAX; triIndex = -1; objectIndex = 0; }
+    int hitCount;
+    __device__ void init() { tHit = FLT_MAX; triIndex = -1; objectIndex = 0; hitCount = 0; }
     __device__ bool isHit() const { return triIndex != -1; }
 };
 
@@ -162,11 +175,12 @@ __device__ void singlePassIntersectRoutine(const cuRay& ray, int id, cuIntersect
         p_pos = make_float3(ray.pos.z, ray.pos.x, ray.pos.y);
         p_dir = make_float3(ray.dir.z, ray.dir.x, ray.dir.y);
     }*/
-    if (k == 0) {       // YZ 평면에 투영하기 위해 (y, z, x) 순서로 변경
+    //CPU 투영 방식과 일치하오록 수정
+    if (k == 0) {       //YZ 평면에 투영: (y, z, x) 순서로 변경
         p_pos = make_float3(ray.pos.y, ray.pos.z, ray.pos.x);
         p_dir = make_float3(ray.dir.y, ray.dir.z, ray.dir.x);
     }
-    else if (k == 1) {  // ZX 평면에 투영하기 위해 (z, x, y) 순서로 변경
+    else if (k == 1) {  //ZX 평면에 투영: (z, x, y) 순서로 변경
         p_pos = make_float3(ray.pos.z, ray.pos.x, ray.pos.y);
         p_dir = make_float3(ray.dir.z, ray.dir.x, ray.dir.y);
     }
@@ -187,8 +201,25 @@ __device__ void singlePassIntersectRoutine(const cuRay& ray, int id, cuIntersect
     float gamma = u_coord * d2.x + v_coord * d2.y + d2.z;
 
     if (beta >= -BARYCENTRY_EPSILON && gamma >= -BARYCENTRY_EPSILON && (beta + gamma) <= 1.0f + BARYCENTRY_EPSILON) {
-        hit.tHit = t; hit.beta = beta; hit.gamma = gamma; hit.triIndex = id;
+        hit.hitCount++; // 유효한 충돌이므로 카운터를 1 증가
+
+        // 가장 가까운 충돌점 정보는 계속 갱신
+        if (t < hit.tHit) {
+            hit.tHit = t;
+            hit.beta = beta;
+            hit.gamma = gamma;
+            hit.triIndex = id;
+        }
     }
+
+    //if ((beta < 0.f - BARYCENTRY_EPSILON) | (gamma < 0.f - BARYCENTRY_EPSILON) | ((1.0f - beta - gamma) < 0.0f - BARYCENTRY_EPSILON)) {
+    //    return;
+    //}
+
+    //hit.tHit = t;
+    //hit.beta = beta;
+    //hit.gamma = gamma;
+    //hit.triIndex = id;
 }
 
 __device__ void singlePassIntersect(cuRay& currRay, cuIntersectionCheck& intersectionCheck) {
@@ -228,7 +259,7 @@ __device__ void singlePassIntersect(cuRay& currRay, cuIntersectionCheck& interse
                 unsigned tri_idx = tex1Dfetch(inObjectOffsetListTex, offset + i);
                 singlePassIntersectRoutine(currRay, tri_idx, intersectionCheck, t_near, t_far);
             }
-            if (intersectionCheck.tHit < t_far || stack.empty()) break;
+            if (/*intersectionCheck.tHit < t_far || */stack.empty()) break;
             cu_traceState next = stack.top(); stack.pop();
             t_near = t_far; t_far = next.tMax;
             node = tex1Dfetch(inKdTreeNodeTex, next.nodeID);
@@ -237,7 +268,7 @@ __device__ void singlePassIntersect(cuRay& currRay, cuIntersectionCheck& interse
 }
 
 
-__global__ void renderKernel(float* pFrameBuffer) {
+__global__ void renderKernel(float* pFrameBuffer, int* maxhit) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
     if (x >= g_SceneInfo.resX || y >= g_SceneInfo.resY) return;
@@ -257,6 +288,12 @@ __global__ void renderKernel(float* pFrameBuffer) {
         float3 N = normalize(make_float3(N_packed.x, N_packed.y, N_packed.z));
         float lambert = fmaxf(0.0f, dot(N, normalize(make_float3(1, -1, -1))));
         finalColor = make_float3(0.9f, 0.8f, 0.7f) * lambert + make_float3(0.1f, 0.1f, 0.1f);
+
+        atomicMax(maxhit, hit.hitCount);
+        //if (*maxhit == hit.hitCount && hit.hitCount != 0) printf("(in kernel) maxhit:%d\n", *maxhit);
+        //printf("(kernel)maxhit:%d", *maxhit);
+        float red_factor = fminf(1.0f, (float)hit.hitCount / 1127192737.f);
+        finalColor += make_float3(red_factor * 0.8f, 0.0f, 0.0f);
     }
 
     int idx = 3 * ((g_SceneInfo.resY - y - 1) * g_SceneInfo.resX + x);
@@ -299,9 +336,9 @@ void renderWithCuda(const CompositeObject& object, const Camera& camera, int wid
         return;
     }
 
-    printf("0. exist KD-Tree\n");
+    //printf("0. exist KD-Tree\n");
 
-    printf("[DEBUG] object.n_triangles = %d\n", object.n_triangles);
+    //printf("[DEBUG] object.n_triangles = %d\n", object.n_triangles);
     if (kdTree == nullptr) {
         printf("[FATAL] kdTree == nullptr\n");
         return;
@@ -319,46 +356,27 @@ void renderWithCuda(const CompositeObject& object, const Camera& camera, int wid
     // TriAccel -> float4[4] (n_u, n_v, n_d, k | b_nu, b_nv, b_d, idx | c_nu, c_nv, c_d, matID | N.x, N.y, N.z, pad)
     std::vector<float4> h_triangles(object.n_triangles * 4);
     //float4* h_triangles = (float4*)malloc(sizeof(float4) * (object.n_triangles * 4));
-    //printf("Data packing start\n");
     for (int i = 0; i < object.n_triangles; ++i) {
         const TriAccel& src = kdTree->tri_accel_list[i];
-        //printf("Data packing %d - 0, src.k: % u\n", i, src.k);
         h_triangles[i * 4 + 0] = make_float4(src.n_u, src.n_v, src.n_d, uint_as_float_H(src.k));
-        //printf("Data packing %d - 1, src.indexInObject: %d\n",i);
         h_triangles[i * 4 + 1] = make_float4(src.b_nu, src.b_nv, src.b_d, int_as_float_H(src.indexInObject));
-        //printf("Data packing %d - 2, src.material_ID: %d\n", i);
         h_triangles[i * 4 + 2] = make_float4(src.c_nu, src.c_nv, src.c_d, int_as_float_H(src.material_ID));
-        //printf("Data packing %d - 3\n", i);
         h_triangles[i * 4 + 3] = make_float4(src.N[0], src.N[1], src.N[2], 0.0f);
-        //printf("Data packing %d - 4\n", i);
     }
-    printf("1. Data packing done\n");
+    //printf("1. Data packing done\n");
 
     // 2. GPU 메모리 할당 및 데이터 전송
     cudaError_t err;
-    //cudaArray* d_kdtree_nodes, * d_tri_offsets, * d_tri_accel;
     kdtreeNode* d_kdtree_nodes;
     unsigned int* d_tri_offsets;
     float4* d_tri_accel;
 
-    printf("kdtree node count: %d\n", kdTree->tree_node_count);
+    //printf("kdtree node count: %d\n", kdTree->tree_node_count);
     cudaChannelFormatDesc node_desc = cudaCreateChannelDesc<uint2>();
-    //CUDA_CHECK(cudaMallocArray(&d_kdtree_nodes, &node_desc, kdTree->tree_node_count, 0));
-    //CUDA_CHECK(cudaMemcpyToArray(d_kdtree_nodes, 0, 0, kdTree->tree, kdTree->tree_node_count * sizeof(kdtreeNode), cudaMemcpyHostToDevice));
-    //CUDA_CHECK(cudaMalloc(&d_kdtree_nodes, kdTree->tree_node_count * sizeof(kdtreeNode)));
-    //CUDA_CHECK(cudaMemcpy(d_kdtree_nodes, kdTree->tree, kdTree->tree_node_count * sizeof(kdtreeNode), cudaMemcpyHostToDevice));
 
     cudaChannelFormatDesc offset_desc = cudaCreateChannelDesc<unsigned int>();
-    //CUDA_CHECK(cudaMallocArray(&d_tri_offsets, &offset_desc, kdTree->tri_offset_count, 0));
-    //CUDA_CHECK(cudaMemcpyToArray(d_tri_offsets, 0, 0, kdTree->tri_offset_list, kdTree->tri_offset_count * sizeof(unsigned int), cudaMemcpyHostToDevice));
-    //CUDA_CHECK(cudaMalloc(&d_tri_offsets, kdTree->tri_offset_count * sizeof(uint)));
-    //CUDA_CHECK(cudaMemcpy(d_tri_offsets, kdTree->tri_offset_list, kdTree->tri_offset_count * sizeof(unsigned int), cudaMemcpyHostToDevice));
 
     cudaChannelFormatDesc tri_desc = cudaCreateChannelDesc<float4>();
-    //CUDA_CHECK(cudaMallocArray(&d_tri_accel, &tri_desc, object.n_triangles * 4, 0));
-    //CUDA_CHECK(cudaMemcpyToArray(d_tri_accel, 0, 0, h_triangles.data(), h_triangles.size() * sizeof(float4), cudaMemcpyHostToDevice));
-    //CUDA_CHECK(cudaMalloc(&d_tri_accel, object.n_triangles * 4 * sizeof(float4)));
-    //CUDA_CHECK(cudaMemcpy(d_tri_accel, h_triangles, object.n_triangles * 4 * sizeof(float4), cudaMemcpyHostToDevice));
 
     size_t node_size = kdTree->tree_node_count * sizeof(kdtreeNode);
     CUDA_CHECK(cudaMalloc(&d_kdtree_nodes, node_size));
@@ -377,27 +395,16 @@ void renderWithCuda(const CompositeObject& object, const Camera& camera, int wid
     if (err != cudaSuccess) {
         std::cerr << "[CUDA Error] GPU memcpy failed: " << cudaGetErrorString(err) << std::endl;
     }
-    printf("2. gpu memcpy done\n");
+    //printf("2. gpu memcpy done\n");
     
     // 3. 텍스처 바인딩
-    //cudaBindTextureToArray(inKdTreeNodeTex, d_kdtree_nodes);
-    //cudaBindTextureToArray(inObjectOffsetListTex, d_tri_offsets);
-    //cudaBindTextureToArray(inTriAccelTex, d_tri_accel);
-    //CUDA_CHECK(cudaBindTextureToArray(&inKdTreeNodeTex, d_kdtree_nodes, &node_desc));
-    //CUDA_CHECK(cudaBindTextureToArray(&inObjectOffsetListTex, d_tri_offsets, &offset_desc));
-    //CUDA_CHECK(cudaBindTextureToArray(&inTriAccelTex, d_tri_accel, &tri_desc));
-    // 
     CUDA_CHECK(cudaBindTexture(0, &inKdTreeNodeTex, d_kdtree_nodes, &node_desc, node_size));
     CUDA_CHECK(cudaBindTexture(0, &inObjectOffsetListTex, d_tri_offsets, &offset_desc, offset_size));
     CUDA_CHECK(cudaBindTexture(0, &inTriAccelTex, d_tri_accel, &tri_desc, accel_size));
-    //CUDA_CHECK(cudaBindTexture(nullptr, &inKdTreeNodeTex, d_kdtree_nodes, &node_desc, kdTree->tree_node_count * sizeof(kdtreeNode)));
-    //CUDA_CHECK(cudaBindTexture(nullptr, &inObjectOffsetListTex, d_tri_offsets, &offset_desc, kdTree->tri_offset_count * sizeof(unsigned int)));
-    //CUDA_CHECK(cudaBindTexture(nullptr, &inTriAccelTex, d_tri_accel, &tri_desc, object.n_triangles * 4 * sizeof(float4)));
-    //err = cudaGetLastError();
     if (err != cudaSuccess) {
         std::cerr << "[CUDA Error] texture bind failed: " << cudaGetErrorString(err) << std::endl;
     }
-    printf("3. texture Bind done\n");
+    //printf("3. texture Bind done\n");
     
     // 4. 상수 메모리 설정
     SceneInfo h_scene_info = { width, height };
@@ -437,7 +444,7 @@ void renderWithCuda(const CompositeObject& object, const Camera& camera, int wid
     if (err != cudaSuccess) {
         std::cerr << "[CUDA Error] const memory set failed: " << cudaGetErrorString(err) << std::endl;
     }
-    printf("4. const memory set done\n");
+    //printf("4. const memory set done\n");
 
     // 5. 커널 실행
     float* d_framebuffer;
@@ -449,16 +456,27 @@ void renderWithCuda(const CompositeObject& object, const Camera& camera, int wid
     dim3 blocks((width + threads.x - 1) / threads.x, (height + threads.y - 1) / threads.y);
     size_t shared_mem_size = threads.x * threads.y * SHORT_STACK_DEPTH * sizeof(cu_traceState);
 
+    int* d_maxhit;
+    CUDA_CHECK(cudaMalloc((void**)&d_maxhit, sizeof(int)));
+    CUDA_CHECK(cudaMemset(d_maxhit, 0, sizeof(int)));
+
     //singlePassRayTracingKernel_ShadowOff <<< blocks, threads, shared_mem_size >>> (d_framebuffer, 3);
-    renderKernel <<< blocks, threads, shared_mem_size >>> (d_framebuffer);
+    renderKernel <<< blocks, threads, shared_mem_size >>> (d_framebuffer, d_maxhit);
     CUDA_CHECK(cudaGetLastError());        // launch 실패 확인
-    CUDA_CHECK(cudaDeviceSynchronize());   // 실행 중 오류 확인
+    CUDA_CHECK(cudaDeviceSynchronize()); // 실행 중 오류 확인
+
+    int h_count = 0;
+    CUDA_CHECK(cudaMemcpy(&h_count, d_maxhit, sizeof(int), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaFree(d_maxhit));
+    printf("af maxHIT count: %d\n", h_count);
+    //free(h_count);
+
     err = cudaGetLastError();
     if (err != cudaSuccess) {
         std::cerr << "[CUDA Error] Kernel launch failed: " << cudaGetErrorString(err) << std::endl; 
     }
 
-    printf("5. kernel launch done\n");
+    //printf("5. kernel launch done\n");
 
     // 6. 결과 복사 및 메모리 해제
     if (out_framebuffer) delete[] out_framebuffer;
@@ -482,10 +500,159 @@ void renderWithCuda(const CompositeObject& object, const Camera& camera, int wid
     cudaUnbindTexture(inKdTreeNodeTex);
     cudaUnbindTexture(inObjectOffsetListTex);
     cudaUnbindTexture(inTriAccelTex);
-    printf("6. free done\n");
+    //printf("6. free done\n");
     err = cudaGetLastError();
     if (err != cudaSuccess) {
         std::cerr << "[CUDA Error] free failed: " << cudaGetErrorString(err) << std::endl;
     }
     std::cout << "--- Minimal CUDA Renderer Finished ---" << std::endl;
+}
+
+//-----------------------------------------------------------------------
+// Gaussian Render
+//-----------------------------------------------------------------------
+/*
+__device__ bool rayIntersectsGaussian(const float3 ray_o, const float3 ray_d,
+    const GPUParticle& p,
+    float& t_out) {
+    float3 oc = ray_o - p.position;
+    float radius = fmaxf(p.scale.x, fmaxf(p.scale.y, p.scale.z)); // approximate
+
+    float b = dot(oc, ray_d);
+    float c = dot(oc, oc) - radius * radius;
+    float discriminant = b * b - c;
+
+    if (discriminant > 0) {
+        t_out = -b - sqrtf(discriminant);
+        return t_out > 0.0f;
+    }
+    return false;
+}
+
+__global__ void renderGaussianKernelWithKdTree(...) {
+    int px = blockIdx.x * blockDim.x + threadIdx.x;
+    int py = blockIdx.y * blockDim.y + threadIdx.y;
+    if (px >= width || py >= height) return;
+
+    int pixel_idx = py * width + px;
+
+    // 1. Ray 생성
+    float3 ray_o = cam.origin;
+    float3 ray_d = generateRayDirection(cam, px, py);
+
+    float min_t = 1e30f;
+    int hit_idx = -1;
+
+    // 2. Kd-tree traverse하면서 입자 하나씩 검사
+    for (int i = 0; i < n_particles; ++i) {
+        float t = 0.f;
+        if (rayIntersectsGaussian(ray_o, ray_d, particles[i], t)) {
+            if (t < min_t) {
+                min_t = t;
+                hit_idx = i;
+            }
+        }
+    }
+
+    // 3. 결과 저장
+    if (hit_idx != -1) {
+        GPUParticle p = particles[hit_idx];
+        uchar4 color = make_uchar4(
+            (unsigned char)(fminf(p.color.x * 255.f, 255.f)),
+            (unsigned char)(fminf(p.color.y * 255.f, 255.f)),
+            (unsigned char)(fminf(p.color.z * 255.f, 255.f)),
+            255);
+        framebuffer[pixel_idx] = color;
+    }
+    else {
+        framebuffer[pixel_idx] = make_uchar4(0, 0, 0, 255);
+    }
+}
+*/
+
+size_t find_binary_start_offset(const char* filename) {
+    FILE* fp = fopen(filename, "rb");
+    if (!fp) return 0;
+
+    char c;
+    int state = 0;
+    size_t offset = 0;
+
+    while (fread(&c, 1, 1, fp) == 1) {
+        offset++;
+        if (c == '\n') {
+            long prev = ftell(fp);
+            char line[64] = { 0 };
+            fgets(line, sizeof(line), fp);
+            if (strncmp(line, "end_header", 10) == 0) {
+                offset = ftell(fp);
+                break;
+            }
+            fseek(fp, prev, SEEK_SET);
+        }
+    }
+
+    fclose(fp);
+    return offset;
+}
+
+int read_ply_and_upload_gaussians(const char* ply_filename, GPUParticle*& d_particles, int& n_particles) {
+    static_assert(sizeof(FullPLYVertex) == 248, "FullPLYVertex size must be 248 bytes");
+    printf("[DEBUG] sizeof(FullPLYVertex) = %zu\n", sizeof(FullPLYVertex));
+
+    FILE* fp_txt = fopen(ply_filename, "r");
+    if (!fp_txt) {
+        fprintf(stderr, "[PLY] Cannot open file: %s\n", ply_filename);
+        return 0;
+    }
+
+    int num_vertices = 0;
+    char line[512];
+    while (fgets(line, sizeof(line), fp_txt)) {
+        if (strncmp(line, "element vertex", 14) == 0)
+            sscanf(line, "element vertex %d", &num_vertices);
+        else if (strncmp(line, "end_header", 10) == 0)
+            break;
+    }
+    fclose(fp_txt);
+
+    size_t header_end_offset = find_binary_start_offset(ply_filename);
+    if (num_vertices == 0 || header_end_offset == 0) {
+        fprintf(stderr, "[PLY] Invalid header or end_header not found.\n");
+        return 0;
+    }
+
+    FILE* fp = fopen(ply_filename, "rb");
+    if (!fp) return 0;
+    fseek(fp, (long)header_end_offset, SEEK_SET);
+
+    std::vector<FullPLYVertex> full_vertices(num_vertices);
+    size_t read_count = fread(full_vertices.data(), sizeof(FullPLYVertex), num_vertices, fp);
+    fclose(fp);
+
+    if (read_count != (size_t)num_vertices) {
+        fprintf(stderr, "[PLY] Failed to read all vertex data (%zu/%d)\n", read_count, num_vertices);
+        return 0;
+    }
+
+    // Transform to GPUParticle
+    std::vector<GPUParticle> host_particles(num_vertices);
+    for (int i = 0; i < num_vertices; ++i) {
+        const auto& v = full_vertices[i];
+        GPUParticle& p = host_particles[i];
+
+        p.position = make_float3(v.x, v.y, v.z);
+        p.scale = make_float3(v.scale[0], v.scale[1], v.scale[2]);
+        p.rotation = make_float4(v.rot[0], v.rot[1], v.rot[2], v.rot[3]);
+        p.color = make_float3(v.f_dc[0], v.f_dc[1], v.f_dc[2]);
+        p.opacity = v.opacity;
+    }
+
+    // Upload to CUDA
+    cudaMalloc(&d_particles, sizeof(GPUParticle) * num_vertices);
+    cudaMemcpy(d_particles, host_particles.data(), sizeof(GPUParticle) * num_vertices, cudaMemcpyHostToDevice);
+
+    n_particles = num_vertices;
+    printf("[PLY] Successfully loaded %d particles to GPU.\n", n_particles);
+    return 1;
 }

@@ -6,9 +6,13 @@
 //#include <vector_types.h>
 #include <cstring>
 
-// 전방 선언
-//struct _CompositeObject;
-//struct Camera;
+struct GPUParticle {
+	float3 position;
+	float3 scale;
+	float4 rotation;
+	float3 color;
+	float opacity;
+};
 
 inline float fminf(const float a, const float b) { return (b > a) ? a : b; }
 inline float fmaxf(const float a, const float b) { return (b < a) ? a : b; }
@@ -39,6 +43,9 @@ void renderWithCuda(
 	float*& out_framebuffer,
 	bool& is_done
 );
+
+int read_ply_and_upload_gaussians(const char* ply_filename, GPUParticle*& d_particles, int& n_particles);
+
 
 #if 1
 // -----------------------------------------------------------
