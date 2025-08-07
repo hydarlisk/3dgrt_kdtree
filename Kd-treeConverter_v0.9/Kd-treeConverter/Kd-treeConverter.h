@@ -5,6 +5,7 @@
  **************************************************************/
 
 #pragma once
+#include <vector>
 
 #define X 0
 #define Y 1
@@ -87,6 +88,16 @@ typedef struct _CompositeObject {
 	KdTree *kd_tree;
 } CompositeObject;
 
+//shyun
+struct Gaussian {
+	float pos[3];       // 3D 위치 (x, y, z)
+	float scale[3];     // 3축 스케일 (sx, sy, sz)
+	float rot[4];       // 회전 쿼터니언 (qw, qx, qy, qz)
+	float opacity;      // 불투명도 (0.0 ~ 1.0)
+	float f_dc[3];      // 기본 색상 (R, G, B)
+};
+//shyun end
+
 typedef struct _Ray {
 	//float origin[3];
 	//float direction[3];
@@ -110,4 +121,6 @@ int build_kd_tree_for_composite_object(CompositeObject *);
 void dump_kd_tree_for_composite_object(CompositeObject *, const char *, int, const char *);
 int read_kd_tree_from_file(CompositeObject *, const char *, int);
 int find_ray_object_intersection(KdTree *, Ray *, float *, float *);
+
+bool initialize_kdtree_for_gaussians(const std::vector<Gaussian>& gaussians);
 //}

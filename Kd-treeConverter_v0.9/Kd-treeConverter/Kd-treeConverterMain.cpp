@@ -46,7 +46,7 @@ int g_render_height = MAIN_WINDOW_HEIGHT;
 bool g_cuda_rendering_done = false;
 bool g_cuda_interactive_mode = false; // CUDA 인터랙티브 모드 활성화 플래그
 bool g_camera_dirty = true;           // 카메라가 변경되었는지 확인하는 플래그
-
+std::vector<Gaussian> g_gaussians; // 전역 변수로 가우시안 데이터를 저장할 벡터 선언
 #include <sys/stat.h>
 
 void check_ply_file_size(const char* filename) {
@@ -365,121 +365,94 @@ typedef enum _SL_KDT_CONFIG_command_ID {
 } SL_KDT_CONFIG_command_ID;
 
 //shyun
-
-// 특정 PLY 파일을 읽고 CompositeObject를 생성하도록 수정된 함수
-/*int read_PLY_binary_and_build_kdtree(const char* filename) {
-	char full_path[_MAX_PATH];
-	if (_fullpath(full_path, filename, _MAX_PATH) != NULL) {
-		printf("Attempting to open file at absolute path: %s\n", full_path);
+bool loadGaussiansFromPly(const char* filename, std::vector<Gaussian>& gaussians) {
+	std::ifstream file(filename, std::ios::binary);
+	if (!file.is_open()) {
+		fprintf(stderr, "Error: Cannot open .ply file: %s\n", filename);
+		return false;
 	}
 
-	FILE* fp = fopen(filename, "rb");
-	if (!fp) {
-		fprintf(stderr, "Cannot open binary PLY file: %s\n", filename);
-		return 0;
-	}
-
-	// 1. 헤더를 파싱하여 정점과 면의 개수 파악
-	char line[1024];
-	int num_vertices = 0, num_faces = 0;
-	long data_start_pos = 0;
-
-	while (fgets(line, sizeof(line), fp)) {
-		if (strncmp(line, "element vertex", 14) == 0) {
-			sscanf(line, "element vertex %d", &num_vertices);
-		}
-		else if (strncmp(line, "element face", 12) == 0) {
-			sscanf(line, "element face %d", &num_faces);
-		}
-		else if (strncmp(line, "end_header", 10) == 0) {
-			data_start_pos = ftell(fp);
+	// --- 1. 헤더 파싱 ---
+	std::string line;
+	int vertex_count = 0;
+	while (std::getline(file, line)) {
+		if (line == "end_header") {
 			break;
 		}
-	}
-	printf("Header parsing finished. Vertices: %d, Faces: %d\n", num_vertices, num_faces);
-
-	if (num_vertices == 0 && num_faces == 0) {
-		fprintf(stderr, "PLY header parsing failed or file is empty.\n");
-		fclose(fp);
-		return 0;
-	}
-	printf("Reading %d vertices and %d faces.\n", num_vertices, num_faces);
-
-	// 2. 파일로부터 모든 정점과 면 데이터 읽기
-	fseek(fp, data_start_pos, SEEK_SET);
-
-	std::vector<FullPLYVertex> vertices(num_vertices);
-	if (fread(vertices.data(), sizeof(FullPLYVertex), num_vertices, fp) != (size_t)num_vertices) {
-		fprintf(stderr, "Failed to read vertex data.\n");
-		fclose(fp);
-		return 0;
-	}
-
-	std::vector<PLYFace> faces(num_faces);
-	for (int i = 0; i < num_faces; ++i) {
-		if (fread(&faces[i].num_vertices, 1, 1, fp) != 1 || faces[i].num_vertices != 3) {
-			fprintf(stderr, "Error: File contains non-triangular faces or face read error.\n");
-			fclose(fp);
-			return 0;
-		}
-		if (fread(faces[i].indices, sizeof(unsigned int), 3, fp) != 3) {
-			fprintf(stderr, "Failed to read face indices.\n");
-			fclose(fp);
-			return 0;
-		}
-	}
-	fclose(fp);
-
-	// 3. CompositeObject 구조체 채우기
-	CompositeObject* obj = &uip.poly_model;
-	obj->n_triangles = num_faces;
-	obj->extended_vertices = (ExtendedVertex*)malloc(sizeof(ExtendedVertex) * 3 * num_faces);
-	if (!obj->extended_vertices) {
-		fprintf(stderr, "Memory allocation failed for extended_vertices.\n");
-		return 0;
-	}
-
-	// AABB 초기화
-	for (int i = 0; i < 3; ++i) {
-		obj->AABB[i] = FLT_MAX;
-		obj->AABB[i + 3] = -FLT_MAX;
-	}
-
-	// 면을 순회하며 필요한 정점 데이터 복사
-	for (int i = 0; i < num_faces; ++i) {
-		for (int j = 0; j < 3; ++j) {
-			unsigned int vertex_index = faces[i].indices[j];
-			FullPLYVertex& v = vertices[vertex_index];
-			ExtendedVertex* ev = &obj->extended_vertices[i * 3 + j];
-
-			// 위치와 법선 벡터 복사
-			ev->vertex[0] = v.x;
-			ev->vertex[1] = v.y;
-			ev->vertex[2] = v.z;
-			ev->normal[0] = v.nx;
-			ev->normal[1] = v.ny;
-			ev->normal[2] = v.nz;
-
-			// 기본 재질 ID 설정
-			ev->material_ID = 0;
-
-			// AABB (Axis-Aligned Bounding Box) 업데이트
-			for (int k = 0; k < 3; ++k) {
-				if (ev->vertex[k] < obj->AABB[k])     obj->AABB[k] = ev->vertex[k];
-				if (ev->vertex[k] > obj->AABB[k + 3]) obj->AABB[k + 3] = ev->vertex[k];
-			}
+		// "element vertex" 라인을 찾아 가우시안의 총 개수를 파악
+		if (line.rfind("element vertex", 0) == 0) {
+			sscanf(line.c_str(), "element vertex %d", &vertex_count);
 		}
 	}
 
-	// 이제 객체는 kd-tree를 만들 준비가 되었습니다.
-	//build_kd_tree_for_composite_object(obj);
-	uip.composite_object_read = 1;
+	if (vertex_count == 0) {
+		fprintf(stderr, "Error: No vertex elements found in .ply header.\n");
+		return false;
+	}
 
-	printf("Successfully converted PLY to CompositeObject.\n");
-	return 1;
+	// --- 2. 바이너리 데이터 읽기 ---
+	// .ply 파일에 저장된 순서와 타입을 그대로 반영한 임시 구조체
+	struct PlyGaussian {
+		float pos[3];
+		float normal[3]; // 사용하지 않지만 파일에 포함되어 있음
+		float f_dc[3];
+		float opacity;
+		float scale[3];
+		float rot[4];
+	};
+
+	gaussians.resize(vertex_count);
+	for (int i = 0; i < vertex_count; ++i) {
+		PlyGaussian ply_gauss;
+		file.read(reinterpret_cast<char*>(&ply_gauss), sizeof(PlyGaussian));
+
+		if (file.eof()) break; // 파일 끝에 도달하면 중단
+
+		// 임시 구조체에서 최종 Gaussian 구조체로 데이터 복사 및 변환
+		gaussians[i].pos[0] = ply_gauss.pos[0];
+		gaussians[i].pos[1] = ply_gauss.pos[1];
+		gaussians[i].pos[2] = ply_gauss.pos[2];
+
+		// 중요: opacity는 sigmoid 함수를 적용해야 0~1 사이 값으로 변환됨
+		gaussians[i].opacity = 1.0f / (1.0f + expf(-ply_gauss.opacity));
+
+		// 중요: scale은 exp 함수를 적용해야 실제 크기 값이 됨
+		gaussians[i].scale[0] = expf(ply_gauss.scale[0]);
+		gaussians[i].scale[1] = expf(ply_gauss.scale[1]);
+		gaussians[i].scale[2] = expf(ply_gauss.scale[2]);
+
+		// 쿼터니언은 정규화(normalize) 필요
+		float norm = sqrt(ply_gauss.rot[0] * ply_gauss.rot[0] + ply_gauss.rot[1] * ply_gauss.rot[1] + ply_gauss.rot[2] * ply_gauss.rot[2] + ply_gauss.rot[3] * ply_gauss.rot[3]);
+		gaussians[i].rot[0] = ply_gauss.rot[0] / norm; // w
+		gaussians[i].rot[1] = ply_gauss.rot[1] / norm; // x
+		gaussians[i].rot[2] = ply_gauss.rot[2] / norm; // y
+		gaussians[i].rot[3] = ply_gauss.rot[3] / norm; // z
+
+		// DC 색상값은 그대로 복사 (SH의 추가적인 요소는 일단 무시)
+		gaussians[i].f_dc[0] = ply_gauss.f_dc[0];
+		gaussians[i].f_dc[1] = ply_gauss.f_dc[1];
+		gaussians[i].f_dc[2] = ply_gauss.f_dc[2];
+	}
+
+	file.close();
+
+	// 로드 성공 후, 카메라 위치 등을 초기화하기 위해 AABB 계산 (선택적)
+	if (!gaussians.empty()) {
+		uip.poly_model.AABB[XMIN] = uip.poly_model.AABB[YMIN] = uip.poly_model.AABB[ZMIN] = FLT_MAX;
+		uip.poly_model.AABB[XMAX] = uip.poly_model.AABB[YMAX] = uip.poly_model.AABB[ZMAX] = -FLT_MAX;
+		for (const auto& g : gaussians) {
+			uip.poly_model.AABB[XMIN] = fminf(uip.poly_model.AABB[XMIN], g.pos[0]);
+			uip.poly_model.AABB[XMAX] = fmaxf(uip.poly_model.AABB[XMAX], g.pos[0]);
+			uip.poly_model.AABB[YMIN] = fminf(uip.poly_model.AABB[YMIN], g.pos[1]);
+			uip.poly_model.AABB[YMAX] = fmaxf(uip.poly_model.AABB[YMAX], g.pos[1]);
+			uip.poly_model.AABB[ZMIN] = fminf(uip.poly_model.AABB[ZMIN], g.pos[2]);
+			uip.poly_model.AABB[ZMAX] = fmaxf(uip.poly_model.AABB[ZMAX], g.pos[2]);
+		}
+	}
+
+	fprintf(stdout, "Successfully loaded %zu gaussians.\n", gaussians.size());
+	return true;
 }
-*/
-
 
 bool read_OBJ_geom_file(const char* filename, MeshGeom* mesh_geom) {
 	std::ifstream file(filename);
@@ -562,7 +535,7 @@ bool read_OBJ_geom_file(const char* filename, MeshGeom* mesh_geom) {
 	return true;
 }
 
-int read_OBJ_and_build_kdtree(const char* obj_filename)
+int read_OBJ_file(const char* obj_filename)
 {
 	printf("> Reading OBJ File and building KD-tree: %s\n\n", obj_filename);
 
@@ -950,15 +923,68 @@ void main_menu_action(int selection) {
 		g_cuda_rendering_done = false;
 		glutPostRedisplay();
 		break;
-	case 200:
+
+	case 200: {
+		render_gaussian = true;
+		const char* file_path = MODEL_PATH;  // obj 경로
+#if SCENE_NUM < 1
+		if (!read_OBJ_file(file_path)) {
+			fprintf(stderr, "Failed to load obj file\n");
+			return;
+		}
+#else
+		g_gaussians.clear();
+		// 3DGS 학습 결과물을 로드
+		if (!loadGaussiansFromPly(file_path, g_gaussians)) {
+			fprintf(stderr, "Failed to load ply file\n");
+			return;
+		}
+#endif
+
+		uip.composite_object_read = 1;
+
+		load_poly_model_into_OpenGL();
+		g_cuda_rendering_done = false;
+		glutPostRedisplay();
+		printf("draw DONE\n");
+		break;
+	}
+	case 300:
+#if SCENE_NUM < 1
 		build_kd_tree_for_composite_object(&uip.poly_model);
 		if (uip.poly_model.kd_tree->tri_accel_list == NULL) printf("tri_accel_list NULL\n");
 		else {
 			printf("triangle num: %d\n", uip.poly_model.n_triangles);
 			printf("tri_accel_list size: %d", sizeof(uip.poly_model.kd_tree->tri_accel_list) / sizeof(*(uip.poly_model.kd_tree->tri_accel_list)));
 		}
+#else
+		if (g_gaussians.empty()) {
+			printf("Error: No Gaussians loaded. Please load a .ply file first (Menu 800).\n");
+			break;
+		}
+		printf("\n> Constructing Kd-tree from %zu Gaussian particles...\n", g_gaussians.size());
+
+		// 1. 새로 만든 가우시안용 초기화 함수 호출
+		if (!initialize_kdtree_for_gaussians(g_gaussians)) {
+			fprintf(stderr, "Error: Failed to initialize k-d tree for Gaussians.\n");
+			break;
+		}
+
+		// 2. 기존의 재귀 빌드 함수 호출 (g_pTriangleInfos에는 이제 가우시안 정보가 들어있음)
+		build_kd_tree_recursive(g_bEdge, g_pTriangleInfos, g_iTriangleSize, g_root_AABB, 0, &(g_pKdTree_Node_Array[0]));
+
+		// 3. 결과 출력
+		fprintf(stdout, "  - Kd-tree for Gaussians constructed successfully!\n");
+		fprintf(stdout, "   * Tree Level: %d\n", g_iKdTree_Level);
+		fprintf(stdout, "   * Node Count (All,Leaf,Empty) : %5d, %5d, %5d(%.1f%%)\n",
+			g_iKdTree_Node_Count, g_iKdTree_LeafNode_Count, g_iKdTree_EmptyNode_Count,
+			100.0f * g_iKdTree_EmptyNode_Count / g_iKdTree_Node_Count);
+		fprintf(stdout, "   * Maximum Gaussians in LeafNode: %d\n\n", g_iKdTree_MaxTriInLeafNode_Count);
+		fprintf(stdout, "\n> Done!\n\n");
+
+#endif
 		break;
-	case 300:
+	case 400:
 		strcpy(full_kd_tree_file_name, uip.kd_tree_dump_dir);
 		strcat(full_kd_tree_file_name, "/");
 		strcat(full_kd_tree_file_name, uip.kd_tree_filename);
@@ -980,281 +1006,83 @@ void main_menu_action(int selection) {
 				uip.kd_tree_dump_format, full_i_geometry_file_name);
 		}
 		break;
-		case 400:
-			strcpy(full_kd_tree_file_name, uip.kd_tree_dump_dir);
-			printf("uip.kd_tree_dump_dir:%s\n", uip.kd_tree_dump_dir);
-			strcat(full_kd_tree_file_name, "/");
-			strcat(full_kd_tree_file_name, uip.kd_tree_filename);
-			printf("uip.kd_tree_filename:%s\n", uip.kd_tree_filename);
-			if (render_gaussian) {
-				strcpy(full_kd_tree_file_name, KDTREE_PATH);
-				uip.kd_tree_dump_format = KD_TREE_DUMP_IN_BINARY;
-			}
-			printf("full_kd_tree_file_name:%s\n", full_kd_tree_file_name);
-			read_kd_tree_from_file(&uip.poly_model, full_kd_tree_file_name, uip.kd_tree_dump_format);
-			glutPostRedisplay();
+	case 500:
+		strcpy(full_kd_tree_file_name, uip.kd_tree_dump_dir);
+		printf("uip.kd_tree_dump_dir:%s\n", uip.kd_tree_dump_dir);
+		strcat(full_kd_tree_file_name, "/");
+		strcat(full_kd_tree_file_name, uip.kd_tree_filename);
+		printf("uip.kd_tree_filename:%s\n", uip.kd_tree_filename);
+		if (render_gaussian) {
+			strcpy(full_kd_tree_file_name, KDTREE_PATH);
+			uip.kd_tree_dump_format = KD_TREE_DUMP_IN_BINARY;
+		}
+		printf("full_kd_tree_file_name:%s\n", full_kd_tree_file_name);
+		read_kd_tree_from_file(&uip.poly_model, full_kd_tree_file_name, uip.kd_tree_dump_format);
+		glutPostRedisplay();
+		break;
+	case 600: {
+		//CUDA rendering
+		fprintf(stdout, "CUDA ray tracing Render using SGRT with kd-tree\n");
+		if (!uip.composite_object_read) {
+			fprintf(stderr, "CompositeObject not loaded.\n");
 			break;
-		case 500: {
-			render_gaussian = true;
-			const char* file_path = MODEL_PATH;  // obj 경로
+		}
+		if (uip.poly_model.n_triangles == 0) {
+			fprintf(stdout, "No triangles in CompositeObject\n");
+			break;
+		}
+		if (uip.poly_model.kd_tree == NULL) {
+			fprintf(stdout, "No kd-tree in CompositeObject\n");
+			break;
+		}
+		//TODO: CUDA rendering*****************************************
+		//cudaRenderer.h
+		//renderWithCuda(const CompositeObject & object, const Camera & camera, int width, int height, float*& out_framebuffer, bool& is_done)
 #if SCENE_NUM < 1
-			if (!read_OBJ_and_build_kdtree(file_path)) {
-				fprintf(stderr, "Failed to load obj file\n");
-				return;
-			}
+		renderObjWithCuda(
+			uip.poly_model,
+			camera,
+			g_render_width,
+			g_render_height,
+			g_render_framebuffer,
+			g_cuda_rendering_done
+		);
 #else
-			GPUParticle* d_particles = nullptr;
-			int n_particles = 0;
-			check_ply_file_size(file_path);
-			if (!read_ply_and_upload_gaussians(file_path, d_particles, n_particles)) {
-				fprintf(stderr, "Failed to load ply.\n");
-				return;
-			}
+		renderGaussiansWithCuda(
+			uip.poly_model,
+			camera,
+			g_render_width,
+			g_render_height,
+			g_render_framebuffer,
+			g_cuda_rendering_done
+		);
 #endif
-
-			//CompositeObject obj_model;
-			//if (!load_obj_to_composite_object(file_path, &obj_model)) {
-			//	fprintf(stderr, "Failed to load .obj file.\n");
-			//	break;
-			//}
-			//uip.poly_model = obj_model;
-
-			uip.composite_object_read = 1;
-
-			//fprintf(stdout, "Successfully loaded .obj model. Building Kd-tree...\n");
-			//build_kd_tree_for_composite_object(&obj_model);
-
-			//dump_kd_tree_for_composite_object(
-			//	&obj_model,
-			//	KDTREE_PATH,         // 저장할 kd-tree
-			//	KD_TREE_DUMP_IN_BINARY,    // 저장 포맷
-			//	IGEOM_PATH         // 저장할 geometry
-			//);
-
-
-			//printf("uip, AABB: X [%f, %f] Y [%f, %f] Z [%f, %f]\n",
-			//	uip.poly_model.AABB[XMIN], uip.poly_model.AABB[XMAX],
-			//	uip.poly_model.AABB[YMIN], uip.poly_model.AABB[YMAX],
-			//	uip.poly_model.AABB[ZMIN], uip.poly_model.AABB[ZMAX]);
-
-			load_poly_model_into_OpenGL();
-			g_cuda_rendering_done = false;
+		if (g_cuda_rendering_done) {
+			printf("CUDA rendering complete. Refreshing display...\n");
 			glutPostRedisplay();
-			printf("draw DONE\n");
-			break;
 		}
-		case 600: {
-			//CUDA rendering
-			fprintf(stdout, "CUDA ray tracing Render using SGRT with kd-tree\n");
-			if (!uip.composite_object_read) {
-				fprintf(stderr, "CompositeObject not loaded.\n");
-				break;
-			}
-			if (uip.poly_model.n_triangles == 0) {
-				fprintf(stdout, "No triangles in CompositeObject\n");
-				break;
-			}
-			if (uip.poly_model.kd_tree == NULL) {
-				fprintf(stdout, "No kd-tree in CompositeObject\n");
-				break;
-			}
-			//TODO: CUDA rendering*****************************************
-			
-			/*/test.h
-			kernelTestFuncion();
-			cudaCopyTest();
-			printf("test done\n");*/
-
-			/*//SGRT
-			renderWithSGRT(
-				uip.poly_model,
-				camera,
-				g_render_width,
-				g_render_height,
-				g_render_framebuffer,
-				g_cuda_rendering_done
-			);
-
-			if (g_cuda_rendering_done) {
-				printf("SGRT rendering complete. Refreshing display...\n");
-				glutPostRedisplay();
-			}
-			else {
-				fprintf(stderr, "SGRT rendering failed.\n");
-			}*/
-
-			//cudaRenderer.h
-			//renderWithCuda(const CompositeObject & object, const Camera & camera, int width, int height, float*& out_framebuffer, bool& is_done)
-			renderWithCuda(
-				uip.poly_model,
-				camera,
-				g_render_width,
-				g_render_height,
-				g_render_framebuffer,
-				g_cuda_rendering_done
-			);
-			if (g_cuda_rendering_done) {
-				printf("CUDA rendering complete. Refreshing display...\n");
-				glutPostRedisplay();
-			}
-			else {
-				fprintf(stderr, "CUDA rendering failed.\n");
-			}
-
-			/*GScene* scene = new GScene();
-			scene->setKdTreeLoadFilePath(KDTREE_PATH);
-			scene->convertRenderScene();
-			scene->buildObjectKdTree();
-			GKDTreeStructure* kdTree = new GKDTreeStructure(scene);
-			kdTree->initialize();
-			scene->setSceneKDTree(kdTree);
-
-			GGPUExperimentalRayTracer* rayTracer = new GGPUExperimentalRayTracer();
-
-			rayTracer->rendering(scene, false);*/
-			
-
-			/*CompositeObject& obj = uip.poly_model;
-			GScene scn;
-
-			convertCompositeObjectToGSceneAndKdTree(obj, scn);
-			GKDTreeStructure* kdTree = new GKDTreeStructure(&scn);
-			kdTree->initialize();
-			scn.setSceneKDTree(kdTree);
-
-			GGPUExperimentalRayTracer* rayTracer = new GGPUExperimentalRayTracer();
-
-			rayTracer->rendering(&scn, false);*/
-
-			/*UploadCompositeObjectToDevice(uip.poly_model);
-			LaunchRenderKernel(g_render_framebuffer, g_render_width, g_render_height);*/
-
-			/*CompositeObject* compObj = &uip.poly_model;
-			GScene* scene = convertCompositeObjectToScene(compObj);
-			if (!scene) {
-				printf("[SGRT] Failed to convert CompositeObject to GScene.\n");
-				return;
-			}
-
-			scene->convertRenderScene();
-
-			GGPUExperimentalRayTracer* tracer;
-			//tracer.setScene(scene);//TODO
-			GError err = tracer->rendering(scene, false);
-
-			if (err != errorNo)
-				printf("[SGRT] Rendering failed: %d\n", err);
-			else
-				printf("[SGRT] Rendering succeeded.\n");
-
-			delete scene;*/
-
-			/*GScene* scene = convertCompositeObjectToGScene(&uip.poly_model);
-			GGPUExperimentalRayTracer raytracer;
-			GError err = raytracer.rendering(scene, false);
-
-			if (err != errorNo) {
-				printf("CUDA rendering failed with error %d\n", err);
-				break;
-			}
-
-			// 결과 프레임버퍼 가져오기
-			g_render_framebuffer = raytracer.getFrameBufferPointer();
-			g_render_width = raytracer.getFrameBufferWidth();
-			g_render_height = raytracer.getFrameBufferHeight();
-			g_cuda_rendering_done = 1;
-
-			printf("Rendering done. Displaying on screen...\n");
+		else {
+			fprintf(stderr, "CUDA rendering failed.\n");
+		}
+		//*************************************************************
+		break;
+	}
+	case 700:
+		g_cuda_interactive_mode = !g_cuda_interactive_mode; // 인터랙티브 모드 토글
+		if (g_cuda_interactive_mode) {
+			g_camera_dirty = true; // 모드를 켜는 즉시 한 번 렌더링하도록 설정
+			printf("CUDA Interactive Mode: ON\n");
+		}
+		else {
+			printf("CUDA Interactive Mode: OFF\n");
+			// 인터랙티브 모드를 끄면 다시 OpenGL 뷰로 돌아가도록 화면 갱신
 			glutPostRedisplay();
-			break;*/
-
-			/*GKdTreeAccel* kdAccel = new GKdTreeAccel();
-			kdAccel->setFromCompositeObject(&obj_model);
-			
-			GScene* scene = new GScene();
-			scene->initalize(); // scene 내부 변수 초기화
-
-			scene->setResolution(800, 600);
-			scene->setSuperSampling(1, 1);
-			scene->setGPUBlockSize(8, 8);
-			scene->setAccelStructure(kdAccel);
-			scene->setMaxReflectionDepth(1);
-			scene->setEnableShadow(false);
-			scene->setEnableLocalShading(false);
-			scene->setUseTexture(false);
-
-			GGPUExperimentalRayTracer* renderer = new GGPUExperimentalRayTracer();
-			GError err = renderer->rendering(scene, false);
-			if (err != errorNo) {
-				printf("CUDA rendering failed: %s\n", GErrorManager::getGErrorString(err));
-			}
-			break;
-
-			// [1] 카메라 설정
-			cuCamera camera;
-			camera.eye = make_float3(0, 0, -5);
-			camera.u = make_float3(1, 0, 0);
-			camera.v = make_float3(0, 1, 0);
-			camera.n = make_float3(0, 0, 1);
-			camera.fnear = 1.0f;
-			camera.startPoint = make_float3(-1, 1, 0);
-			camera.stepX = 2.0f / 800;
-			camera.stepY = 2.0f / 600;
-
-			// [2] 장면 정보
-			SceneInfo info = {};
-			info.iResolutionX = 800;
-			info.iResolutionY = 600;
-			info.iBlockSizeX = 8;
-			info.iBlockSizeY = 8;
-			info.iSuperSamplingX = 1;
-			info.iSuperSamplingY = 1;
-
-			//// [3] CompositeObject → CUDA에 업로드
-			//CompositeObject* d_obj;
-			//cudaMalloc(&d_obj, sizeof(CompositeObject));
-			//upload_composite_object_to_cuda(&uip.poly_model, d_obj);
-			// [3] CompositeObject → CUDA에 깊은 복사로 업로드
-			CompositeObject* d_obj = nullptr;
-			deep_copy_composite_object_to_cuda(&uip.poly_model, &d_obj);  // 새로 구현한 함수 사용
-
-			// [4] 프레임버퍼 준비
-			float* d_framebuffer;
-			cudaMalloc(&d_framebuffer, sizeof(float) * 800 * 600 * 3);
-			cudaMemset(d_framebuffer, 0, sizeof(float) * 800 * 600 * 3);
-
-			// [5] CUDA 커널 호출
-			dim3 block(8, 8);
-			dim3 grid((800 + 7) / 8, (600 + 7) / 8);
-			singlePassRayTracingKernel <<< grid, block >>> (
-				d_framebuffer, 1, 0, 0, false,
-				camera, info, d_obj
-				);
-			cudaDeviceSynchronize();
-
-			// [6] 결과 복사
-			float* h_framebuffer = new float[800 * 600 * 3];
-			cudaMemcpy(h_framebuffer, d_framebuffer, sizeof(float) * 800 * 600 * 3, cudaMemcpyDeviceToHost);
-			//save_as_ppm(h_framebuffer, 800, 600, "output_kdtree.ppm");*/
-			//*************************************************************
-			break;
 		}
-		case 700:
-			g_cuda_interactive_mode = !g_cuda_interactive_mode; // 인터랙티브 모드 토글
-			if (g_cuda_interactive_mode) {
-				g_camera_dirty = true; // 모드를 켜는 즉시 한 번 렌더링하도록 설정
-				printf("CUDA Interactive Mode: ON\n");
-			}
-			else {
-				printf("CUDA Interactive Mode: OFF\n");
-				// 인터랙티브 모드를 끄면 다시 OpenGL 뷰로 돌아가도록 화면 갱신
-				glutPostRedisplay();
-			}
-			break;
-		case 999:
-			exit(0);
-			clean_up_system();
-			break;
+		break;
+	case 999:
+		exit(0);
+		clean_up_system();
+		break;
 	}
 }
 
@@ -1267,11 +1095,15 @@ void register_callbacks_and_create_menu(void) {
    
 	uip.main_menu_ID = glutCreateMenu(main_menu_action);
 	glutAddMenuEntry("ChangeMode", 0);
-	glutAddMenuEntry("1. Read SL_KDT_Config File and Prepair I-Geometry", 100); 
-	glutAddMenuEntry("2. Construct Kd-tree from I-Geometry", 200);  
-	glutAddMenuEntry("3. Dump Kd-tree and I-Geometry to Files", 300);
-	glutAddMenuEntry("4. Read Kd-tree from File", 400);
-	glutAddMenuEntry("5. Read .obj File and Prepair I-Geometry", 500);
+	glutAddMenuEntry("1. Read SL_KDT_Config File and Prepair I-Geometry", 100);
+#if SCENE_NUM < 1
+	glutAddMenuEntry("5. Read .obj File and Prepair I-Geometry", 200);
+#else
+	glutAddMenuEntry("5. Read .ply File and Prepair I-Geometry", 200);
+#endif
+	glutAddMenuEntry("2. Construct Kd-tree from I-Geometry", 300);  
+	glutAddMenuEntry("3. Dump Kd-tree and I-Geometry to Files", 400);
+	glutAddMenuEntry("4. Read Kd-tree from File", 500);
 	glutAddMenuEntry("6. CUDA Rendering (One-shot)", 600);
 	glutAddMenuEntry("7. CUDA Rendering (Interactive Toggle)", 700); // 메뉴 추가
 	glutAddMenuEntry("Exit", 999); 
@@ -1358,7 +1190,11 @@ void idle() {
 		g_camera_dirty = false; // 플래그 리셋
 
 		// CUDA 렌더링 실행 (기존 렌더링 함수 재사용)
-		renderWithCuda(uip.poly_model, camera, g_render_width, g_render_height, g_render_framebuffer, g_cuda_rendering_done);
+#if SCENE_NUM < 1
+		renderObjWithCuda(uip.poly_model, camera, g_render_width, g_render_height, g_render_framebuffer, g_cuda_rendering_done);
+#else
+		renderGaussiansWithCuda(uip.poly_model, camera, g_render_width, g_render_height, g_render_framebuffer, g_cuda_rendering_done);
+#endif
 
 		glutPostRedisplay(); // 화면 갱신 요청
 	}

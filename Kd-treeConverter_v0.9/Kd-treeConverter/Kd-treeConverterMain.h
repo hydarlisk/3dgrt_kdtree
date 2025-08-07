@@ -14,7 +14,7 @@
 #define MAX_FOVY 90.0
 #define EPSILON 0.00001
 //shyun
-#define SCENE_NUM 0
+#define SCENE_NUM 1
 
 #if SCENE_NUM == 0
 	#define MODEL_PATH "../../Data/Obj/hotdog_3dgrt.obj"

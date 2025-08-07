@@ -9,14 +9,70 @@
 #include <float.h>
 #include <math.h>
 #include <string.h>
+#include <vector>
 
 #include "Kd-treeConverter.h"
 //#include "Kd-treeConverterMain.h"
 #include "Kd-treeConstructor.h"
 #include "RayTraversal.h"
 #include "MyMathUtility.h"
-//using namespace KDTConstructor;
-//using namespace KDTConverter;
+
+bool initialize_kdtree_for_gaussians(const std::vector<Gaussian>& gaussians) {
+	// 기존 전역 버퍼들 초기화
+	uninitialize_kd_tree();
+
+	g_iKdTree_Node_Count = 0;
+	g_iKdTree_TriOffset_Count = 0;
+	g_iKdTree_Node_CountAlloc = 8 * 1024 * 1024;
+	g_iKdTree_TriOffset_CountAlloc = 16 * 1024 * 1024;
+	g_iKdTree_Level = 0;
+	g_iKdTree_LeafNode_Count = 0;
+	g_iKdTree_EmptyNode_Count = 0;
+	g_iKdTree_MaxTriInLeafNode_Count = 0;
+
+	g_iTriangleSize = gaussians.size();
+	if (g_iTriangleSize == 0) return false;
+
+	// --- 1. g_pTriangleInfos 배열을 가우시안 정보로 채우기 ---
+	g_pTriangleInfos = new TriangleList[g_iTriangleSize];
+	if (!g_pTriangleInfos) return false;
+
+	g_root_AABB.min[0] = g_root_AABB.min[1] = g_root_AABB.min[2] = FLT_MAX;
+	g_root_AABB.max[0] = g_root_AABB.max[1] = g_root_AABB.max[2] = -FLT_MAX;
+
+	for (int i = 0; i < g_iTriangleSize; ++i) {
+		const Gaussian& g = gaussians[i];
+
+		// offset은 가우시안 벡터의 인덱스
+		g_pTriangleInfos[i].offset = i;
+
+		// 가우시안은 '점'이므로, AABB의 min과 max 값을 위치 값으로 동일하게 설정
+		g_pTriangleInfos[i].AABB.min[0] = g_pTriangleInfos[i].AABB.max[0] = g.pos[0];
+		g_pTriangleInfos[i].AABB.min[1] = g_pTriangleInfos[i].AABB.max[1] = g.pos[1];
+		g_pTriangleInfos[i].AABB.min[2] = g_pTriangleInfos[i].AABB.max[2] = g.pos[2];
+
+		// 전체 씬의 AABB 갱신
+		g_root_AABB.min[0] = fminf(g_root_AABB.min[0], g.pos[0]);
+		g_root_AABB.max[0] = fmaxf(g_root_AABB.max[0], g.pos[0]);
+		g_root_AABB.min[1] = fminf(g_root_AABB.min[1], g.pos[1]);
+		g_root_AABB.max[1] = fmaxf(g_root_AABB.max[1], g.pos[1]);
+		g_root_AABB.min[2] = fminf(g_root_AABB.min[2], g.pos[2]);
+		g_root_AABB.max[2] = fmaxf(g_root_AABB.max[2], g.pos[2]);
+	}
+
+	// --- 2. 나머지 전역 버퍼들 할당 ---
+	g_bEdge = new BoundEdge[g_iTriangleSize * 2];
+	g_pKdTree_Node_Array = new KdTreeNode[g_iKdTree_Node_CountAlloc];
+	g_pKdTree_TriOffset_Array = new unsigned int[g_iKdTree_TriOffset_CountAlloc];
+
+	if (!g_bEdge || !g_pKdTree_Node_Array || !g_pKdTree_TriOffset_Array) {
+		uninitialize_kd_tree();
+		return false;
+	}
+	g_iKdTree_Node_Count = 1; // 루트 노드
+	return true;
+}
+
 int build_kd_tree_for_composite_object(CompositeObject *c_object) {
 	// Returns 1 if a kd-tree was constructed successfully, or 0 otherwise.
 	// Input: "c_object->n_triangles" & "c_object->extended_vertices"

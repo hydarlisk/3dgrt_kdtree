@@ -6,6 +6,18 @@
 //#include <vector_types.h>
 #include <cstring>
 
+#pragma pack(push, 1)
+struct FullPLYVertex {
+	float x, y, z;           // position
+	float nx, ny, nz;        // normal (optional)
+	float f_dc[3];           // base color (RGB)
+	float f_rest[45];        // SH 계수
+	float opacity;
+	float scale[3];          // xyz 스케일
+	float rot[4];            // quaternion
+};
+#pragma pack(pop)
+
 struct GPUParticle {
 	float3 position;
 	float3 scale;
@@ -35,7 +47,7 @@ bool initCuda();
  * @param out_framebuffer [out] 렌더링 결과가 저장될 Host 메모리 프레임버퍼 포인터.
  * @param is_done [out] 렌더링 완료 여부 플래그.
  */
-void renderWithCuda(
+void renderObjWithCuda(
 	const CompositeObject& object,
 	const Camera& camera,
 	int width,
@@ -44,7 +56,14 @@ void renderWithCuda(
 	bool& is_done
 );
 
-int read_ply_and_upload_gaussians(const char* ply_filename, GPUParticle*& d_particles, int& n_particles);
+void renderGaussiansWithCuda(
+	const CompositeObject& object,
+	const Camera& camera,
+	int width,
+	int height,
+	float*& out_framebuffer,
+	bool& is_done
+);
 
 
 #if 1

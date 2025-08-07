@@ -14,17 +14,11 @@
 #include <texture_indirect_functions.h>
 #include <vector_types.h>
 
-#pragma pack(push, 1)
-struct FullPLYVertex {
-    float x, y, z;           // position
-    float nx, ny, nz;        // normal (optional)
-    float f_dc[3];           // base color (RGB)
-    float f_rest[45];        // SH 계수
-    float opacity;
-    float scale[3];          // xyz 스케일
-    float rot[4];            // quaternion
-};
-#pragma pack(pop)
+extern std::vector<Gaussian> g_gaussians;
+extern KdTreeNode* g_pKdTree_Node_Array;
+extern unsigned int* g_pKdTree_TriOffset_Array;
+extern unsigned int  g_iKdTree_Node_Count;
+extern unsigned int  g_iKdTree_TriOffset_Count;
 
 #define CUDA_CHECK(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 inline void gpuAssert(cudaError_t code, const char* file, int line) {
@@ -302,6 +296,73 @@ __global__ void renderKernel(float* pFrameBuffer, int* maxhit) {
     pFrameBuffer[idx + 2] = finalColor.z;
 }
 
+// cudaRenderer.cu
+
+// GPU에 복사된 원본 가우시안 데이터에 접근하기 위한 전역 포인터
+__device__ FullPLYVertex* d_gaussians_ptr;
+
+// find_next_hit: min_t 이후의 가장 가까운 충돌을 찾는 Kd-tree 순회 함수
+// (기존 singlePassIntersect 로직을 수정하여 구현)
+__device__ cuIntersectionCheck find_next_hit(const cuRay& ray, float min_t) {
+    // ... Kd-tree 순회 로직 ...
+    // 삼각형 교차 판정 시:
+    // if (t > min_t && t < hit.tHit) { ... } // 이 조건으로 수정
+    // ...
+}
+
+__global__ void renderKernelGaussian(float* pFrameBuffer/*, ... d_gaussians_ptr를 상수로 복사했다면 인자 불필요 */) {
+    int x = blockIdx.x * blockDim.x + threadIdx.x;
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
+    if (x >= g_SceneInfo.resX || y >= g_SceneInfo.resY) return;
+
+    // 1. 레이 생성 및 누적 변수 초기화
+    cuRay ray = { /* ... 카메라 정보로 레이 생성 ... */ };
+    float3 accum_color = make_float3(0.0f, 0.0f, 0.0f);
+    float  accum_alpha = 0.0f;
+    float  min_t_for_next_search = 0.0f; // 광선의 시작점
+
+    // 2. 누적 렌더링 루프
+    const int MAX_STEPS = 64; // 최대 충돌 횟수 제한
+    for (int step = 0; step < MAX_STEPS && accum_alpha < 0.99f; ++step) {
+
+        // 3. 다음으로 가장 가까운 20면체 삼각형 찾기
+        cuIntersectionCheck hit = find_next_hit(ray, min_t_for_next_search);
+
+        if (!hit.isHit()) { // 더 이상 충돌하는 삼각형이 없으면 종료
+            break;
+        }
+
+        // 4. 충돌한 삼각형의 material_ID로부터 원본 가우시안 인덱스 가져오기
+        // TriAccel 텍스처에서 material_ID를 가져오는 방법 필요 (기존 코드 참조)
+        float4 d2 = tex1Dfetch(inTriAccelTex, hit.triIndex * 4 + 2);
+        int gaussian_index = __float_as_int(d2.w);
+
+        // 5. 원본 가우시안 데이터 가져오기
+        FullPLYVertex g = d_gaussians_ptr[gaussian_index];
+
+        // 6. 기여도 계산 (가장 간단한 버전)
+        // (f_dc는 0~1 정규화 필요할 수 있음)
+        float3 contrib_color = make_float3(g.f_dc[0], g.f_dc[1], g.f_dc[2]);
+        float  contrib_alpha = g.opacity;
+
+        // 7. Front-to-back "Over" 연산자로 블렌딩
+        accum_color += contrib_color * contrib_alpha * (1.0f - accum_alpha);
+        accum_alpha += contrib_alpha * (1.0f - accum_alpha);
+
+        // 8. 다음 탐색을 위해 시작점 업데이트
+        min_t_for_next_search = hit.tHit;
+    }
+
+    // 10. 배경색과 최종 혼합하여 프레임버퍼에 쓰기
+    float3 background_color = make_float3(0.2f, 0.3f, 0.4f);
+    float3 final_color = accum_color + background_color * (1.0f - accum_alpha);
+
+    int idx = 3 * ((g_SceneInfo.resY - y - 1) * g_SceneInfo.resX + x);
+    pFrameBuffer[idx + 0] = final_color.x;
+    pFrameBuffer[idx + 1] = final_color.y;
+    pFrameBuffer[idx + 2] = final_color.z;
+}
+
 // =================================================================================
 // 4. Host-Side Public Render Function
 // =================================================================================
@@ -322,7 +383,7 @@ bool initCuda() {
     return true;
 }
 
-void renderWithCuda(const CompositeObject& object, const Camera& camera, int width, int height, float*& out_framebuffer, bool& is_done) {
+void renderObjWithCuda(const CompositeObject& object, const Camera& camera, int width, int height, float*& out_framebuffer, bool& is_done) {
     is_done = false;
     //int num_gpus;
     //cudaGetDeviceCount(&num_gpus);
@@ -511,65 +572,179 @@ void renderWithCuda(const CompositeObject& object, const Camera& camera, int wid
 //-----------------------------------------------------------------------
 // Gaussian Render
 //-----------------------------------------------------------------------
-/*
-__device__ bool rayIntersectsGaussian(const float3 ray_o, const float3 ray_d,
-    const GPUParticle& p,
-    float& t_out) {
-    float3 oc = ray_o - p.position;
-    float radius = fmaxf(p.scale.x, fmaxf(p.scale.y, p.scale.z)); // approximate
+// 순회 결과를 담을 간단한 구조체
+struct TraversalResult {
+    unsigned int candidate_gaussians[64]; // 후보 가우시안 인덱스를 담을 배열
+    int count;                            // 찾은 후보의 개수
+};
 
-    float b = dot(oc, ray_d);
-    float c = dot(oc, oc) - radius * radius;
-    float discriminant = b * b - c;
 
-    if (discriminant > 0) {
-        t_out = -b - sqrtf(discriminant);
-        return t_out > 0.0f;
+// 가우시안 Kd-tree를 순회하여 광선 경로상의 가우시안 인덱스를 수집하는 함수
+__device__ void traverseGaussianKdTree(const cuRay& ray, TraversalResult& result, const KdTreeNode* nodes, const unsigned int* offsets) {
+    result.count = 0;
+
+    float t_near = 0.0f, t_far = FLT_MAX;
+    if (!BoundsRayIntersect(g_SceneBBoxMin, g_SceneBBoxMax, ray, t_near, t_far)) {
+        return; // 광선이 씬 바운딩 박스를 통과하지 않으면 바로 종료
     }
-    return false;
-}
 
-__global__ void renderGaussianKernelWithKdTree(...) {
-    int px = blockIdx.x * blockDim.x + threadIdx.x;
-    int py = blockIdx.y * blockDim.y + threadIdx.y;
-    if (px >= width || py >= height) return;
+    shortStack stack;
+    stack.init(threadIdx.x + threadIdx.y * blockDim.x);
 
-    int pixel_idx = py * width + px;
+    const KdTreeNode* currentNode = &nodes[0]; // 루트 노드에서 시작
 
-    // 1. Ray 생성
-    float3 ray_o = cam.origin;
-    float3 ray_d = generateRayDirection(cam, px, py);
+    while (true) {
+        // 리프 노드를 만날 때까지 트리를 타고 내려감
+        while (!IS_LEAF(*currentNode)) {
+            unsigned axis = SPLIT_AXIS(*currentNode);
+            float split_pos = SPLIT_POS(*currentNode);
+            float dir_axis = (&(ray.dir.x))[axis];
+            float pos_axis = (&(ray.pos.x))[axis];
 
-    float min_t = 1e30f;
-    int hit_idx = -1;
+            // ... (이 부분은 기존 singlePassIntersect의 순회 로직과 거의 동일) ...
+            float t_split = (split_pos - pos_axis) / dir_axis;
+            unsigned near_child_offset = FIRST_CHILD_OFFSET(*currentNode) + (pos_axis < split_pos || (pos_axis == split_pos && dir_axis < 0) ? 0 : 1);
+            unsigned far_child_offset = FIRST_CHILD_OFFSET(*currentNode) + (pos_axis < split_pos || (pos_axis == split_pos && dir_axis < 0) ? 1 : 0);
 
-    // 2. Kd-tree traverse하면서 입자 하나씩 검사
-    for (int i = 0; i < n_particles; ++i) {
-        float t = 0.f;
-        if (rayIntersectsGaussian(ray_o, ray_d, particles[i], t)) {
-            if (t < min_t) {
-                min_t = t;
-                hit_idx = i;
+            if (t_split > t_far || t_split < 0) {
+                currentNode = &nodes[near_child_offset];
+            }
+            else if (t_split < t_near) {
+                currentNode = &nodes[far_child_offset];
+            }
+            else {
+                stack.push(far_child_offset, t_far);
+                currentNode = &nodes[near_child_offset];
+                t_far = t_split;
             }
         }
-    }
 
-    // 3. 결과 저장
-    if (hit_idx != -1) {
-        GPUParticle p = particles[hit_idx];
-        uchar4 color = make_uchar4(
-            (unsigned char)(fminf(p.color.x * 255.f, 255.f)),
-            (unsigned char)(fminf(p.color.y * 255.f, 255.f)),
-            (unsigned char)(fminf(p.color.z * 255.f, 255.f)),
-            255);
-        framebuffer[pixel_idx] = color;
-    }
-    else {
-        framebuffer[pixel_idx] = make_uchar4(0, 0, 0, 255);
+        // 리프 노드에 도달하면, 포함된 가우시안 인덱스들을 결과 배열에 추가
+        unsigned int offset = OBJECTLIST_OFFSET(*currentNode);
+        unsigned int count = OBJECT_SIZE(*currentNode);
+        for (int i = 0; i < count; ++i) {
+            if (result.count < 64) { // 배열 오버플로우 방지
+                result.candidate_gaussians[result.count++] = offsets[offset + i];
+            }
+        }
+
+        // 스택이 비었으면 순회 종료
+        if (stack.empty()) break;
+
+        // 스택에서 다음 노드를 가져와 계속 순회
+        cu_traceState next = stack.top(); stack.pop();
+        t_near = t_far;
+        t_far = next.tMax;
+        currentNode = &nodes[next.nodeID];
     }
 }
-*/
 
+
+// 새로운 메인 커널
+__global__ void gaussianRayTraceKernel(float* pFrameBuffer, const KdTreeNode* kdtree_nodes, const unsigned int* kdtree_offsets, const Gaussian* gaussians) {
+    int x = blockIdx.x * blockDim.x + threadIdx.x;
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
+    if (x >= g_SceneInfo.resX || y >= g_SceneInfo.resY) return;
+
+    // 1. 광선 생성 (기존과 동일)
+    float sx = (float)x + 0.5f, sy = (float)y + 0.5f;
+    float3 dir = g_CameraInfo.startPoint + g_CameraInfo.u * sx * g_CameraInfo.stepX - g_CameraInfo.v * sy * g_CameraInfo.stepY;
+    cuRay ray = { g_CameraInfo.eye, normalize(dir - g_CameraInfo.eye) };
+
+    // 2. Kd-tree 순회하여 후보 가우시안 수집
+    TraversalResult result;
+    traverseGaussianKdTree(ray, result, kdtree_nodes, kdtree_offsets);
+
+    // 3. 디버깅: 찾은 후보 가우시안의 '개수'를 명암으로 시각화
+    float intensity = fminf(1.0f, (float)result.count / 20.0f); // 20개 이상이면 흰색
+    float3 finalColor = make_float3(intensity, intensity, intensity);
+
+    // 4. 프레임버퍼에 쓰기
+    int idx = 3 * ((g_SceneInfo.resY - y - 1) * g_SceneInfo.resX + x);
+    pFrameBuffer[idx + 0] = finalColor.x;
+    pFrameBuffer[idx + 1] = finalColor.y;
+    pFrameBuffer[idx + 2] = finalColor.z;
+}
+
+void renderGaussiansWithCuda(const CompositeObject& object, const Camera& camera, int width, int height, float*& out_framebuffer, bool& is_done) {
+    is_done = false;
+    if (g_gaussians.empty() || g_pKdTree_Node_Array == nullptr) {
+        std::cerr << "[CUDA Error] Gaussian data or Kd-tree not ready." << std::endl;
+        return;
+    }
+
+    std::cout << "--- Gaussian Ray Tracing Started ---" << std::endl;
+
+    // 1. GPU 메모리 할당
+    Gaussian* d_gaussians;
+    KdTreeNode* d_kdtree_nodes;
+    unsigned int* d_kdtree_offsets;
+    float* d_framebuffer;
+
+    CUDA_CHECK(cudaMalloc(&d_gaussians, g_gaussians.size() * sizeof(Gaussian)));
+    CUDA_CHECK(cudaMalloc(&d_kdtree_nodes, g_iKdTree_Node_Count * sizeof(KdTreeNode)));
+    CUDA_CHECK(cudaMalloc(&d_kdtree_offsets, g_iKdTree_TriOffset_Count * sizeof(unsigned int)));
+    CUDA_CHECK(cudaMalloc(&d_framebuffer, width * height * 3 * sizeof(float)));
+
+    // 2. 데이터 복사: Host -> Device
+    CUDA_CHECK(cudaMemcpy(d_gaussians, g_gaussians.data(), g_gaussians.size() * sizeof(Gaussian), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_kdtree_nodes, g_pKdTree_Node_Array, g_iKdTree_Node_Count * sizeof(KdTreeNode), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(d_kdtree_offsets, g_pKdTree_TriOffset_Array, g_iKdTree_TriOffset_Count * sizeof(unsigned int), cudaMemcpyHostToDevice));
+
+    // 3. 상수 메모리 설정 (카메라, 씬 정보 등)
+    SceneInfo h_scene_info = { width, height };
+    CUDA_CHECK(cudaMemcpyToSymbol(g_SceneInfo, &h_scene_info, sizeof(SceneInfo)));
+
+    CameraInfo h_camera_info;
+    h_camera_info.eye = make_float3(camera.pos[0], camera.pos[1], camera.pos[2]);
+    h_camera_info.u = make_float3(camera.uaxis[0], camera.uaxis[1], camera.uaxis[2]);
+    h_camera_info.v = make_float3(camera.vaxis[0], camera.vaxis[1], camera.vaxis[2]);
+    float3 n_axis = make_float3(camera.naxis[0], camera.naxis[1], camera.naxis[2]);
+    float fov_rad = camera.fovy * (M_PI / 180.0f);
+    float plane_height = 2.0f * camera.near_c * tanf(fov_rad * 0.5f);
+    float plane_width = plane_height * camera.aspect;
+    h_camera_info.stepX = plane_width / width;
+    h_camera_info.stepY = plane_height / height;
+    h_camera_info.startPoint = h_camera_info.eye - n_axis * camera.near_c
+        - h_camera_info.u * (plane_width * 0.5f)
+        + h_camera_info.v * (plane_height * 0.5f);
+    CUDA_CHECK(cudaMemcpyToSymbol(g_CameraInfo, &h_camera_info, sizeof(CameraInfo)));
+
+    // CPU에서 계산한 씬 전체의 AABB를 GPU 상수 메모리로 복사합니다.
+    float3 h_bbox_min = make_float3(object.AABB[XMIN], object.AABB[YMIN], object.AABB[ZMIN]);
+    float3 h_bbox_max = make_float3(object.AABB[XMAX], object.AABB[YMAX], object.AABB[ZMAX]);
+    CUDA_CHECK(cudaMemcpyToSymbol(g_SceneBBoxMin, &h_bbox_min, sizeof(float3)));
+    CUDA_CHECK(cudaMemcpyToSymbol(g_SceneBBoxMax, &h_bbox_max, sizeof(float3)));
+
+    // 4. 새로운 커널 실행
+    dim3 threads(16, 16);
+    dim3 blocks((width + threads.x - 1) / threads.x, (height + threads.y - 1) / threads.y);
+
+    gaussianRayTraceKernel << < blocks, threads >> > (
+        d_framebuffer,
+        d_kdtree_nodes,
+        d_kdtree_offsets,
+        d_gaussians
+        );
+
+    CUDA_CHECK(cudaGetLastError());
+    CUDA_CHECK(cudaDeviceSynchronize());
+
+    // 5. 결과 복사: Device -> Host
+    if (out_framebuffer) delete[] out_framebuffer;
+    out_framebuffer = new float[width * height * 3];
+    CUDA_CHECK(cudaMemcpy(out_framebuffer, d_framebuffer, width * height * 3 * sizeof(float), cudaMemcpyDeviceToHost));
+    is_done = true;
+
+    // 6. GPU 메모리 해제
+    cudaFree(d_gaussians);
+    cudaFree(d_kdtree_nodes);
+    cudaFree(d_kdtree_offsets);
+    cudaFree(d_framebuffer);
+
+    std::cout << "--- Gaussian Ray Tracing Finished ---" << std::endl;
+}
+/*
 size_t find_binary_start_offset(const char* filename) {
     FILE* fp = fopen(filename, "rb");
     if (!fp) return 0;
@@ -613,7 +788,7 @@ int read_ply_and_upload_gaussians(const char* ply_filename, GPUParticle*& d_part
             sscanf(line, "element vertex %d", &num_vertices);
         else if (strncmp(line, "end_header", 10) == 0)
             break;
-    }
+        }
     fclose(fp_txt);
 
     size_t header_end_offset = find_binary_start_offset(ply_filename);
@@ -656,3 +831,4 @@ int read_ply_and_upload_gaussians(const char* ply_filename, GPUParticle*& d_part
     printf("[PLY] Successfully loaded %d particles to GPU.\n", n_particles);
     return 1;
 }
+*/
