@@ -365,93 +365,162 @@ typedef enum _SL_KDT_CONFIG_command_ID {
 } SL_KDT_CONFIG_command_ID;
 
 //shyun
+inline void fMyVecNormalize4D(float v[4]) {
+	float len_sq = v[0] * v[0] + v[1] * v[1] + v[2] * v[2] + v[3] * v[3];
+	if (len_sq > 0.00001f) { // 0으로 나누는 것을 방지
+		float len_inv = 1.0f / sqrtf(len_sq);
+		v[0] *= len_inv;
+		v[1] *= len_inv;
+		v[2] *= len_inv;
+		v[3] *= len_inv;
+	}
+}
+
 bool loadGaussiansFromPly(const char* filename, std::vector<Gaussian>& gaussians) {
 	std::ifstream file(filename, std::ios::binary);
 	if (!file.is_open()) {
-		fprintf(stderr, "Error: Cannot open .ply file: %s\n", filename);
+		fprintf(stderr, "Error: Cannot open PLY file %s\n", filename);
 		return false;
 	}
 
-	// --- 1. 헤더 파싱 ---
+	// --- Header Parsing ---
 	std::string line;
-	int vertex_count = 0;
-	while (std::getline(file, line)) {
-		if (line == "end_header") {
-			break;
-		}
-		// "element vertex" 라인을 찾아 가우시안의 총 개수를 파악
-		if (line.rfind("element vertex", 0) == 0) {
-			sscanf(line.c_str(), "element vertex %d", &vertex_count);
+	long num_vertices = 0;
+	while (std::getline(file, line) && line != "end_header") {
+		std::stringstream ss(line);
+		std::string token;
+		ss >> token;
+		if (token == "element" && (ss >> token, token == "vertex")) {
+			ss >> num_vertices;
 		}
 	}
 
-	if (vertex_count == 0) {
-		fprintf(stderr, "Error: No vertex elements found in .ply header.\n");
-		return false;
-	}
+	if (num_vertices == 0) return false;
 
-	// --- 2. 바이너리 데이터 읽기 ---
-	// .ply 파일에 저장된 순서와 타입을 그대로 반영한 임시 구조체
-	struct PlyGaussian {
+	gaussians.clear();
+	gaussians.reserve(num_vertices);
+
+	// --- Binary Data Reading ---
+	// This struct must exactly match the binary layout in the PLY file
+	struct PlyVertex {
 		float pos[3];
-		float normal[3]; // 사용하지 않지만 파일에 포함되어 있음
+		float normal[3]; // Skip
 		float f_dc[3];
+		float f_rest[45]; // Skip
 		float opacity;
 		float scale[3];
 		float rot[4];
 	};
 
-	gaussians.resize(vertex_count);
-	for (int i = 0; i < vertex_count; ++i) {
-		PlyGaussian ply_gauss;
-		file.read(reinterpret_cast<char*>(&ply_gauss), sizeof(PlyGaussian));
+	for (long i = 0; i < num_vertices; ++i) {
+		PlyVertex pv;
+		file.read(reinterpret_cast<char*>(&pv), sizeof(PlyVertex));
+		if (!file) {
+			fprintf(stderr, "Error reading vertex data at index %d\n", i);
+			return false;
+		}
 
-		if (file.eof()) break; // 파일 끝에 도달하면 중단
-
-		// 임시 구조체에서 최종 Gaussian 구조체로 데이터 복사 및 변환
-		gaussians[i].pos[0] = ply_gauss.pos[0];
-		gaussians[i].pos[1] = ply_gauss.pos[1];
-		gaussians[i].pos[2] = ply_gauss.pos[2];
-
-		// 중요: opacity는 sigmoid 함수를 적용해야 0~1 사이 값으로 변환됨
-		gaussians[i].opacity = 1.0f / (1.0f + expf(-ply_gauss.opacity));
-
-		// 중요: scale은 exp 함수를 적용해야 실제 크기 값이 됨
-		gaussians[i].scale[0] = expf(ply_gauss.scale[0]);
-		gaussians[i].scale[1] = expf(ply_gauss.scale[1]);
-		gaussians[i].scale[2] = expf(ply_gauss.scale[2]);
-
-		// 쿼터니언은 정규화(normalize) 필요
-		float norm = sqrt(ply_gauss.rot[0] * ply_gauss.rot[0] + ply_gauss.rot[1] * ply_gauss.rot[1] + ply_gauss.rot[2] * ply_gauss.rot[2] + ply_gauss.rot[3] * ply_gauss.rot[3]);
-		gaussians[i].rot[0] = ply_gauss.rot[0] / norm; // w
-		gaussians[i].rot[1] = ply_gauss.rot[1] / norm; // x
-		gaussians[i].rot[2] = ply_gauss.rot[2] / norm; // y
-		gaussians[i].rot[3] = ply_gauss.rot[3] / norm; // z
-
-		// DC 색상값은 그대로 복사 (SH의 추가적인 요소는 일단 무시)
-		gaussians[i].f_dc[0] = ply_gauss.f_dc[0];
-		gaussians[i].f_dc[1] = ply_gauss.f_dc[1];
-		gaussians[i].f_dc[2] = ply_gauss.f_dc[2];
+		Gaussian g;
+		memcpy(g.pos, pv.pos, sizeof(float) * 3);
+		memcpy(g.f_dc, pv.f_dc, sizeof(float) * 3);
+		g.opacity = pv.opacity;
+		memcpy(g.scale, pv.scale, sizeof(float) * 3);
+		memcpy(g.rot, pv.rot, sizeof(float) * 4);
+		gaussians.push_back(g);
 	}
 
-	file.close();
+	fprintf(stderr, "Loaded %zu gaussians.\n", gaussians.size());
+	return true;
+}
 
-	// 로드 성공 후, 카메라 위치 등을 초기화하기 위해 AABB 계산 (선택적)
-	if (!gaussians.empty()) {
-		uip.poly_model.AABB[XMIN] = uip.poly_model.AABB[YMIN] = uip.poly_model.AABB[ZMIN] = FLT_MAX;
-		uip.poly_model.AABB[XMAX] = uip.poly_model.AABB[YMAX] = uip.poly_model.AABB[ZMAX] = -FLT_MAX;
-		for (const auto& g : gaussians) {
-			uip.poly_model.AABB[XMIN] = fminf(uip.poly_model.AABB[XMIN], g.pos[0]);
-			uip.poly_model.AABB[XMAX] = fmaxf(uip.poly_model.AABB[XMAX], g.pos[0]);
-			uip.poly_model.AABB[YMIN] = fminf(uip.poly_model.AABB[YMIN], g.pos[1]);
-			uip.poly_model.AABB[YMAX] = fmaxf(uip.poly_model.AABB[YMAX], g.pos[1]);
-			uip.poly_model.AABB[ZMIN] = fminf(uip.poly_model.AABB[ZMIN], g.pos[2]);
-			uip.poly_model.AABB[ZMAX] = fmaxf(uip.poly_model.AABB[ZMAX], g.pos[2]);
+void rotate_vector_by_quaternion(float v[3], const float q[4], float v_out[3]) {
+	float uv[3], uuv[3];
+	float q_vec[3] = { q[1], q[2], q[3] };
+
+	// u = 2.0f * (q_vec X v)
+	fMyVecCrossProduct(q_vec, v, uv);
+	for (int i = 0; i < 3; ++i) uv[i] *= 2.0f;
+
+	// v_out = v + q[0] * u + (q_vec X u)
+	fMyVecCrossProduct(q_vec, uv, uuv);
+	for (int i = 0; i < 3; ++i) {
+		v_out[i] = v[i] + q[0] * uv[i] + uuv[i];
+	}
+}
+void create_composite_object_from_gaussians(const std::vector<Gaussian>& gaussians) {
+	if (gaussians.empty()) return;
+
+	// 1. 메모리 할당
+	long num_gaussians = gaussians.size();
+	long num_total_triangles = num_gaussians * 20;
+	long num_total_vertices = num_total_triangles * 3;
+
+	uip.poly_model.n_triangles = 0; // 시작은 0
+	uip.poly_model.extended_vertices = (ExtendedVertex*)malloc(num_total_vertices * sizeof(ExtendedVertex));
+	if (uip.poly_model.extended_vertices == NULL) {
+		fprintf(stderr, "Fatal Error: Memory allocation failed for %ld vertices!\n", num_total_vertices);
+		exit(1);
+	}
+	ExtendedVertex* current_vertex_ptr = uip.poly_model.extended_vertices;
+
+	// 2. AABB 초기화
+	uip.poly_model.AABB[XMIN] = uip.poly_model.AABB[YMIN] = uip.poly_model.AABB[ZMIN] = FLT_MAX;
+	uip.poly_model.AABB[XMAX] = uip.poly_model.AABB[YMAX] = uip.poly_model.AABB[ZMAX] = -FLT_MAX;
+
+	// 3. 메인 루프: 모든 가우시안에 대해 20면체 생성
+	for (long i = 0; i < num_gaussians; ++i) {
+		const Gaussian& g = gaussians[i];
+
+		float normalized_rot[4];
+		memcpy(normalized_rot, g.rot, sizeof(float) * 4);
+		fMyVecNormalize4D(normalized_rot); // 쿼터니언 정규화
+
+		// 20개의 면(삼각형)에 대해 루프
+		for (int j = 0; j < 20; ++j) {
+			// 3개의 꼭짓점에 대해 루프
+			for (int k = 0; k < 3; ++k) {
+				const int vertex_index = ICO_FACES[j][k];
+				float unit_v[3];
+				memcpy(unit_v, ICO_VERTICES[vertex_index], sizeof(float) * 3);
+
+				// 4. 버텍스 변환 (Scale -> Rotate -> Translate)
+				float v_scaled[3], v_rotated[3], v_final[3];
+
+				// 스케일 적용 (지수함수를 적용해야 올바른 스케일이 됨)
+				v_scaled[0] = unit_v[0] * expf(g.scale[0]);
+				v_scaled[1] = unit_v[1] * expf(g.scale[1]);
+				v_scaled[2] = unit_v[2] * expf(g.scale[2]);
+
+				// 회전 적용
+				rotate_vector_by_quaternion(v_scaled, normalized_rot, v_rotated);
+
+				// 위치(Translate) 적용
+				v_final[0] = v_rotated[0] + g.pos[0];
+				v_final[1] = v_rotated[1] + g.pos[1];
+				v_final[2] = v_rotated[2] + g.pos[2];
+
+				// 5. ExtendedVertex 데이터 채우기
+				memcpy(current_vertex_ptr->vertex, v_final, sizeof(float) * 3);
+				current_vertex_ptr->material_ID = i; // ★ 핵심: 가우시안 인덱스를 저장
+				// 노멀은 일단 0으로 초기화 (필요 시 계산 가능)
+				memset(current_vertex_ptr->normal, 0, sizeof(float) * 3);
+
+				// 6. AABB 업데이트
+				uip.poly_model.AABB[XMIN] = fminf(uip.poly_model.AABB[XMIN], v_final[0]);
+				uip.poly_model.AABB[XMAX] = fmaxf(uip.poly_model.AABB[XMAX], v_final[0]);
+				uip.poly_model.AABB[YMIN] = fminf(uip.poly_model.AABB[YMIN], v_final[1]);
+				uip.poly_model.AABB[YMAX] = fmaxf(uip.poly_model.AABB[YMAX], v_final[1]);
+				uip.poly_model.AABB[ZMIN] = fminf(uip.poly_model.AABB[ZMIN], v_final[2]);
+				uip.poly_model.AABB[ZMAX] = fmaxf(uip.poly_model.AABB[ZMAX], v_final[2]);
+
+				current_vertex_ptr++;
+			}
 		}
 	}
 
-	fprintf(stdout, "Successfully loaded %zu gaussians.\n", gaussians.size());
-	return true;
+	// 7. 최종 삼각형 개수 설정
+	uip.poly_model.n_triangles = num_total_triangles;
+	printf("Successfully created CompositeObject with %d triangles from %ld Gaussians.\n", uip.poly_model.n_triangles, num_gaussians);
 }
 
 bool read_OBJ_geom_file(const char* filename, MeshGeom* mesh_geom) {
@@ -939,6 +1008,7 @@ void main_menu_action(int selection) {
 			fprintf(stderr, "Failed to load ply file\n");
 			return;
 		}
+		create_composite_object_from_gaussians(g_gaussians);
 #endif
 
 		uip.composite_object_read = 1;
@@ -950,39 +1020,12 @@ void main_menu_action(int selection) {
 		break;
 	}
 	case 300:
-#if SCENE_NUM < 1
 		build_kd_tree_for_composite_object(&uip.poly_model);
 		if (uip.poly_model.kd_tree->tri_accel_list == NULL) printf("tri_accel_list NULL\n");
 		else {
 			printf("triangle num: %d\n", uip.poly_model.n_triangles);
 			printf("tri_accel_list size: %d", sizeof(uip.poly_model.kd_tree->tri_accel_list) / sizeof(*(uip.poly_model.kd_tree->tri_accel_list)));
 		}
-#else
-		if (g_gaussians.empty()) {
-			printf("Error: No Gaussians loaded. Please load a .ply file first (Menu 800).\n");
-			break;
-		}
-		printf("\n> Constructing Kd-tree from %zu Gaussian particles...\n", g_gaussians.size());
-
-		// 1. 새로 만든 가우시안용 초기화 함수 호출
-		if (!initialize_kdtree_for_gaussians(g_gaussians)) {
-			fprintf(stderr, "Error: Failed to initialize k-d tree for Gaussians.\n");
-			break;
-		}
-
-		// 2. 기존의 재귀 빌드 함수 호출 (g_pTriangleInfos에는 이제 가우시안 정보가 들어있음)
-		build_kd_tree_recursive(g_bEdge, g_pTriangleInfos, g_iTriangleSize, g_root_AABB, 0, &(g_pKdTree_Node_Array[0]));
-
-		// 3. 결과 출력
-		fprintf(stdout, "  - Kd-tree for Gaussians constructed successfully!\n");
-		fprintf(stdout, "   * Tree Level: %d\n", g_iKdTree_Level);
-		fprintf(stdout, "   * Node Count (All,Leaf,Empty) : %5d, %5d, %5d(%.1f%%)\n",
-			g_iKdTree_Node_Count, g_iKdTree_LeafNode_Count, g_iKdTree_EmptyNode_Count,
-			100.0f * g_iKdTree_EmptyNode_Count / g_iKdTree_Node_Count);
-		fprintf(stdout, "   * Maximum Gaussians in LeafNode: %d\n\n", g_iKdTree_MaxTriInLeafNode_Count);
-		fprintf(stdout, "\n> Done!\n\n");
-
-#endif
 		break;
 	case 400:
 		strcpy(full_kd_tree_file_name, uip.kd_tree_dump_dir);
@@ -1048,8 +1091,9 @@ void main_menu_action(int selection) {
 			g_cuda_rendering_done
 		);
 #else
-		renderGaussiansWithCuda(
+		renderGaussianWithCuda(
 			uip.poly_model,
+			g_gaussians,
 			camera,
 			g_render_width,
 			g_render_height,
@@ -1193,7 +1237,7 @@ void idle() {
 #if SCENE_NUM < 1
 		renderObjWithCuda(uip.poly_model, camera, g_render_width, g_render_height, g_render_framebuffer, g_cuda_rendering_done);
 #else
-		renderGaussiansWithCuda(uip.poly_model, camera, g_render_width, g_render_height, g_render_framebuffer, g_cuda_rendering_done);
+		renderGaussianWithCuda(uip.poly_model, g_gaussians, camera, g_render_width, g_render_height, g_render_framebuffer, g_cuda_rendering_done);
 #endif
 
 		glutPostRedisplay(); // 화면 갱신 요청

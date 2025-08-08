@@ -6,24 +6,49 @@
 //#include <vector_types.h>
 #include <cstring>
 
-#pragma pack(push, 1)
-struct FullPLYVertex {
-	float x, y, z;           // position
-	float nx, ny, nz;        // normal (optional)
-	float f_dc[3];           // base color (RGB)
-	float f_rest[45];        // SH 계수
-	float opacity;
-	float scale[3];          // xyz 스케일
-	float rot[4];            // quaternion
-};
-#pragma pack(pop)
+#define MAX_HITS 32
+#define SCENE_NUM 1
 
-struct GPUParticle {
-	float3 position;
-	float3 scale;
-	float4 rotation;
-	float3 color;
-	float opacity;
+#if SCENE_NUM == 0
+#define MODEL_PATH "../../Data/Obj/hotdog_3dgrt.obj"
+#define KDTREE_PATH "../../Data/Obj/hotdog_tree.kdt"
+#define IGEOM_PATH "../../Data/Obj/hotdog_igeom.bin"
+#elif SCENE_NUM == 1
+#define MODEL_PATH "../../Data/ply/hotdog/hotdog_3dgrt.ply"
+#define KDTREE_PATH "../../Data/ply/hotdog/hotdog_tree.kdt"
+#define IGEOM_PATH "../../Data/ply/hotdog/hotdog_igeom.bin"
+#elif SCENE_NUM == 2
+#define MODEL_PATH "../../Data/ply/lego/lego_3dgrt.ply"
+#define KDTREE_PATH "../../Data/ply/lego/lego_tree.kdt"
+#define IGEOM_PATH "../../Data/ply/lego/lego_igeom.bin"
+#elif SCENE_NUM == 3
+#define MODEL_PATH "../../Data/ply/bonsai/bonsai_3dgrt.ply"
+#define KDTREE_PATH "../../Data/ply/bonsai/bonsai_tree.kdt"
+#define IGEOM_PATH "../../Data/ply/bonsai/bonsai_igeom.bin"
+#elif SCENE_NUM == 4
+#define MODEL_PATH "../../Data/ply/chair/chair_3dgrt.ply"
+#define KDTREE_PATH "../../Data/ply/chair/chair_tree.kdt"
+#define IGEOM_PATH "../../Data/ply/chair/chair_igeom.bin"
+#elif SCENE_NUM == 5
+#define MODEL_PATH "../../Data/ply/flowers/flowers_3dgrt.ply"
+#define KDTREE_PATH "../../Data/ply/flowers/flowers_tree.kdt"
+#define IGEOM_PATH "../../Data/ply/flowers/flowers_igeom.bin"
+#endif
+
+const float iX = 0.525731112119133606f;
+const float iZ = 0.850650808352039932f;
+
+const float ICO_VERTICES[12][3] = {
+	{-iX, 0.0, iZ}, {iX, 0.0, iZ}, {-iX, 0.0, -iZ}, {iX, 0.0, -iZ},
+	{0.0, iZ, iX}, {0.0, iZ, -iX}, {0.0, -iZ, iX}, {0.0, -iZ, -iX},
+	{iZ, iX, 0.0}, {-iZ, iX, 0.0}, {iZ, -iZ, 0.0}, {-iZ, -iZ, 0.0}
+};
+
+const int ICO_FACES[20][3] = {
+	{0, 4, 1}, {0, 9, 4}, {9, 5, 4}, {4, 5, 8}, {4, 8, 1},
+	{8, 10, 1}, {8, 3, 10}, {5, 3, 8}, {5, 2, 3}, {2, 7, 3},
+	{7, 10, 3}, {7, 6, 10}, {7, 11, 6}, {11, 0, 6}, {0, 1, 6},
+	{6, 1, 10}, {9, 0, 11}, {9, 11, 2}, {9, 2, 5}, {7, 2, 11}
 };
 
 inline float fminf(const float a, const float b) { return (b > a) ? a : b; }
@@ -56,8 +81,9 @@ void renderObjWithCuda(
 	bool& is_done
 );
 
-void renderGaussiansWithCuda(
+void renderGaussianWithCuda(
 	const CompositeObject& object,
+	const std::vector<Gaussian>& gaussians,
 	const Camera& camera,
 	int width,
 	int height,
