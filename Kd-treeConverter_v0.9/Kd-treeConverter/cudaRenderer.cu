@@ -1,9 +1,11 @@
 #include <GL/glew.h>
 #include <GL/freeglut.h>
+#include <curand_kernel.h>
 #include "OpenGLStuffs.h"
 #include "CudaRenderer.h"
 //#include "SGRTx2Lib/cudaRenderPipeline.h"
 #include "SGRTx2Lib/cuda_math.h"
+
 
 #include <vector>
 #include <iostream>
@@ -178,7 +180,8 @@ __device__ void singlePassIntersectRoutine(const cuRay& ray, int id, cuIntersect
     if (fabsf(den) < 1e-8f) return;
     float t = (n_d - (p_pos.z + n_u * p_pos.x + n_v * p_pos.y)) / den;
 
-    if (t >= hit.tHit || t <= t_near || t >= t_far) return;
+    //if (t >= hit.tHit || t <= t_near || t >= t_far) return;
+    if (t <= t_near || t >= t_far) return;
 
     float4 d1 = tex1Dfetch(inTriAccelTex, id * 4 + 1);
     float4 d2 = tex1Dfetch(inTriAccelTex, id * 4 + 2);
@@ -317,7 +320,7 @@ void renderObjWithCuda(const CompositeObject& object, const Camera& camera, int 
     //cudaGetDeviceCount(&num_gpus);
     //printf("numgpu:%d\n", num_gpus);
     //cudaSetDevice(0);
-    std::cout << "--- Minimal CUDA Renderer Started ---" << std::endl;
+    //std::cout << "--- Minimal CUDA Renderer Started ---" << std::endl;
 
     KdTree* kdTree = object.kd_tree;
     if (!kdTree || object.n_triangles == 0) {
@@ -494,7 +497,7 @@ void renderObjWithCuda(const CompositeObject& object, const Camera& camera, int 
     if (err != cudaSuccess) {
         std::cerr << "[CUDA Error] free failed: " << cudaGetErrorString(err) << std::endl;
     }
-    std::cout << "--- Minimal CUDA Renderer Finished ---" << std::endl;
+    //std::cout << "--- Minimal CUDA Renderer Finished ---" << std::endl;
 }
 
 //-----------------------------------------------------------------------
@@ -540,7 +543,8 @@ __device__ void singlePassIntersectRoutineGaussian(const cuRay& ray, int id, cuI
     if (fabsf(den) < 1e-8f) return;
     float t = (n_d - (p_pos.z + n_u * p_pos.x + n_v * p_pos.y)) / den;
 
-    if (t >= hit.tHit || t <= t_near || t >= t_far) return;
+    //if (t >= hit.tHit || t <= t_near || t >= t_far) return;
+    if (t <= t_near || t >= t_far) return;
 
     float4 d1 = tex1Dfetch(inTriAccelTex, id * 4 + 1);
     float4 d2 = tex1Dfetch(inTriAccelTex, id * 4 + 2);
@@ -556,13 +560,13 @@ __device__ void singlePassIntersectRoutineGaussian(const cuRay& ray, int id, cuI
         hits[hit.hitCount].triIndex = id;
         hit.hitCount++; // 유효한 충돌이므로 카운터를 1 증가
 
-        // 가장 가까운 충돌점 정보는 계속 갱신
-        if (t < hit.tHit) {
-            hit.tHit = t;
-            hit.beta = beta;
-            hit.gamma = gamma;
-            hit.triIndex = id;
-        }
+        //// 가장 가까운 충돌점 정보는 계속 갱신
+        //if (t < hit.tHit) {
+        //    hit.tHit = t;
+        //    hit.beta = beta;
+        //    hit.gamma = gamma;
+        //    hit.triIndex = id;
+        //}
     }
 }
 
@@ -617,20 +621,40 @@ __global__ void renderKernelGaussian(float* pFrameBuffer) {
     int y = blockIdx.y * blockDim.y + threadIdx.y;
     if (x >= g_SceneInfo.resX || y >= g_SceneInfo.resY) return;
 
+#if SUPER_SAMPLING
+const int samples_per_pixel = 16; // 픽셀당 샘플 수 (4, 9, 16 등 제곱수 사용)
+float3 final_color = make_float3(0.0f, 0.0f, 0.0f);
+
+unsigned int seed = y * g_SceneInfo.resX + x;
+curandState rand_state;
+curand_init(seed, 0, 0, &rand_state);
+
+for (int s = 0; s < samples_per_pixel; ++s) {
+    // 픽셀 내에서 약간의 랜덤한 오프셋을 줍니다.
+    float u_offset = curand_uniform(&rand_state);
+    float v_offset = curand_uniform(&rand_state);
+
+    float sx = (float)x + u_offset;
+    float sy = (float)y + v_offset;
+#endif
+
     float sx = (float)x + 0.5f, sy = (float)y + 0.5f;
     float3 dir = g_CameraInfo.startPoint + g_CameraInfo.u * sx * g_CameraInfo.stepX - g_CameraInfo.v * sy * g_CameraInfo.stepY;
 
     cuRay ray = { g_CameraInfo.eye, normalize(dir - g_CameraInfo.eye) };
     cuIntersectionCheck hit;
     hit.init();
-    HitRecord hits[32];
+    HitRecord hits[MAX_HITS];
 
     singlePassIntersectGaussian(ray, hit, hits);
     if (hit.hitCount == 0) {
         int idx = 3 * ((g_SceneInfo.resY - y - 1) * g_SceneInfo.resX + x);
-        pFrameBuffer[idx + 0] = 0.2f; // 배경색 R
-        pFrameBuffer[idx + 1] = 0.3f; // 배경색 G
-        pFrameBuffer[idx + 2] = 0.4f; // 배경색 B
+        //pFrameBuffer[idx + 0] = 0.2f; // 배경색 R
+        //pFrameBuffer[idx + 1] = 0.3f; // 배경색 G
+        //pFrameBuffer[idx + 2] = 0.4f; // 배경색 B
+        pFrameBuffer[idx + 0] = 0.0f; // 배경색 R
+        pFrameBuffer[idx + 1] = 0.0f; // 배경색 G
+        pFrameBuffer[idx + 2] = 0.0f; // 배경색 B
         return;
     }
 
@@ -657,13 +681,24 @@ __global__ void renderKernelGaussian(float* pFrameBuffer) {
         accumulated_color += sample_color * sample_opacity * (1.0f - accumulated_opacity);
         accumulated_opacity += sample_opacity * (1.0f - accumulated_opacity);
 
-        if (accumulated_opacity > 0.99f) break;
+        if (accumulated_opacity > 0.9f) break;
     }
 
     // 5. 최종 색상 계산 및 프레임버퍼에 쓰기
-    float3 background_color = make_float3(0.2f, 0.3f, 0.4f);
+    //float3 background_color = make_float3(0.2f, 0.3f, 0.4f);
+    float3 background_color = make_float3(0.0f, 0.0f, 0.0f);
+#if SUPER_SAMPLING
+    final_color += accumulated_color + background_color * (1.0f - accumulated_opacity);
+}
+// 모든 샘플의 색상 값을 평균냅니다.
+final_color /= samples_per_pixel;
+#endif
     float3 final_color = accumulated_color + background_color * (1.0f - accumulated_opacity);
 
+    // 선형 공간(Linear Space)의 색상을 감마 공간(Gamma Space)으로 변환
+    final_color.x = powf(final_color.x, 1.0f / 2.2f);
+    final_color.y = powf(final_color.y, 1.0f / 2.2f);
+    final_color.z = powf(final_color.z, 1.0f / 2.2f);
 
     int idx = 3 * ((g_SceneInfo.resY - y - 1) * g_SceneInfo.resX + x);
     pFrameBuffer[idx + 0] = final_color.x;
@@ -677,7 +712,7 @@ void renderGaussianWithCuda(const CompositeObject& object, const std::vector<Gau
     //cudaGetDeviceCount(&num_gpus);
     //printf("numgpu:%d\n", num_gpus);
     //cudaSetDevice(0);
-    std::cout << "--- Minimal CUDA Renderer Started ---" << std::endl;
+    //std::cout << "--- Minimal CUDA Renderer Started ---" << std::endl;
 
     KdTree* kdTree = object.kd_tree;
     if (!kdTree || object.n_triangles == 0) {
@@ -849,5 +884,5 @@ void renderGaussianWithCuda(const CompositeObject& object, const std::vector<Gau
     if (err != cudaSuccess) {
         std::cerr << "[CUDA Error] free failed: " << cudaGetErrorString(err) << std::endl;
     }
-    std::cout << "--- Minimal CUDA Renderer Finished ---" << std::endl;
+    //std::cout << "--- Minimal CUDA Renderer Finished ---" << std::endl;
 }

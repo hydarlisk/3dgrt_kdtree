@@ -39,6 +39,10 @@
 //#include "SGRTx2Lib/GGPUExperimentalRayTracer.h"
 //using namespace KDTConverter;
 //using namespace KDTConstructor;
+char* ply_file_path;
+char* ply_kdtree_path;
+char* ply_igeom_path;
+char* ply_to_obj;
 bool render_gaussian = false;
 float* g_render_framebuffer = nullptr;
 int g_render_width = MAIN_WINDOW_WIDTH;
@@ -291,7 +295,7 @@ void mousemove(int x, int y) {
 			glLoadIdentity();
  			glMultMatrixf(camera.mat);
  			glTranslatef(-camera.pos[X], -camera.pos[Y], -camera.pos[Z]);
-			fprintf(stdout, "camera.pos: %f %f %f\n", camera.pos[0], camera.pos[1], camera.pos[2]);
+			//fprintf(stdout, "camera.pos: %f %f %f\n", camera.pos[0], camera.pos[1], camera.pos[2]);
 
 			glutPostRedisplay();
 		}
@@ -425,12 +429,55 @@ bool loadGaussiansFromPly(const char* filename, std::vector<Gaussian>& gaussians
 		memcpy(g.f_dc, pv.f_dc, sizeof(float) * 3);
 		g.opacity = pv.opacity;
 		memcpy(g.scale, pv.scale, sizeof(float) * 3);
+		//printf("%f, %f, %f\n", g.scale[0], g.scale[1], g.scale[2]);
 		memcpy(g.rot, pv.rot, sizeof(float) * 4);
 		gaussians.push_back(g);
 	}
 
 	fprintf(stderr, "Loaded %zu gaussians.\n", gaussians.size());
 	return true;
+}
+
+void transform_vector_by_matrix_transpose(const float v[3], const float3x3& rot, float result[3]) {
+	result[0] = v[0] * rot.m[0][0] + v[1] * rot.m[1][0] + v[2] * rot.m[2][0];
+	result[1] = v[0] * rot.m[0][1] + v[1] * rot.m[1][1] + v[2] * rot.m[2][1];
+	result[2] = v[0] * rot.m[0][2] + v[1] * rot.m[1][2] + v[2] * rot.m[2][2];
+}
+
+// 쿼터니언(w,x,y,z)을 전치된 회전 행렬로 변환
+void quaternionToMatrixTranspose(const float q[4], float3x3& rot) {
+	float w = q[0], x = q[1], y = q[2], z = q[3];
+	float xx = x * x, yy = y * y, zz = z * z;
+	float xy = x * y, xz = x * z, yz = y * z;
+	float wx = w * x, wy = w * y, wz = w * z;
+
+	rot.m[0][0] = 1.0f - 2.0f * (yy + zz); rot.m[1][0] = 2.0f * (xy - wz); rot.m[2][0] = 2.0f * (xz + wy);
+	rot.m[0][1] = 2.0f * (xy + wz); rot.m[1][1] = 1.0f - 2.0f * (xx + zz); rot.m[2][1] = 2.0f * (yz - wx);
+	rot.m[0][2] = 2.0f * (xz - wy); rot.m[1][2] = 2.0f * (yz + wx); rot.m[2][2] = 1.0f - 2.0f * (xx + yy);
+}
+
+float kernelScale_final(float density, float min_response, float kernel_degree) {
+	// 참고: 코드의 'opts'와 'responseModulation' 부분은 특정 옵션에 따른 미세 조정으로,
+	// 핵심 로직이 아니므로 여기서는 생략하고 직접 min_response를 사용합니다.
+
+	// kernelDegree < 0 (Bump Kernel)
+	if (kernel_degree < 0) {
+		const float k = std::fabs(kernel_degree);
+		const float s = 1.0 / std::pow(3.0, k);
+		const float ks = std::pow((1.f / (std::log(min_response) - 1.f) + 1.f) / s, 1.f / k);
+		return ks;
+	}
+
+	// kernelDegree == 0 (Linear Kernel)
+	if (kernel_degree == 0) {
+		return ((1.0f - min_response) / 3.0f) / -0.329630334487f;
+	}
+
+	// kernelDegree > 0 (Generalized Gaussian Kernel)
+	const float b = kernel_degree;
+	const float a = -4.5f / std::pow(3.0f, b);
+
+	return std::pow(std::log(min_response) / a, 1.0f / b);
 }
 
 void rotate_vector_by_quaternion(float v[3], const float q[4], float v_out[3]) {
@@ -447,12 +494,43 @@ void rotate_vector_by_quaternion(float v[3], const float q[4], float v_out[3]) {
 		v_out[i] = v[i] + q[0] * uv[i] + uuv[i];
 	}
 }
-void create_composite_object_from_gaussians(const std::vector<Gaussian>& gaussians) {
-	if (gaussians.empty()) return;
+
+void create_composite_object_from_gaussians(
+	const std::vector<Gaussian>& gaussians,
+	float alpha_min = ALPHA_MIN,
+	float kernel_degree = KERNEL_DEGREE
+) {
+	if (gaussians.empty()) {
+		printf("Gaussian list is empty. Nothing to create.\n");
+		return;
+	}
+
+	//// 유효한(filtered) 가우시안만 임시 저장할 벡터
+	//std::vector<Gaussian> filtered_gaussians;
+	//filtered_gaussians.reserve(gaussians.size());
+	//std::vector<long> original_indices; // 유효한 가우시안의 원본 인덱스 저장
+
+	//for (long i = 0; i < gaussians.size(); ++i) {
+	//	const Gaussian& g = gaussians[i];
+	//	const float density = 1.0f / (1.0f + expf(-g.opacity));
+	//	float k_iso = kernelScale_final(density, alpha_min, kernel_degree);
+
+	//	// ★★★ 핵심 수정: 스케일 값이 유효한지 확인 ★★★
+	//	// k_iso가 0보다 크고 유효한 숫자인 경우에만 해당 가우시안을 처리 목록에 추가
+	//	if (k_iso > 1e-6f && std::isfinite(k_iso)) {
+	//		filtered_gaussians.push_back(g);
+	//		original_indices.push_back(i); // material_ID를 위해 원본 인덱스 저장
+	//	}
+	//}
+
+	if (uip.poly_model.extended_vertices != nullptr) {
+		free(uip.poly_model.extended_vertices);
+		uip.poly_model.extended_vertices = nullptr;
+	}
 
 	// 1. 메모리 할당
 	long num_gaussians = gaussians.size();
-	long num_total_triangles = num_gaussians * 20;
+	long num_total_triangles = num_gaussians * icosaHedronNumTri;
 	long num_total_vertices = num_total_triangles * 3;
 
 	uip.poly_model.n_triangles = 0; // 시작은 0
@@ -467,41 +545,68 @@ void create_composite_object_from_gaussians(const std::vector<Gaussian>& gaussia
 	uip.poly_model.AABB[XMIN] = uip.poly_model.AABB[YMIN] = uip.poly_model.AABB[ZMIN] = FLT_MAX;
 	uip.poly_model.AABB[XMAX] = uip.poly_model.AABB[YMAX] = uip.poly_model.AABB[ZMAX] = -FLT_MAX;
 
+	const float ICOSA_VRT_SCALE = 0.5f * icosaEdge;
+
 	// 3. 메인 루프: 모든 가우시안에 대해 20면체 생성
 	for (long i = 0; i < num_gaussians; ++i) {
 		const Gaussian& g = gaussians[i];
 
-		float normalized_rot[4];
-		memcpy(normalized_rot, g.rot, sizeof(float) * 4);
-		fMyVecNormalize4D(normalized_rot); // 쿼터니언 정규화
+		//회전
+		float q_normalized[4];
+		memcpy(q_normalized, g.rot, sizeof(float) * 4);
+		fMyVecNormalize4D(q_normalized); // 쿼터니언 정규화
+		float3x3 rot_transpose;
+		quaternionToMatrixTranspose(q_normalized, rot_transpose);
 
-		// 20개의 면(삼각형)에 대해 루프
+		//sigma(density) 계산
+		const float sigma = 1.0f / (1.0f + expf(-g.opacity));
+		//float k_iso = 0.0f;
+		//if (sigma / alpha_min > 1.0f) {
+		//	k_iso = sqrtf(2.0f * logf(sigma / alpha_min));
+		//}
+		// kernelScale_final 함수를 호출하여 k_iso 계산
+		float k_iso = kernelScale_final(sigma, alpha_min, kernel_degree);
+
+		float final_scale[3] = {
+			expf(g.scale[0]) * k_iso * ICOSA_VRT_SCALE,
+			expf(g.scale[1]) * k_iso * ICOSA_VRT_SCALE,
+			expf(g.scale[2]) * k_iso * ICOSA_VRT_SCALE
+		};
+
+		// 아이코사헤드론의 20개 면(삼각형)을 생성
 		for (int j = 0; j < 20; ++j) {
-			// 3개의 꼭짓점에 대해 루프
-			for (int k = 0; k < 3; ++k) {
-				const int vertex_index = ICO_FACES[j][k];
-				float unit_v[3];
-				memcpy(unit_v, ICO_VERTICES[vertex_index], sizeof(float) * 3);
+			const int* face_indices = ICO_FACES[j];
 
-				// 4. 버텍스 변환 (Scale -> Rotate -> Translate)
+			// 3개의 정점을 변환하여 저장
+			for (int l = 0; l < 3; ++l) {
+				// 원본 단위 아이코사헤드론 정점
+				const float* v_cano = ICO_VERTICES[face_indices[l]];
+
+				// 스케일, 회전, 이동 변환 적용
 				float v_scaled[3], v_rotated[3], v_final[3];
 
-				// 스케일 적용 (지수함수를 적용해야 올바른 스케일이 됨)
-				v_scaled[0] = unit_v[0] * expf(g.scale[0]);
-				v_scaled[1] = unit_v[1] * expf(g.scale[1]);
-				v_scaled[2] = unit_v[2] * expf(g.scale[2]);
+				// 1. 스케일 적용 (비등방성 S * 등방성 k)
+				//v_scaled[0] = v_cano[0] * expf(g.scale[0]) * k;
+				//v_scaled[1] = v_cano[1] * expf(g.scale[1]) * k;
+				//v_scaled[2] = v_cano[2] * expf(g.scale[2]) * k;
+				v_scaled[0] = v_cano[0] * final_scale[0];
+				v_scaled[1] = v_cano[1] * final_scale[1];
+				v_scaled[2] = v_cano[2] * final_scale[2];
+				//printf("%f, %f, %f\n", expf(g.scale[0]), expf(g.scale[1]), expf(g.scale[2]));
 
 				// 회전 적용
-				rotate_vector_by_quaternion(v_scaled, normalized_rot, v_rotated);
+				//rotate_vector_by_quaternion(v_scaled, normalized_rot, v_rotated);
+				transform_vector_by_matrix_transpose(v_scaled, rot_transpose, v_rotated);
 
 				// 위치(Translate) 적용
 				v_final[0] = v_rotated[0] + g.pos[0];
 				v_final[1] = v_rotated[1] + g.pos[1];
 				v_final[2] = v_rotated[2] + g.pos[2];
+				//printf("%f, %f, %f\n", g.pos[0], g.pos[1], g.pos[2]);
 
 				// 5. ExtendedVertex 데이터 채우기
 				memcpy(current_vertex_ptr->vertex, v_final, sizeof(float) * 3);
-				current_vertex_ptr->material_ID = i; // ★ 핵심: 가우시안 인덱스를 저장
+				current_vertex_ptr->material_ID = i; // 가우시안 인덱스를 저장
 				// 노멀은 일단 0으로 초기화 (필요 시 계산 가능)
 				memset(current_vertex_ptr->normal, 0, sizeof(float) * 3);
 
@@ -520,6 +625,7 @@ void create_composite_object_from_gaussians(const std::vector<Gaussian>& gaussia
 
 	// 7. 최종 삼각형 개수 설정
 	uip.poly_model.n_triangles = num_total_triangles;
+	uip.composite_object_read = 1;
 	printf("Successfully created CompositeObject with %d triangles from %ld Gaussians.\n", uip.poly_model.n_triangles, num_gaussians);
 }
 
@@ -652,7 +758,6 @@ int read_OBJ_file(const char* obj_filename)
 
 	return 1;
 }
-
 /*bool load_obj_to_composite_object(const char* filename, CompositeObject* c_object) {
 	std::ifstream infile(filename);
 	if (!infile.is_open()) {
@@ -721,6 +826,55 @@ int read_OBJ_file(const char* obj_filename)
 		c_object->AABB[ZMIN], c_object->AABB[ZMAX]);
 	return true;
 }*/
+
+bool save_composite_object_to_obj(const CompositeObject& object, const char* filename) {
+	// 1. 파일 스트림 열기
+	std::ofstream outFile(filename);
+	if (!outFile.is_open()) {
+		fprintf(stderr, "Error: Cannot open file for writing: %s\n", filename);
+		return false;
+	}
+
+	// 2. 파일 헤더 주석 작성
+	outFile << "# OBJ file generated from a CompositeObject structure\n";
+	outFile << "# Total Triangles: " << object.n_triangles << "\n";
+	const int total_vertices = object.n_triangles * 3;
+	outFile << "# Total Vertices in Array: " << total_vertices << "\n\n";
+
+	// 3. 정점(vertex) 및 법선(vertex normal) 데이터 작성
+	for (int i = 0; i < total_vertices; ++i) {
+		const ExtendedVertex& v = object.extended_vertices[i];
+
+		// 정점 좌표 (v x y z)
+		outFile << "v " << v.vertex[0] << " " << v.vertex[1] << " " << v.vertex[2] << "\n";
+
+		// 정점 법선 (vn x y z)
+		outFile << "vn " << v.normal[0] << " " << v.normal[1] << " " << v.normal[2] << "\n";
+	}
+
+	outFile << "\n"; // 데이터 섹션 구분을 위한 공백 라인
+
+	// 4. 면(face) 데이터 작성
+	// OBJ 파일의 인덱스는 1부터 시작하므로, C++ 배열 인덱스에 1을 더해줘야 합니다.
+	for (int i = 0; i < object.n_triangles; ++i) {
+		// 현재 삼각형을 구성하는 세 정점의 시작 인덱스
+		const int v1_idx = 3 * i + 1;
+		const int v2_idx = 3 * i + 2;
+		const int v3_idx = 3 * i + 3;
+
+		// 면 정보 (f v1//vn1 v2//vn2 v3//vn3)
+		// 각 정점과 법선이 1:1로 매칭되므로, 정점 인덱스와 법선 인덱스는 같습니다.
+		outFile << "f " << v1_idx << "//" << v1_idx << " "
+			<< v2_idx << "//" << v2_idx << " "
+			<< v3_idx << "//" << v3_idx << "\n";
+	}
+
+	// 5. 파일 닫기 및 완료 메시지
+	outFile.close();
+	printf("Successfully saved CompositeObject to %s\n", filename);
+
+	return true;
+}
 //shyun end
 
 SL_KDT_CONFIG_command_ID query_SL_KDT_CONFIG_command_ID(const char *command) {
@@ -961,7 +1115,7 @@ int read_SL_KDT_CONFIG_file(void) {
 void main_menu_action(int selection) {
 	char full_kd_tree_file_name[512];
 	char full_i_geometry_file_name[512];
-
+	fprintf(stdout, "\n");
 	switch (selection) {
 	case 0:
 		g_cuda_rendering_done = !g_cuda_rendering_done;
@@ -996,20 +1150,13 @@ void main_menu_action(int selection) {
 	case 200: {
 		render_gaussian = true;
 		const char* file_path = MODEL_PATH;  // obj 경로
-#if SCENE_NUM < 1
 		if (!read_OBJ_file(file_path)) {
 			fprintf(stderr, "Failed to load obj file\n");
 			return;
 		}
-#else
-		g_gaussians.clear();
-		// 3DGS 학습 결과물을 로드
-		if (!loadGaussiansFromPly(file_path, g_gaussians)) {
-			fprintf(stderr, "Failed to load ply file\n");
-			return;
-		}
-		create_composite_object_from_gaussians(g_gaussians);
-#endif
+		ply_file_path = MODEL_PATH;
+		ply_kdtree_path = KDTREE_PATH;
+		ply_igeom_path = IGEOM_PATH;
 
 		uip.composite_object_read = 1;
 
@@ -1024,7 +1171,7 @@ void main_menu_action(int selection) {
 		if (uip.poly_model.kd_tree->tri_accel_list == NULL) printf("tri_accel_list NULL\n");
 		else {
 			printf("triangle num: %d\n", uip.poly_model.n_triangles);
-			printf("tri_accel_list size: %d", sizeof(uip.poly_model.kd_tree->tri_accel_list) / sizeof(*(uip.poly_model.kd_tree->tri_accel_list)));
+			//printf("tri_accel_list size: %d\n", sizeof(uip.poly_model.kd_tree->tri_accel_list) / sizeof(*(uip.poly_model.kd_tree->tri_accel_list)));
 		}
 		break;
 	case 400:
@@ -1039,9 +1186,9 @@ void main_menu_action(int selection) {
 		if (render_gaussian) {
 			dump_kd_tree_for_composite_object(
 				&uip.poly_model,
-				KDTREE_PATH,         // 저장할 kd-tree
+				ply_kdtree_path,         // 저장할 kd-tree
 				KD_TREE_DUMP_IN_BINARY,    // 저장 포맷
-				IGEOM_PATH         // 저장할 geometry
+				ply_igeom_path         // 저장할 geometry
 			);
 		}
 		else {
@@ -1056,7 +1203,7 @@ void main_menu_action(int selection) {
 		strcat(full_kd_tree_file_name, uip.kd_tree_filename);
 		printf("uip.kd_tree_filename:%s\n", uip.kd_tree_filename);
 		if (render_gaussian) {
-			strcpy(full_kd_tree_file_name, KDTREE_PATH);
+			strcpy(full_kd_tree_file_name, ply_kdtree_path);
 			uip.kd_tree_dump_format = KD_TREE_DUMP_IN_BINARY;
 		}
 		printf("full_kd_tree_file_name:%s\n", full_kd_tree_file_name);
@@ -1081,6 +1228,7 @@ void main_menu_action(int selection) {
 		//TODO: CUDA rendering*****************************************
 		//cudaRenderer.h
 		//renderWithCuda(const CompositeObject & object, const Camera & camera, int width, int height, float*& out_framebuffer, bool& is_done)
+
 #if SCENE_NUM < 1
 		renderObjWithCuda(
 			uip.poly_model,
@@ -1123,11 +1271,72 @@ void main_menu_action(int selection) {
 			glutPostRedisplay();
 		}
 		break;
+	case 800:
+		fprintf(stdout, "dump .obj file\n");
+		if (uip.composite_object_read) {
+			save_composite_object_to_obj(uip.poly_model, ply_to_obj);
+			fprintf(stdout, "Done!\n");
+		}
+		else {
+			fprintf(stderr, "Error: No composite object loaded to save.\n");
+		}
+		break;
 	case 999:
 		exit(0);
 		clean_up_system();
 		break;
 	}
+}
+
+void subMenuHandler(int value) {
+	render_gaussian = true;
+	g_gaussians.clear();
+	switch (value) {
+		case 101: printf("Hotdog selected\n");
+			ply_file_path = "../../Data/ply/hotdog/hotdog_3dgrt.ply";
+			ply_kdtree_path = "../../Data/ply/hotdog/hotdog_tree.kdt";
+			ply_igeom_path = "../../Data/ply/hotdog/hotdog_igeom.bin";
+			ply_to_obj = "../../Data/ply/hotdog/hotdog_3dgrt_new.obj";
+			break;
+		case 102: printf("Lego selected\n");
+			ply_file_path = "../../Data/ply/lego/lego_3dgrt.ply";
+			ply_kdtree_path = "../../Data/ply/lego/lego_tree.kdt";
+			ply_igeom_path = "../../Data/ply/lego/lego_igeom.bin";
+			ply_to_obj = "../../Data/ply/lego/lego_3dgrt_new.obj";
+			break;
+		case 103: printf("Bonsai selected\n");
+			ply_file_path = "../../Data/ply/bonsai/bonsai_3dgrt.ply";
+			ply_kdtree_path = "../../Data/ply/bonsai/bonsai_tree.kdt";
+			ply_igeom_path = "../../Data/ply/bonsai/bonsai_igeom.bin";
+			ply_to_obj = "../../Data/ply/bonsai/bonsai_3dgrt_new.obj";
+			break;
+		case 104: printf("Chair selected\n");
+			ply_file_path = "../../Data/ply/chair/chair_3dgrt.ply";
+			ply_kdtree_path = "../../Data/ply/chair/chair_tree.kdt";
+			ply_igeom_path = "../../Data/ply/chair/chair_igeom.bin";
+			ply_to_obj = "../../Data/ply/chair/chair_3dgrt_new.obj";
+			break;
+		case 105: printf("Flowers selected\n");
+			ply_file_path = "../../Data/ply/flowers/flowers_3dgrt.ply";
+			ply_kdtree_path = "../../Data/ply/flowers/flowers_tree.kdt";
+			ply_igeom_path = "../../Data/ply/flowers/flowers_igeom.bin";
+			ply_to_obj = "../../Data/ply/flowers/flowers_3dgrt_new.obj";
+			break;
+	}
+	//printf("%s\n", ply_file_path);
+	// 3DGS 학습 결과물을 로드
+	if (!loadGaussiansFromPly(ply_file_path, g_gaussians)) {
+		fprintf(stderr, "Failed to load ply file\n");
+		return;
+	}
+	create_composite_object_from_gaussians(g_gaussians);
+
+	uip.composite_object_read = 1;
+
+	load_poly_model_into_OpenGL();
+	g_cuda_rendering_done = false;
+	glutPostRedisplay();
+	printf("draw DONE\n");
 }
 
 void register_callbacks_and_create_menu(void) {
@@ -1136,20 +1345,26 @@ void register_callbacks_and_create_menu(void) {
 	glutReshapeFunc(reshape);
 	glutMouseFunc(mousepress); 
 	glutMotionFunc(mousemove);
-   
+
+	int submenu = glutCreateMenu(subMenuHandler);
+	glutAddMenuEntry("hotdog", 101);
+	glutAddMenuEntry("lego", 102);
+	glutAddMenuEntry("bonsai", 103);
+	glutAddMenuEntry("chair", 104);
+	glutAddMenuEntry("flowers", 105);
+
 	uip.main_menu_ID = glutCreateMenu(main_menu_action);
 	glutAddMenuEntry("ChangeMode", 0);
 	glutAddMenuEntry("1. Read SL_KDT_Config File and Prepair I-Geometry", 100);
-#if SCENE_NUM < 1
-	glutAddMenuEntry("5. Read .obj File and Prepair I-Geometry", 200);
-#else
-	glutAddMenuEntry("5. Read .ply File and Prepair I-Geometry", 200);
-#endif
-	glutAddMenuEntry("2. Construct Kd-tree from I-Geometry", 300);  
-	glutAddMenuEntry("3. Dump Kd-tree and I-Geometry to Files", 400);
-	glutAddMenuEntry("4. Read Kd-tree from File", 500);
+	glutAddMenuEntry("2. Read .obj File and Prepair I-Geometry", 200);
+	//glutAddMenuEntry("2. Read .ply File and Prepair I-Geometry", 200);
+	glutAddSubMenu("2. Read .ply File and Prepair I-Geometry", submenu);
+	glutAddMenuEntry("3. Construct Kd-tree from I-Geometry", 300);  
+	glutAddMenuEntry("4. Dump Kd-tree and I-Geometry to Files", 400);
+	glutAddMenuEntry("4-1. Dump I-Geometry to obj File", 800);
+	glutAddMenuEntry("5. Read Kd-tree from File", 500);
 	glutAddMenuEntry("6. CUDA Rendering (One-shot)", 600);
-	glutAddMenuEntry("7. CUDA Rendering (Interactive Toggle)", 700); // 메뉴 추가
+	glutAddMenuEntry("7. CUDA Rendering (Interactive Toggle)", 700);
 	glutAddMenuEntry("Exit", 999); 
 
 	glutAttachMenu(GLUT_RIGHT_BUTTON); 

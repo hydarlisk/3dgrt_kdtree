@@ -19,9 +19,9 @@ void set_rotate_mat(Camera *cam) {
 }
 
 void initialize_camera(Camera *cam) {
-#define i_c_POS_X 100.0
-#define i_c_POS_Y 100.0
-#define i_c_POS_Z 100.0
+#define i_c_POS_X 50.0
+#define i_c_POS_Y 50.0
+#define i_c_POS_Z 50.0
 
 	GLfloat matrix[16];
 
