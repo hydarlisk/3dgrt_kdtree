@@ -557,6 +557,15 @@ __device__ void singlePassIntersectRoutineGaussian(const cuRay& ray, int id, cuI
     float gamma = u_coord * d2.x + v_coord * d2.y + d2.z;
 
     if (beta >= -BARYCENTRY_EPSILON && gamma >= -BARYCENTRY_EPSILON && (beta + gamma) <= 1.0f + BARYCENTRY_EPSILON) {
+        float4 N_packed = tex1Dfetch(inTriAccelTex, id * 4 + 3);
+        float3 N = make_float3(N_packed.x, N_packed.y, N_packed.z);
+
+        // 2. 법선 벡터와 광선 방향의 내적(dot product)을 계산합니다.
+        //    내적 값이 0보다 크면 광선이 삼각형의 뒷면에 부딪혔다는 의미입니다.
+        if (dot(N, ray.dir) > 0.0f) {
+            return; // 뒷면이므로 이 충돌을 무시하고 함수를 즉시 종료합니다.
+        }
+        
         hits[hit.hitCount].t = t;
         hits[hit.hitCount].triIndex = id;
         hit.hitCount++; // 유효한 충돌이므로 카운터를 1 증가
@@ -571,7 +580,11 @@ __device__ void singlePassIntersectRoutineGaussian(const cuRay& ray, int id, cuI
     }
 }
 
-__device__ void singlePassIntersectGaussian(cuRay& currRay, cuIntersectionCheck& intersectionCheck, HitRecord* hits) {
+__device__ void singlePassIntersectGaussian(
+    cuRay& currRay,
+    cuIntersectionCheck& intersectionCheck,
+    HitRecord* hits
+) {
     float t_near = RAY_START_EPSILON, t_far = FLT_MAX;
     if (BoundsRayIntersect(g_SceneBBoxMin, g_SceneBBoxMax, currRay, t_near, t_far)) {
         shortStack stack;
@@ -659,7 +672,9 @@ __device__ __forceinline__ float3 eval_sh_final(
     return result;
 }
 
-__global__ void renderKernelGaussian(float* pFrameBuffer) {
+__global__ void renderKernelGaussian(float* pFrameBuffer
+    ,int* maxhit, int* hcount
+) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
     if (x >= g_SceneInfo.resX || y >= g_SceneInfo.resY) return;
@@ -744,27 +759,29 @@ for (int s = 0; s < samples_per_pixel; ++s) {
 // 모든 샘플의 색상 값을 평균냅니다.
 final_color /= samples_per_pixel;
 #endif
-    //float3 final_color = accumulated_color + background_color * (1.0f - accumulated_opacity);
-    float3 final_color = accumulated_color / accumulated_opacity;
+    float3 final_color = accumulated_color + background_color * (1.0f - accumulated_opacity);
+    //float3 final_color = accumulated_color / accumulated_opacity;
 
     int idx = 3 * ((g_SceneInfo.resY - y - 1) * g_SceneInfo.resX + x);
     pFrameBuffer[idx + 0] = final_color.x;
     pFrameBuffer[idx + 1] = final_color.y;
     pFrameBuffer[idx + 2] = final_color.z;
+
+    if (hit.hitCount > 0) {
+        //if(accumulated_opacity<0.95f) printf("hitCount %d | ao: %f\n", hit.hitCount, accumulated_opacity);
+        atomicAdd(maxhit, hit.hitCount);
+        atomicAdd(hcount, 1);
+    }
 }
 
 void renderGaussianWithCuda(const CompositeObject& object, const std::vector<Gaussian>& gaussians, const Camera& camera, int width, int height, float*& out_framebuffer, bool& is_done) {
     is_done = false;
-    //int num_gpus;
-    //cudaGetDeviceCount(&num_gpus);
-    //printf("numgpu:%d\n", num_gpus);
-    //cudaSetDevice(0);
     //std::cout << "--- Minimal CUDA Renderer Started ---" << std::endl;
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
+    //cudaEvent_t start, stop;
+    //cudaEventCreate(&start);
+    //cudaEventCreate(&stop);
 
-    cudaEventRecord(start);
+    //cudaEventRecord(start);
 
     KdTree* kdTree = object.kd_tree;
     if (!kdTree || object.n_triangles == 0) {
@@ -892,9 +909,22 @@ void renderGaussianWithCuda(const CompositeObject& object, const std::vector<Gau
     dim3 blocks((width + threads.x - 1) / threads.x, (height + threads.y - 1) / threads.y);
     size_t shared_mem_size = threads.x * threads.y * SHORT_STACK_DEPTH * sizeof(cu_traceState);
 
-    renderKernelGaussian << < blocks, threads, shared_mem_size >> > (d_framebuffer);
+    int* d_maxhit, *hitcount;
+    CUDA_CHECK(cudaMalloc((void**)&d_maxhit, sizeof(int)));
+    CUDA_CHECK(cudaMemset(d_maxhit, 0, sizeof(int)));
+    CUDA_CHECK(cudaMalloc((void**)&hitcount, sizeof(int)));
+    CUDA_CHECK(cudaMemset(hitcount, 0, sizeof(int)));
+
+    renderKernelGaussian << < blocks, threads, shared_mem_size >> > (d_framebuffer, d_maxhit, hitcount);
     CUDA_CHECK(cudaGetLastError());        // launch 실패 확인
     CUDA_CHECK(cudaDeviceSynchronize()); // 실행 중 오류 확인
+
+    int h_maxhit = 0, h_count = 0;
+    CUDA_CHECK(cudaMemcpy(&h_maxhit, d_maxhit, sizeof(int), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(&h_count, hitcount, sizeof(int), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaFree(d_maxhit));
+    CUDA_CHECK(cudaFree(hitcount));
+    //printf("af maxHIT sum, count, avg: %d, %d, %f\n", h_maxhit, h_count, (float)(h_maxhit/h_count));
 
     err = cudaGetLastError();
     if (err != cudaSuccess) {
@@ -923,15 +953,15 @@ void renderGaussianWithCuda(const CompositeObject& object, const std::vector<Gau
     cudaUnbindTexture(inTriAccelTex);
     //printf("6. free done\n");
     //for fps check
-    cudaEventRecord(stop);
-    float milliseconds = 0;
-    cudaEventElapsedTime(&milliseconds, start, stop);
-    float frame_time_sec = milliseconds / 1000.0f;
-    float current_fps = 1.0f / frame_time_sec;
-    printf("Frame Time: %.2f ms, FPS: %.2f\n", milliseconds, current_fps);
-    // g_fps = current_fps; // 직접 접근은 불가, Host 함수에서 처리
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
+    //cudaEventRecord(stop);
+    //float milliseconds = 0;
+    //cudaEventElapsedTime(&milliseconds, start, stop);
+    //float frame_time_sec = milliseconds / 1000.0f;
+    //float current_fps = 1.0f / frame_time_sec;
+    //printf("Frame Time: %.2f ms, FPS: %.2f\n", milliseconds, current_fps);
+    //// g_fps = current_fps; // 직접 접근은 불가, Host 함수에서 처리
+    //cudaEventDestroy(start);
+    //cudaEventDestroy(stop);
 
     err = cudaGetLastError();
     if (err != cudaSuccess) {

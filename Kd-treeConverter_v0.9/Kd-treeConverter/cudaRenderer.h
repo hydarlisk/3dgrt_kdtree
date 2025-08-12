@@ -11,7 +11,7 @@
 
 #define SUPER_SAMPLING false
 
-#define MAX_HITS 1500
+#define MAX_HITS 512
 #define SCENE_NUM 1
 
 #if SCENE_NUM == 0

@@ -7,6 +7,8 @@
 #pragma once
 #include <vector>
 
+#define ISCET_COST 20000
+
 #define X 0
 #define Y 1
 #define Z 2
@@ -76,9 +78,9 @@ typedef struct _KdTree {
 
 typedef struct _ExtendedVertex {
 	float vertex[3];
-	float normal[3]; //
+	//float normal[3]; //
 	int material_ID; // Need to be modified
-	char pad[4]; // For 32 byte-alignement
+	//char pad[4]; // For 32 byte-alignement
 } ExtendedVertex;
 
 typedef struct _CompositeObject {

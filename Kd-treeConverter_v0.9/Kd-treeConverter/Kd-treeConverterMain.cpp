@@ -617,7 +617,7 @@ void create_composite_object_from_gaussians(
 				memcpy(current_vertex_ptr->vertex, v_final, sizeof(float) * 3);
 				current_vertex_ptr->material_ID = i; // 가우시안 인덱스를 저장
 				// 노멀은 일단 0으로 초기화 (필요 시 계산 가능)
-				memset(current_vertex_ptr->normal, 0, sizeof(float) * 3);
+				//memset(current_vertex_ptr->normal, 0, sizeof(float) * 3);
 
 				// AABB 업데이트
 				uip.poly_model.AABB[XMIN] = fminf(uip.poly_model.AABB[XMIN], v_final[0]);
@@ -927,7 +927,7 @@ void append_mesh_geom_to_composite_object(CompositeObject *c_object,
 			vertex = mesh_geom->vertices + *ptr_index*6;
 
 	 		memcpy(ptr_next->vertex, vertex, 3*sizeof(float));
-	 		memcpy(ptr_next->normal, vertex+3, 3*sizeof(float));
+	 		//memcpy(ptr_next->normal, vertex+3, 3*sizeof(float));
 			ptr_next->material_ID = mat_type;
 
 			ptr_index++;
@@ -1441,7 +1441,7 @@ void init_KDT_system(void) {
 
 	v_KD_TREE_TRAVL_COST = 1.0;
 	//v_KD_TREE_ISECT_COST = 1.5;
-	v_KD_TREE_ISECT_COST = 2000.0;
+	v_KD_TREE_ISECT_COST = ISCET_COST;
 	v_KD_TREE_MAX_LEVEL = 100;
 	v_KD_TREE_MIN_TRIANGLE = 4;
 	v_KD_TREE_EMTPY_BONUS = 0.9;
