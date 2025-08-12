@@ -6,7 +6,7 @@
 //#include <vector_types.h>
 #include <cstring>
 
-#define ALPHA_MIN 0.005f
+#define ALPHA_MIN 0.01f
 #define KERNEL_DEGREE 2.0f
 
 #define SUPER_SAMPLING false
@@ -27,7 +27,7 @@
 #define KDTREE_PATH "../../Data/ply/lego/lego_tree.kdt"
 #define IGEOM_PATH "../../Data/ply/lego/lego_igeom.bin"
 #elif SCENE_NUM == 3
-#define MODEL_PATH "../../Data/ply/bonsai/bonsai_3dgrt.ply"
+#define MODEL_PATH "../../Data/ply/bonsai/bonsai.ply"
 #define KDTREE_PATH "../../Data/ply/bonsai/bonsai_tree.kdt"
 #define IGEOM_PATH "../../Data/ply/bonsai/bonsai_igeom.bin"
 #elif SCENE_NUM == 4
@@ -35,7 +35,7 @@
 #define KDTREE_PATH "../../Data/ply/chair/chair_tree.kdt"
 #define IGEOM_PATH "../../Data/ply/chair/chair_igeom.bin"
 #elif SCENE_NUM == 5
-#define MODEL_PATH "../../Data/ply/flowers/flowers_3dgrt.ply"
+#define MODEL_PATH "../../Data/ply/flowers/flowers.ply"
 #define KDTREE_PATH "../../Data/ply/flowers/flowers_tree.kdt"
 #define IGEOM_PATH "../../Data/ply/flowers/flowers_igeom.bin"
 #endif
@@ -47,8 +47,9 @@ struct float3x3 {
 #define icosaHedronNumVrt 12
 #define icosaHedronNumTri 20
 
-const float goldenRatio = 1.618033988749895;
-const float icosaEdge = 1.323169076499215;
+const float goldenRatio = 1.618033988749895f;
+//const float icosaEdge = 1.323169076499215f;
+const float unitspherefactor = 0.5257311121191335703f;
 
 const float ICO_VERTICES[icosaHedronNumVrt][3] = {
 	{-1, goldenRatio, 0}, {1, goldenRatio, 0}, {0, 1, -goldenRatio},

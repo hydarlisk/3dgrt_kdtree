@@ -21,7 +21,7 @@ static const unsigned int modulo[] = { 0,1,2,0,1 };
 
 // From macros to variables to be able to modify through the configuration file
 float v_KD_TREE_TRAVL_COST = 1.0;
-float v_KD_TREE_ISECT_COST = 1.5;
+float v_KD_TREE_ISECT_COST = 1.0;
 unsigned int v_KD_TREE_MAX_LEVEL = 100;
 unsigned int v_KD_TREE_MIN_TRIANGLE = 4;
 float v_KD_TREE_EMTPY_BONUS = 0.9;

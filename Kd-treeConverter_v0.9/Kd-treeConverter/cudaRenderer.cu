@@ -509,6 +509,7 @@ struct HitRecord {
 };
 
 __device__ void sortHits(HitRecord* hits, int count) {
+    //printf("count: %d\n", count);
     for (int i = 1; i < count; i++) {
         HitRecord key = hits[i];
         int j = i - 1;
@@ -616,11 +617,54 @@ __device__ void singlePassIntersectGaussian(cuRay& currRay, cuIntersectionCheck&
     }
 }
 
+__device__ __forceinline__ float3 eval_sh_final(
+    const int degree,
+    const float3& view_dir,
+    const Gaussian& g
+) {
+    // 0차 SH: 기본 색상
+    const float SH_C0 = 0.2820947917f;
+    float3 result = make_float3(g.f_dc[0], g.f_dc[1], g.f_dc[2]);
+
+    if (degree > 0) {
+        // 1차 SH
+        const float SH_C1 = 0.4886025119f;
+        float x = view_dir.x, y = view_dir.y, z = view_dir.z;
+        result.x += SH_C1 * (-y * g.f_rest[0 * 3 + 0] + z * g.f_rest[1 * 3 + 0] - x * g.f_rest[2 * 3 + 0]);
+        result.y += SH_C1 * (-y * g.f_rest[0 * 3 + 1] + z * g.f_rest[1 * 3 + 1] - x * g.f_rest[2 * 3 + 1]);
+        result.z += SH_C1 * (-y * g.f_rest[0 * 3 + 2] + z * g.f_rest[1 * 3 + 2] - x * g.f_rest[2 * 3 + 2]);
+
+        if (degree > 1) {
+            // 2차 SH
+            const float SH_C2_0 = 1.0925484306f, SH_C2_1 = -1.0925484306f, SH_C2_2 = 0.3153915652f, SH_C2_3 = -1.0925484306f, SH_C2_4 = 0.5462742153f;
+            float xx = x * x, yy = y * y, zz = z * z;
+            float xy = x * y, yz = y * z, xz = x * z;
+            result.x += SH_C2_0 * xy * g.f_rest[3 * 3 + 0] + SH_C2_1 * yz * g.f_rest[4 * 3 + 0] + SH_C2_2 * (2.f * zz - xx - yy) * g.f_rest[5 * 3 + 0] + SH_C2_3 * xz * g.f_rest[6 * 3 + 0] + SH_C2_4 * (xx - yy) * g.f_rest[7 * 3 + 0];
+            result.y += SH_C2_0 * xy * g.f_rest[3 * 3 + 1] + SH_C2_1 * yz * g.f_rest[4 * 3 + 1] + SH_C2_2 * (2.f * zz - xx - yy) * g.f_rest[5 * 3 + 1] + SH_C2_3 * xz * g.f_rest[6 * 3 + 1] + SH_C2_4 * (xx - yy) * g.f_rest[7 * 3 + 1];
+            result.z += SH_C2_0 * xy * g.f_rest[3 * 3 + 2] + SH_C2_1 * yz * g.f_rest[4 * 3 + 2] + SH_C2_2 * (2.f * zz - xx - yy) * g.f_rest[5 * 3 + 2] + SH_C2_3 * xz * g.f_rest[6 * 3 + 2] + SH_C2_4 * (xx - yy) * g.f_rest[7 * 3 + 2];
+
+            if (degree > 2) {
+                // 3차 SH
+                const float SH_C3_0 = -0.5900435899f, SH_C3_1 = 2.8906114426f, SH_C3_2 = -0.4570457996f, SH_C3_3 = 0.3731763326f, SH_C3_4 = -0.4570457996f, SH_C3_5 = 1.4453057213f, SH_C3_6 = -0.5900435899f;
+                result.x += SH_C3_0 * y * (3 * xx - yy) * g.f_rest[8 * 3 + 0] + SH_C3_1 * xy * z * g.f_rest[9 * 3 + 0] + SH_C3_2 * y * (4 * zz - xx - yy) * g.f_rest[10 * 3 + 0] + SH_C3_3 * z * (2 * zz - 3 * xx - 3 * yy) * g.f_rest[11 * 3 + 0] + SH_C3_4 * x * (4 * zz - xx - yy) * g.f_rest[12 * 3 + 0] + SH_C3_5 * z * (xx - yy) * g.f_rest[13 * 3 + 0] + SH_C3_6 * x * (xx - 3 * yy) * g.f_rest[14 * 3 + 0];
+                result.y += SH_C3_0 * y * (3 * xx - yy) * g.f_rest[8 * 3 + 1] + SH_C3_1 * xy * z * g.f_rest[9 * 3 + 1] + SH_C3_2 * y * (4 * zz - xx - yy) * g.f_rest[10 * 3 + 1] + SH_C3_3 * z * (2 * zz - 3 * xx - 3 * yy) * g.f_rest[11 * 3 + 1] + SH_C3_4 * x * (4 * zz - xx - yy) * g.f_rest[12 * 3 + 1] + SH_C3_5 * z * (xx - yy) * g.f_rest[13 * 3 + 1] + SH_C3_6 * x * (xx - 3 * yy) * g.f_rest[14 * 3 + 1];
+                result.z += SH_C3_0 * y * (3 * xx - yy) * g.f_rest[8 * 3 + 2] + SH_C3_1 * xy * z * g.f_rest[9 * 3 + 2] + SH_C3_2 * y * (4 * zz - xx - yy) * g.f_rest[10 * 3 + 2] + SH_C3_3 * z * (2 * zz - 3 * xx - 3 * yy) * g.f_rest[11 * 3 + 2] + SH_C3_4 * x * (4 * zz - xx - yy) * g.f_rest[12 * 3 + 2] + SH_C3_5 * z * (xx - yy) * g.f_rest[13 * 3 + 2] + SH_C3_6 * x * (xx - 3 * yy) * g.f_rest[14 * 3 + 2];
+            }
+        }
+    }
+    // 원본 3dgrut과 동일하게, 최종적으로 0.5를 더해 [0,1] 범위로 이동
+    result.x = result.x * SH_C0 + 0.5f;
+    result.y = result.y * SH_C0 + 0.5f;
+    result.z = result.z * SH_C0 + 0.5f;
+    return result;
+}
+
 __global__ void renderKernelGaussian(float* pFrameBuffer) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
     if (x >= g_SceneInfo.resX || y >= g_SceneInfo.resY) return;
 
+    float sx = (float)x + 0.5f, sy = (float)y + 0.5f;
 #if SUPER_SAMPLING
 const int samples_per_pixel = 16; // 픽셀당 샘플 수 (4, 9, 16 등 제곱수 사용)
 float3 final_color = make_float3(0.0f, 0.0f, 0.0f);
@@ -634,11 +678,10 @@ for (int s = 0; s < samples_per_pixel; ++s) {
     float u_offset = curand_uniform(&rand_state);
     float v_offset = curand_uniform(&rand_state);
 
-    float sx = (float)x + u_offset;
-    float sy = (float)y + v_offset;
+    sx = (float)x + u_offset;
+    sy = (float)y + v_offset;
 #endif
 
-    float sx = (float)x + 0.5f, sy = (float)y + 0.5f;
     float3 dir = g_CameraInfo.startPoint + g_CameraInfo.u * sx * g_CameraInfo.stepX - g_CameraInfo.v * sy * g_CameraInfo.stepY;
 
     cuRay ray = { g_CameraInfo.eye, normalize(dir - g_CameraInfo.eye) };
@@ -672,17 +715,25 @@ for (int s = 0; s < samples_per_pixel; ++s) {
         Gaussian g = g_d_gaussians[gaussianID];
 
         float sample_opacity = 1.0f / (1.0f + expf(-g.opacity)); // Sigmoid
-        float3 sample_color = make_float3(
-            0.5f + 0.5f * g.f_dc[0], // SH DC 계수는 -0.5~0.5 범위일 수 있으므로 0~1로 변환
-            0.5f + 0.5f * g.f_dc[1],
-            0.5f + 0.5f * g.f_dc[2]
-        );
+        //float3 dir = normalize(ray.pos - make_float3(g.pos[0], g.pos[1], g.pos[2]));
+        //float3 sample_color = make_float3(
+        //    0.5f + 0.5f * g.f_dc[0], // SH DC 계수는 -0.5~0.5 범위일 수 있으므로 0~1로 변환
+        //    0.5f + 0.5f * g.f_dc[1],
+        //    0.5f + 0.5f * g.f_dc[2]
+        //);
+        float3 dir = normalize(make_float3(g.pos[0], g.pos[1], g.pos[2]) - ray.pos);
+        float3 sample_color = eval_sh_final(3, dir, g);
 
         accumulated_color += sample_color * sample_opacity * (1.0f - accumulated_opacity);
         accumulated_opacity += sample_opacity * (1.0f - accumulated_opacity);
 
-        if (accumulated_opacity > 0.9f) break;
+        if (accumulated_opacity > 0.97f) {
+            //printf("hitCount %d | ao: %f\n", hit.hitCount, accumulated_opacity);
+            break;
+        }
     }
+    //if(accumulated_opacity<0.95f)
+    //printf("hitCount %d | ao: %f\n", hit.hitCount, accumulated_opacity);
 
     // 5. 최종 색상 계산 및 프레임버퍼에 쓰기
     //float3 background_color = make_float3(0.2f, 0.3f, 0.4f);
@@ -693,12 +744,8 @@ for (int s = 0; s < samples_per_pixel; ++s) {
 // 모든 샘플의 색상 값을 평균냅니다.
 final_color /= samples_per_pixel;
 #endif
-    float3 final_color = accumulated_color + background_color * (1.0f - accumulated_opacity);
-
-    // 선형 공간(Linear Space)의 색상을 감마 공간(Gamma Space)으로 변환
-    final_color.x = powf(final_color.x, 1.0f / 2.2f);
-    final_color.y = powf(final_color.y, 1.0f / 2.2f);
-    final_color.z = powf(final_color.z, 1.0f / 2.2f);
+    //float3 final_color = accumulated_color + background_color * (1.0f - accumulated_opacity);
+    float3 final_color = accumulated_color / accumulated_opacity;
 
     int idx = 3 * ((g_SceneInfo.resY - y - 1) * g_SceneInfo.resX + x);
     pFrameBuffer[idx + 0] = final_color.x;
@@ -713,6 +760,11 @@ void renderGaussianWithCuda(const CompositeObject& object, const std::vector<Gau
     //printf("numgpu:%d\n", num_gpus);
     //cudaSetDevice(0);
     //std::cout << "--- Minimal CUDA Renderer Started ---" << std::endl;
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
 
     KdTree* kdTree = object.kd_tree;
     if (!kdTree || object.n_triangles == 0) {
@@ -824,15 +876,6 @@ void renderGaussianWithCuda(const CompositeObject& object, const std::vector<Gau
 
     CUDA_CHECK(cudaMemcpyToSymbol(g_d_gaussians, &d_gaussians_ptr, sizeof(Gaussian*)));
 
-    //cuObjectMaterial h_material;
-    //h_material.ambient_emission = make_float3(0.1f, 0.1f, 0.1f);
-    //h_material.diffuse = make_float3(0.8f, 0.7f, 0.6f);
-    //h_material.specular = make_float3(0.2f, 0.2f, 0.2f);
-    //h_material.reflection = 0.05f;
-    //h_material.transparency = 0.0f;
-    //h_material.roughness = 32.0f;
-    //h_material.refractionIndex = 1.0f;
-    //CUDA_CHECK(cudaMemcpyToSymbol(g_materials, &h_material, sizeof(cuObjectMaterial)));
     err = cudaGetLastError();
     if (err != cudaSuccess) {
         std::cerr << "[CUDA Error] const memory set failed: " << cudaGetErrorString(err) << std::endl;
@@ -849,7 +892,6 @@ void renderGaussianWithCuda(const CompositeObject& object, const std::vector<Gau
     dim3 blocks((width + threads.x - 1) / threads.x, (height + threads.y - 1) / threads.y);
     size_t shared_mem_size = threads.x * threads.y * SHORT_STACK_DEPTH * sizeof(cu_traceState);
 
-    //singlePassRayTracingKernel_ShadowOff <<< blocks, threads, shared_mem_size >>> (d_framebuffer, 3);
     renderKernelGaussian << < blocks, threads, shared_mem_size >> > (d_framebuffer);
     CUDA_CHECK(cudaGetLastError());        // launch 실패 확인
     CUDA_CHECK(cudaDeviceSynchronize()); // 실행 중 오류 확인
@@ -880,6 +922,17 @@ void renderGaussianWithCuda(const CompositeObject& object, const std::vector<Gau
     cudaUnbindTexture(inObjectOffsetListTex);
     cudaUnbindTexture(inTriAccelTex);
     //printf("6. free done\n");
+    //for fps check
+    cudaEventRecord(stop);
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+    float frame_time_sec = milliseconds / 1000.0f;
+    float current_fps = 1.0f / frame_time_sec;
+    printf("Frame Time: %.2f ms, FPS: %.2f\n", milliseconds, current_fps);
+    // g_fps = current_fps; // 직접 접근은 불가, Host 함수에서 처리
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
+
     err = cudaGetLastError();
     if (err != cudaSuccess) {
         std::cerr << "[CUDA Error] free failed: " << cudaGetErrorString(err) << std::endl;

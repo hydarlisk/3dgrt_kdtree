@@ -51,15 +51,36 @@ bool g_cuda_rendering_done = false;
 bool g_cuda_interactive_mode = false; // CUDA 인터랙티브 모드 활성화 플래그
 bool g_camera_dirty = true;           // 카메라가 변경되었는지 확인하는 플래그
 std::vector<Gaussian> g_gaussians; // 전역 변수로 가우시안 데이터를 저장할 벡터 선언
-#include <sys/stat.h>
+float g_fps = 0.0f; // FPS를 저장할 전역 변수
 
-void check_ply_file_size(const char* filename) {
-	struct stat st;
-	if (stat(filename, &st) != 0) {
-		printf("Failed to stat file\n");
-		return;
+// FPS를 화면 좌측 상단에 그리는 함수
+void draw_fps() {
+	glDisable(GL_LIGHTING);
+	glMatrixMode(GL_PROJECTION);
+	glPushMatrix();
+	glLoadIdentity();
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	glLoadIdentity();
+
+	// 텍스트 색상 설정
+	glColor3f(1.0f, 1.0f, 0.0f); // 노란색
+
+	// 텍스트 위치 설정 (좌측 상단)
+	glRasterPos2f(-0.98f, 0.95f);
+
+	char fps_string[32];
+	sprintf(fps_string, "FPS: %.2f", g_fps);
+
+	for (char* c = fps_string; *c != '\0'; c++) {
+		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, *c);
 	}
-	printf("Actual file size: %lld bytes\n", (long long)st.st_size);
+
+	glMatrixMode(GL_PROJECTION);
+	glPopMatrix();
+	glMatrixMode(GL_MODELVIEW);
+	glPopMatrix();
+	glEnable(GL_LIGHTING);
 }
 
 //shyun end
@@ -99,6 +120,7 @@ void display(void) {
 		glRasterPos2f(-1.0f, -1.0f);
 		glDrawPixels(g_render_width, g_render_height, GL_RGB, GL_FLOAT, g_render_framebuffer);
 
+		draw_fps(); // FPS
 		glEnable(GL_DEPTH_TEST);
 		glutSwapBuffers();
 		return; // CUDA 결과를 그렸으므로 나머지 OpenGL 렌더링은 건너뜁니다.
@@ -369,17 +391,6 @@ typedef enum _SL_KDT_CONFIG_command_ID {
 } SL_KDT_CONFIG_command_ID;
 
 //shyun
-inline void fMyVecNormalize4D(float v[4]) {
-	float len_sq = v[0] * v[0] + v[1] * v[1] + v[2] * v[2] + v[3] * v[3];
-	if (len_sq > 0.00001f) { // 0으로 나누는 것을 방지
-		float len_inv = 1.0f / sqrtf(len_sq);
-		v[0] *= len_inv;
-		v[1] *= len_inv;
-		v[2] *= len_inv;
-		v[3] *= len_inv;
-	}
-}
-
 bool loadGaussiansFromPly(const char* filename, std::vector<Gaussian>& gaussians) {
 	std::ifstream file(filename, std::ios::binary);
 	if (!file.is_open()) {
@@ -427,6 +438,7 @@ bool loadGaussiansFromPly(const char* filename, std::vector<Gaussian>& gaussians
 		Gaussian g;
 		memcpy(g.pos, pv.pos, sizeof(float) * 3);
 		memcpy(g.f_dc, pv.f_dc, sizeof(float) * 3);
+		memcpy(g.f_rest, pv.f_rest, sizeof(float) * 45);
 		g.opacity = pv.opacity;
 		memcpy(g.scale, pv.scale, sizeof(float) * 3);
 		//printf("%f, %f, %f\n", g.scale[0], g.scale[1], g.scale[2]);
@@ -436,6 +448,17 @@ bool loadGaussiansFromPly(const char* filename, std::vector<Gaussian>& gaussians
 
 	fprintf(stderr, "Loaded %zu gaussians.\n", gaussians.size());
 	return true;
+}
+
+inline void fMyVecNormalize4D(float v[4]) {
+	float len_sq = v[0] * v[0] + v[1] * v[1] + v[2] * v[2] + v[3] * v[3];
+	if (len_sq > 0.00001f) { // 0으로 나누는 것을 방지
+		float len_inv = 1.0f / sqrtf(len_sq);
+		v[0] *= len_inv;
+		v[1] *= len_inv;
+		v[2] *= len_inv;
+		v[3] *= len_inv;
+	}
 }
 
 void transform_vector_by_matrix_transpose(const float v[3], const float3x3& rot, float result[3]) {
@@ -452,7 +475,7 @@ void quaternionToMatrixTranspose(const float q[4], float3x3& rot) {
 	float wx = w * x, wy = w * y, wz = w * z;
 
 	rot.m[0][0] = 1.0f - 2.0f * (yy + zz); rot.m[1][0] = 2.0f * (xy - wz); rot.m[2][0] = 2.0f * (xz + wy);
-	rot.m[0][1] = 2.0f * (xy + wz); rot.m[1][1] = 1.0f - 2.0f * (xx + zz); rot.m[2][1] = 2.0f * (yz - wx);
+	rot.m[0][1] = 2.0f * (xy + wz);	rot.m[1][1] = 1.0f - 2.0f * (xx + zz); rot.m[2][1] = 2.0f * (yz - wx);
 	rot.m[0][2] = 2.0f * (xz - wy); rot.m[1][2] = 2.0f * (yz + wx); rot.m[2][2] = 1.0f - 2.0f * (xx + yy);
 }
 
@@ -505,30 +528,12 @@ void create_composite_object_from_gaussians(
 		return;
 	}
 
-	//// 유효한(filtered) 가우시안만 임시 저장할 벡터
-	//std::vector<Gaussian> filtered_gaussians;
-	//filtered_gaussians.reserve(gaussians.size());
-	//std::vector<long> original_indices; // 유효한 가우시안의 원본 인덱스 저장
-
-	//for (long i = 0; i < gaussians.size(); ++i) {
-	//	const Gaussian& g = gaussians[i];
-	//	const float density = 1.0f / (1.0f + expf(-g.opacity));
-	//	float k_iso = kernelScale_final(density, alpha_min, kernel_degree);
-
-	//	// ★★★ 핵심 수정: 스케일 값이 유효한지 확인 ★★★
-	//	// k_iso가 0보다 크고 유효한 숫자인 경우에만 해당 가우시안을 처리 목록에 추가
-	//	if (k_iso > 1e-6f && std::isfinite(k_iso)) {
-	//		filtered_gaussians.push_back(g);
-	//		original_indices.push_back(i); // material_ID를 위해 원본 인덱스 저장
-	//	}
-	//}
-
 	if (uip.poly_model.extended_vertices != nullptr) {
 		free(uip.poly_model.extended_vertices);
 		uip.poly_model.extended_vertices = nullptr;
 	}
 
-	// 1. 메모리 할당
+	// 메모리 할당
 	long num_gaussians = gaussians.size();
 	long num_total_triangles = num_gaussians * icosaHedronNumTri;
 	long num_total_vertices = num_total_triangles * 3;
@@ -541,13 +546,13 @@ void create_composite_object_from_gaussians(
 	}
 	ExtendedVertex* current_vertex_ptr = uip.poly_model.extended_vertices;
 
-	// 2. AABB 초기화
+	// AABB 초기화
 	uip.poly_model.AABB[XMIN] = uip.poly_model.AABB[YMIN] = uip.poly_model.AABB[ZMIN] = FLT_MAX;
 	uip.poly_model.AABB[XMAX] = uip.poly_model.AABB[YMAX] = uip.poly_model.AABB[ZMAX] = -FLT_MAX;
 
-	const float ICOSA_VRT_SCALE = 0.5f * icosaEdge;
-
-	// 3. 메인 루프: 모든 가우시안에 대해 20면체 생성
+	//const float ICOSA_VRT_SCALE = 0.5f * icosaEdge;
+	int cnt = 0;
+	// 모든 가우시안에 대해 20면체 생성
 	for (long i = 0; i < num_gaussians; ++i) {
 		const Gaussian& g = gaussians[i];
 
@@ -560,18 +565,25 @@ void create_composite_object_from_gaussians(
 
 		//sigma(density) 계산
 		const float sigma = 1.0f / (1.0f + expf(-g.opacity));
-		//float k_iso = 0.0f;
-		//if (sigma / alpha_min > 1.0f) {
-		//	k_iso = sqrtf(2.0f * logf(sigma / alpha_min));
-		//}
+		float k_iso = 0.0f;
+		if (sigma / alpha_min > 1.0f) {
+			k_iso = sqrtf(2.0f * logf(sigma / alpha_min));
+		}
+		//printf("%d, sigma: %f\n", i, sigma);
+		//printf("%d, k_iso: %f\n", i, k_iso);
 		// kernelScale_final 함수를 호출하여 k_iso 계산
-		float k_iso = kernelScale_final(sigma, alpha_min, kernel_degree);
+		//float k_iso = kernelScale_final(sigma, alpha_min, kernel_degree);
 
 		float final_scale[3] = {
-			expf(g.scale[0]) * k_iso * ICOSA_VRT_SCALE,
-			expf(g.scale[1]) * k_iso * ICOSA_VRT_SCALE,
-			expf(g.scale[2]) * k_iso * ICOSA_VRT_SCALE
+			expf(g.scale[0]) * k_iso * unitspherefactor,// *ICOSA_VRT_SCALE,
+			expf(g.scale[1]) * k_iso * unitspherefactor,// * ICOSA_VRT_SCALE,
+			expf(g.scale[2]) * k_iso * unitspherefactor// * ICOSA_VRT_SCALE
 		};
+		//printf("scale : %e %e %e\n", final_scale[0], final_scale[1], final_scale[2]);
+		if (final_scale[0] < 0.000001 && final_scale[1] < 0.000001 && final_scale[2] < 0.000001) {
+			cnt++;
+			continue;
+		}
 
 		// 아이코사헤드론의 20개 면(삼각형)을 생성
 		for (int j = 0; j < 20; ++j) {
@@ -585,10 +597,7 @@ void create_composite_object_from_gaussians(
 				// 스케일, 회전, 이동 변환 적용
 				float v_scaled[3], v_rotated[3], v_final[3];
 
-				// 1. 스케일 적용 (비등방성 S * 등방성 k)
-				//v_scaled[0] = v_cano[0] * expf(g.scale[0]) * k;
-				//v_scaled[1] = v_cano[1] * expf(g.scale[1]) * k;
-				//v_scaled[2] = v_cano[2] * expf(g.scale[2]) * k;
+				// 스케일 적용 (비등방성 S * 등방성 k)
 				v_scaled[0] = v_cano[0] * final_scale[0];
 				v_scaled[1] = v_cano[1] * final_scale[1];
 				v_scaled[2] = v_cano[2] * final_scale[2];
@@ -604,13 +613,13 @@ void create_composite_object_from_gaussians(
 				v_final[2] = v_rotated[2] + g.pos[2];
 				//printf("%f, %f, %f\n", g.pos[0], g.pos[1], g.pos[2]);
 
-				// 5. ExtendedVertex 데이터 채우기
+				// ExtendedVertex 데이터 채우기
 				memcpy(current_vertex_ptr->vertex, v_final, sizeof(float) * 3);
 				current_vertex_ptr->material_ID = i; // 가우시안 인덱스를 저장
 				// 노멀은 일단 0으로 초기화 (필요 시 계산 가능)
 				memset(current_vertex_ptr->normal, 0, sizeof(float) * 3);
 
-				// 6. AABB 업데이트
+				// AABB 업데이트
 				uip.poly_model.AABB[XMIN] = fminf(uip.poly_model.AABB[XMIN], v_final[0]);
 				uip.poly_model.AABB[XMAX] = fmaxf(uip.poly_model.AABB[XMAX], v_final[0]);
 				uip.poly_model.AABB[YMIN] = fminf(uip.poly_model.AABB[YMIN], v_final[1]);
@@ -622,8 +631,8 @@ void create_composite_object_from_gaussians(
 			}
 		}
 	}
-
-	// 7. 최종 삼각형 개수 설정
+	printf("cnt %d\n", cnt);
+	// 최종 삼각형 개수 설정
 	uip.poly_model.n_triangles = num_total_triangles;
 	uip.composite_object_read = 1;
 	printf("Successfully created CompositeObject with %d triangles from %ld Gaussians.\n", uip.poly_model.n_triangles, num_gaussians);
@@ -849,7 +858,7 @@ bool save_composite_object_to_obj(const CompositeObject& object, const char* fil
 		outFile << "v " << v.vertex[0] << " " << v.vertex[1] << " " << v.vertex[2] << "\n";
 
 		// 정점 법선 (vn x y z)
-		outFile << "vn " << v.normal[0] << " " << v.normal[1] << " " << v.normal[2] << "\n";
+		//outFile << "vn " << v.normal[0] << " " << v.normal[1] << " " << v.normal[2] << "\n";
 	}
 
 	outFile << "\n"; // 데이터 섹션 구분을 위한 공백 라인
@@ -864,9 +873,10 @@ bool save_composite_object_to_obj(const CompositeObject& object, const char* fil
 
 		// 면 정보 (f v1//vn1 v2//vn2 v3//vn3)
 		// 각 정점과 법선이 1:1로 매칭되므로, 정점 인덱스와 법선 인덱스는 같습니다.
-		outFile << "f " << v1_idx << "//" << v1_idx << " "
-			<< v2_idx << "//" << v2_idx << " "
-			<< v3_idx << "//" << v3_idx << "\n";
+		//outFile << "f " << v1_idx << "//" << v1_idx << " "
+		//	<< v2_idx << "//" << v2_idx << " "
+		//	<< v3_idx << "//" << v3_idx << "\n";
+		outFile << "f " << v1_idx << " " << v2_idx << " " << v3_idx << "\n";
 	}
 
 	// 5. 파일 닫기 및 완료 메시지
@@ -1157,6 +1167,7 @@ void main_menu_action(int selection) {
 		ply_file_path = MODEL_PATH;
 		ply_kdtree_path = KDTREE_PATH;
 		ply_igeom_path = IGEOM_PATH;
+		ply_to_obj = "../../Data/obj/hotdog_3dgrt_new.obj";
 
 		uip.composite_object_read = 1;
 
@@ -1229,6 +1240,11 @@ void main_menu_action(int selection) {
 		//cudaRenderer.h
 		//renderWithCuda(const CompositeObject & object, const Camera & camera, int width, int height, float*& out_framebuffer, bool& is_done)
 
+		cudaEvent_t start, stop;
+		cudaEventCreate(&start);
+		cudaEventCreate(&stop);
+
+		cudaEventRecord(start); // 시작 기록
 #if SCENE_NUM < 1
 		renderObjWithCuda(
 			uip.poly_model,
@@ -1249,6 +1265,16 @@ void main_menu_action(int selection) {
 			g_cuda_rendering_done
 		);
 #endif
+		cudaEventRecord(stop); // 종료 기록
+		cudaEventSynchronize(stop); // GPU 작업 완료까지 대기
+
+		float milliseconds = 0;
+		cudaEventElapsedTime(&milliseconds, start, stop);
+		g_fps = 1000.0f / milliseconds; // 전역 변수에 FPS 저장
+
+		cudaEventDestroy(start);
+		cudaEventDestroy(stop);
+
 		if (g_cuda_rendering_done) {
 			printf("CUDA rendering complete. Refreshing display...\n");
 			glutPostRedisplay();
@@ -1298,6 +1324,12 @@ void subMenuHandler(int value) {
 			ply_igeom_path = "../../Data/ply/hotdog/hotdog_igeom.bin";
 			ply_to_obj = "../../Data/ply/hotdog/hotdog_3dgrt_new.obj";
 			break;
+		case 1012: printf("Hotdog2 selected\n");
+			ply_file_path = "../../Data/ply/hotdog2/hotdog_3dgrt2.ply";
+			ply_kdtree_path = "../../Data/ply/hotdog2/hotdog2_tree.kdt";
+			ply_igeom_path = "../../Data/ply/hotdog2/hotdog2_igeom.bin";
+			ply_to_obj = "../../Data/ply/hotdog2/hotdog_3dgrt2_new.obj";
+			break;
 		case 102: printf("Lego selected\n");
 			ply_file_path = "../../Data/ply/lego/lego_3dgrt.ply";
 			ply_kdtree_path = "../../Data/ply/lego/lego_tree.kdt";
@@ -1305,10 +1337,10 @@ void subMenuHandler(int value) {
 			ply_to_obj = "../../Data/ply/lego/lego_3dgrt_new.obj";
 			break;
 		case 103: printf("Bonsai selected\n");
-			ply_file_path = "../../Data/ply/bonsai/bonsai_3dgrt.ply";
+			ply_file_path = "../../Data/ply/bonsai/bonsai.ply";
 			ply_kdtree_path = "../../Data/ply/bonsai/bonsai_tree.kdt";
 			ply_igeom_path = "../../Data/ply/bonsai/bonsai_igeom.bin";
-			ply_to_obj = "../../Data/ply/bonsai/bonsai_3dgrt_new.obj";
+			ply_to_obj = "../../Data/ply/bonsai/bonsai_new.obj";
 			break;
 		case 104: printf("Chair selected\n");
 			ply_file_path = "../../Data/ply/chair/chair_3dgrt.ply";
@@ -1317,10 +1349,10 @@ void subMenuHandler(int value) {
 			ply_to_obj = "../../Data/ply/chair/chair_3dgrt_new.obj";
 			break;
 		case 105: printf("Flowers selected\n");
-			ply_file_path = "../../Data/ply/flowers/flowers_3dgrt.ply";
+			ply_file_path = "../../Data/ply/flowers/flowers.ply";
 			ply_kdtree_path = "../../Data/ply/flowers/flowers_tree.kdt";
 			ply_igeom_path = "../../Data/ply/flowers/flowers_igeom.bin";
-			ply_to_obj = "../../Data/ply/flowers/flowers_3dgrt_new.obj";
+			ply_to_obj = "../../Data/ply/flowers/flowers_new.obj";
 			break;
 	}
 	//printf("%s\n", ply_file_path);
@@ -1348,6 +1380,7 @@ void register_callbacks_and_create_menu(void) {
 
 	int submenu = glutCreateMenu(subMenuHandler);
 	glutAddMenuEntry("hotdog", 101);
+	glutAddMenuEntry("hotdog2", 1012);
 	glutAddMenuEntry("lego", 102);
 	glutAddMenuEntry("bonsai", 103);
 	glutAddMenuEntry("chair", 104);
@@ -1407,7 +1440,8 @@ void init_KDT_system(void) {
 	uip.composite_object_read = 0;
 
 	v_KD_TREE_TRAVL_COST = 1.0;
-	v_KD_TREE_ISECT_COST = 1.5;
+	//v_KD_TREE_ISECT_COST = 1.5;
+	v_KD_TREE_ISECT_COST = 2000.0;
 	v_KD_TREE_MAX_LEVEL = 100;
 	v_KD_TREE_MIN_TRIANGLE = 4;
 	v_KD_TREE_EMTPY_BONUS = 0.9;
@@ -1448,12 +1482,26 @@ void idle() {
 	if (g_cuda_interactive_mode && g_camera_dirty) {
 		g_camera_dirty = false; // 플래그 리셋
 
+		cudaEvent_t start, stop;
+		cudaEventCreate(&start);
+		cudaEventCreate(&stop);
+
+		cudaEventRecord(start); // 시작 기록
 		// CUDA 렌더링 실행 (기존 렌더링 함수 재사용)
 #if SCENE_NUM < 1
 		renderObjWithCuda(uip.poly_model, camera, g_render_width, g_render_height, g_render_framebuffer, g_cuda_rendering_done);
 #else
 		renderGaussianWithCuda(uip.poly_model, g_gaussians, camera, g_render_width, g_render_height, g_render_framebuffer, g_cuda_rendering_done);
 #endif
+		cudaEventRecord(stop); // 종료 기록
+		cudaEventSynchronize(stop); // GPU 작업 완료까지 대기
+
+		float milliseconds = 0;
+		cudaEventElapsedTime(&milliseconds, start, stop);
+		g_fps = 1000.0f / milliseconds; // 전역 변수에 FPS 저장
+
+		cudaEventDestroy(start);
+		cudaEventDestroy(stop);
 
 		glutPostRedisplay(); // 화면 갱신 요청
 	}

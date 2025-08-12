@@ -95,6 +95,7 @@ struct Gaussian {
 	float rot[4];       // 회전 쿼터니언 (qw, qx, qy, qz)
 	float opacity;      // 불투명도 (0.0 ~ 1.0)
 	float f_dc[3];      // 기본 색상 (R, G, B)
+	float f_rest[45];
 };
 //shyun end
 
