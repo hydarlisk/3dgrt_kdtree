@@ -63,6 +63,24 @@ const int ICO_FACES[icosaHedronNumTri][3] = {
 	{9, 3, 2}, {9, 2, 10}, {9, 10, 11},
 	{5, 4, 7}, {1, 10, 2} };
 
+
+#define SH_C0 0.28209479177387814f	// sqrt(1 / (4 * pi))
+#define SH_C1 0.4886025119029199f	// sqrt(3 / (4 * pi))
+
+#define SH_C2_0 1.0925484306f
+#define SH_C2_1 -1.0925484306f
+#define SH_C2_2 0.3153915652f
+#define SH_C2_3 -1.0925484306f
+#define SH_C2_4 0.5462742153f
+
+#define SH_C3_0 -0.5900435899f
+#define SH_C3_1 2.8906114426f
+#define SH_C3_2 -0.4570457996f
+#define SH_C3_3 0.3731763326f
+#define SH_C3_4 -0.4570457996f
+#define SH_C3_5 1.4453057213f
+#define SH_C3_6 -0.5900435899f
+
 inline float fminf(const float a, const float b) { return (b > a) ? a : b; }
 inline float fmaxf(const float a, const float b) { return (b < a) ? a : b; }
 inline float int_as_float_H(const int a) { return *(float*)&(a); }

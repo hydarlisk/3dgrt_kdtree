@@ -52,6 +52,8 @@ bool g_cuda_interactive_mode = false; // CUDA 인터랙티브 모드 활성화 �
 bool g_camera_dirty = true;           // 카메라가 변경되었는지 확인하는 플래그
 std::vector<Gaussian> g_gaussians; // 전역 변수로 가우시안 데이터를 저장할 벡터 선언
 float g_fps = 0.0f; // FPS를 저장할 전역 변수
+int frame_count = 0;
+float total_frame = 0.0f;
 
 // FPS를 화면 좌측 상단에 그리는 함수
 void draw_fps() {
@@ -1439,11 +1441,12 @@ void init_KDT_system(void) {
 	uip.right_button_pressed = 0;
 	uip.composite_object_read = 0;
 
-	v_KD_TREE_TRAVL_COST = 1.0;
+	v_KD_TREE_TRAVL_COST = TRAVL_COST;
 	//v_KD_TREE_ISECT_COST = 1.5;
 	v_KD_TREE_ISECT_COST = ISCET_COST;
 	v_KD_TREE_MAX_LEVEL = 100;
-	v_KD_TREE_MIN_TRIANGLE = 4;
+	//v_KD_TREE_MIN_TRIANGLE = 4;
+	v_KD_TREE_MIN_TRIANGLE = 2;
 	v_KD_TREE_EMTPY_BONUS = 0.9;
 }
 
@@ -1499,7 +1502,13 @@ void idle() {
 		float milliseconds = 0;
 		cudaEventElapsedTime(&milliseconds, start, stop);
 		g_fps = 1000.0f / milliseconds; // 전역 변수에 FPS 저장
-
+		total_frame += g_fps;
+		printf("avg FPS : %f\n", (float)(total_frame / frame_count));
+		if (++frame_count >= 100) {
+			printf("avg FPS : %f\n", (float)(total_frame / frame_count));
+			frame_count = 0;
+			total_frame = 0.0f;
+		}
 		cudaEventDestroy(start);
 		cudaEventDestroy(stop);
 

@@ -521,6 +521,34 @@ __device__ void sortHits(HitRecord* hits, int count) {
     }
 }
 
+__device__ void bitonicSort(HitRecord* hits, int N) {
+    int tid = threadIdx.x;
+
+    for (int k = 2; k <= N; k <<= 1) {
+        for (int j = k >> 1; j > 0; j >>= 1) {
+            int ixj = tid ^ j;
+            if (ixj > tid) {
+                HitRecord tmp = hits[tid];
+                if ((tid & k) == 0) {
+                    if (hits[tid].t > hits[ixj].t) {
+                        //HitRecord tmp = hits[tid];
+                        hits[tid] = hits[ixj];
+                        hits[ixj] = tmp;
+                    }
+                }
+                else {
+                    if (hits[tid].t < hits[ixj].t) {
+                        //HitRecord tmp = hits[tid];
+                        hits[tid] = hits[ixj];
+                        hits[ixj] = tmp;
+                    }
+                }
+            }
+            __syncthreads();
+        }
+    }
+}
+
 __device__ void singlePassIntersectRoutineGaussian(const cuRay& ray, int id, cuIntersectionCheck& hit, float t_near, float t_far, HitRecord* hits) {
     if (hit.hitCount >= MAX_HITS) return;
 
@@ -636,12 +664,15 @@ __device__ __forceinline__ float3 eval_sh_final(
     const Gaussian& g
 ) {
     // 0차 SH: 기본 색상
-    const float SH_C0 = 0.2820947917f;
+    //const float SH_C0 = 0.2820947917f;
     float3 result = make_float3(g.f_dc[0], g.f_dc[1], g.f_dc[2]);
+    //result.x = result.x * SH_C0;
+    //result.y = result.y * SH_C0;
+    //result.z = result.z * SH_C0;
 
     if (degree > 0) {
         // 1차 SH
-        const float SH_C1 = 0.4886025119f;
+        //const float SH_C1 = 0.4886025119f;
         float x = view_dir.x, y = view_dir.y, z = view_dir.z;
         result.x += SH_C1 * (-y * g.f_rest[0 * 3 + 0] + z * g.f_rest[1 * 3 + 0] - x * g.f_rest[2 * 3 + 0]);
         result.y += SH_C1 * (-y * g.f_rest[0 * 3 + 1] + z * g.f_rest[1 * 3 + 1] - x * g.f_rest[2 * 3 + 1]);
@@ -649,19 +680,49 @@ __device__ __forceinline__ float3 eval_sh_final(
 
         if (degree > 1) {
             // 2차 SH
-            const float SH_C2_0 = 1.0925484306f, SH_C2_1 = -1.0925484306f, SH_C2_2 = 0.3153915652f, SH_C2_3 = -1.0925484306f, SH_C2_4 = 0.5462742153f;
+            //const float SH_C2_0 = 1.0925484306f, SH_C2_1 = -1.0925484306f, SH_C2_2 = 0.3153915652f, SH_C2_3 = -1.0925484306f, SH_C2_4 = 0.5462742153f;
             float xx = x * x, yy = y * y, zz = z * z;
             float xy = x * y, yz = y * z, xz = x * z;
-            result.x += SH_C2_0 * xy * g.f_rest[3 * 3 + 0] + SH_C2_1 * yz * g.f_rest[4 * 3 + 0] + SH_C2_2 * (2.f * zz - xx - yy) * g.f_rest[5 * 3 + 0] + SH_C2_3 * xz * g.f_rest[6 * 3 + 0] + SH_C2_4 * (xx - yy) * g.f_rest[7 * 3 + 0];
-            result.y += SH_C2_0 * xy * g.f_rest[3 * 3 + 1] + SH_C2_1 * yz * g.f_rest[4 * 3 + 1] + SH_C2_2 * (2.f * zz - xx - yy) * g.f_rest[5 * 3 + 1] + SH_C2_3 * xz * g.f_rest[6 * 3 + 1] + SH_C2_4 * (xx - yy) * g.f_rest[7 * 3 + 1];
-            result.z += SH_C2_0 * xy * g.f_rest[3 * 3 + 2] + SH_C2_1 * yz * g.f_rest[4 * 3 + 2] + SH_C2_2 * (2.f * zz - xx - yy) * g.f_rest[5 * 3 + 2] + SH_C2_3 * xz * g.f_rest[6 * 3 + 2] + SH_C2_4 * (xx - yy) * g.f_rest[7 * 3 + 2];
+            result.x += SH_C2_0 * xy * g.f_rest[3 * 3 + 0]
+                + SH_C2_1 * yz * g.f_rest[4 * 3 + 0]
+                + SH_C2_2 * (2.f * zz - xx - yy) * g.f_rest[5 * 3 + 0]
+                + SH_C2_3 * xz * g.f_rest[6 * 3 + 0]
+                + SH_C2_4 * (xx - yy) * g.f_rest[7 * 3 + 0];
+            result.y += SH_C2_0 * xy * g.f_rest[3 * 3 + 1] 
+                + SH_C2_1 * yz * g.f_rest[4 * 3 + 1]
+                + SH_C2_2 * (2.f * zz - xx - yy) * g.f_rest[5 * 3 + 1]
+                + SH_C2_3 * xz * g.f_rest[6 * 3 + 1] 
+                + SH_C2_4 * (xx - yy) * g.f_rest[7 * 3 + 1];
+            result.z += SH_C2_0 * xy * g.f_rest[3 * 3 + 2] 
+                + SH_C2_1 * yz * g.f_rest[4 * 3 + 2]
+                + SH_C2_2 * (2.f * zz - xx - yy) * g.f_rest[5 * 3 + 2]
+                + SH_C2_3 * xz * g.f_rest[6 * 3 + 2] 
+                + SH_C2_4 * (xx - yy) * g.f_rest[7 * 3 + 2];
 
             if (degree > 2) {
                 // 3차 SH
-                const float SH_C3_0 = -0.5900435899f, SH_C3_1 = 2.8906114426f, SH_C3_2 = -0.4570457996f, SH_C3_3 = 0.3731763326f, SH_C3_4 = -0.4570457996f, SH_C3_5 = 1.4453057213f, SH_C3_6 = -0.5900435899f;
-                result.x += SH_C3_0 * y * (3 * xx - yy) * g.f_rest[8 * 3 + 0] + SH_C3_1 * xy * z * g.f_rest[9 * 3 + 0] + SH_C3_2 * y * (4 * zz - xx - yy) * g.f_rest[10 * 3 + 0] + SH_C3_3 * z * (2 * zz - 3 * xx - 3 * yy) * g.f_rest[11 * 3 + 0] + SH_C3_4 * x * (4 * zz - xx - yy) * g.f_rest[12 * 3 + 0] + SH_C3_5 * z * (xx - yy) * g.f_rest[13 * 3 + 0] + SH_C3_6 * x * (xx - 3 * yy) * g.f_rest[14 * 3 + 0];
-                result.y += SH_C3_0 * y * (3 * xx - yy) * g.f_rest[8 * 3 + 1] + SH_C3_1 * xy * z * g.f_rest[9 * 3 + 1] + SH_C3_2 * y * (4 * zz - xx - yy) * g.f_rest[10 * 3 + 1] + SH_C3_3 * z * (2 * zz - 3 * xx - 3 * yy) * g.f_rest[11 * 3 + 1] + SH_C3_4 * x * (4 * zz - xx - yy) * g.f_rest[12 * 3 + 1] + SH_C3_5 * z * (xx - yy) * g.f_rest[13 * 3 + 1] + SH_C3_6 * x * (xx - 3 * yy) * g.f_rest[14 * 3 + 1];
-                result.z += SH_C3_0 * y * (3 * xx - yy) * g.f_rest[8 * 3 + 2] + SH_C3_1 * xy * z * g.f_rest[9 * 3 + 2] + SH_C3_2 * y * (4 * zz - xx - yy) * g.f_rest[10 * 3 + 2] + SH_C3_3 * z * (2 * zz - 3 * xx - 3 * yy) * g.f_rest[11 * 3 + 2] + SH_C3_4 * x * (4 * zz - xx - yy) * g.f_rest[12 * 3 + 2] + SH_C3_5 * z * (xx - yy) * g.f_rest[13 * 3 + 2] + SH_C3_6 * x * (xx - 3 * yy) * g.f_rest[14 * 3 + 2];
+                //const float SH_C3_0 = -0.5900435899f, SH_C3_1 = 2.8906114426f, SH_C3_2 = -0.4570457996f, SH_C3_3 = 0.3731763326f, SH_C3_4 = -0.4570457996f, SH_C3_5 = 1.4453057213f, SH_C3_6 = -0.5900435899f;
+                result.x += SH_C3_0 * y * (3 * xx - yy) * g.f_rest[8 * 3 + 0]
+                    + SH_C3_1 * xy * z * g.f_rest[9 * 3 + 0]
+                    + SH_C3_2 * y * (4 * zz - xx - yy) * g.f_rest[10 * 3 + 0]
+                    + SH_C3_3 * z * (2 * zz - 3 * xx - 3 * yy) * g.f_rest[11 * 3 + 0]
+                    + SH_C3_4 * x * (4 * zz - xx - yy) * g.f_rest[12 * 3 + 0] 
+                    + SH_C3_5 * z * (xx - yy) * g.f_rest[13 * 3 + 0]
+                    + SH_C3_6 * x * (xx - 3 * yy) * g.f_rest[14 * 3 + 0];
+                result.y += SH_C3_0 * y * (3 * xx - yy) * g.f_rest[8 * 3 + 1]
+                    + SH_C3_1 * xy * z * g.f_rest[9 * 3 + 1] 
+                    + SH_C3_2 * y * (4 * zz - xx - yy) * g.f_rest[10 * 3 + 1] 
+                    + SH_C3_3 * z * (2 * zz - 3 * xx - 3 * yy) * g.f_rest[11 * 3 + 1]
+                    + SH_C3_4 * x * (4 * zz - xx - yy) * g.f_rest[12 * 3 + 1]
+                    + SH_C3_5 * z * (xx - yy) * g.f_rest[13 * 3 + 1] 
+                    + SH_C3_6 * x * (xx - 3 * yy) * g.f_rest[14 * 3 + 1];
+                result.z += SH_C3_0 * y * (3 * xx - yy) * g.f_rest[8 * 3 + 2] 
+                    + SH_C3_1 * xy * z * g.f_rest[9 * 3 + 2]
+                    + SH_C3_2 * y * (4 * zz - xx - yy) * g.f_rest[10 * 3 + 2] 
+                    + SH_C3_3 * z * (2 * zz - 3 * xx - 3 * yy) * g.f_rest[11 * 3 + 2] 
+                    + SH_C3_4 * x * (4 * zz - xx - yy) * g.f_rest[12 * 3 + 2] 
+                    + SH_C3_5 * z * (xx - yy) * g.f_rest[13 * 3 + 2]
+                    + SH_C3_6 * x * (xx - 3 * yy) * g.f_rest[14 * 3 + 2];
             }
         }
     }
@@ -669,11 +730,14 @@ __device__ __forceinline__ float3 eval_sh_final(
     result.x = result.x * SH_C0 + 0.5f;
     result.y = result.y * SH_C0 + 0.5f;
     result.z = result.z * SH_C0 + 0.5f;
+    //result.x += 0.5f;
+    //result.y += 0.5f;
+    //result.z += 0.5f;
     return result;
 }
 
 __global__ void renderKernelGaussian(float* pFrameBuffer
-    ,int* maxhit, int* hcount
+    //,int* maxhit, int* hcount
 ) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -767,11 +831,192 @@ final_color /= samples_per_pixel;
     pFrameBuffer[idx + 1] = final_color.y;
     pFrameBuffer[idx + 2] = final_color.z;
 
-    if (hit.hitCount > 0) {
-        //if(accumulated_opacity<0.95f) printf("hitCount %d | ao: %f\n", hit.hitCount, accumulated_opacity);
-        atomicAdd(maxhit, hit.hitCount);
-        atomicAdd(hcount, 1);
+    //if (hit.hitCount > 0) {
+    //    //if(accumulated_opacity<0.95f) printf("hitCount %d | ao: %f\n", hit.hitCount, accumulated_opacity);
+    //    atomicAdd(maxhit, hit.hitCount);
+    //    atomicAdd(hcount, 1);
+    //}
+}
+
+__device__ void singlePassIntersectRoutineGaussian1(const cuRay& ray, int id, float t_near, float t_far, HitRecord* local_hits, int& local_hit_count) {
+    if (local_hit_count >= MAX_HITS) return;
+
+    float4 d0 = tex1Dfetch(inTriAccelTex, id * 4 + 0);
+    unsigned int packed_flags = __float_as_uint(d0.w);
+    unsigned int k = packed_flags & 0x3;
+    float n_u = d0.x, n_v = d0.y, n_d = d0.z;
+
+    float3 p_pos = ray.pos, p_dir = ray.dir;
+    //CPU 투영 방식과 일치하오록 수정
+    if (k == 0) {       //YZ 평면에 투영: (y, z, x) 순서로 변경
+        p_pos = make_float3(ray.pos.y, ray.pos.z, ray.pos.x);
+        p_dir = make_float3(ray.dir.y, ray.dir.z, ray.dir.x);
     }
+    else if (k == 1) {  //ZX 평면에 투영: (z, x, y) 순서로 변경
+        p_pos = make_float3(ray.pos.z, ray.pos.x, ray.pos.y);
+        p_dir = make_float3(ray.dir.z, ray.dir.x, ray.dir.y);
+    }
+
+    float den = p_dir.z + n_u * p_dir.x + n_v * p_dir.y;
+    if (fabsf(den) < 1e-8f) return;
+    float t = (n_d - (p_pos.z + n_u * p_pos.x + n_v * p_pos.y)) / den;
+
+    //if (t >= hit.tHit || t <= t_near || t >= t_far) return;
+    if (t <= t_near || t >= t_far) return;
+
+    float4 d1 = tex1Dfetch(inTriAccelTex, id * 4 + 1);
+    float4 d2 = tex1Dfetch(inTriAccelTex, id * 4 + 2);
+
+    float u_coord = p_pos.x + t * p_dir.x;
+    float v_coord = p_pos.y + t * p_dir.y;
+
+    float beta = u_coord * d1.x + v_coord * d1.y + d1.z;
+    float gamma = u_coord * d2.x + v_coord * d2.y + d2.z;
+
+    if (beta >= -BARYCENTRY_EPSILON && gamma >= -BARYCENTRY_EPSILON && (beta + gamma) <= 1.0f + BARYCENTRY_EPSILON) {
+        float4 N_packed = tex1Dfetch(inTriAccelTex, id * 4 + 3);
+        float3 N = make_float3(N_packed.x, N_packed.y, N_packed.z);
+
+        // 법선 벡터와 광선 방향의 내적(dot product)을 계산
+        // 내적 값이 0보다 크면 광선이 삼각형의 뒷면
+        if (dot(N, ray.dir) > 0.0f) {
+            return; // 뒷면이므로 이 충돌을 무시
+        }
+
+        local_hits[local_hit_count].t = t;
+        local_hits[local_hit_count].triIndex = id;
+        local_hit_count++;
+    }
+}
+
+__device__ void singlePassIntersectGaussian1(
+    cuRay& currRay,
+    float3& accumulated_color,      // 수정: 누적 색상을 직접 업데이트
+    float& accumulated_opacity    // 수정: 누적 알파를 직접 업데이트
+) {
+    // 1. 광선의 유효 범위 설정
+    float t_near = RAY_START_EPSILON, t_far = FLT_MAX;
+    if (BoundsRayIntersect(g_SceneBBoxMin, g_SceneBBoxMax, currRay, t_near, t_far)) {
+
+        // 2. Kd-tree 순회를 위한 스택 초기화
+        shortStack stack;
+        stack.init(threadIdx.x + threadIdx.y * blockDim.x);
+        kdtreeNode node = tex1Dfetch(inKdTreeNodeTex, 0);
+
+        // 3. 메인 순회 루프
+        while (true) {
+            // ★ 조기 종료 최적화: 누적 알파값이 임계치를 넘으면 전체 순회를 중단
+            if (accumulated_opacity > 0.995f) {
+                break;
+            }
+
+            // 4. 현재 노드가 리프 노드인지 확인
+            if (IS_LEAF(node)) {
+                // --- 리프 노드 처리 로직 ---
+                unsigned int offset = OBJECTLIST_OFFSET(node);
+                unsigned int count = OBJECT_SIZE(node);
+
+                if (count > 0) {
+                    // 4-1. 수집: 이 리프 노드 내의 모든 충돌을 임시 로컬 배열에 저장
+                    HitRecord local_hits[MAX_HITS];
+                    int local_hit_count = 0;
+
+                    for (unsigned i = 0; i < count; ++i) {
+                        unsigned tri_idx = tex1Dfetch(inObjectOffsetListTex, offset + i);
+                        singlePassIntersectRoutineGaussian1(currRay, tri_idx, t_near, t_far, local_hits, local_hit_count);
+                    }
+
+                    if (local_hit_count > 0) {
+                        // 4-2. 정렬: 이 리프 노드 내의 충돌만 정렬
+                        sortHits(local_hits, local_hit_count);
+                        //bitonicSort(local_hits, local_hit_count);
+
+                        // 4-3. 블렌딩: 정렬된 순서대로 알파 블렌딩 수행
+                        for (int i = 0; i < local_hit_count; ++i) {
+                            float4 d2 = tex1Dfetch(inTriAccelTex, local_hits[i].triIndex * 4 + 2);
+                            int gaussianID = __float_as_int(d2.w);
+                            Gaussian g = g_d_gaussians[gaussianID];
+
+                            float sample_opacity = 1.0f / (1.0f + expf(-g.opacity));
+                            float3 view_dir = normalize(make_float3(g.pos[0], g.pos[1], g.pos[2]) - currRay.pos);
+                            float3 sample_color = eval_sh_final(3, view_dir, g);
+
+                            accumulated_color += sample_color * sample_opacity * (1.0f - accumulated_opacity);
+                            accumulated_opacity += sample_opacity * (1.0f - accumulated_opacity);
+
+                            // 블렌딩 중에도 조기 종료 조건을 계속 확인
+                            if (accumulated_opacity > 0.995f) break;
+                        }
+                    }
+                }
+
+                // --- 다음 노드로 진행 ---
+                if (stack.empty()) break; // 스택이 비었으면 전체 순회 종료
+
+                cu_traceState next = stack.top();
+                stack.pop();
+                t_near = t_far;
+                t_far = next.tMax;
+                node = tex1Dfetch(inKdTreeNodeTex, next.nodeID);
+
+            }
+            else {
+                // --- 내부 노드(Inner Node) 처리 로직 ---
+                unsigned axis = SPLIT_AXIS(node);
+                float split_pos = SPLIT_POS(node);
+                float dir_axis = ((float*)&(currRay.dir))[axis];
+                float pos_axis = ((float*)&(currRay.pos))[axis];
+
+                if (fabsf(dir_axis) < 1e-8f) { // 광선이 축과 평행한 경우
+                    node = tex1Dfetch(inKdTreeNodeTex, FIRST_CHILD_OFFSET(node) + 1);
+                    continue;
+                }
+
+                float t_split = (split_pos - pos_axis) / dir_axis;
+                unsigned near_child_idx = FIRST_CHILD_OFFSET(node) + (pos_axis < split_pos || (pos_axis == split_pos && dir_axis < 0) ? 0 : 1);
+                unsigned far_child_idx = FIRST_CHILD_OFFSET(node) + (pos_axis < split_pos || (pos_axis == split_pos && dir_axis < 0) ? 1 : 0);
+
+                if (t_split > t_far || t_split <= 0) {
+                    node = tex1Dfetch(inKdTreeNodeTex, near_child_idx);
+                }
+                else if (t_split < t_near) {
+                    node = tex1Dfetch(inKdTreeNodeTex, far_child_idx);
+                }
+                else {
+                    stack.push(far_child_idx, t_far);
+                    node = tex1Dfetch(inKdTreeNodeTex, near_child_idx);
+                    t_far = t_split;
+                }
+            }
+        } // while(true)
+    } // if (BoundsRayIntersect)
+}
+
+__global__ void renderKernelGaussian1(float* pFrameBuffer) {
+    int x = blockIdx.x * blockDim.x + threadIdx.x;
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
+    if (x >= g_SceneInfo.resX || y >= g_SceneInfo.resY) return;
+
+    // 1. 광선 생성
+    float sx = (float)x + 0.5f, sy = (float)y + 0.5f;
+    float3 dir = g_CameraInfo.startPoint + g_CameraInfo.u * sx * g_CameraInfo.stepX - g_CameraInfo.v * sy * g_CameraInfo.stepY;
+    cuRay ray = { g_CameraInfo.eye, normalize(dir - g_CameraInfo.eye) };
+
+    // 2. 누적 변수 초기화
+    float3 accumulated_color = make_float3(0.0f, 0.0f, 0.0f);
+    float accumulated_opacity = 0.0f;
+
+    // 3. 수정된 메인 탐색/블렌딩 함수 호출
+    singlePassIntersectGaussian1(ray, accumulated_color, accumulated_opacity);
+
+    // 4. 최종 색상 계산 및 프레임버퍼 쓰기 (톤매핑/감마보정 제외)
+    float3 background_color = make_float3(0.0f, 0.0f, 0.0f);
+    float3 final_color = accumulated_color + background_color * (1.0f - accumulated_opacity);
+
+    int idx = 3 * ((g_SceneInfo.resY - y - 1) * g_SceneInfo.resX + x);
+    pFrameBuffer[idx + 0] = final_color.x;
+    pFrameBuffer[idx + 1] = final_color.y;
+    pFrameBuffer[idx + 2] = final_color.z;
 }
 
 void renderGaussianWithCuda(const CompositeObject& object, const std::vector<Gaussian>& gaussians, const Camera& camera, int width, int height, float*& out_framebuffer, bool& is_done) {
@@ -915,7 +1160,8 @@ void renderGaussianWithCuda(const CompositeObject& object, const std::vector<Gau
     CUDA_CHECK(cudaMalloc((void**)&hitcount, sizeof(int)));
     CUDA_CHECK(cudaMemset(hitcount, 0, sizeof(int)));
 
-    renderKernelGaussian << < blocks, threads, shared_mem_size >> > (d_framebuffer, d_maxhit, hitcount);
+    //renderKernelGaussian << < blocks, threads, shared_mem_size >> > (d_framebuffer);// , d_maxhit, hitcount);
+    renderKernelGaussian1 << < blocks, threads, shared_mem_size >> > (d_framebuffer);// , d_maxhit, hitcount);
     CUDA_CHECK(cudaGetLastError());        // launch 실패 확인
     CUDA_CHECK(cudaDeviceSynchronize()); // 실행 중 오류 확인
 
