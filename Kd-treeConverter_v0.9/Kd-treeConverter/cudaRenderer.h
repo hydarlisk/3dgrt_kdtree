@@ -9,9 +9,11 @@
 #define ALPHA_MIN 0.01f
 #define KERNEL_DEGREE 2.0f
 
+#define OPACITY_THRESHOLD 0.95f
+
 #define SUPER_SAMPLING false
 
-#define MAX_HITS 512
+#define MAX_HITS 64
 #define SCENE_NUM 1
 
 #if SCENE_NUM == 0
@@ -120,7 +122,9 @@ void renderGaussianWithCuda(
 	float*& out_framebuffer,
 	bool& is_done
 );
-
+void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vector<Gaussian>& gaussians);
+void renderGaussianWithCudaFrame(const Camera& camera, int width, int height, float* d_framebuffer);
+void cleanupCudaResources();
 
 #if 0
 // -----------------------------------------------------------

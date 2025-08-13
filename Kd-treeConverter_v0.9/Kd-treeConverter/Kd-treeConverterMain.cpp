@@ -45,6 +45,7 @@ char* ply_igeom_path;
 char* ply_to_obj;
 bool render_gaussian = false;
 float* g_render_framebuffer = nullptr;
+float* g_d_render_framebuffer = nullptr;
 int g_render_width = MAIN_WINDOW_WIDTH;
 int g_render_height = MAIN_WINDOW_HEIGHT;
 bool g_cuda_rendering_done = false;
@@ -376,6 +377,7 @@ void init_OpenGL_RC(void) {
 
 void clean_up_system(void) {
 	// free memory and etc
+	cleanupCudaResources();
 	glutDestroyWindow(uip.main_window_ID); 
 }
 
@@ -1242,11 +1244,6 @@ void main_menu_action(int selection) {
 		//cudaRenderer.h
 		//renderWithCuda(const CompositeObject & object, const Camera & camera, int width, int height, float*& out_framebuffer, bool& is_done)
 
-		cudaEvent_t start, stop;
-		cudaEventCreate(&start);
-		cudaEventCreate(&stop);
-
-		cudaEventRecord(start); // 시작 기록
 #if SCENE_NUM < 1
 		renderObjWithCuda(
 			uip.poly_model,
@@ -1267,15 +1264,6 @@ void main_menu_action(int selection) {
 			g_cuda_rendering_done
 		);
 #endif
-		cudaEventRecord(stop); // 종료 기록
-		cudaEventSynchronize(stop); // GPU 작업 완료까지 대기
-
-		float milliseconds = 0;
-		cudaEventElapsedTime(&milliseconds, start, stop);
-		g_fps = 1000.0f / milliseconds; // 전역 변수에 FPS 저장
-
-		cudaEventDestroy(start);
-		cudaEventDestroy(stop);
 
 		if (g_cuda_rendering_done) {
 			printf("CUDA rendering complete. Refreshing display...\n");
@@ -1290,6 +1278,12 @@ void main_menu_action(int selection) {
 	case 700:
 		g_cuda_interactive_mode = !g_cuda_interactive_mode; // 인터랙티브 모드 토글
 		if (g_cuda_interactive_mode) {
+			if (g_d_render_framebuffer) {
+				cudaFree(g_d_render_framebuffer);
+			}
+			cudaMalloc((void**)&g_d_render_framebuffer, (size_t)g_render_width * g_render_height * 3 * sizeof(float));
+
+			renderGaussianWithCudaSetup(uip.poly_model, g_gaussians);
 			g_camera_dirty = true; // 모드를 켜는 즉시 한 번 렌더링하도록 설정
 			printf("CUDA Interactive Mode: ON\n");
 		}
@@ -1494,7 +1488,13 @@ void idle() {
 #if SCENE_NUM < 1
 		renderObjWithCuda(uip.poly_model, camera, g_render_width, g_render_height, g_render_framebuffer, g_cuda_rendering_done);
 #else
-		renderGaussianWithCuda(uip.poly_model, g_gaussians, camera, g_render_width, g_render_height, g_render_framebuffer, g_cuda_rendering_done);
+		//renderGaussianWithCuda(uip.poly_model, g_gaussians, camera, g_render_width, g_render_height, g_render_framebuffer, g_cuda_rendering_done);
+		renderGaussianWithCudaFrame(camera, g_render_width, g_render_height, g_d_render_framebuffer);
+		size_t framebuffer_size = (size_t)g_render_width * g_render_height * 3 * sizeof(float);
+		if (g_render_framebuffer) delete[] g_render_framebuffer;
+		g_render_framebuffer = new float[framebuffer_size / sizeof(float)];
+		cudaMemcpy(g_render_framebuffer, g_d_render_framebuffer, framebuffer_size, cudaMemcpyDeviceToHost);
+		g_cuda_rendering_done = true;
 #endif
 		cudaEventRecord(stop); // 종료 기록
 		cudaEventSynchronize(stop); // GPU 작업 완료까지 대기
@@ -1503,9 +1503,9 @@ void idle() {
 		cudaEventElapsedTime(&milliseconds, start, stop);
 		g_fps = 1000.0f / milliseconds; // 전역 변수에 FPS 저장
 		total_frame += g_fps;
-		printf("avg FPS : %f\n", (float)(total_frame / frame_count));
+		printf("FPS : %f\n", g_fps);
 		if (++frame_count >= 100) {
-			printf("avg FPS : %f\n", (float)(total_frame / frame_count));
+			printf("avg FPS for 100 frame : %f\n", (float)(total_frame / frame_count));
 			frame_count = 0;
 			total_frame = 0.0f;
 		}

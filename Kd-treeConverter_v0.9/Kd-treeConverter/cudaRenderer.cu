@@ -133,6 +133,11 @@ __constant__ float3 g_SceneBBoxMax;
 __device__ Gaussian* g_d_gaussians;
 __device__ ExtendedVertex* g_d_all_vertices;
 
+kdtreeNode* g_d_kdtree_nodes = nullptr;
+unsigned int* g_d_tri_offsets = nullptr;
+float4* g_d_tri_accel = nullptr;
+Gaussian* g_d_gaussians_persistent = nullptr;
+
 // =================================================================================
 // 3. CUDA 커널 코드 (사용자 제공 커널)
 // =================================================================================
@@ -747,7 +752,7 @@ __device__ __forceinline__ float3 eval_sh_final(
 }
 
 __global__ void renderKernelGaussian(float* pFrameBuffer
-    //,int* maxhit, int* hcount
+    , int* hitsum, int* maxhit, int* hcount
 ) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -821,7 +826,7 @@ for (int s = 0; s < samples_per_pixel; ++s) {
             break;
         }
     }
-    //if(accumulated_opacity<0.95f)
+    //if(accumulated_opacity<OPACITY_THRESHOLD)
     //printf("hitCount %d | ao: %f\n", hit.hitCount, accumulated_opacity);
 
     // 5. 최종 색상 계산 및 프레임버퍼에 쓰기
@@ -841,11 +846,12 @@ final_color /= samples_per_pixel;
     pFrameBuffer[idx + 1] = final_color.y;
     pFrameBuffer[idx + 2] = final_color.z;
 
-    //if (hit.hitCount > 0) {
-    //    //if(accumulated_opacity<0.95f) printf("hitCount %d | ao: %f\n", hit.hitCount, accumulated_opacity);
-    //    atomicAdd(maxhit, hit.hitCount);
-    //    atomicAdd(hcount, 1);
-    //}
+    if (hit.hitCount > 0) {
+        //if(accumulated_opacity<OPACITY_THRESHOLD) printf("hitCount %d | ao: %f\n", hit.hitCount, accumulated_opacity);
+        atomicMax(maxhit, hit.hitCount);
+        atomicAdd(hitsum, hit.hitCount);
+        atomicAdd(hcount, 1);
+    }
 }
 
 __device__ void singlePassIntersectRoutineGaussian1(const cuRay& ray, int id, float t_near, float t_far, HitRecord* local_hits, int& local_hit_count) {
@@ -913,6 +919,7 @@ __device__ void singlePassIntersectGaussian1(
     cuRay& currRay,
     float3& accumulated_color,      // 수정: 누적 색상을 직접 업데이트
     float& accumulated_opacity    // 수정: 누적 알파를 직접 업데이트
+    , int& hitCount
 ) {
     // 1. 광선의 유효 범위 설정
     float t_near = RAY_START_EPSILON, t_far = FLT_MAX;
@@ -925,8 +932,8 @@ __device__ void singlePassIntersectGaussian1(
 
         // 3. 메인 순회 루프
         while (true) {
-            // ★ 조기 종료 최적화: 누적 알파값이 임계치를 넘으면 전체 순회를 중단
-            if (accumulated_opacity > 0.995f) {
+            // 조기 종료 최적화: 누적 알파값이 임계치를 넘으면 전체 순회를 중단
+            if (accumulated_opacity > OPACITY_THRESHOLD) {
                 break;
             }
 
@@ -949,6 +956,7 @@ __device__ void singlePassIntersectGaussian1(
                     if (local_hit_count > 0) {
                         // 4-2. 정렬: 이 리프 노드 내의 충돌만 정렬
                         sortHits(local_hits, local_hit_count);
+                        hitCount += local_hit_count;
                         //bitonicSort(local_hits, local_hit_count);
 
                         // 4-3. 블렌딩: 정렬된 순서대로 알파 블렌딩 수행
@@ -960,12 +968,16 @@ __device__ void singlePassIntersectGaussian1(
                             float sample_opacity = 1.0f / (1.0f + expf(-g.opacity));
                             float3 view_dir = normalize(make_float3(g.pos[0], g.pos[1], g.pos[2]) - currRay.pos);
                             float3 sample_color = eval_sh_final(3, view_dir, g);
-
+                            //float3 sample_color = make_float3(
+                            //    0.5f + 0.5f * g.f_dc[0], // SH DC 계수는 -0.5~0.5 범위일 수 있으므로 0~1로 변환
+                            //    0.5f + 0.5f * g.f_dc[1],
+                            //    0.5f + 0.5f * g.f_dc[2]
+                            //);
                             accumulated_color += sample_color * sample_opacity * (1.0f - accumulated_opacity);
                             accumulated_opacity += sample_opacity * (1.0f - accumulated_opacity);
 
                             // 블렌딩 중에도 조기 종료 조건을 계속 확인
-                            if (accumulated_opacity > 0.995f) break;
+                            if (accumulated_opacity > OPACITY_THRESHOLD) break;
                         }
                     }
                 }
@@ -1012,7 +1024,9 @@ __device__ void singlePassIntersectGaussian1(
     } // if (BoundsRayIntersect)
 }
 
-__global__ void renderKernelGaussian1(float* pFrameBuffer) {
+__global__ void renderKernelGaussian1(float* pFrameBuffer
+    , int* hitsum, int* maxhit, int* hcount
+) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
     if (x >= g_SceneInfo.resX || y >= g_SceneInfo.resY) return;
@@ -1025,9 +1039,10 @@ __global__ void renderKernelGaussian1(float* pFrameBuffer) {
     // 2. 누적 변수 초기화
     float3 accumulated_color = make_float3(0.0f, 0.0f, 0.0f);
     float accumulated_opacity = 0.0f;
+    int hitCount=0;
 
     // 3. 수정된 메인 탐색/블렌딩 함수 호출
-    singlePassIntersectGaussian1(ray, accumulated_color, accumulated_opacity);
+    singlePassIntersectGaussian1(ray, accumulated_color, accumulated_opacity, hitCount);
 
     // 4. 최종 색상 계산 및 프레임버퍼 쓰기 (톤매핑/감마보정 제외)
     float3 background_color = make_float3(0.0f, 0.0f, 0.0f);
@@ -1037,6 +1052,14 @@ __global__ void renderKernelGaussian1(float* pFrameBuffer) {
     pFrameBuffer[idx + 0] = final_color.x;
     pFrameBuffer[idx + 1] = final_color.y;
     pFrameBuffer[idx + 2] = final_color.z;
+
+
+    if (hitCount > 0) {
+        //if(accumulated_opacity<OPACITY_THRESHOLD) printf("hitCount %d | ao: %f\n", hit.hitCount, accumulated_opacity);
+        atomicMax(maxhit, hitCount);
+        atomicAdd(hitsum, hitCount);
+        atomicAdd(hcount, 1);
+    }
 }
 
 void renderGaussianWithCuda(const CompositeObject& object, const std::vector<Gaussian>& gaussians, const Camera& camera, int width, int height, float*& out_framebuffer, bool& is_done) {
@@ -1164,7 +1187,6 @@ void renderGaussianWithCuda(const CompositeObject& object, const std::vector<Gau
     CUDA_CHECK(cudaMemcpy(d_all_vertices_ptr, object.extended_vertices, vertices_size, cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpyToSymbol(g_d_all_vertices, &d_all_vertices_ptr, sizeof(ExtendedVertex*)));
 
-
     err = cudaGetLastError();
     if (err != cudaSuccess) {
         std::cerr << "[CUDA Error] const memory set failed: " << cudaGetErrorString(err) << std::endl;
@@ -1181,23 +1203,27 @@ void renderGaussianWithCuda(const CompositeObject& object, const std::vector<Gau
     dim3 blocks((width + threads.x - 1) / threads.x, (height + threads.y - 1) / threads.y);
     size_t shared_mem_size = threads.x * threads.y * SHORT_STACK_DEPTH * sizeof(cu_traceState);
 
-    int* d_maxhit, *hitcount;
+    int *d_maxhit, *d_hitsum, *hitcount;
     CUDA_CHECK(cudaMalloc((void**)&d_maxhit, sizeof(int)));
     CUDA_CHECK(cudaMemset(d_maxhit, 0, sizeof(int)));
+    CUDA_CHECK(cudaMalloc((void**)&d_hitsum, sizeof(int)));
+    CUDA_CHECK(cudaMemset(d_hitsum, 0, sizeof(int)));
     CUDA_CHECK(cudaMalloc((void**)&hitcount, sizeof(int)));
     CUDA_CHECK(cudaMemset(hitcount, 0, sizeof(int)));
 
-    //renderKernelGaussian << < blocks, threads, shared_mem_size >> > (d_framebuffer);// , d_maxhit, hitcount);
-    renderKernelGaussian1 << < blocks, threads, shared_mem_size >> > (d_framebuffer);// , d_maxhit, hitcount);
+    renderKernelGaussian << < blocks, threads, shared_mem_size >> > (d_framebuffer, d_hitsum, d_maxhit, hitcount);
+    //renderKernelGaussian1 << < blocks, threads, shared_mem_size >> > (d_framebuffer);// , d_maxhit, hitcount);
     CUDA_CHECK(cudaGetLastError());        // launch 실패 확인
     CUDA_CHECK(cudaDeviceSynchronize()); // 실행 중 오류 확인
 
-    int h_maxhit = 0, h_count = 0;
+    int h_maxhit = 0, h_count = 0, h_hitsum = 0;
     CUDA_CHECK(cudaMemcpy(&h_maxhit, d_maxhit, sizeof(int), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(&h_hitsum, d_hitsum, sizeof(int), cudaMemcpyDeviceToHost));
     CUDA_CHECK(cudaMemcpy(&h_count, hitcount, sizeof(int), cudaMemcpyDeviceToHost));
     CUDA_CHECK(cudaFree(d_maxhit));
+    CUDA_CHECK(cudaFree(d_hitsum));
     CUDA_CHECK(cudaFree(hitcount));
-    //printf("af maxHIT sum, count, avg: %d, %d, %f\n", h_maxhit, h_count, (float)(h_maxhit/h_count));
+    printf("hit max: %d, sum: %d, count: %d, avg: %f\n", h_maxhit, h_hitsum, h_count, (float)(h_hitsum/h_count));
 
     err = cudaGetLastError();
     if (err != cudaSuccess) {
@@ -1242,4 +1268,195 @@ void renderGaussianWithCuda(const CompositeObject& object, const std::vector<Gau
         std::cerr << "[CUDA Error] free failed: " << cudaGetErrorString(err) << std::endl;
     }
     //std::cout << "--- Minimal CUDA Renderer Finished ---" << std::endl;
+}
+
+void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vector<Gaussian>& gaussians) {
+    printf("Setting up static data for CUDA rendering...\n");
+
+    KdTree* kdTree = object.kd_tree;
+    if (!kdTree || object.n_triangles == 0) {
+        std::cerr << "[CUDA Error] Object or Kd-tree is empty." << std::endl;
+        return;
+    }
+    if (!kdTree || gaussians.empty()) {
+        std::cerr << "[CUDA Error] Kd-tree or Gaussian data is empty." << std::endl;
+        return;
+    }
+
+    //printf("0. exist KD-Tree\n");
+
+    //printf("[DEBUG] object.n_triangles = %d\n", object.n_triangles);
+    if (kdTree == nullptr) {
+        printf("[FATAL] kdTree == nullptr\n");
+        return;
+    }
+    if (kdTree->tri_accel_list == nullptr) {
+        printf("[FATAL] tri_accel_list == nullptr\n");
+        return;
+    }
+    if (kdTree->tri_accel_list + object.n_triangles <= kdTree->tri_accel_list) {
+        printf("[FATAL] tri_accel_list too small or corrupt pointer\n");
+        return;
+    }
+
+    // 1. 데이터 패킹 (Host)
+    // TriAccel -> float4[4] (n_u, n_v, n_d, k | b_nu, b_nv, b_d, idx | c_nu, c_nv, c_d, matID | N.x, N.y, N.z, pad)
+    std::vector<float4> h_triangles(object.n_triangles * 3);
+    for (int i = 0; i < object.n_triangles; ++i) {
+        const TriAccel& src = kdTree->tri_accel_list[i];
+        h_triangles[i * 3 + 0] = make_float4(src.n_u, src.n_v, src.n_d, uint_as_float_H(src.k));
+        h_triangles[i * 3 + 1] = make_float4(src.b_nu, src.b_nv, src.b_d, int_as_float_H(src.indexInObject));
+        h_triangles[i * 3 + 2] = make_float4(src.c_nu, src.c_nv, src.c_d, int_as_float_H(src.material_ID));
+    }
+    //printf("1. Data packing done\n");
+
+    // 2. GPU 메모리 할당 및 데이터 전송
+    cudaError_t err;
+
+    if (g_d_kdtree_nodes) cudaFree(g_d_kdtree_nodes);
+    if (g_d_tri_offsets) cudaFree(g_d_tri_offsets);
+    if (g_d_tri_accel) cudaFree(g_d_tri_accel);
+    if (g_d_gaussians_persistent) cudaFree(g_d_gaussians_persistent);
+
+    size_t node_size = kdTree->tree_node_count * sizeof(kdtreeNode);
+    CUDA_CHECK(cudaMalloc(&g_d_kdtree_nodes, node_size));
+    CUDA_CHECK(cudaMemcpy(g_d_kdtree_nodes, kdTree->tree, node_size, cudaMemcpyHostToDevice));
+
+    size_t offset_size = kdTree->tri_offset_count * sizeof(unsigned int);
+    CUDA_CHECK(cudaMalloc(&g_d_tri_offsets, offset_size));
+    CUDA_CHECK(cudaMemcpy(g_d_tri_offsets, kdTree->tri_offset_list, offset_size, cudaMemcpyHostToDevice));
+
+    size_t accel_size = h_triangles.size() * sizeof(float4);
+    CUDA_CHECK(cudaMalloc(&g_d_tri_accel, accel_size));
+    CUDA_CHECK(cudaMemcpy(g_d_tri_accel, h_triangles.data(), accel_size, cudaMemcpyHostToDevice));
+
+    CUDA_CHECK(cudaMalloc(&g_d_gaussians_persistent, gaussians.size() * sizeof(Gaussian)));
+    CUDA_CHECK(cudaMemcpy(g_d_gaussians_persistent, gaussians.data(), gaussians.size() * sizeof(Gaussian), cudaMemcpyHostToDevice));
+
+    err = cudaGetLastError();
+    if (err != cudaSuccess) {
+        std::cerr << "[CUDA Error] GPU memcpy failed: " << cudaGetErrorString(err) << std::endl;
+    }
+    //printf("2. gpu memcpy done\n");
+
+    // 3. 텍스처 바인딩
+    cudaChannelFormatDesc node_desc = cudaCreateChannelDesc<uint2>();
+    cudaChannelFormatDesc offset_desc = cudaCreateChannelDesc<unsigned int>();
+    cudaChannelFormatDesc tri_desc = cudaCreateChannelDesc<float4>();
+    CUDA_CHECK(cudaBindTexture(0, &inKdTreeNodeTex, g_d_kdtree_nodes, &node_desc, node_size));
+    CUDA_CHECK(cudaBindTexture(0, &inObjectOffsetListTex, g_d_tri_offsets, &offset_desc, offset_size));
+    CUDA_CHECK(cudaBindTexture(0, &inTriAccelTex, g_d_tri_accel, &tri_desc, accel_size));
+    if (err != cudaSuccess) {
+        std::cerr << "[CUDA Error] texture bind failed: " << cudaGetErrorString(err) << std::endl;
+    }
+    //printf("3. texture Bind done\n");
+
+    // 4. 상수 메모리 설정
+    float3 h_bbox_min = make_float3(object.AABB[XMIN], object.AABB[YMIN], object.AABB[ZMIN]);
+    float3 h_bbox_max = make_float3(object.AABB[XMAX], object.AABB[YMAX], object.AABB[ZMAX]);
+    CUDA_CHECK(cudaMemcpyToSymbol(g_SceneBBoxMin, &h_bbox_min, sizeof(float3)));
+    CUDA_CHECK(cudaMemcpyToSymbol(g_SceneBBoxMax, &h_bbox_max, sizeof(float3)));
+
+    ExtendedVertex* d_all_vertices_ptr;
+    size_t vertices_size = (size_t)object.n_triangles * 3 * sizeof(ExtendedVertex);
+    CUDA_CHECK(cudaMalloc(&d_all_vertices_ptr, vertices_size));
+    CUDA_CHECK(cudaMemcpy(d_all_vertices_ptr, object.extended_vertices, vertices_size, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpyToSymbol(g_d_all_vertices, &d_all_vertices_ptr, sizeof(ExtendedVertex*)));
+    
+    CUDA_CHECK(cudaMemcpyToSymbol(g_d_gaussians, &g_d_gaussians_persistent, sizeof(Gaussian*)));
+
+    err = cudaGetLastError();
+    if (err != cudaSuccess) {
+        std::cerr << "[CUDA Error] const memory set failed: " << cudaGetErrorString(err) << std::endl;
+    }
+    //printf("4. const memory set done\n");
+
+    //cudaFree(d_kdtree_nodes);
+    //cudaFree(d_tri_offsets);
+    //cudaFree(d_tri_accel);
+    //cudaFree(d_gaussians_ptr);
+    //cudaFree(d_all_vertices_ptr);
+    //cudaUnbindTexture(inKdTreeNodeTex);
+    //cudaUnbindTexture(inObjectOffsetListTex);
+    //cudaUnbindTexture(inTriAccelTex);
+    //printf("6. free done\n");
+
+    err = cudaGetLastError();
+    if (err != cudaSuccess) {
+        std::cerr << "[CUDA Error] free failed: " << cudaGetErrorString(err) << std::endl;
+    }
+    //std::cout << "--- Minimal CUDA Renderer Finished ---" << std::endl;
+}
+
+void renderGaussianWithCudaFrame(const Camera& camera, int width, int height, float* d_framebuffer) {
+    SceneInfo h_scene_info = { width, height };
+    CUDA_CHECK(cudaMemcpyToSymbol(g_SceneInfo, &h_scene_info, sizeof(SceneInfo)));
+
+    CameraInfo h_camera_info;
+    h_camera_info.eye = make_float3(camera.pos[0], camera.pos[1], camera.pos[2]);
+    h_camera_info.u = make_float3(camera.uaxis[0], camera.uaxis[1], camera.uaxis[2]);
+    h_camera_info.v = make_float3(camera.vaxis[0], camera.vaxis[1], camera.vaxis[2]);
+    float3 n_axis = make_float3(camera.naxis[0], camera.naxis[1], camera.naxis[2]);
+
+    float fov_rad = camera.fovy * (M_PI / 180.0f);
+    float plane_height = 2.0f * camera.near_c * tanf(fov_rad * 0.5f);
+    float plane_width = plane_height * camera.aspect;
+    h_camera_info.stepX = plane_width / width;
+    h_camera_info.stepY = plane_height / height;
+    h_camera_info.startPoint = h_camera_info.eye - n_axis * camera.near_c
+                            - h_camera_info.u * (plane_width * 0.5f)
+                            + h_camera_info.v * (plane_height * 0.5f);
+    CUDA_CHECK(cudaMemcpyToSymbol(g_CameraInfo, &h_camera_info, sizeof(CameraInfo)));
+
+    // 5. 커널 실행
+    dim3 threads(16, 16);
+    dim3 blocks((width + threads.x - 1) / threads.x, (height + threads.y - 1) / threads.y);
+    size_t shared_mem_size = threads.x * threads.y * SHORT_STACK_DEPTH * sizeof(cu_traceState);
+
+    //renderKernelGaussian1 << < blocks, threads, shared_mem_size >> > (d_framebuffer);
+    //CUDA_CHECK(cudaGetLastError());        // launch 실패 확인
+    //CUDA_CHECK(cudaDeviceSynchronize()); // 실행 중 오류 확인
+
+    int* d_maxhit, * d_hitsum, * hitcount;
+    CUDA_CHECK(cudaMalloc((void**)&d_maxhit, sizeof(int)));
+    CUDA_CHECK(cudaMemset(d_maxhit, 0, sizeof(int)));
+    CUDA_CHECK(cudaMalloc((void**)&d_hitsum, sizeof(int)));
+    CUDA_CHECK(cudaMemset(d_hitsum, 0, sizeof(int)));
+    CUDA_CHECK(cudaMalloc((void**)&hitcount, sizeof(int)));
+    CUDA_CHECK(cudaMemset(hitcount, 0, sizeof(int)));
+
+    //renderKernelGaussian << < blocks, threads, shared_mem_size >> > (d_framebuffer, d_hitsum, d_maxhit, hitcount);
+    renderKernelGaussian1 << < blocks, threads, shared_mem_size >> > (d_framebuffer, d_hitsum, d_maxhit, hitcount);
+    //renderKernelGaussian1 << < blocks, threads, shared_mem_size >> > (d_framebuffer);// , d_maxhit, hitcount);
+    CUDA_CHECK(cudaGetLastError());        // launch 실패 확인
+    CUDA_CHECK(cudaDeviceSynchronize()); // 실행 중 오류 확인
+
+    int h_maxhit = 0, h_count = 0, h_hitsum = 0;
+    CUDA_CHECK(cudaMemcpy(&h_maxhit, d_maxhit, sizeof(int), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(&h_hitsum, d_hitsum, sizeof(int), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(&h_count, hitcount, sizeof(int), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaFree(d_maxhit));
+    CUDA_CHECK(cudaFree(d_hitsum));
+    CUDA_CHECK(cudaFree(hitcount));
+    printf("hit max, sum, count, avg: %d, %d, %d, %f\n", h_maxhit, h_hitsum, h_count, (float)(h_hitsum / h_count));
+
+    // 6. 결과 복사 및 메모리 해제
+    //if (out_framebuffer) delete[] out_framebuffer;
+    //out_framebuffer = new float[width * height * 3];
+    //CUDA_CHECK(cudaMemcpy(out_framebuffer, d_framebuffer, framebuffer_size, cudaMemcpyDeviceToHost));
+    //is_done = true;
+
+    //CUDA_CHECK(cudaFree(d_framebuffer));
+}
+
+void cleanupCudaResources() {
+    printf("Cleaning up CUDA resources...\n");
+    if (g_d_kdtree_nodes) cudaFree(g_d_kdtree_nodes);
+    if (g_d_tri_offsets) cudaFree(g_d_tri_offsets);
+    if (g_d_tri_accel) cudaFree(g_d_tri_accel);
+    if (g_d_gaussians_persistent) cudaFree(g_d_gaussians_persistent);
+
+    cudaUnbindTexture(inKdTreeNodeTex);
+    cudaUnbindTexture(inObjectOffsetListTex);
+    cudaUnbindTexture(inTriAccelTex);
 }
