@@ -122,7 +122,7 @@ void renderGaussianWithCuda(
 );
 
 
-#if 1
+#if 0
 // -----------------------------------------------------------
 // kdtree node
 // -----------------------------------------------------------
@@ -139,4 +139,12 @@ void renderGaussianWithCuda(
 
 	#define OBJECTLIST_OFFSET(node)		( (node).y)
 	#define ROPE_NODE_OFFSET(node)		( (node).y)
+#else
+	#define IS_LEAF(node)				(((node).x & 7) == 3)
+	#define SPLIT_AXIS(node)			( (node).x & 3)
+	#define FIRST_CHILD_OFFSET(node)	( (node).x >> 3)
+	#define SECOND_CHILD_OFFSET(node)	(((node).x >> 3) + 1)
+	#define SPLIT_POS(node)				(*(float *)&((node).y))
+	#define OBJECT_SIZE(node)			( (node).x >> 3)
+	#define OBJECTLIST_OFFSET(node)		( (node).y)
 #endif

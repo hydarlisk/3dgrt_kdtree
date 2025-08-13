@@ -70,12 +70,12 @@ struct cuObjectMaterial {
 
 // Kd-tree 노드 (GKDTreeNode.h에서 추출)
 typedef uint2 kdtreeNode;
-#define IS_LEAF(node)               (((node).x & 3) == 3)
-#define SPLIT_AXIS(node)            ( (node).x & 3)
-#define FIRST_CHILD_OFFSET(node)    ( (node).x >> 3)
-#define SPLIT_POS(node)             (*(float *)&((node).y))
-#define OBJECT_SIZE(node)           ( (node).x >> 3)
-#define OBJECTLIST_OFFSET(node)     ( (node).y)
+//#define IS_LEAF(node)               (((node).x & 3) == 3)
+//#define SPLIT_AXIS(node)            ( (node).x & 3)
+//#define FIRST_CHILD_OFFSET(node)    ( (node).x >> 3)
+//#define SPLIT_POS(node)             (*(float *)&((node).y))
+//#define OBJECT_SIZE(node)           ( (node).x >> 3)
+//#define OBJECTLIST_OFFSET(node)     ( (node).y)
 
 // 스택 (cudaRenderPipelineCommonKernel.cu에서 추출)
 #define SHORT_STACK_DEPTH 12
@@ -131,6 +131,7 @@ __constant__ CameraInfo g_CameraInfo;
 __constant__ float3 g_SceneBBoxMin;
 __constant__ float3 g_SceneBBoxMax;
 __device__ Gaussian* g_d_gaussians;
+__device__ ExtendedVertex* g_d_all_vertices;
 
 // =================================================================================
 // 3. CUDA 커널 코드 (사용자 제공 커널)
@@ -884,17 +885,18 @@ __device__ void singlePassIntersectRoutineGaussian1(const cuRay& ray, int id, fl
 
     if (beta >= -BARYCENTRY_EPSILON && gamma >= -BARYCENTRY_EPSILON && (beta + gamma) <= 1.0f + BARYCENTRY_EPSILON) {
         //float4 N_packed = tex1Dfetch(inTriAccelTex, id * 4 + 3);
-        //float3 N = make_float3(N_packed.x, N_packed.y, N_packed.z);
-        float3 N;
-        if (k == 0) {       // YZ 평면에 투영. 주축은 X. (u=y, v=z)
-            N = make_float3(1.0f, n_u, n_v);
-        }
-        else if (k == 1) { // ZX 평면에 투영. 주축은 Y. (u=z, v=x)
-            N = make_float3(n_v, 1.0f, n_u);
-        }
-        else {             // XY 평면에 투영. 주축은 Z. (u=x, v=y)
-            N = make_float3(n_u, n_v, 1.0f);
-        }
+        //float3 N = make_float3(N_packed.x, N_packed.y, N_packed.z);ExtendedVertex v0 = g_d_all_vertices[id * 3 + 0];
+
+        ExtendedVertex v0 = g_d_all_vertices[id * 3 + 0];
+        ExtendedVertex v1 = g_d_all_vertices[id * 3 + 1];
+        ExtendedVertex v2 = g_d_all_vertices[id * 3 + 2];
+
+        // 2. 두 개의 변(edge) 벡터를 계산합니다.
+        float3 edge1 = make_float3(v1.vertex[0] - v0.vertex[0], v1.vertex[1] - v0.vertex[1], v1.vertex[2] - v0.vertex[2]);
+        float3 edge2 = make_float3(v2.vertex[0] - v0.vertex[0], v2.vertex[1] - v0.vertex[1], v2.vertex[2] - v0.vertex[2]);
+
+        // 3. 외적(cross product)을 통해 법선 벡터 N을 계산하고 정규화합니다.
+        float3 N = cross(edge1, edge2);
         // 법선 벡터와 광선 방향의 내적(dot product)을 계산
         // 내적 값이 0보다 크면 광선이 삼각형의 뒷면
         if (dot(N, ray.dir) > 0.0f) {
@@ -1156,6 +1158,13 @@ void renderGaussianWithCuda(const CompositeObject& object, const std::vector<Gau
 
     CUDA_CHECK(cudaMemcpyToSymbol(g_d_gaussians, &d_gaussians_ptr, sizeof(Gaussian*)));
 
+    ExtendedVertex* d_all_vertices_ptr;
+    size_t vertices_size = (size_t)object.n_triangles * 3 * sizeof(ExtendedVertex);
+    CUDA_CHECK(cudaMalloc(&d_all_vertices_ptr, vertices_size));
+    CUDA_CHECK(cudaMemcpy(d_all_vertices_ptr, object.extended_vertices, vertices_size, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpyToSymbol(g_d_all_vertices, &d_all_vertices_ptr, sizeof(ExtendedVertex*)));
+
+
     err = cudaGetLastError();
     if (err != cudaSuccess) {
         std::cerr << "[CUDA Error] const memory set failed: " << cudaGetErrorString(err) << std::endl;
@@ -1211,6 +1220,7 @@ void renderGaussianWithCuda(const CompositeObject& object, const std::vector<Gau
     cudaFree(d_tri_offsets);
     cudaFree(d_tri_accel);
     cudaFree(d_gaussians_ptr);
+    cudaFree(d_all_vertices_ptr);
     cudaFree(d_framebuffer);
     cudaUnbindTexture(inKdTreeNodeTex);
     cudaUnbindTexture(inObjectOffsetListTex);

@@ -50,7 +50,7 @@ typedef struct _bound_edge_ {
 
 	#define OBJECTLIST_OFFSET(node)		( (node).y)
 	#define ROPE_NODE_OFFSET(node)		( (node).y)
-#endif
+#else
 
 
 #endif
