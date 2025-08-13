@@ -834,9 +834,9 @@ void build_TriAccList(CompositeObject *poly_model, TriAccel*& pTriAcc)
 		u = modulo[k+1];
 		v = modulo[k+2];
 
-		pTriAcc[i].N[0] = N[0];
-		pTriAcc[i].N[1] = N[1];
-		pTriAcc[i].N[2] = N[2];
+		//pTriAcc[i].N[0] = N[0];
+		//pTriAcc[i].N[1] = N[1];
+		//pTriAcc[i].N[2] = N[2];
 
 		// N'
 		float fRcp_N_k = 1.0f / N[k];

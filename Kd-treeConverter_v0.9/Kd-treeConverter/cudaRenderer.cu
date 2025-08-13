@@ -353,7 +353,7 @@ void renderObjWithCuda(const CompositeObject& object, const Camera& camera, int 
         h_triangles[i * 4 + 0] = make_float4(src.n_u, src.n_v, src.n_d, uint_as_float_H(src.k));
         h_triangles[i * 4 + 1] = make_float4(src.b_nu, src.b_nv, src.b_d, int_as_float_H(src.indexInObject));
         h_triangles[i * 4 + 2] = make_float4(src.c_nu, src.c_nv, src.c_d, int_as_float_H(src.material_ID));
-        h_triangles[i * 4 + 3] = make_float4(src.N[0], src.N[1], src.N[2], 0.0f);
+        //h_triangles[i * 4 + 3] = make_float4(src.N[0], src.N[1], src.N[2], 0.0f);
     }
     //printf("1. Data packing done\n");
 
@@ -585,9 +585,18 @@ __device__ void singlePassIntersectRoutineGaussian(const cuRay& ray, int id, cuI
     float gamma = u_coord * d2.x + v_coord * d2.y + d2.z;
 
     if (beta >= -BARYCENTRY_EPSILON && gamma >= -BARYCENTRY_EPSILON && (beta + gamma) <= 1.0f + BARYCENTRY_EPSILON) {
-        float4 N_packed = tex1Dfetch(inTriAccelTex, id * 4 + 3);
-        float3 N = make_float3(N_packed.x, N_packed.y, N_packed.z);
-
+        //float4 N_packed = tex1Dfetch(inTriAccelTex, id * 4 + 3);
+        //float3 N = make_float3(N_packed.x, N_packed.y, N_packed.z);
+        float3 N;
+        if (k == 0) {       // YZ 평면에 투영. 주축은 X. (u=y, v=z)
+            N = make_float3(1.0f, n_u, n_v);
+        }
+        else if (k == 1) { // ZX 평면에 투영. 주축은 Y. (u=z, v=x)
+            N = make_float3(n_v, 1.0f, n_u);
+        }
+        else {             // XY 평면에 투영. 주축은 Z. (u=x, v=y)
+            N = make_float3(n_u, n_v, 1.0f);
+        }
         // 2. 법선 벡터와 광선 방향의 내적(dot product)을 계산합니다.
         //    내적 값이 0보다 크면 광선이 삼각형의 뒷면에 부딪혔다는 의미입니다.
         if (dot(N, ray.dir) > 0.0f) {
@@ -841,7 +850,7 @@ final_color /= samples_per_pixel;
 __device__ void singlePassIntersectRoutineGaussian1(const cuRay& ray, int id, float t_near, float t_far, HitRecord* local_hits, int& local_hit_count) {
     if (local_hit_count >= MAX_HITS) return;
 
-    float4 d0 = tex1Dfetch(inTriAccelTex, id * 4 + 0);
+    float4 d0 = tex1Dfetch(inTriAccelTex, id * 3 + 0);
     unsigned int packed_flags = __float_as_uint(d0.w);
     unsigned int k = packed_flags & 0x3;
     float n_u = d0.x, n_v = d0.y, n_d = d0.z;
@@ -864,8 +873,8 @@ __device__ void singlePassIntersectRoutineGaussian1(const cuRay& ray, int id, fl
     //if (t >= hit.tHit || t <= t_near || t >= t_far) return;
     if (t <= t_near || t >= t_far) return;
 
-    float4 d1 = tex1Dfetch(inTriAccelTex, id * 4 + 1);
-    float4 d2 = tex1Dfetch(inTriAccelTex, id * 4 + 2);
+    float4 d1 = tex1Dfetch(inTriAccelTex, id * 3 + 1);
+    float4 d2 = tex1Dfetch(inTriAccelTex, id * 3 + 2);
 
     float u_coord = p_pos.x + t * p_dir.x;
     float v_coord = p_pos.y + t * p_dir.y;
@@ -874,9 +883,18 @@ __device__ void singlePassIntersectRoutineGaussian1(const cuRay& ray, int id, fl
     float gamma = u_coord * d2.x + v_coord * d2.y + d2.z;
 
     if (beta >= -BARYCENTRY_EPSILON && gamma >= -BARYCENTRY_EPSILON && (beta + gamma) <= 1.0f + BARYCENTRY_EPSILON) {
-        float4 N_packed = tex1Dfetch(inTriAccelTex, id * 4 + 3);
-        float3 N = make_float3(N_packed.x, N_packed.y, N_packed.z);
-
+        //float4 N_packed = tex1Dfetch(inTriAccelTex, id * 4 + 3);
+        //float3 N = make_float3(N_packed.x, N_packed.y, N_packed.z);
+        float3 N;
+        if (k == 0) {       // YZ 평면에 투영. 주축은 X. (u=y, v=z)
+            N = make_float3(1.0f, n_u, n_v);
+        }
+        else if (k == 1) { // ZX 평면에 투영. 주축은 Y. (u=z, v=x)
+            N = make_float3(n_v, 1.0f, n_u);
+        }
+        else {             // XY 평면에 투영. 주축은 Z. (u=x, v=y)
+            N = make_float3(n_u, n_v, 1.0f);
+        }
         // 법선 벡터와 광선 방향의 내적(dot product)을 계산
         // 내적 값이 0보다 크면 광선이 삼각형의 뒷면
         if (dot(N, ray.dir) > 0.0f) {
@@ -933,7 +951,7 @@ __device__ void singlePassIntersectGaussian1(
 
                         // 4-3. 블렌딩: 정렬된 순서대로 알파 블렌딩 수행
                         for (int i = 0; i < local_hit_count; ++i) {
-                            float4 d2 = tex1Dfetch(inTriAccelTex, local_hits[i].triIndex * 4 + 2);
+                            float4 d2 = tex1Dfetch(inTriAccelTex, local_hits[i].triIndex * 3 + 2);
                             int gaussianID = __float_as_int(d2.w);
                             Gaussian g = g_d_gaussians[gaussianID];
 
@@ -1056,14 +1074,14 @@ void renderGaussianWithCuda(const CompositeObject& object, const std::vector<Gau
 
     // 1. 데이터 패킹 (Host)
     // TriAccel -> float4[4] (n_u, n_v, n_d, k | b_nu, b_nv, b_d, idx | c_nu, c_nv, c_d, matID | N.x, N.y, N.z, pad)
-    std::vector<float4> h_triangles(object.n_triangles * 4);
+    std::vector<float4> h_triangles(object.n_triangles * 3);
     //float4* h_triangles = (float4*)malloc(sizeof(float4) * (object.n_triangles * 4));
     for (int i = 0; i < object.n_triangles; ++i) {
         const TriAccel& src = kdTree->tri_accel_list[i];
-        h_triangles[i * 4 + 0] = make_float4(src.n_u, src.n_v, src.n_d, uint_as_float_H(src.k));
-        h_triangles[i * 4 + 1] = make_float4(src.b_nu, src.b_nv, src.b_d, int_as_float_H(src.indexInObject));
-        h_triangles[i * 4 + 2] = make_float4(src.c_nu, src.c_nv, src.c_d, int_as_float_H(src.material_ID));
-        h_triangles[i * 4 + 3] = make_float4(src.N[0], src.N[1], src.N[2], 0.0f);
+        h_triangles[i * 3 + 0] = make_float4(src.n_u, src.n_v, src.n_d, uint_as_float_H(src.k));
+        h_triangles[i * 3 + 1] = make_float4(src.b_nu, src.b_nv, src.b_d, int_as_float_H(src.indexInObject));
+        h_triangles[i * 3 + 2] = make_float4(src.c_nu, src.c_nv, src.c_d, int_as_float_H(src.material_ID));
+        //h_triangles[i * 4 + 3] = make_float4(src.N[0], src.N[1], src.N[2], 0.0f);
     }
     //printf("1. Data packing done\n");
 

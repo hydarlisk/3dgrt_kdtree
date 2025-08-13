@@ -296,9 +296,9 @@ void IsectRay( const KdTreeNode *node, int nIdx )
 		// Backface Culling : �������� �ʴ� ��ü�� �ش�
 		// ---------------------------------------------------------------
 		if (!acc.isTransparent && BACKFACE_CULLING) {
-			if (fMyVecDotProduct(rp->df, acc.N) < 0) {
+			//if (fMyVecDotProduct(rp->df, acc.N) < 0) {
 				continue;
-			}
+			//}
 		}
 
 		const unsigned int k	= acc.k;

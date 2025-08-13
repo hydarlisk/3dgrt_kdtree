@@ -59,8 +59,8 @@ typedef __declspec(align(16)) struct _TriAccel {
 	int material_ID;
 
 	// normal vector
-	float N[3];
-	int pad;
+	//float N[3];
+	//int pad;
 } TriAccel;
 
 typedef struct _KdTreeNode {
