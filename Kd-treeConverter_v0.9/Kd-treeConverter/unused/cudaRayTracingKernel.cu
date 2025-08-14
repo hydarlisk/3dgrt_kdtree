@@ -406,7 +406,7 @@ __global__ void rayTraceKernel(CUDACompositeObject object, float* output, int wi
 	int y = blockIdx.y * blockDim.y + threadIdx.y;
 
 	if (x < width && y < height) {
-		// 1. 광선 생성 (카메라 위치, 방향 등 설정)
+		// 광선 생성 (카메라 위치, 방향 등 설정)
 		float3 rayOrigin = make_float3(0.0f, 0.0f, 5.0f); // 예시
 		float3 rayDirection;
 		rayDirection.x = (x - width / 2.0f) / (width / 2.0f); // 예시
@@ -414,16 +414,16 @@ __global__ void rayTraceKernel(CUDACompositeObject object, float* output, int wi
 		rayDirection.z = -1.0f; // 예시
 		rayDirection = normalize(rayDirection);
 
-		// 2. cuRay 구조체 생성
+		// cuRay 구조체 생성
 		cuRay ray;
 		ray.pos = make_float3(rayOrigin.x, rayOrigin.y, rayOrigin.z);
 		ray.dir = make_float3(rayDirection.x, rayDirection.y, rayDirection.z);
 
-		// 3. intersectKdTree 함수 호출
+		// intersectKdTree 함수 호출
 		cuIntersectionCheck currIsectCheck;
 		intersectKdTree(object.kd_tree, ray, currIsectCheck);
 
-		// 4. 결과 색상 결정
+		// 결과 색상 결정
 		float3 color;
 		if (t > 0.0f) {
 			// 교차 발생: 교점에서의 색상 계산 (normal, material 등 고려)
@@ -434,7 +434,7 @@ __global__ void rayTraceKernel(CUDACompositeObject object, float* output, int wi
 			color = make_float3(0.0f, 0.0f, 0.0f); // 예시: 검은색
 		}
 
-		// 5. 결과 저장
+		// 결과 저장
 		int index = (y * width + x) * 4; // RGBA
 		output[index] = color.x;
 		output[index + 1] = color.y;
@@ -450,7 +450,7 @@ __global__ void rayTraceKernel(CUDACompositeObject object, float* output, int wi
 //}
 
 __device__ void intersectKdTree(CUDAKdTree* tree, cuRay ray, cuIntersectionCheck& intersectionCheck) {
-	// 1. Kd-Tree Traversal
+	// Kd-Tree Traversal
 	float t_scene_near = 0.0f, t_scene_far = FLT_MAX;
 	if (BoundsRayIntersect(g_SceneBBox, ray, t_scene_near, t_scene_far)) {
 		float t_near = t_scene_near, t_far = t_scene_far;
@@ -509,10 +509,10 @@ __device__ void intersectKdTree(CUDAKdTree* tree, cuRay ray, cuIntersectionCheck
 
 // CompositeObject 데이터를 CUDA 메모리로 복사
 void copyCompositeObjectToCUDA(const CompositeObject* hostObject, CUDACompositeObject*& cudaObject) {
-	// 1. CUDACompositeObject 할당
+	// CUDACompositeObject 할당
 	checkCudaErrors(cudaMalloc((void**)&cudaObject, sizeof(CUDACompositeObject)));
 
-	// 2. 필요한 데이터 할당 및 복사
+	// 필요한 데이터 할당 및 복사
 	// ExtendedVertex 복사
 	CUDAExtendedVertex* cudaVertices;
 	checkCudaErrors(cudaMalloc((void**)&cudaVertices, sizeof(CUDAExtendedVertex) * hostObject->n_triangles * 3)); // 삼각형 당 3개의 정점
@@ -559,29 +559,29 @@ void copyCompositeObjectToCUDA(const CompositeObject* hostObject, CUDACompositeO
 
 // CUDA 초기화 및 렌더링 함수
 void initCudaRendering_Orig(CompositeObject& compositeObject, float* frameBuffer, bool* renderFlag) {
-	// 1. CUDA 디바이스 초기화 (필요한 경우)
+	// CUDA 디바이스 초기화 (필요한 경우)
 
-	// 2. CUDACompositeObject 생성 및 데이터 복사
+	// CUDACompositeObject 생성 및 데이터 복사
 	CUDACompositeObject* cudaObject;
 	copyCompositeObjectToCUDA(&compositeObject, cudaObject);
 
-	// 3. 렌더링 결과를 저장할 프레임 버퍼 할당
+	// 렌더링 결과를 저장할 프레임 버퍼 할당
 	if (frameBuffer == nullptr) {
 		g_render_width = 512; // 예시 해상도
 		g_render_height = 512;
 		frameBuffer = new float[g_render_width * g_render_height * 4]; // RGBA
 	}
 
-	// 4. CUDA 커널 실행
+	// CUDA 커널 실행
 	dim3 blockDim(16, 16);
 	dim3 gridDim((g_render_width + blockDim.x - 1) / blockDim.x, (g_render_height + blockDim.y - 1) / blockDim.y);
 	rayTraceKernel <<<gridDim, blockDim >>> (*cudaObject, frameBuffer, g_render_width, g_render_height);
 	checkCudaErrors(cudaDeviceSynchronize());
 
-	// 5. CUDA 렌더링 완료 플래그 설정
+	// CUDA 렌더링 완료 플래그 설정
 	*renderFlag = true;
 
-	// 6. CUDA 메모리 해제 (나중에 필요할 수 있음)
+	// CUDA 메모리 해제 (나중에 필요할 수 있음)
 	cudaFree(cudaObject->extended_vertices);
 	cudaFree(cudaObject->kd_tree->tree);
 	cudaFree(cudaObject->kd_tree->tri_offset_list);

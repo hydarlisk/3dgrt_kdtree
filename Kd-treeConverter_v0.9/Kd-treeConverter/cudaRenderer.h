@@ -13,7 +13,7 @@
 
 #define SUPER_SAMPLING false
 
-#define MAX_HITS 64
+#define MAX_HITS 256
 #define SCENE_NUM 1
 
 #if SCENE_NUM == 0
@@ -46,6 +46,7 @@ struct float3x3 {
 	float m[3][3];
 };
 
+#define M_PI 3.14159265358979323846f
 #define icosaHedronNumVrt 12
 #define icosaHedronNumTri 20
 

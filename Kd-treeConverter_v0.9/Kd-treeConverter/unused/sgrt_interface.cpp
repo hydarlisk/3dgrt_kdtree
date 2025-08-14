@@ -65,7 +65,7 @@
 //void loadCompositeObjectToSGRT(const CompositeObject* obj, GGPUExperimentalRayTracer& tracer) {
 //    printf("[SGRT] Converting CompositeObject to SGRT scene...\n");
 //
-//    // 1. SurfaceMesh 생성
+//    // SurfaceMesh 생성
 //    GSurfaceMesh* surface = new GSurfaceMesh();
 //    surface->create(obj->n_triangles * 3);
 //
@@ -77,7 +77,7 @@
 //        surface->vertices[i].materialID = obj->extended_vertices[i].material_ID;
 //    }
 //
-//    // 2. GGPUKdTreeAccel 생성
+//    // GGPUKdTreeAccel 생성
 //    GGPUKdTreeAccel* accel = new GGPUKdTreeAccel();
 //
 //    accel->create(obj->kd_tree->tree_node_count,
@@ -93,7 +93,7 @@
 //    cudaMemcpy(accel->d_triangles, obj->kd_tree->tri_accel_list,
 //        sizeof(TriAccel) * obj->kd_tree->tri_offset_count, cudaMemcpyHostToDevice);
 //
-//    // 3. 트레이서 설정
+//    // 트레이서 설정
 //    tracer.setAccel(accel);
 //    tracer.setSurface(surface);
 //    tracer.setCameraLookAt({ 0, 0, -2 }, { 0, 0, 0 }, { 0, 1, 0 });
@@ -129,7 +129,7 @@ void convertCompositeObjectToGSceneAndKdTree(const CompositeObject& compObj, GSc
 }
 
 void UploadCompositeObjectToDevice(const CompositeObject& compObj) {
-    // 1. AABB
+    // AABB
     cuBoundingBox aabb;
     aabb.min_max[0] = make_float4(compObj.AABB[XMIN], compObj.AABB[YMIN], compObj.AABB[ZMIN], 0.0f);
     aabb.min_max[1] = make_float4(compObj.AABB[XMAX], compObj.AABB[YMAX], compObj.AABB[ZMAX], 0.0f);
@@ -140,13 +140,13 @@ void UploadCompositeObjectToDevice(const CompositeObject& compObj) {
     cudaMemcpy(d_vertices, compObj.vertices, compObj.numVertices * sizeof(ExtendedVertex), cudaMemcpyHostToDevice);
     cudaMemcpyToSymbol(g_Vertices, &d_vertices, sizeof(ExtendedVertex*));
 
-    // 2. kd-tree 노드 -> inKdTreeNodeTex
+    // kd-tree 노드 -> inKdTreeNodeTex
     cudaBindTexture(NULL, inKdTreeNodeTex, compObj.kdTreeNodes, sizeof(kdtreeNode) * compObj.kdTreeNodeCount);
 
-    // 3. Object offset list -> inObjectOffsetListTex
+    // Object offset list -> inObjectOffsetListTex
     cudaBindTexture(NULL, inObjectOffsetListTex, compObj.objIndexList, sizeof(uint32_t) * compObj.objListSize);
 
-    // 4. Triangle 데이터 / Material 데이터 등
+    // Triangle 데이터 / Material 데이터 등
     // getObjectMaterial(), singlePassIntersectRoutine() 에서 접근 가능한 글로벌 배열에 업로드
     cudaMemcpyToSymbol(devTriangleData, compObj.triangleList, sizeof(Triangle) * compObj.triangleCount);
     cudaMemcpyToSymbol(devMaterialList, compObj.materialList, sizeof(Material) * compObj.triangleCount);
@@ -164,7 +164,7 @@ GScene* convertCompositeObjectToScene(CompositeObject* obj)
     // 2) GTriangleWrapperList 생성
     GTriangleWrapperList* triList = new GTriangleWrapperList();
 
-    // 3. 삼각형을 GTriangleWrapper로 변환
+    // 삼각형을 GTriangleWrapper로 변환
     for (int i = 0; i < obj->n_triangles; ++i) {
         const TriAccel& tri = obj->kd_tree->tri_accel_list[i];
 
@@ -223,7 +223,7 @@ GScene* convertCompositeObjectToScene(CompositeObject* obj)
 //    //    - GTriangleWrapperList는 SGRTx2Lib에 존재
 //    GTriangleWrapperList* triList = new GTriangleWrapperList();
 //
-//    // 3. 각 삼각형을 GTriangleWrapper로 변환
+//    // 각 삼각형을 GTriangleWrapper로 변환
 //    for (int i = 0; i < obj->n_triangles; ++i) {
 //        const TriAccel& tri = obj->kd_tree->tri_accel_list[i];
 //

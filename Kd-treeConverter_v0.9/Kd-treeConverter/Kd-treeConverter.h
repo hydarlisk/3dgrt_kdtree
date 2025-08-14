@@ -7,8 +7,8 @@
 #pragma once
 #include <vector>
 
-#define TRAVL_COST 0.2
-#define ISCET_COST 60000.0
+#define TRAVL_COST 1.0
+#define ISCET_COST 20000.0
 
 #define X 0
 #define Y 1

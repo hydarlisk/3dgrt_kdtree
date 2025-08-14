@@ -78,7 +78,7 @@ public:
 };
 
 // =================================================================================
-// 2. 어댑터 클래스를 사용하여 CompositeObject를 GScene으로 변환하는 함수
+// 어댑터 클래스를 사용하여 CompositeObject를 GScene으로 변환하는 함수
 // =================================================================================
 GScene* convertToGScene(const CompositeObject& object, const Camera& camera, int width, int height) {
     GScene* scene = new GScene();
@@ -117,13 +117,13 @@ GScene* convertToGScene(const CompositeObject& object, const Camera& camera, int
 }
 
 // =================================================================================
-// 3. 최종 렌더링 함수
+// 최종 렌더링 함수
 // =================================================================================
 void renderWithSGRT(const CompositeObject& object, const Camera& camera, int width, int height, float*& out_framebuffer, bool& is_done) {
     is_done = false;
     std::cout << "--- SGRT Integration: Starting Render ---" << std::endl;
 
-    // 1. CompositeObject -> GScene 변환
+    // CompositeObject -> GScene 변환
     GScene* scene = convertToGScene(object, camera, width, height);
     if (!scene || scene->getObjectCount() == 0) {
         std::cerr << "[SGRT Error] Failed to convert to GScene or scene is empty." << std::endl;
@@ -132,7 +132,7 @@ void renderWithSGRT(const CompositeObject& object, const Camera& camera, int wid
     }
     std::cout << "[SGRT] Step 1: Converted to GScene." << std::endl;
 
-    // 2. GScene::convertRenderScene() 호출하여 Kd-tree 빌드
+    // GScene::convertRenderScene() 호출하여 Kd-tree 빌드
     scene->setUseSpatialStructure(USE_KDTREE);
     if (scene->convertRenderScene() != errorNo) {
         std::cerr << "[SGRT Error] GScene::convertRenderScene() failed." << std::endl;
@@ -141,7 +141,7 @@ void renderWithSGRT(const CompositeObject& object, const Camera& camera, int wid
     }
     std::cout << "[SGRT] Step 2: Kd-tree built via convertRenderScene()." << std::endl;
 
-    // 3. GGPUExperimentalRayTracer로 렌더링 실행
+    // GGPUExperimentalRayTracer로 렌더링 실행
     GGPUExperimentalRayTracer* tracer = new GGPUExperimentalRayTracer();
     std::cout << "[SGRT] Step 3: Calling tracer->rendering()..." << std::endl;
     if (tracer->rendering(scene, false) != errorNo) {
@@ -152,7 +152,7 @@ void renderWithSGRT(const CompositeObject& object, const Camera& camera, int wid
     }
     std::cout << "[SGRT] Step 4: Rendering finished." << std::endl;
 
-    // 4. GImageBuffer.h에 정의된 getBuffer()로 결과 프레임버퍼 가져오기
+    // GImageBuffer.h에 정의된 getBuffer()로 결과 프레임버퍼 가져오기
     GImageBuffer* imageBuffer = scene->getImageBuffer();
     if (imageBuffer && imageBuffer->getBuffer()) {
         if (out_framebuffer) delete[] out_framebuffer;
@@ -166,7 +166,7 @@ void renderWithSGRT(const CompositeObject& object, const Camera& camera, int wid
         std::cerr << "[SGRT Error] Failed to get framebuffer from scene." << std::endl;
     }
 
-    // 5. 메모리 해제
+    // 메모리 해제
     delete tracer;
     delete scene;
     std::cout << "--- SGRT Integration: Finished ---" << std::endl;

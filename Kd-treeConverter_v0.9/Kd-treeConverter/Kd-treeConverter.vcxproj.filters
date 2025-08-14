@@ -93,9 +93,6 @@
     <ClCompile Include="RayTraversal.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="sgrt_interface.cpp">
-      <Filter>CUDA</Filter>
-    </ClCompile>
     <ClCompile Include="SGRTx2Lib\GOpenGLPipelineRenderer.cpp">
       <Filter>SGRTx2Lib\Pipeline\OpenGLPipeline</Filter>
     </ClCompile>
@@ -264,9 +261,6 @@
     <ClCompile Include="SGRTx2Lib\SSERenderPipeline4x4.cpp">
       <Filter>SGRTx2Lib\Pipeline\CPURenderPipeline</Filter>
     </ClCompile>
-    <ClCompile Include="SGRT_Integration.cpp">
-      <Filter>CUDA</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Kd-treeConverter.h">
@@ -289,9 +283,6 @@
     </ClInclude>
     <ClInclude Include="RayTraversal.h">
       <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="sgrt_interface.h">
-      <Filter>CUDA</Filter>
     </ClInclude>
     <ClInclude Include="SGRTx2Lib\GOpenGLPipelineRenderer.h">
       <Filter>SGRTx2Lib\Pipeline\OpenGLPipeline</Filter>
@@ -488,19 +479,10 @@
     <ClInclude Include="SGRTx2Lib\SSERenderPipeline.h">
       <Filter>SGRTx2Lib\Pipeline\CPURenderPipeline</Filter>
     </ClInclude>
-    <ClInclude Include="cuCommonDefs.cuh">
-      <Filter>CUDA</Filter>
-    </ClInclude>
     <ClInclude Include="cudaRenderer.h">
       <Filter>CUDA</Filter>
     </ClInclude>
-    <ClInclude Include="SGRT_Integration.h">
-      <Filter>CUDA</Filter>
-    </ClInclude>
     <ClInclude Include="test.h">
-      <Filter>CUDA</Filter>
-    </ClInclude>
-    <ClInclude Include="cudaKDTreeTracer.h">
       <Filter>CUDA</Filter>
     </ClInclude>
     <ClInclude Include="SGRTx2Lib\cudaRenderPipeline.h">
@@ -508,9 +490,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="cudaRayTracingKernel.cu">
-      <Filter>CUDA</Filter>
-    </CudaCompile>
     <CudaCompile Include="SGRTx2Lib\cudaRenderPipelineKernel.cu">
       <Filter>SGRTx2Lib\Pipeline\cudaRenderPipeline</Filter>
     </CudaCompile>
@@ -539,9 +518,6 @@
       <Filter>SGRTx2Lib\Pipeline\cudaRenderPipeline</Filter>
     </CudaCompile>
     <CudaCompile Include="cudaRenderer.cu">
-      <Filter>CUDA</Filter>
-    </CudaCompile>
-    <CudaCompile Include="cudaKDTreeTracer.cu">
       <Filter>CUDA</Filter>
     </CudaCompile>
     <CudaCompile Include="test.cu">

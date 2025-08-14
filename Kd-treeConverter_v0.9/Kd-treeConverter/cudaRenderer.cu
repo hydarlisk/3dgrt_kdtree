@@ -25,9 +25,8 @@ inline void gpuAssert(cudaError_t code, const char* file, int line) {
 }
 
 // =================================================================================
-// 1. CUDA 커널 및 디바이스 헬퍼 함수/구조체 (SGRT 파일들에서 필요한 부분만 추출)
+// CUDA 커널 및 디바이스 헬퍼 함수/구조체 (SGRT 파일들에서 필요한 부분만 추출)
 // =================================================================================
-#define M_PI 3.14159265358979323846f
 #define RAY_START_EPSILON 1e-4f
 #define BARYCENTRY_EPSILON 1e-7f
 
@@ -78,9 +77,11 @@ typedef uint2 kdtreeNode;
 //#define OBJECTLIST_OFFSET(node)     ( (node).y)
 
 // 스택 (cudaRenderPipelineCommonKernel.cu에서 추출)
+#define DIM_X 16
+#define DIM_Y 16
 #define SHORT_STACK_DEPTH 12
 typedef struct { unsigned nodeID; float tMax; } cu_traceState;
-extern __shared__ cu_traceState smemBuffer[SHORT_STACK_DEPTH * 256];
+extern __shared__ cu_traceState smemBuffer[SHORT_STACK_DEPTH * DIM_X * DIM_Y];
 
 struct shortStack {
     unsigned _top, quant, baseOffset;
@@ -117,7 +118,7 @@ __device__ float3 refraction(float3 I, float3 N, float eta) {
 }
 
 // =================================================================================
-// 2. 텍스춰 및 상수 메모리 선언
+// 텍스춰 및 상수 메모리 선언
 // =================================================================================
 texture<uint2, 1, cudaReadModeElementType> inKdTreeNodeTex;
 texture<uint, 1, cudaReadModeElementType> inObjectOffsetListTex;
@@ -139,7 +140,7 @@ float4* g_d_tri_accel = nullptr;
 Gaussian* g_d_gaussians_persistent = nullptr;
 
 // =================================================================================
-// 3. CUDA 커널 코드 (사용자 제공 커널)
+// CUDA 커널 코드 (사용자 제공 커널)
 // =================================================================================
 
 __device__ bool BoundsRayIntersect(const float3& bmin, const float3& bmax, const cuRay& ray, float& tmin, float& tmax) {
@@ -301,7 +302,7 @@ __global__ void renderKernelObj(float* pFrameBuffer, int* maxhit) {
 }
 
 // =================================================================================
-// 4. Host-Side Public Render Function
+// Host-Side Public Render Function
 // =================================================================================
 
 bool initCuda() {
@@ -350,7 +351,7 @@ void renderObjWithCuda(const CompositeObject& object, const Camera& camera, int 
         return;
     }
 
-    // 1. 데이터 패킹 (Host)
+    // 데이터 패킹 (Host)
     // TriAccel -> float4[4] (n_u, n_v, n_d, k | b_nu, b_nv, b_d, idx | c_nu, c_nv, c_d, matID | N.x, N.y, N.z, pad)
     std::vector<float4> h_triangles(object.n_triangles * 4);
     //float4* h_triangles = (float4*)malloc(sizeof(float4) * (object.n_triangles * 4));
@@ -363,7 +364,7 @@ void renderObjWithCuda(const CompositeObject& object, const Camera& camera, int 
     }
     //printf("1. Data packing done\n");
 
-    // 2. GPU 메모리 할당 및 데이터 전송
+    // GPU 메모리 할당 및 데이터 전송
     cudaError_t err;
     kdtreeNode* d_kdtree_nodes;
     unsigned int* d_tri_offsets;
@@ -395,7 +396,7 @@ void renderObjWithCuda(const CompositeObject& object, const Camera& camera, int 
     }
     //printf("2. gpu memcpy done\n");
     
-    // 3. 텍스처 바인딩
+    // 텍스처 바인딩
     CUDA_CHECK(cudaBindTexture(0, &inKdTreeNodeTex, d_kdtree_nodes, &node_desc, node_size));
     CUDA_CHECK(cudaBindTexture(0, &inObjectOffsetListTex, d_tri_offsets, &offset_desc, offset_size));
     CUDA_CHECK(cudaBindTexture(0, &inTriAccelTex, d_tri_accel, &tri_desc, accel_size));
@@ -404,7 +405,7 @@ void renderObjWithCuda(const CompositeObject& object, const Camera& camera, int 
     }
     //printf("3. texture Bind done\n");
     
-    // 4. 상수 메모리 설정
+    // 상수 메모리 설정
     SceneInfo h_scene_info = { width, height };
     CUDA_CHECK(cudaMemcpyToSymbol(g_SceneInfo, &h_scene_info, sizeof(SceneInfo)));
 
@@ -444,7 +445,7 @@ void renderObjWithCuda(const CompositeObject& object, const Camera& camera, int 
     }
     //printf("4. const memory set done\n");
 
-    // 5. 커널 실행
+    // 커널 실행
     float* d_framebuffer;
     size_t framebuffer_size = width * height * 3 * sizeof(float);
     CUDA_CHECK(cudaMalloc(&d_framebuffer, framebuffer_size));
@@ -476,7 +477,7 @@ void renderObjWithCuda(const CompositeObject& object, const Camera& camera, int 
 
     //printf("5. kernel launch done\n");
 
-    // 6. 결과 복사 및 메모리 해제
+    // 결과 복사 및 메모리 해제
     if (out_framebuffer) delete[] out_framebuffer;
     out_framebuffer = new float[width * height * 3];
     CUDA_CHECK(cudaMemcpy(out_framebuffer, d_framebuffer, framebuffer_size, cudaMemcpyDeviceToHost));
@@ -555,10 +556,88 @@ __device__ void bitonicSort(HitRecord* hits, int N) {
     }
 }
 
+__device__ __forceinline__ float3 eval_sh_final(
+    const int degree,
+    const float3& view_dir,
+    const Gaussian& g
+) {
+    // 0차 SH: 기본 색상
+    //const float SH_C0 = 0.2820947917f;
+    float3 result = make_float3(g.f_dc[0], g.f_dc[1], g.f_dc[2]);
+    //result.x = result.x * SH_C0;
+    //result.y = result.y * SH_C0;
+    //result.z = result.z * SH_C0;
+
+    if (degree > 0) {
+        // 1차 SH
+        //const float SH_C1 = 0.4886025119f;
+        float x = view_dir.x, y = view_dir.y, z = view_dir.z;
+        result.x += SH_C1 * (-y * g.f_rest[0 * 3 + 0] + z * g.f_rest[1 * 3 + 0] - x * g.f_rest[2 * 3 + 0]);
+        result.y += SH_C1 * (-y * g.f_rest[0 * 3 + 1] + z * g.f_rest[1 * 3 + 1] - x * g.f_rest[2 * 3 + 1]);
+        result.z += SH_C1 * (-y * g.f_rest[0 * 3 + 2] + z * g.f_rest[1 * 3 + 2] - x * g.f_rest[2 * 3 + 2]);
+
+        if (degree > 1) {
+            // 2차 SH
+            //const float SH_C2_0 = 1.0925484306f, SH_C2_1 = -1.0925484306f, SH_C2_2 = 0.3153915652f, SH_C2_3 = -1.0925484306f, SH_C2_4 = 0.5462742153f;
+            float xx = x * x, yy = y * y, zz = z * z;
+            float xy = x * y, yz = y * z, xz = x * z;
+            result.x += SH_C2_0 * xy * g.f_rest[3 * 3 + 0]
+                + SH_C2_1 * yz * g.f_rest[4 * 3 + 0]
+                + SH_C2_2 * (2.f * zz - xx - yy) * g.f_rest[5 * 3 + 0]
+                + SH_C2_3 * xz * g.f_rest[6 * 3 + 0]
+                + SH_C2_4 * (xx - yy) * g.f_rest[7 * 3 + 0];
+            result.y += SH_C2_0 * xy * g.f_rest[3 * 3 + 1]
+                + SH_C2_1 * yz * g.f_rest[4 * 3 + 1]
+                + SH_C2_2 * (2.f * zz - xx - yy) * g.f_rest[5 * 3 + 1]
+                + SH_C2_3 * xz * g.f_rest[6 * 3 + 1]
+                + SH_C2_4 * (xx - yy) * g.f_rest[7 * 3 + 1];
+            result.z += SH_C2_0 * xy * g.f_rest[3 * 3 + 2]
+                + SH_C2_1 * yz * g.f_rest[4 * 3 + 2]
+                + SH_C2_2 * (2.f * zz - xx - yy) * g.f_rest[5 * 3 + 2]
+                + SH_C2_3 * xz * g.f_rest[6 * 3 + 2]
+                + SH_C2_4 * (xx - yy) * g.f_rest[7 * 3 + 2];
+
+            if (degree > 2) {
+                // 3차 SH
+                //const float SH_C3_0 = -0.5900435899f, SH_C3_1 = 2.8906114426f, SH_C3_2 = -0.4570457996f, SH_C3_3 = 0.3731763326f, SH_C3_4 = -0.4570457996f, SH_C3_5 = 1.4453057213f, SH_C3_6 = -0.5900435899f;
+                result.x += SH_C3_0 * y * (3 * xx - yy) * g.f_rest[8 * 3 + 0]
+                    + SH_C3_1 * xy * z * g.f_rest[9 * 3 + 0]
+                    + SH_C3_2 * y * (4 * zz - xx - yy) * g.f_rest[10 * 3 + 0]
+                    + SH_C3_3 * z * (2 * zz - 3 * xx - 3 * yy) * g.f_rest[11 * 3 + 0]
+                    + SH_C3_4 * x * (4 * zz - xx - yy) * g.f_rest[12 * 3 + 0]
+                    + SH_C3_5 * z * (xx - yy) * g.f_rest[13 * 3 + 0]
+                    + SH_C3_6 * x * (xx - 3 * yy) * g.f_rest[14 * 3 + 0];
+                result.y += SH_C3_0 * y * (3 * xx - yy) * g.f_rest[8 * 3 + 1]
+                    + SH_C3_1 * xy * z * g.f_rest[9 * 3 + 1]
+                    + SH_C3_2 * y * (4 * zz - xx - yy) * g.f_rest[10 * 3 + 1]
+                    + SH_C3_3 * z * (2 * zz - 3 * xx - 3 * yy) * g.f_rest[11 * 3 + 1]
+                    + SH_C3_4 * x * (4 * zz - xx - yy) * g.f_rest[12 * 3 + 1]
+                    + SH_C3_5 * z * (xx - yy) * g.f_rest[13 * 3 + 1]
+                    + SH_C3_6 * x * (xx - 3 * yy) * g.f_rest[14 * 3 + 1];
+                result.z += SH_C3_0 * y * (3 * xx - yy) * g.f_rest[8 * 3 + 2]
+                    + SH_C3_1 * xy * z * g.f_rest[9 * 3 + 2]
+                    + SH_C3_2 * y * (4 * zz - xx - yy) * g.f_rest[10 * 3 + 2]
+                    + SH_C3_3 * z * (2 * zz - 3 * xx - 3 * yy) * g.f_rest[11 * 3 + 2]
+                    + SH_C3_4 * x * (4 * zz - xx - yy) * g.f_rest[12 * 3 + 2]
+                    + SH_C3_5 * z * (xx - yy) * g.f_rest[13 * 3 + 2]
+                    + SH_C3_6 * x * (xx - 3 * yy) * g.f_rest[14 * 3 + 2];
+            }
+        }
+    }
+    // 원본 3dgrut과 동일하게, 최종적으로 0.5를 더해 [0,1] 범위로 이동
+    result.x = result.x * SH_C0 + 0.5f;
+    result.y = result.y * SH_C0 + 0.5f;
+    result.z = result.z * SH_C0 + 0.5f;
+    //result.x += 0.5f;
+    //result.y += 0.5f;
+    //result.z += 0.5f;
+    return result;
+}
+
 __device__ void singlePassIntersectRoutineGaussian(const cuRay& ray, int id, cuIntersectionCheck& hit, float t_near, float t_far, HitRecord* hits) {
     if (hit.hitCount >= MAX_HITS) return;
 
-    float4 d0 = tex1Dfetch(inTriAccelTex, id * 4 + 0);
+    float4 d0 = tex1Dfetch(inTriAccelTex, id * 3 + 0);
     unsigned int packed_flags = __float_as_uint(d0.w);
     unsigned int k = packed_flags & 0x3;
     float n_u = d0.x, n_v = d0.y, n_d = d0.z;
@@ -581,8 +660,8 @@ __device__ void singlePassIntersectRoutineGaussian(const cuRay& ray, int id, cuI
     //if (t >= hit.tHit || t <= t_near || t >= t_far) return;
     if (t <= t_near || t >= t_far) return;
 
-    float4 d1 = tex1Dfetch(inTriAccelTex, id * 4 + 1);
-    float4 d2 = tex1Dfetch(inTriAccelTex, id * 4 + 2);
+    float4 d1 = tex1Dfetch(inTriAccelTex, id * 3 + 1);
+    float4 d2 = tex1Dfetch(inTriAccelTex, id * 3 + 2);
 
     float u_coord = p_pos.x + t * p_dir.x;
     float v_coord = p_pos.y + t * p_dir.y;
@@ -593,18 +672,16 @@ __device__ void singlePassIntersectRoutineGaussian(const cuRay& ray, int id, cuI
     if (beta >= -BARYCENTRY_EPSILON && gamma >= -BARYCENTRY_EPSILON && (beta + gamma) <= 1.0f + BARYCENTRY_EPSILON) {
         //float4 N_packed = tex1Dfetch(inTriAccelTex, id * 4 + 3);
         //float3 N = make_float3(N_packed.x, N_packed.y, N_packed.z);
-        float3 N;
-        if (k == 0) {       // YZ 평면에 투영. 주축은 X. (u=y, v=z)
-            N = make_float3(1.0f, n_u, n_v);
-        }
-        else if (k == 1) { // ZX 평면에 투영. 주축은 Y. (u=z, v=x)
-            N = make_float3(n_v, 1.0f, n_u);
-        }
-        else {             // XY 평면에 투영. 주축은 Z. (u=x, v=y)
-            N = make_float3(n_u, n_v, 1.0f);
-        }
-        // 2. 법선 벡터와 광선 방향의 내적(dot product)을 계산합니다.
-        //    내적 값이 0보다 크면 광선이 삼각형의 뒷면에 부딪혔다는 의미입니다.
+        ExtendedVertex v0 = g_d_all_vertices[id * 3 + 0];
+        ExtendedVertex v1 = g_d_all_vertices[id * 3 + 1];
+        ExtendedVertex v2 = g_d_all_vertices[id * 3 + 2];
+
+        // 두 개의 변(edge) 벡터를 계산합니다.
+        float3 edge1 = make_float3(v1.vertex[0] - v0.vertex[0], v1.vertex[1] - v0.vertex[1], v1.vertex[2] - v0.vertex[2]);
+        float3 edge2 = make_float3(v2.vertex[0] - v0.vertex[0], v2.vertex[1] - v0.vertex[1], v2.vertex[2] - v0.vertex[2]);
+
+        // 외적(cross product)을 통해 법선 벡터 N을 계산하고 정규화합니다.
+        float3 N = cross(edge1, edge2);
         if (dot(N, ray.dir) > 0.0f) {
             return; // 뒷면이므로 이 충돌을 무시하고 함수를 즉시 종료합니다.
         }
@@ -612,14 +689,6 @@ __device__ void singlePassIntersectRoutineGaussian(const cuRay& ray, int id, cuI
         hits[hit.hitCount].t = t;
         hits[hit.hitCount].triIndex = id;
         hit.hitCount++; // 유효한 충돌이므로 카운터를 1 증가
-
-        //// 가장 가까운 충돌점 정보는 계속 갱신
-        //if (t < hit.tHit) {
-        //    hit.tHit = t;
-        //    hit.beta = beta;
-        //    hit.gamma = gamma;
-        //    hit.triIndex = id;
-        //}
     }
 }
 
@@ -673,83 +742,6 @@ __device__ void singlePassIntersectGaussian(
     }
 }
 
-__device__ __forceinline__ float3 eval_sh_final(
-    const int degree,
-    const float3& view_dir,
-    const Gaussian& g
-) {
-    // 0차 SH: 기본 색상
-    //const float SH_C0 = 0.2820947917f;
-    float3 result = make_float3(g.f_dc[0], g.f_dc[1], g.f_dc[2]);
-    //result.x = result.x * SH_C0;
-    //result.y = result.y * SH_C0;
-    //result.z = result.z * SH_C0;
-
-    if (degree > 0) {
-        // 1차 SH
-        //const float SH_C1 = 0.4886025119f;
-        float x = view_dir.x, y = view_dir.y, z = view_dir.z;
-        result.x += SH_C1 * (-y * g.f_rest[0 * 3 + 0] + z * g.f_rest[1 * 3 + 0] - x * g.f_rest[2 * 3 + 0]);
-        result.y += SH_C1 * (-y * g.f_rest[0 * 3 + 1] + z * g.f_rest[1 * 3 + 1] - x * g.f_rest[2 * 3 + 1]);
-        result.z += SH_C1 * (-y * g.f_rest[0 * 3 + 2] + z * g.f_rest[1 * 3 + 2] - x * g.f_rest[2 * 3 + 2]);
-
-        if (degree > 1) {
-            // 2차 SH
-            //const float SH_C2_0 = 1.0925484306f, SH_C2_1 = -1.0925484306f, SH_C2_2 = 0.3153915652f, SH_C2_3 = -1.0925484306f, SH_C2_4 = 0.5462742153f;
-            float xx = x * x, yy = y * y, zz = z * z;
-            float xy = x * y, yz = y * z, xz = x * z;
-            result.x += SH_C2_0 * xy * g.f_rest[3 * 3 + 0]
-                + SH_C2_1 * yz * g.f_rest[4 * 3 + 0]
-                + SH_C2_2 * (2.f * zz - xx - yy) * g.f_rest[5 * 3 + 0]
-                + SH_C2_3 * xz * g.f_rest[6 * 3 + 0]
-                + SH_C2_4 * (xx - yy) * g.f_rest[7 * 3 + 0];
-            result.y += SH_C2_0 * xy * g.f_rest[3 * 3 + 1] 
-                + SH_C2_1 * yz * g.f_rest[4 * 3 + 1]
-                + SH_C2_2 * (2.f * zz - xx - yy) * g.f_rest[5 * 3 + 1]
-                + SH_C2_3 * xz * g.f_rest[6 * 3 + 1] 
-                + SH_C2_4 * (xx - yy) * g.f_rest[7 * 3 + 1];
-            result.z += SH_C2_0 * xy * g.f_rest[3 * 3 + 2] 
-                + SH_C2_1 * yz * g.f_rest[4 * 3 + 2]
-                + SH_C2_2 * (2.f * zz - xx - yy) * g.f_rest[5 * 3 + 2]
-                + SH_C2_3 * xz * g.f_rest[6 * 3 + 2] 
-                + SH_C2_4 * (xx - yy) * g.f_rest[7 * 3 + 2];
-
-            if (degree > 2) {
-                // 3차 SH
-                //const float SH_C3_0 = -0.5900435899f, SH_C3_1 = 2.8906114426f, SH_C3_2 = -0.4570457996f, SH_C3_3 = 0.3731763326f, SH_C3_4 = -0.4570457996f, SH_C3_5 = 1.4453057213f, SH_C3_6 = -0.5900435899f;
-                result.x += SH_C3_0 * y * (3 * xx - yy) * g.f_rest[8 * 3 + 0]
-                    + SH_C3_1 * xy * z * g.f_rest[9 * 3 + 0]
-                    + SH_C3_2 * y * (4 * zz - xx - yy) * g.f_rest[10 * 3 + 0]
-                    + SH_C3_3 * z * (2 * zz - 3 * xx - 3 * yy) * g.f_rest[11 * 3 + 0]
-                    + SH_C3_4 * x * (4 * zz - xx - yy) * g.f_rest[12 * 3 + 0] 
-                    + SH_C3_5 * z * (xx - yy) * g.f_rest[13 * 3 + 0]
-                    + SH_C3_6 * x * (xx - 3 * yy) * g.f_rest[14 * 3 + 0];
-                result.y += SH_C3_0 * y * (3 * xx - yy) * g.f_rest[8 * 3 + 1]
-                    + SH_C3_1 * xy * z * g.f_rest[9 * 3 + 1] 
-                    + SH_C3_2 * y * (4 * zz - xx - yy) * g.f_rest[10 * 3 + 1] 
-                    + SH_C3_3 * z * (2 * zz - 3 * xx - 3 * yy) * g.f_rest[11 * 3 + 1]
-                    + SH_C3_4 * x * (4 * zz - xx - yy) * g.f_rest[12 * 3 + 1]
-                    + SH_C3_5 * z * (xx - yy) * g.f_rest[13 * 3 + 1] 
-                    + SH_C3_6 * x * (xx - 3 * yy) * g.f_rest[14 * 3 + 1];
-                result.z += SH_C3_0 * y * (3 * xx - yy) * g.f_rest[8 * 3 + 2] 
-                    + SH_C3_1 * xy * z * g.f_rest[9 * 3 + 2]
-                    + SH_C3_2 * y * (4 * zz - xx - yy) * g.f_rest[10 * 3 + 2] 
-                    + SH_C3_3 * z * (2 * zz - 3 * xx - 3 * yy) * g.f_rest[11 * 3 + 2] 
-                    + SH_C3_4 * x * (4 * zz - xx - yy) * g.f_rest[12 * 3 + 2] 
-                    + SH_C3_5 * z * (xx - yy) * g.f_rest[13 * 3 + 2]
-                    + SH_C3_6 * x * (xx - 3 * yy) * g.f_rest[14 * 3 + 2];
-            }
-        }
-    }
-    // 원본 3dgrut과 동일하게, 최종적으로 0.5를 더해 [0,1] 범위로 이동
-    result.x = result.x * SH_C0 + 0.5f;
-    result.y = result.y * SH_C0 + 0.5f;
-    result.z = result.z * SH_C0 + 0.5f;
-    //result.x += 0.5f;
-    //result.y += 0.5f;
-    //result.z += 0.5f;
-    return result;
-}
 
 __global__ void renderKernelGaussian(float* pFrameBuffer
     , int* hitsum, int* maxhit, int* hcount
@@ -803,7 +795,7 @@ for (int s = 0; s < samples_per_pixel; ++s) {
 
     for (int i = 0; i < hit.hitCount; ++i) {
         // TriAccel 텍스처에서 material_ID (가우시안 ID)를 가져옵니다.
-        float4 d2 = tex1Dfetch(inTriAccelTex, hits[i].triIndex * 4 + 2);
+        float4 d2 = tex1Dfetch(inTriAccelTex, hits[i].triIndex * 3 + 2);
         int gaussianID = __float_as_int(d2.w);
 
         Gaussian g = g_d_gaussians[gaussianID];
@@ -829,7 +821,8 @@ for (int s = 0; s < samples_per_pixel; ++s) {
     //if(accumulated_opacity<OPACITY_THRESHOLD)
     //printf("hitCount %d | ao: %f\n", hit.hitCount, accumulated_opacity);
 
-    // 5. 최종 색상 계산 및 프레임버퍼에 쓰기
+    // 
+// 최종 색상 계산 및 프레임버퍼에 쓰기
     //float3 background_color = make_float3(0.2f, 0.3f, 0.4f);
     float3 background_color = make_float3(0.0f, 0.0f, 0.0f);
 #if SUPER_SAMPLING
@@ -897,11 +890,11 @@ __device__ void singlePassIntersectRoutineGaussian1(const cuRay& ray, int id, fl
         ExtendedVertex v1 = g_d_all_vertices[id * 3 + 1];
         ExtendedVertex v2 = g_d_all_vertices[id * 3 + 2];
 
-        // 2. 두 개의 변(edge) 벡터를 계산합니다.
+        // 두 개의 변(edge) 벡터를 계산합니다.
         float3 edge1 = make_float3(v1.vertex[0] - v0.vertex[0], v1.vertex[1] - v0.vertex[1], v1.vertex[2] - v0.vertex[2]);
         float3 edge2 = make_float3(v2.vertex[0] - v0.vertex[0], v2.vertex[1] - v0.vertex[1], v2.vertex[2] - v0.vertex[2]);
 
-        // 3. 외적(cross product)을 통해 법선 벡터 N을 계산하고 정규화합니다.
+        // 외적(cross product)을 통해 법선 벡터 N을 계산하고 정규화합니다.
         float3 N = cross(edge1, edge2);
         // 법선 벡터와 광선 방향의 내적(dot product)을 계산
         // 내적 값이 0보다 크면 광선이 삼각형의 뒷면
@@ -919,132 +912,128 @@ __device__ void singlePassIntersectGaussian1(
     cuRay& currRay,
     float3& accumulated_color,      // 수정: 누적 색상을 직접 업데이트
     float& accumulated_opacity    // 수정: 누적 알파를 직접 업데이트
-    , int& hitCount
+    //, int& hitCount
 ) {
-    // 1. 광선의 유효 범위 설정
+    //int hitCount = 0;
+    // 광선의 유효 범위 설정
     float t_near = RAY_START_EPSILON, t_far = FLT_MAX;
     if (BoundsRayIntersect(g_SceneBBoxMin, g_SceneBBoxMax, currRay, t_near, t_far)) {
 
-        // 2. Kd-tree 순회를 위한 스택 초기화
+        // Kd-tree 순회를 위한 스택 초기화
         shortStack stack;
         stack.init(threadIdx.x + threadIdx.y * blockDim.x);
         kdtreeNode node = tex1Dfetch(inKdTreeNodeTex, 0);
 
-        // 3. 메인 순회 루프
+        // 메인 순회 루프
         while (true) {
             // 조기 종료 최적화: 누적 알파값이 임계치를 넘으면 전체 순회를 중단
             if (accumulated_opacity > OPACITY_THRESHOLD) {
+                //printf("hitCount:%d\n", hitCount);
                 break;
             }
-
-            // 4. 현재 노드가 리프 노드인지 확인
-            if (IS_LEAF(node)) {
-                // --- 리프 노드 처리 로직 ---
-                unsigned int offset = OBJECTLIST_OFFSET(node);
-                unsigned int count = OBJECT_SIZE(node);
-
-                if (count > 0) {
-                    // 4-1. 수집: 이 리프 노드 내의 모든 충돌을 임시 로컬 배열에 저장
-                    HitRecord local_hits[MAX_HITS];
-                    int local_hit_count = 0;
-
-                    for (unsigned i = 0; i < count; ++i) {
-                        unsigned tri_idx = tex1Dfetch(inObjectOffsetListTex, offset + i);
-                        singlePassIntersectRoutineGaussian1(currRay, tri_idx, t_near, t_far, local_hits, local_hit_count);
-                    }
-
-                    if (local_hit_count > 0) {
-                        // 4-2. 정렬: 이 리프 노드 내의 충돌만 정렬
-                        sortHits(local_hits, local_hit_count);
-                        hitCount += local_hit_count;
-                        //bitonicSort(local_hits, local_hit_count);
-
-                        // 4-3. 블렌딩: 정렬된 순서대로 알파 블렌딩 수행
-                        for (int i = 0; i < local_hit_count; ++i) {
-                            float4 d2 = tex1Dfetch(inTriAccelTex, local_hits[i].triIndex * 3 + 2);
-                            int gaussianID = __float_as_int(d2.w);
-                            Gaussian g = g_d_gaussians[gaussianID];
-
-                            float sample_opacity = 1.0f / (1.0f + expf(-g.opacity));
-                            float3 view_dir = normalize(make_float3(g.pos[0], g.pos[1], g.pos[2]) - currRay.pos);
-                            float3 sample_color = eval_sh_final(3, view_dir, g);
-                            //float3 sample_color = make_float3(
-                            //    0.5f + 0.5f * g.f_dc[0], // SH DC 계수는 -0.5~0.5 범위일 수 있으므로 0~1로 변환
-                            //    0.5f + 0.5f * g.f_dc[1],
-                            //    0.5f + 0.5f * g.f_dc[2]
-                            //);
-                            accumulated_color += sample_color * sample_opacity * (1.0f - accumulated_opacity);
-                            accumulated_opacity += sample_opacity * (1.0f - accumulated_opacity);
-
-                            // 블렌딩 중에도 조기 종료 조건을 계속 확인
-                            if (accumulated_opacity > OPACITY_THRESHOLD) break;
-                        }
-                    }
-                }
-
-                // --- 다음 노드로 진행 ---
-                if (stack.empty()) break; // 스택이 비었으면 전체 순회 종료
-
-                cu_traceState next = stack.top();
-                stack.pop();
-                t_near = t_far;
-                t_far = next.tMax;
-                node = tex1Dfetch(inKdTreeNodeTex, next.nodeID);
-
-            }
-            else {
-                // --- 내부 노드(Inner Node) 처리 로직 ---
+            while (!IS_LEAF(node)) {
                 unsigned axis = SPLIT_AXIS(node);
                 float split_pos = SPLIT_POS(node);
-                float dir_axis = ((float*)&(currRay.dir))[axis];
-                float pos_axis = ((float*)&(currRay.pos))[axis];
-
+                float dir_axis = (&(currRay.dir.x))[axis];
                 if (fabsf(dir_axis) < 1e-8f) { // 광선이 축과 평행한 경우
-                    node = tex1Dfetch(inKdTreeNodeTex, FIRST_CHILD_OFFSET(node) + 1);
+                    node = tex1Dfetch(inKdTreeNodeTex, FIRST_CHILD_OFFSET(node) + 1); // 임의로 한쪽으로 보냄
                     continue;
                 }
-
+                float pos_axis = (&(currRay.pos.x))[axis];
                 float t_split = (split_pos - pos_axis) / dir_axis;
-                unsigned near_child_idx = FIRST_CHILD_OFFSET(node) + (pos_axis < split_pos || (pos_axis == split_pos && dir_axis < 0) ? 0 : 1);
-                unsigned far_child_idx = FIRST_CHILD_OFFSET(node) + (pos_axis < split_pos || (pos_axis == split_pos && dir_axis < 0) ? 1 : 0);
-
-                if (t_split > t_far || t_split <= 0) {
-                    node = tex1Dfetch(inKdTreeNodeTex, near_child_idx);
+                unsigned near_child = FIRST_CHILD_OFFSET(node) + (pos_axis < split_pos || (pos_axis == split_pos && dir_axis < 0) ? 0 : 1);
+                unsigned far_child = FIRST_CHILD_OFFSET(node) + (pos_axis < split_pos || (pos_axis == split_pos && dir_axis < 0) ? 1 : 0);
+                if (t_split > t_far || t_split < 0) {
+                    node = tex1Dfetch(inKdTreeNodeTex, near_child);
                 }
                 else if (t_split < t_near) {
-                    node = tex1Dfetch(inKdTreeNodeTex, far_child_idx);
+                    node = tex1Dfetch(inKdTreeNodeTex, far_child);
                 }
                 else {
-                    stack.push(far_child_idx, t_far);
-                    node = tex1Dfetch(inKdTreeNodeTex, near_child_idx);
+                    stack.push(far_child, t_far);
+                    node = tex1Dfetch(inKdTreeNodeTex, near_child);
                     t_far = t_split;
                 }
             }
+            // --- 리프 노드 처리 로직 ---
+            unsigned int offset = OBJECTLIST_OFFSET(node);
+            unsigned int count = OBJECT_SIZE(node);
+            if (count <= 0) continue;
+            //if (count > 0) {
+            // 수집: 이 리프 노드 내의 모든 충돌을 임시 로컬 배열에 저장
+            HitRecord local_hits[MAX_HITS];
+            int local_hit_count = 0;
+
+            for (unsigned i = 0; i < count; ++i) {
+                unsigned tri_idx = tex1Dfetch(inObjectOffsetListTex, offset + i);
+                singlePassIntersectRoutineGaussian1(currRay, tri_idx, t_near, t_far, local_hits, local_hit_count);
+            }
+
+            if (local_hit_count > 0) {
+                // 정렬: 이 리프 노드 내의 충돌만 정렬
+                sortHits(local_hits, local_hit_count);
+                //hitCount += local_hit_count;
+                //bitonicSort(local_hits, local_hit_count);
+
+                // 블렌딩: 정렬된 순서대로 알파 블렌딩 수행
+                for (int i = 0; i < local_hit_count; ++i) {
+                    float4 d2 = tex1Dfetch(inTriAccelTex, local_hits[i].triIndex * 3 + 2);
+                    int gaussianID = __float_as_int(d2.w);
+                    Gaussian g = g_d_gaussians[gaussianID];
+
+                    float sample_opacity = 1.0f / (1.0f + expf(-g.opacity));
+                    float3 view_dir = normalize(make_float3(g.pos[0], g.pos[1], g.pos[2]) - currRay.pos);
+                    float3 sample_color = eval_sh_final(3, view_dir, g);
+                    //// SH DC 계수는 -0.5~0.5 범위일 수 있으므로 0~1로 변환
+                    //float3 sample_color = make_float3(
+                    //    0.5f + 0.5f * g.f_dc[0], 
+                    //    0.5f + 0.5f * g.f_dc[1],
+                    //    0.5f + 0.5f * g.f_dc[2]
+                    //);
+                    accumulated_color += sample_color * sample_opacity * (1.0f - accumulated_opacity);
+                    accumulated_opacity += sample_opacity * (1.0f - accumulated_opacity);
+
+                    // 블렌딩 중에도 조기 종료 조건을 계속 확인
+                    if (accumulated_opacity > OPACITY_THRESHOLD) {
+                        //printf("hitCount:%d\n", hitCount);
+                        break;
+                    }
+                }
+            }
+            //}//if (count > 0)
+
+            if (stack.empty()) {
+                //printf("(empty) hitCount:%d\n", hitCount);
+                break;
+            }
+            cu_traceState next = stack.top(); stack.pop();
+            t_near = t_far; t_far = next.tMax;
+            node = tex1Dfetch(inKdTreeNodeTex, next.nodeID);
         } // while(true)
     } // if (BoundsRayIntersect)
 }
 
 __global__ void renderKernelGaussian1(float* pFrameBuffer
-    , int* hitsum, int* maxhit, int* hcount
+    //, int* hitsum, int* maxhit, int* hcount
 ) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
     if (x >= g_SceneInfo.resX || y >= g_SceneInfo.resY) return;
 
-    // 1. 광선 생성
+    // 광선 생성
     float sx = (float)x + 0.5f, sy = (float)y + 0.5f;
     float3 dir = g_CameraInfo.startPoint + g_CameraInfo.u * sx * g_CameraInfo.stepX - g_CameraInfo.v * sy * g_CameraInfo.stepY;
     cuRay ray = { g_CameraInfo.eye, normalize(dir - g_CameraInfo.eye) };
 
-    // 2. 누적 변수 초기화
+    // 누적 변수 초기화
     float3 accumulated_color = make_float3(0.0f, 0.0f, 0.0f);
     float accumulated_opacity = 0.0f;
-    int hitCount=0;
+    //int hitCount = 0;
 
-    // 3. 수정된 메인 탐색/블렌딩 함수 호출
-    singlePassIntersectGaussian1(ray, accumulated_color, accumulated_opacity, hitCount);
+    // 수정된 메인 탐색/블렌딩 함수 호출
+    singlePassIntersectGaussian1(ray, accumulated_color, accumulated_opacity);//, hitCount);
 
-    // 4. 최종 색상 계산 및 프레임버퍼 쓰기 (톤매핑/감마보정 제외)
+    // 최종 색상 계산 및 프레임버퍼 쓰기 (톤매핑/감마보정 제외)
     float3 background_color = make_float3(0.0f, 0.0f, 0.0f);
     float3 final_color = accumulated_color + background_color * (1.0f - accumulated_opacity);
 
@@ -1054,12 +1043,12 @@ __global__ void renderKernelGaussian1(float* pFrameBuffer
     pFrameBuffer[idx + 2] = final_color.z;
 
 
-    if (hitCount > 0) {
-        //if(accumulated_opacity<OPACITY_THRESHOLD) printf("hitCount %d | ao: %f\n", hit.hitCount, accumulated_opacity);
-        atomicMax(maxhit, hitCount);
-        atomicAdd(hitsum, hitCount);
-        atomicAdd(hcount, 1);
-    }
+    //if (hitCount > 0) {
+    //    //if(accumulated_opacity<OPACITY_THRESHOLD) printf("hitCount %d | ao: %f\n", hit.hitCount, accumulated_opacity);
+    //    atomicMax(maxhit, hitCount);
+    //    atomicAdd(hitsum, hitCount);
+    //    atomicAdd(hcount, 1);
+    //}
 }
 
 void renderGaussianWithCuda(const CompositeObject& object, const std::vector<Gaussian>& gaussians, const Camera& camera, int width, int height, float*& out_framebuffer, bool& is_done) {
@@ -1097,7 +1086,7 @@ void renderGaussianWithCuda(const CompositeObject& object, const std::vector<Gau
         return;
     }
 
-    // 1. 데이터 패킹 (Host)
+    // 데이터 패킹 (Host)
     // TriAccel -> float4[4] (n_u, n_v, n_d, k | b_nu, b_nv, b_d, idx | c_nu, c_nv, c_d, matID | N.x, N.y, N.z, pad)
     std::vector<float4> h_triangles(object.n_triangles * 3);
     //float4* h_triangles = (float4*)malloc(sizeof(float4) * (object.n_triangles * 4));
@@ -1110,7 +1099,7 @@ void renderGaussianWithCuda(const CompositeObject& object, const std::vector<Gau
     }
     //printf("1. Data packing done\n");
 
-    // 2. GPU 메모리 할당 및 데이터 전송
+    // GPU 메모리 할당 및 데이터 전송
     cudaError_t err;
     kdtreeNode* d_kdtree_nodes;
     unsigned int* d_tri_offsets;
@@ -1145,7 +1134,7 @@ void renderGaussianWithCuda(const CompositeObject& object, const std::vector<Gau
     }
     //printf("2. gpu memcpy done\n");
 
-    // 3. 텍스처 바인딩
+    // 텍스처 바인딩
     CUDA_CHECK(cudaBindTexture(0, &inKdTreeNodeTex, d_kdtree_nodes, &node_desc, node_size));
     CUDA_CHECK(cudaBindTexture(0, &inObjectOffsetListTex, d_tri_offsets, &offset_desc, offset_size));
     CUDA_CHECK(cudaBindTexture(0, &inTriAccelTex, d_tri_accel, &tri_desc, accel_size));
@@ -1154,7 +1143,7 @@ void renderGaussianWithCuda(const CompositeObject& object, const std::vector<Gau
     }
     //printf("3. texture Bind done\n");
 
-    // 4. 상수 메모리 설정
+    // 상수 메모리 설정
     SceneInfo h_scene_info = { width, height };
     CUDA_CHECK(cudaMemcpyToSymbol(g_SceneInfo, &h_scene_info, sizeof(SceneInfo)));
 
@@ -1193,13 +1182,13 @@ void renderGaussianWithCuda(const CompositeObject& object, const std::vector<Gau
     }
     //printf("4. const memory set done\n");
 
-    // 5. 커널 실행
+    // 커널 실행
     float* d_framebuffer;
     size_t framebuffer_size = width * height * 3 * sizeof(float);
     CUDA_CHECK(cudaMalloc(&d_framebuffer, framebuffer_size));
     CUDA_CHECK(cudaMemset(d_framebuffer, 0, framebuffer_size));
 
-    dim3 threads(16, 16);
+    dim3 threads(DIM_X, DIM_Y);
     dim3 blocks((width + threads.x - 1) / threads.x, (height + threads.y - 1) / threads.y);
     size_t shared_mem_size = threads.x * threads.y * SHORT_STACK_DEPTH * sizeof(cu_traceState);
 
@@ -1232,7 +1221,7 @@ void renderGaussianWithCuda(const CompositeObject& object, const std::vector<Gau
 
     //printf("5. kernel launch done\n");
 
-    // 6. 결과 복사 및 메모리 해제
+    // 결과 복사 및 메모리 해제
     if (out_framebuffer) delete[] out_framebuffer;
     out_framebuffer = new float[width * height * 3];
     CUDA_CHECK(cudaMemcpy(out_framebuffer, d_framebuffer, framebuffer_size, cudaMemcpyDeviceToHost));
@@ -1299,7 +1288,7 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
         return;
     }
 
-    // 1. 데이터 패킹 (Host)
+    // 데이터 패킹 (Host)
     // TriAccel -> float4[4] (n_u, n_v, n_d, k | b_nu, b_nv, b_d, idx | c_nu, c_nv, c_d, matID | N.x, N.y, N.z, pad)
     std::vector<float4> h_triangles(object.n_triangles * 3);
     for (int i = 0; i < object.n_triangles; ++i) {
@@ -1310,7 +1299,7 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
     }
     //printf("1. Data packing done\n");
 
-    // 2. GPU 메모리 할당 및 데이터 전송
+    // GPU 메모리 할당 및 데이터 전송
     cudaError_t err;
 
     if (g_d_kdtree_nodes) cudaFree(g_d_kdtree_nodes);
@@ -1339,7 +1328,7 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
     }
     //printf("2. gpu memcpy done\n");
 
-    // 3. 텍스처 바인딩
+    // 텍스처 바인딩
     cudaChannelFormatDesc node_desc = cudaCreateChannelDesc<uint2>();
     cudaChannelFormatDesc offset_desc = cudaCreateChannelDesc<unsigned int>();
     cudaChannelFormatDesc tri_desc = cudaCreateChannelDesc<float4>();
@@ -1351,7 +1340,7 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
     }
     //printf("3. texture Bind done\n");
 
-    // 4. 상수 메모리 설정
+    // 상수 메모리 설정
     float3 h_bbox_min = make_float3(object.AABB[XMIN], object.AABB[YMIN], object.AABB[ZMIN]);
     float3 h_bbox_max = make_float3(object.AABB[XMAX], object.AABB[YMAX], object.AABB[ZMAX]);
     CUDA_CHECK(cudaMemcpyToSymbol(g_SceneBBoxMin, &h_bbox_min, sizeof(float3)));
@@ -1408,39 +1397,38 @@ void renderGaussianWithCudaFrame(const Camera& camera, int width, int height, fl
                             + h_camera_info.v * (plane_height * 0.5f);
     CUDA_CHECK(cudaMemcpyToSymbol(g_CameraInfo, &h_camera_info, sizeof(CameraInfo)));
 
-    // 5. 커널 실행
-    dim3 threads(16, 16);
+    // 커널 실행
+    dim3 threads(64, 4);
     dim3 blocks((width + threads.x - 1) / threads.x, (height + threads.y - 1) / threads.y);
     size_t shared_mem_size = threads.x * threads.y * SHORT_STACK_DEPTH * sizeof(cu_traceState);
 
-    //renderKernelGaussian1 << < blocks, threads, shared_mem_size >> > (d_framebuffer);
-    //CUDA_CHECK(cudaGetLastError());        // launch 실패 확인
-    //CUDA_CHECK(cudaDeviceSynchronize()); // 실행 중 오류 확인
-
-    int* d_maxhit, * d_hitsum, * hitcount;
-    CUDA_CHECK(cudaMalloc((void**)&d_maxhit, sizeof(int)));
-    CUDA_CHECK(cudaMemset(d_maxhit, 0, sizeof(int)));
-    CUDA_CHECK(cudaMalloc((void**)&d_hitsum, sizeof(int)));
-    CUDA_CHECK(cudaMemset(d_hitsum, 0, sizeof(int)));
-    CUDA_CHECK(cudaMalloc((void**)&hitcount, sizeof(int)));
-    CUDA_CHECK(cudaMemset(hitcount, 0, sizeof(int)));
-
-    //renderKernelGaussian << < blocks, threads, shared_mem_size >> > (d_framebuffer, d_hitsum, d_maxhit, hitcount);
-    renderKernelGaussian1 << < blocks, threads, shared_mem_size >> > (d_framebuffer, d_hitsum, d_maxhit, hitcount);
-    //renderKernelGaussian1 << < blocks, threads, shared_mem_size >> > (d_framebuffer);// , d_maxhit, hitcount);
+    renderKernelGaussian1 << < blocks, threads, shared_mem_size >> > (d_framebuffer);
     CUDA_CHECK(cudaGetLastError());        // launch 실패 확인
     CUDA_CHECK(cudaDeviceSynchronize()); // 실행 중 오류 확인
 
-    int h_maxhit = 0, h_count = 0, h_hitsum = 0;
-    CUDA_CHECK(cudaMemcpy(&h_maxhit, d_maxhit, sizeof(int), cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaMemcpy(&h_hitsum, d_hitsum, sizeof(int), cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaMemcpy(&h_count, hitcount, sizeof(int), cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaFree(d_maxhit));
-    CUDA_CHECK(cudaFree(d_hitsum));
-    CUDA_CHECK(cudaFree(hitcount));
-    printf("hit max, sum, count, avg: %d, %d, %d, %f\n", h_maxhit, h_hitsum, h_count, (float)(h_hitsum / h_count));
+    //int* d_maxhit, * d_hitsum, * hitcount;
+    //CUDA_CHECK(cudaMalloc((void**)&d_maxhit, sizeof(int)));
+    //CUDA_CHECK(cudaMemset(d_maxhit, 0, sizeof(int)));
+    //CUDA_CHECK(cudaMalloc((void**)&d_hitsum, sizeof(int)));
+    //CUDA_CHECK(cudaMemset(d_hitsum, 0, sizeof(int)));
+    //CUDA_CHECK(cudaMalloc((void**)&hitcount, sizeof(int)));
+    //CUDA_CHECK(cudaMemset(hitcount, 0, sizeof(int)));
 
-    // 6. 결과 복사 및 메모리 해제
+    ////renderKernelGaussian << < blocks, threads, shared_mem_size >> > (d_framebuffer, d_hitsum, d_maxhit, hitcount);
+    //renderKernelGaussian1 << < blocks, threads, shared_mem_size >> > (d_framebuffer, d_hitsum, d_maxhit, hitcount);
+    //CUDA_CHECK(cudaGetLastError());        // launch 실패 확인
+    //CUDA_CHECK(cudaDeviceSynchronize()); // 실행 중 오류 확인
+
+    //int h_maxhit = 0, h_count = 0, h_hitsum = 0;
+    //CUDA_CHECK(cudaMemcpy(&h_maxhit, d_maxhit, sizeof(int), cudaMemcpyDeviceToHost));
+    //CUDA_CHECK(cudaMemcpy(&h_hitsum, d_hitsum, sizeof(int), cudaMemcpyDeviceToHost));
+    //CUDA_CHECK(cudaMemcpy(&h_count, hitcount, sizeof(int), cudaMemcpyDeviceToHost));
+    //CUDA_CHECK(cudaFree(d_maxhit));
+    //CUDA_CHECK(cudaFree(d_hitsum));
+    //CUDA_CHECK(cudaFree(hitcount));
+    //printf("hit max: %d, sum: %d, count: %d, avg: %f\n", h_maxhit, h_hitsum, h_count, (float)(h_hitsum / h_count));
+
+    // 결과 복사 및 메모리 해제
     //if (out_framebuffer) delete[] out_framebuffer;
     //out_framebuffer = new float[width * height * 3];
     //CUDA_CHECK(cudaMemcpy(out_framebuffer, d_framebuffer, framebuffer_size, cudaMemcpyDeviceToHost));

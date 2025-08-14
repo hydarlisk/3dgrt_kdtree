@@ -242,7 +242,7 @@ void mousepress(int button, int state, int x, int y) {
 		if (glutGetModifiers() == GLUT_ACTIVE_SHIFT) {
 			uip.camera_zoom_mode = 1;
 		}
-		else if  (glutGetModifiers() == GLUT_ACTIVE_CTRL) {
+		else/* if  (glutGetModifiers() == GLUT_ACTIVE_CTRL)*/ {
 			uip.camera_global_rotation_mode = 1;
 		}			
 		uip.left_button_pressed  = 1;
@@ -642,6 +642,64 @@ void create_composite_object_from_gaussians(
 	printf("Successfully created CompositeObject with %d triangles from %ld Gaussians.\n", uip.poly_model.n_triangles, num_gaussians);
 }
 
+// CompositeObject의 모든 정점을 Y축 기준으로 회전시키는 함수
+void rotate_composite_object(CompositeObject& object, float angle_degrees, float axis_x, float axis_y, float axis_z) {
+	// 회전축 벡터 정규화
+	float axis_vec[3] = { axis_x, axis_y, axis_z };
+	fMyVecNormalize(axis_vec);
+	float ux = axis_vec[0];
+	float uy = axis_vec[1];
+	float uz = axis_vec[2];
+
+	// 회전 행렬 계산을 위한 값들 준비
+	float angle_rad = angle_degrees * M_PI / 180.0f;
+	float cos_theta = cosf(angle_rad);
+	float sin_theta = sinf(angle_rad);
+	float one_minus_cos = 1.0f - cos_theta;
+
+	// 임의 축 회전 행렬 (Row-major)
+	float R[3][3];
+	R[0][0] = cos_theta + ux * ux * one_minus_cos;
+	R[0][1] = ux * uy * one_minus_cos - uz * sin_theta;
+	R[0][2] = ux * uz * one_minus_cos + uy * sin_theta;
+
+	R[1][0] = uy * ux * one_minus_cos + uz * sin_theta;
+	R[1][1] = cos_theta + uy * uy * one_minus_cos;
+	R[1][2] = uy * uz * one_minus_cos - ux * sin_theta;
+
+	R[2][0] = uz * ux * one_minus_cos - uy * sin_theta;
+	R[2][1] = uz * uy * one_minus_cos + ux * sin_theta;
+	R[2][2] = cos_theta + uz * uz * one_minus_cos;
+
+	// 모든 정점을 순회하며 회전 변환 적용
+	int total_vertices = object.n_triangles * 3;
+	for (int i = 0; i < total_vertices; ++i) {
+		float* v = object.extended_vertices[i].vertex;
+
+		float ox = v[0], oy = v[1], oz = v[2]; // 원본 좌표
+
+		v[0] = ox * R[0][0] + oy * R[0][1] + oz * R[0][2];
+		v[1] = ox * R[1][0] + oy * R[1][1] + oz * R[1][2];
+		v[2] = ox * R[2][0] + oy * R[2][1] + oz * R[2][2];
+	}
+
+	// AABB 다시 계산
+	object.AABB[XMIN] = object.AABB[YMIN] = object.AABB[ZMIN] = FLT_MAX;
+	object.AABB[XMAX] = object.AABB[YMAX] = object.AABB[ZMAX] = -FLT_MAX;
+	for (int i = 0; i < total_vertices; ++i) {
+		float* v = object.extended_vertices[i].vertex;
+		object.AABB[XMIN] = fminf(object.AABB[XMIN], v[0]);
+		object.AABB[XMAX] = fmaxf(object.AABB[XMAX], v[0]);
+		object.AABB[YMIN] = fminf(object.AABB[YMIN], v[1]);
+		object.AABB[YMAX] = fmaxf(object.AABB[YMAX], v[1]);
+		object.AABB[ZMIN] = fminf(object.AABB[ZMIN], v[2]);
+		object.AABB[ZMAX] = fmaxf(object.AABB[ZMAX], v[2]);
+	}
+
+	printf("CompositeObject rotated by %.1f degrees around axis (%.2f, %.2f, %.2f).\n",
+		angle_degrees, ux, uy, uz);
+}
+
 bool read_OBJ_geom_file(const char* filename, MeshGeom* mesh_geom) {
 	std::ifstream file(filename);
 	if (!file.is_open()) {
@@ -841,20 +899,20 @@ int read_OBJ_file(const char* obj_filename)
 }*/
 
 bool save_composite_object_to_obj(const CompositeObject& object, const char* filename) {
-	// 1. 파일 스트림 열기
+	// 파일 스트림 열기
 	std::ofstream outFile(filename);
 	if (!outFile.is_open()) {
 		fprintf(stderr, "Error: Cannot open file for writing: %s\n", filename);
 		return false;
 	}
 
-	// 2. 파일 헤더 주석 작성
+	// 파일 헤더 주석 작성
 	outFile << "# OBJ file generated from a CompositeObject structure\n";
 	outFile << "# Total Triangles: " << object.n_triangles << "\n";
 	const int total_vertices = object.n_triangles * 3;
 	outFile << "# Total Vertices in Array: " << total_vertices << "\n\n";
 
-	// 3. 정점(vertex) 및 법선(vertex normal) 데이터 작성
+	// 정점(vertex) 및 법선(vertex normal) 데이터 작성
 	for (int i = 0; i < total_vertices; ++i) {
 		const ExtendedVertex& v = object.extended_vertices[i];
 
@@ -867,7 +925,7 @@ bool save_composite_object_to_obj(const CompositeObject& object, const char* fil
 
 	outFile << "\n"; // 데이터 섹션 구분을 위한 공백 라인
 
-	// 4. 면(face) 데이터 작성
+	// 면(face) 데이터 작성
 	// OBJ 파일의 인덱스는 1부터 시작하므로, C++ 배열 인덱스에 1을 더해줘야 합니다.
 	for (int i = 0; i < object.n_triangles; ++i) {
 		// 현재 삼각형을 구성하는 세 정점의 시작 인덱스
@@ -883,7 +941,7 @@ bool save_composite_object_to_obj(const CompositeObject& object, const char* fil
 		outFile << "f " << v1_idx << " " << v2_idx << " " << v3_idx << "\n";
 	}
 
-	// 5. 파일 닫기 및 완료 메시지
+	// 파일 닫기 및 완료 메시지
 	outFile.close();
 	printf("Successfully saved CompositeObject to %s\n", filename);
 
@@ -1359,6 +1417,8 @@ void subMenuHandler(int value) {
 	}
 	create_composite_object_from_gaussians(g_gaussians);
 
+	rotate_composite_object(uip.poly_model, 45.0f, 1.0f, 1.0f, 1.0f);
+
 	uip.composite_object_read = 1;
 
 	load_poly_model_into_OpenGL();
@@ -1435,13 +1495,15 @@ void init_KDT_system(void) {
 	uip.right_button_pressed = 0;
 	uip.composite_object_read = 0;
 
+	//v_KD_TREE_TRAVL_COST = 1.0;
 	v_KD_TREE_TRAVL_COST = TRAVL_COST;
 	//v_KD_TREE_ISECT_COST = 1.5;
 	v_KD_TREE_ISECT_COST = ISCET_COST;
 	v_KD_TREE_MAX_LEVEL = 100;
+	v_KD_TREE_MIN_TRIANGLE = 40;
 	//v_KD_TREE_MIN_TRIANGLE = 4;
-	v_KD_TREE_MIN_TRIANGLE = 2;
-	v_KD_TREE_EMTPY_BONUS = 0.9;
+	//v_KD_TREE_EMTPY_BONUS = 0.9;
+	v_KD_TREE_EMTPY_BONUS = 1.0;
 }
 
 void initialize_glew(void) {
