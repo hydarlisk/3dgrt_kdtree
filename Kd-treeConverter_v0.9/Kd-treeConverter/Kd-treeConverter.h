@@ -9,6 +9,8 @@
 
 #define TRAVL_COST 1.0
 #define ISCET_COST 20000.0
+#define MIN_TRI 30
+#define EMTPY_BONUS 0.9
 
 #define X 0
 #define Y 1
@@ -99,7 +101,9 @@ struct Gaussian {
 	float opacity;      // 불투명도 (0.0 ~ 1.0)
 	float f_dc[3];      // 기본 색상 (R, G, B)
 	float f_rest[45];
+	float pad;
 };
+//236 + 4 (240 = 16 * 15)
 //shyun end
 
 typedef struct _Ray {

@@ -1283,57 +1283,7 @@ void main_menu_action(int selection) {
 		read_kd_tree_from_file(&uip.poly_model, full_kd_tree_file_name, uip.kd_tree_dump_format);
 		glutPostRedisplay();
 		break;
-	case 600: {
-		//CUDA rendering
-		fprintf(stdout, "CUDA ray tracing Render using SGRT with kd-tree\n");
-		if (!uip.composite_object_read) {
-			fprintf(stderr, "CompositeObject not loaded.\n");
-			break;
-		}
-		if (uip.poly_model.n_triangles == 0) {
-			fprintf(stdout, "No triangles in CompositeObject\n");
-			break;
-		}
-		if (uip.poly_model.kd_tree == NULL) {
-			fprintf(stdout, "No kd-tree in CompositeObject\n");
-			break;
-		}
-		//TODO: CUDA rendering*****************************************
-		//cudaRenderer.h
-		//renderWithCuda(const CompositeObject & object, const Camera & camera, int width, int height, float*& out_framebuffer, bool& is_done)
-
-#if SCENE_NUM < 1
-		renderObjWithCuda(
-			uip.poly_model,
-			camera,
-			g_render_width,
-			g_render_height,
-			g_render_framebuffer,
-			g_cuda_rendering_done
-		);
-#else
-		renderGaussianWithCuda(
-			uip.poly_model,
-			g_gaussians,
-			camera,
-			g_render_width,
-			g_render_height,
-			g_render_framebuffer,
-			g_cuda_rendering_done
-		);
-#endif
-
-		if (g_cuda_rendering_done) {
-			printf("CUDA rendering complete. Refreshing display...\n");
-			glutPostRedisplay();
-		}
-		else {
-			fprintf(stderr, "CUDA rendering failed.\n");
-		}
-		//*************************************************************
-		break;
-	}
-	case 700:
+	case 600:
 		g_cuda_interactive_mode = !g_cuda_interactive_mode; // 인터랙티브 모드 토글
 		if (g_cuda_interactive_mode) {
 			if (g_d_render_framebuffer) {
@@ -1351,7 +1301,7 @@ void main_menu_action(int selection) {
 			glutPostRedisplay();
 		}
 		break;
-	case 800:
+	case 700:
 		fprintf(stdout, "dump .obj file\n");
 		if (uip.composite_object_read) {
 			save_composite_object_to_obj(uip.poly_model, ply_to_obj);
@@ -1417,7 +1367,7 @@ void subMenuHandler(int value) {
 	}
 	create_composite_object_from_gaussians(g_gaussians);
 
-	rotate_composite_object(uip.poly_model, 45.0f, 1.0f, 1.0f, 1.0f);
+	//(uip.poly_model, 45.0f, 1.0f, 1.0f, 1.0f);
 
 	uip.composite_object_read = 1;
 
@@ -1452,8 +1402,7 @@ void register_callbacks_and_create_menu(void) {
 	glutAddMenuEntry("4. Dump Kd-tree and I-Geometry to Files", 400);
 	glutAddMenuEntry("4-1. Dump I-Geometry to obj File", 800);
 	glutAddMenuEntry("5. Read Kd-tree from File", 500);
-	glutAddMenuEntry("6. CUDA Rendering (One-shot)", 600);
-	glutAddMenuEntry("7. CUDA Rendering (Interactive Toggle)", 700);
+	glutAddMenuEntry("7. CUDA Rendering (Interactive Toggle)", 600);
 	glutAddMenuEntry("Exit", 999); 
 
 	glutAttachMenu(GLUT_RIGHT_BUTTON); 
@@ -1500,10 +1449,10 @@ void init_KDT_system(void) {
 	//v_KD_TREE_ISECT_COST = 1.5;
 	v_KD_TREE_ISECT_COST = ISCET_COST;
 	v_KD_TREE_MAX_LEVEL = 100;
-	v_KD_TREE_MIN_TRIANGLE = 40;
 	//v_KD_TREE_MIN_TRIANGLE = 4;
+	v_KD_TREE_MIN_TRIANGLE = MIN_TRI;
 	//v_KD_TREE_EMTPY_BONUS = 0.9;
-	v_KD_TREE_EMTPY_BONUS = 1.0;
+	v_KD_TREE_EMTPY_BONUS = EMTPY_BONUS;
 }
 
 void initialize_glew(void) {

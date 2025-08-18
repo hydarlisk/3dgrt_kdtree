@@ -114,15 +114,15 @@ void renderObjWithCuda(
 	bool& is_done
 );
 
-void renderGaussianWithCuda(
-	const CompositeObject& object,
-	const std::vector<Gaussian>& gaussians,
-	const Camera& camera,
-	int width,
-	int height,
-	float*& out_framebuffer,
-	bool& is_done
-);
+//void renderGaussianWithCuda(
+//	const CompositeObject& object,
+//	const std::vector<Gaussian>& gaussians,
+//	const Camera& camera,
+//	int width,
+//	int height,
+//	float*& out_framebuffer,
+//	bool& is_done
+//);
 void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vector<Gaussian>& gaussians);
 void renderGaussianWithCudaFrame(const Camera& camera, int width, int height, float* d_framebuffer);
 void cleanupCudaResources();
