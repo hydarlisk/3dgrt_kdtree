@@ -17,62 +17,6 @@
 #include "RayTraversal.h"
 #include "MyMathUtility.h"
 
-bool initialize_kdtree_for_gaussians(const std::vector<Gaussian>& gaussians) {
-	// 기존 전역 버퍼들 초기화
-	uninitialize_kd_tree();
-
-	g_iKdTree_Node_Count = 0;
-	g_iKdTree_TriOffset_Count = 0;
-	g_iKdTree_Node_CountAlloc = 8 * 1024 * 1024;
-	g_iKdTree_TriOffset_CountAlloc = 16 * 1024 * 1024;
-	g_iKdTree_Level = 0;
-	g_iKdTree_LeafNode_Count = 0;
-	g_iKdTree_EmptyNode_Count = 0;
-	g_iKdTree_MaxTriInLeafNode_Count = 0;
-
-	g_iTriangleSize = gaussians.size();
-	if (g_iTriangleSize == 0) return false;
-
-	// --- 1. g_pTriangleInfos 배열을 가우시안 정보로 채우기 ---
-	g_pTriangleInfos = new TriangleList[g_iTriangleSize];
-	if (!g_pTriangleInfos) return false;
-
-	g_root_AABB.min[0] = g_root_AABB.min[1] = g_root_AABB.min[2] = FLT_MAX;
-	g_root_AABB.max[0] = g_root_AABB.max[1] = g_root_AABB.max[2] = -FLT_MAX;
-
-	for (int i = 0; i < g_iTriangleSize; ++i) {
-		const Gaussian& g = gaussians[i];
-
-		// offset은 가우시안 벡터의 인덱스
-		g_pTriangleInfos[i].offset = i;
-
-		// 가우시안은 '점'이므로, AABB의 min과 max 값을 위치 값으로 동일하게 설정
-		g_pTriangleInfos[i].AABB.min[0] = g_pTriangleInfos[i].AABB.max[0] = g.pos[0];
-		g_pTriangleInfos[i].AABB.min[1] = g_pTriangleInfos[i].AABB.max[1] = g.pos[1];
-		g_pTriangleInfos[i].AABB.min[2] = g_pTriangleInfos[i].AABB.max[2] = g.pos[2];
-
-		// 전체 씬의 AABB 갱신
-		g_root_AABB.min[0] = fminf(g_root_AABB.min[0], g.pos[0]);
-		g_root_AABB.max[0] = fmaxf(g_root_AABB.max[0], g.pos[0]);
-		g_root_AABB.min[1] = fminf(g_root_AABB.min[1], g.pos[1]);
-		g_root_AABB.max[1] = fmaxf(g_root_AABB.max[1], g.pos[1]);
-		g_root_AABB.min[2] = fminf(g_root_AABB.min[2], g.pos[2]);
-		g_root_AABB.max[2] = fmaxf(g_root_AABB.max[2], g.pos[2]);
-	}
-
-	// --- 2. 나머지 전역 버퍼들 할당 ---
-	g_bEdge = new BoundEdge[g_iTriangleSize * 2];
-	g_pKdTree_Node_Array = new KdTreeNode[g_iKdTree_Node_CountAlloc];
-	g_pKdTree_TriOffset_Array = new unsigned int[g_iKdTree_TriOffset_CountAlloc];
-
-	if (!g_bEdge || !g_pKdTree_Node_Array || !g_pKdTree_TriOffset_Array) {
-		uninitialize_kd_tree();
-		return false;
-	}
-	g_iKdTree_Node_Count = 1; // 루트 노드
-	return true;
-}
-
 int build_kd_tree_for_composite_object(CompositeObject *c_object) {
 	// Returns 1 if a kd-tree was constructed successfully, or 0 otherwise.
 	// Input: "c_object->n_triangles" & "c_object->extended_vertices"
@@ -104,8 +48,12 @@ int build_kd_tree_for_composite_object(CompositeObject *c_object) {
 	fprintf(stdout, "\n  - Building a kd-tree triangle accerlaration list\n");
 	// build triangle acceleration
 	TriAccel *pTriAcc = NULL;
-	pTriAcc = (TriAccel*)_aligned_malloc(c_object->n_triangles * sizeof(TriAccel), 16);
+	//pTriAcc = (TriAccel*)_aligned_malloc(c_object->n_triangles * sizeof(TriAccel), 16);
 	build_TriAccList(c_object, pTriAcc);
+	if (!pTriAcc) {
+		fprintf(stderr, "TriAccel build failed\n");
+		return 0; // 혹은 false
+	}
 	fprintf(stdout, "  - Done!\n");
 
 	c_object->kd_tree = new KdTree;
@@ -115,6 +63,85 @@ int build_kd_tree_for_composite_object(CompositeObject *c_object) {
 	c_object->kd_tree->tri_offset_count = g_iKdTree_TriOffset_Count;
 	c_object->kd_tree->tri_accel_list = pTriAcc;
 	fprintf(stdout, "\n> Done!\n\n");
+	return 1;
+}
+
+
+#include <iostream>
+#include <chrono>
+#include <ctime>
+#include <iomanip>
+void print_current_time_for_file(const char* com, FILE* fp) {
+	auto now = std::chrono::system_clock::now();
+	auto in_time_t = std::chrono::system_clock::to_time_t(now);
+
+	std::tm buf;
+#ifdef _MSC_VER
+	localtime_s(&buf, &in_time_t);   // Windows (MSVC)
+#else
+	localtime_r(&in_time_t, &buf);   // POSIX
+#endif
+	// printf로 출력
+	fprintf(fp, "%s time: %04d-%02d-%02d %02d:%02d:%02d\n",
+		com,
+		buf.tm_year + 1900,
+		buf.tm_mon + 1,
+		buf.tm_mday,
+		buf.tm_hour,
+		buf.tm_min,
+		buf.tm_sec);
+}
+int build_kd_tree_for_composite_object2(CompositeObject* c_object, const char* filename) {
+	// Returns 1 if a kd-tree was constructed successfully, or 0 otherwise.
+	// Input: "c_object->n_triangles" & "c_object->extended_vertices"
+	// Output: "c_object->kd_tree"
+
+	FILE* fp = fopen(filename, "w");
+	print_current_time_for_file("kdtree build start\n", fp);
+
+	fprintf(fp, "\n> Constructing Kd-tree from I-geometry\n");
+	fprintf(fp, "\n  * # of triangles: %d\n", c_object->n_triangles);
+	fprintf(fp, "\n  * AABB: [%7.2f, %7.2f] x [%7.2f, %7.2f] x [%7.2f, %7.2f]\n", c_object->AABB[0], c_object->AABB[1],
+		c_object->AABB[2], c_object->AABB[3], c_object->AABB[4], c_object->AABB[5]);
+	fprintf(fp, "\n  * Empty Bonus: %7.3f\n  * Travel Cost: %7.3f\n  * Intersection Cost: %7.3f\n  * Max Tree Level: %d\n  * Min # of Triangles per Leaf: %d\n",
+		v_KD_TREE_EMTPY_BONUS, v_KD_TREE_TRAVL_COST, v_KD_TREE_ISECT_COST, v_KD_TREE_MAX_LEVEL, v_KD_TREE_MIN_TRIANGLE);
+
+	// allocate memory and initialize data
+	if (initialize_kd_tree(c_object) == 0) {
+		fprintf(stderr, "Kd-tree construction error.\n");
+		return 0;
+	}
+
+	// build kd-tree
+	fprintf(fp, "\n  - Building a kd-tree\n");
+	build_kd_tree_recursive(g_bEdge, g_pTriangleInfos, g_iTriangleSize, g_root_AABB, 0, &(g_pKdTree_Node_Array[0]));
+	fprintf(fp, "  - Done!\n\n");
+	fprintf(fp, "   * Tree Level: %d\n", g_iKdTree_Level);
+	fprintf(fp, "   * Node Count (All,Leaf,Empty) : %5d, %5d, %5d(%.1f%%)\n",
+		g_iKdTree_Node_Count, g_iKdTree_LeafNode_Count, g_iKdTree_EmptyNode_Count,
+		100.0f * g_iKdTree_EmptyNode_Count / g_iKdTree_Node_Count);
+	fprintf(fp, "   * Maximum Tri# in LeafNode: %d\n", g_iKdTree_MaxTriInLeafNode_Count);
+
+	fprintf(fp, "\n  - Building a kd-tree triangle accerlaration list\n");
+	// build triangle acceleration
+	TriAccel* pTriAcc = NULL;
+	//pTriAcc = (TriAccel*)_aligned_malloc(c_object->n_triangles * sizeof(TriAccel), 16);
+	build_TriAccList(c_object, pTriAcc);
+	if (!pTriAcc) {
+		fprintf(stderr, "TriAccel build failed\n");
+		return 0; // 혹은 false
+	}
+	fprintf(fp, "  - Done!\n");
+
+	c_object->kd_tree = new KdTree;
+	c_object->kd_tree->tree = g_pKdTree_Node_Array;
+	c_object->kd_tree->tree_node_count = g_iKdTree_Node_Count;
+	c_object->kd_tree->tri_offset_list = g_pKdTree_TriOffset_Array;
+	c_object->kd_tree->tri_offset_count = g_iKdTree_TriOffset_Count;
+	c_object->kd_tree->tri_accel_list = pTriAcc;
+	//fprintf(fp, "\n> Done!\n\n");
+	print_current_time_for_file("\nkdtree build start\n", fp);
+	fclose(fp);
 	return 1;
 }
 
@@ -287,8 +314,12 @@ int read_kd_tree_from_file(CompositeObject *c_object, const char *filename, int 
 
 	// build triangle acceleration
 	TriAccel *pTriAcc = NULL;
-	pTriAcc = (TriAccel*)_aligned_malloc(c_object->n_triangles * sizeof(TriAccel), 16);
+	//pTriAcc = (TriAccel*)_aligned_malloc(c_object->n_triangles * sizeof(TriAccel), 16);
 	build_TriAccList(c_object, pTriAcc);
+	if (!pTriAcc) {
+		fprintf(stderr, "TriAccel build failed\n");
+		return 0; // 혹은 false
+	}
 
 	c_object->kd_tree = new KdTree;
 	c_object->kd_tree->tree = g_pKdTree_Node_Array;

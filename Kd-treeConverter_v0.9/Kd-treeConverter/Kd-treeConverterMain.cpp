@@ -43,6 +43,10 @@ char* ply_file_path;
 char* ply_kdtree_path;
 char* ply_igeom_path;
 char* ply_to_obj;
+
+char* kdtree_build_path;
+int submenu[6] = { 101,1012,102,103,104,105 };
+
 bool render_gaussian = false;
 float* g_render_framebuffer = nullptr;
 float* g_d_render_framebuffer = nullptr;
@@ -84,6 +88,23 @@ void draw_fps() {
 	glMatrixMode(GL_MODELVIEW);
 	glPopMatrix();
 	glEnable(GL_LIGHTING);
+}
+#include <iostream>
+#include <chrono>
+#include <ctime>
+#include <iomanip>
+void print_current_time(const char* com) {
+	auto now = std::chrono::system_clock::now();
+
+	auto in_time_t = std::chrono::system_clock::to_time_t(now);
+
+	std::tm buf;
+#ifdef _MSC_VER
+	localtime_s(&buf, &in_time_t);
+#else
+	buf = *std::localtime(&in_time_t);
+#endif
+	std::cout << com << " time: " << std::put_time(&buf, "%Y-%m-%d %H:%M:%S") << std::endl;
 }
 
 //shyun end
@@ -568,21 +589,29 @@ void create_composite_object_from_gaussians(
 		quaternionToMatrixTranspose(q_normalized, rot_transpose);
 
 		//sigma(density) 계산
+#if USE_KERNEL_SCALE
+		printf("%d, sigma: %f\n", i, sigma);
+		printf("%d, k_iso: %f\n", i, k_iso);
+		// kernelScale_final 함수를 호출하여 k_iso 계산
+		float k_iso = kernelScale_final(sigma, alpha_min, kernel_degree);
+
+		float final_scale[3] = {
+			expf(g.scale[0]) * k_iso * 0.5f * icosaEdge,
+			expf(g.scale[1]) * k_iso * 0.5f * icosaEdge,
+			expf(g.scale[2]) * k_iso * 0.5f * icosaEdge
+		};
+#else
 		const float sigma = 1.0f / (1.0f + expf(-g.opacity));
 		float k_iso = 0.0f;
 		if (sigma / alpha_min > 1.0f) {
 			k_iso = sqrtf(2.0f * logf(sigma / alpha_min));
 		}
-		//printf("%d, sigma: %f\n", i, sigma);
-		//printf("%d, k_iso: %f\n", i, k_iso);
-		// kernelScale_final 함수를 호출하여 k_iso 계산
-		//float k_iso = kernelScale_final(sigma, alpha_min, kernel_degree);
-
 		float final_scale[3] = {
-			expf(g.scale[0]) * k_iso * unitspherefactor,// *ICOSA_VRT_SCALE,
-			expf(g.scale[1]) * k_iso * unitspherefactor,// * ICOSA_VRT_SCALE,
-			expf(g.scale[2]) * k_iso * unitspherefactor// * ICOSA_VRT_SCALE
+			expf(g.scale[0]) * k_iso * unitspherefactor,
+			expf(g.scale[1]) * k_iso * unitspherefactor,
+			expf(g.scale[2]) * k_iso * unitspherefactor
 		};
+#endif
 		//printf("scale : %e %e %e\n", final_scale[0], final_scale[1], final_scale[2]);
 		if (final_scale[0] < 0.000001 && final_scale[1] < 0.000001 && final_scale[2] < 0.000001) {
 			cnt++;
@@ -1183,6 +1212,113 @@ int read_SL_KDT_CONFIG_file(void) {
 	return 1;
 }
 
+void subMenuHandler(int value) {
+	render_gaussian = true;
+	g_gaussians.clear();
+	switch (value) {
+	case 101: printf("Hotdog selected\n");
+		ply_file_path = "../../Data/ply/hotdog/hotdog_3dgrt.ply";
+#if !ROTATION
+		ply_kdtree_path = "../../Data/ply/hotdog/hotdog_tree.kdt";
+		ply_igeom_path = "../../Data/ply/hotdog/hotdog_igeom.bin";
+		ply_to_obj = "../../Data/ply/hotdog/hotdog_3dgrt_new.obj";
+		kdtree_build_path = "../../Data/ply/hotdog/hotdog_3dgrt_kdt.txt";
+#else
+		ply_kdtree_path = "../../Data/ply/hotdog/hotdog_tree_rot.kdt";
+		ply_igeom_path = "../../Data/ply/hotdog/hotdog_igeom_rot.bin";
+		ply_to_obj = "../../Data/ply/hotdog/hotdog_3dgrt_new_rot.obj";
+		kdtree_build_path = "../../Data/ply/hotdog/hotdog_3dgrt_kdt_rot.txt";
+#endif
+		break;
+	case 1012: printf("Hotdog2 selected\n");
+		ply_file_path = "../../Data/ply/hotdog2/hotdog_3dgrt2.ply";
+#if !ROTATION
+		ply_kdtree_path = "../../Data/ply/hotdog2/hotdog2_tree.kdt";
+		ply_igeom_path = "../../Data/ply/hotdog2/hotdog2_igeom.bin";
+		ply_to_obj = "../../Data/ply/hotdog2/hotdog_3dgrt2_new.obj";
+		kdtree_build_path = "../../Data/ply/hotdog2/hotdog2_3dgrt_kdt.txt";
+#else
+		ply_kdtree_path = "../../Data/ply/hotdog2/hotdog2_tree_rot.kdt";
+		ply_igeom_path = "../../Data/ply/hotdog2/hotdog2_igeom_rot.bin";
+		ply_to_obj = "../../Data/ply/hotdog2/hotdog_3dgrt2_new_rot.obj";
+		kdtree_build_path = "../../Data/ply/hotdog2/hotdog2_3dgrt_kdt_rot.txt";
+#endif
+		break;
+	case 102: printf("Lego selected\n");
+		ply_file_path = "../../Data/ply/lego/lego_3dgrt.ply";
+#if !ROTATION
+		ply_kdtree_path = "../../Data/ply/lego/lego_tree.kdt";
+		ply_igeom_path = "../../Data/ply/lego/lego_igeom.bin";
+		ply_to_obj = "../../Data/ply/lego/lego_3dgrt_new.obj";
+		kdtree_build_path = "../../Data/ply/lego/lego_3dgrt_kdt.txt";
+#else
+		ply_kdtree_path = "../../Data/ply/lego/lego_tree_rot.kdt";
+		ply_igeom_path = "../../Data/ply/lego/lego_igeom_rot.bin";
+		ply_to_obj = "../../Data/ply/lego/lego_3dgrt_new_rot.obj";
+		kdtree_build_path = "../../Data/ply/lego/lego_3dgrt_kdt_rot.txt";
+#endif
+		break;
+	case 103: printf("Bonsai selected\n");
+		ply_file_path = "../../Data/ply/bonsai/bonsai.ply";
+#if !ROTATION
+		ply_kdtree_path = "../../Data/ply/bonsai/bonsai_tree.kdt";
+		ply_igeom_path = "../../Data/ply/bonsai/bonsai_igeom.bin";
+		ply_to_obj = "../../Data/ply/bonsai/bonsai_3dgrt_new.obj";
+		kdtree_build_path = "../../Data/ply/bonsai/bonsai_3dgrt_kdt.txt";
+#else
+		ply_kdtree_path = "../../Data/ply/bonsai/bonsai_tree_rot.kdt";
+		ply_igeom_path = "../../Data/ply/bonsai/bonsai_igeom_rot.bin";
+		ply_to_obj = "../../Data/ply/bonsai/bonsai_3dgrt_new_rot.obj";
+		kdtree_build_path = "../../Data/ply/bonsai/bonsai_3dgrt_kdt_rot.txt";
+#endif
+		break;
+	case 104: printf("Chair selected\n");
+		ply_file_path = "../../Data/ply/chair/chair_3dgrt.ply";
+#if !ROTATION
+		ply_kdtree_path = "../../Data/ply/chair/chair_tree.kdt";
+		ply_igeom_path = "../../Data/ply/chair/chair_igeom.bin";
+		ply_to_obj = "../../Data/ply/chair/chair_3dgrt_new.obj";
+		kdtree_build_path = "../../Data/ply/chair/chair_3dgrt_kdt.txt";
+#else
+		ply_kdtree_path = "../../Data/ply/chair/chair_tree_rot.kdt";
+		ply_igeom_path = "../../Data/ply/chair/chair_igeom_rot.bin";
+		ply_to_obj = "../../Data/ply/chair/chair_3dgrt_new_rot.obj";
+		kdtree_build_path = "../../Data/ply/chair/chair_3dgrt_kdt_rot.txt";
+#endif
+		break;
+	case 105: printf("Flowers selected\n");
+		ply_file_path = "../../Data/ply/flowers/flowers.ply";
+#if !ROTATION
+		ply_kdtree_path = "../../Data/ply/flowers/flowers_tree.kdt";
+		ply_igeom_path = "../../Data/ply/flowers/flowers_igeom.bin";
+		ply_to_obj = "../../Data/ply/flowers/flowers_3dgrt_new.obj";
+		kdtree_build_path = "../../Data/ply/flowers/flowers_3dgrt_kdt.txt";
+#else
+		ply_kdtree_path = "../../Data/ply/flowers/flowers_tree_rot.kdt";
+		ply_igeom_path = "../../Data/ply/flowers/flowers_igeom_rot.bin";
+		ply_to_obj = "../../Data/ply/flowers/flowers_3dgrt_new_rot.obj";
+		kdtree_build_path = "../../Data/ply/flowers/flowers_3dgrt_kdt_rot.txt";
+#endif
+		break;
+	}
+	//printf("%s\n", ply_file_path);
+	// 3DGS 학습 결과물을 로드
+	if (!loadGaussiansFromPly(ply_file_path, g_gaussians)) {
+		fprintf(stderr, "Failed to load ply file\n");
+		return;
+	}
+	create_composite_object_from_gaussians(g_gaussians);
+#if ROTATION
+	//printf("%s\n%s\n%s\n", ply_kdtree_path, ply_igeom_path, ply_to_obj);
+	rotate_composite_object(uip.poly_model, 45.0f, 1.0f, 1.0f, 1.0f);
+#endif
+	uip.composite_object_read = 1;
+
+	load_poly_model_into_OpenGL();
+	g_cuda_rendering_done = false;
+	glutPostRedisplay();
+	printf("draw DONE\n");
+}
 
 void main_menu_action(int selection) {
 	char full_kd_tree_file_name[512];
@@ -1240,12 +1376,14 @@ void main_menu_action(int selection) {
 		break;
 	}
 	case 300:
+		print_current_time("kdtree build start");
 		build_kd_tree_for_composite_object(&uip.poly_model);
 		if (uip.poly_model.kd_tree->tri_accel_list == NULL) printf("tri_accel_list NULL\n");
 		else {
 			printf("triangle num: %d\n", uip.poly_model.n_triangles);
 			//printf("tri_accel_list size: %d\n", sizeof(uip.poly_model.kd_tree->tri_accel_list) / sizeof(*(uip.poly_model.kd_tree->tri_accel_list)));
 		}
+		print_current_time("kdtree build end");
 		break;
 	case 400:
 		strcpy(full_kd_tree_file_name, uip.kd_tree_dump_dir);
@@ -1311,70 +1449,27 @@ void main_menu_action(int selection) {
 			fprintf(stderr, "Error: No composite object loaded to save.\n");
 		}
 		break;
+	case 800:
+		print_current_time("all_build_start\n");
+		for (int i = 0; i < 6; i++) {
+			subMenuHandler(submenu[i]);
+
+			build_kd_tree_for_composite_object2(&uip.poly_model, kdtree_build_path);
+
+			dump_kd_tree_for_composite_object(
+				&uip.poly_model,
+				ply_kdtree_path,         // 저장할 kd-tree
+				KD_TREE_DUMP_IN_BINARY,    // 저장 포맷
+				ply_igeom_path         // 저장할 geometry
+			);
+		}
+		print_current_time("all_build_end\n");
+		break;
 	case 999:
 		exit(0);
 		clean_up_system();
 		break;
 	}
-}
-
-void subMenuHandler(int value) {
-	render_gaussian = true;
-	g_gaussians.clear();
-	switch (value) {
-		case 101: printf("Hotdog selected\n");
-			ply_file_path = "../../Data/ply/hotdog/hotdog_3dgrt.ply";
-			ply_kdtree_path = "../../Data/ply/hotdog/hotdog_tree.kdt";
-			ply_igeom_path = "../../Data/ply/hotdog/hotdog_igeom.bin";
-			ply_to_obj = "../../Data/ply/hotdog/hotdog_3dgrt_new.obj";
-			break;
-		case 1012: printf("Hotdog2 selected\n");
-			ply_file_path = "../../Data/ply/hotdog2/hotdog_3dgrt2.ply";
-			ply_kdtree_path = "../../Data/ply/hotdog2/hotdog2_tree.kdt";
-			ply_igeom_path = "../../Data/ply/hotdog2/hotdog2_igeom.bin";
-			ply_to_obj = "../../Data/ply/hotdog2/hotdog_3dgrt2_new.obj";
-			break;
-		case 102: printf("Lego selected\n");
-			ply_file_path = "../../Data/ply/lego/lego_3dgrt.ply";
-			ply_kdtree_path = "../../Data/ply/lego/lego_tree.kdt";
-			ply_igeom_path = "../../Data/ply/lego/lego_igeom.bin";
-			ply_to_obj = "../../Data/ply/lego/lego_3dgrt_new.obj";
-			break;
-		case 103: printf("Bonsai selected\n");
-			ply_file_path = "../../Data/ply/bonsai/bonsai.ply";
-			ply_kdtree_path = "../../Data/ply/bonsai/bonsai_tree.kdt";
-			ply_igeom_path = "../../Data/ply/bonsai/bonsai_igeom.bin";
-			ply_to_obj = "../../Data/ply/bonsai/bonsai_new.obj";
-			break;
-		case 104: printf("Chair selected\n");
-			ply_file_path = "../../Data/ply/chair/chair_3dgrt.ply";
-			ply_kdtree_path = "../../Data/ply/chair/chair_tree.kdt";
-			ply_igeom_path = "../../Data/ply/chair/chair_igeom.bin";
-			ply_to_obj = "../../Data/ply/chair/chair_3dgrt_new.obj";
-			break;
-		case 105: printf("Flowers selected\n");
-			ply_file_path = "../../Data/ply/flowers/flowers.ply";
-			ply_kdtree_path = "../../Data/ply/flowers/flowers_tree.kdt";
-			ply_igeom_path = "../../Data/ply/flowers/flowers_igeom.bin";
-			ply_to_obj = "../../Data/ply/flowers/flowers_new.obj";
-			break;
-	}
-	//printf("%s\n", ply_file_path);
-	// 3DGS 학습 결과물을 로드
-	if (!loadGaussiansFromPly(ply_file_path, g_gaussians)) {
-		fprintf(stderr, "Failed to load ply file\n");
-		return;
-	}
-	create_composite_object_from_gaussians(g_gaussians);
-
-	//(uip.poly_model, 45.0f, 1.0f, 1.0f, 1.0f);
-
-	uip.composite_object_read = 1;
-
-	load_poly_model_into_OpenGL();
-	g_cuda_rendering_done = false;
-	glutPostRedisplay();
-	printf("draw DONE\n");
 }
 
 void register_callbacks_and_create_menu(void) {
@@ -1400,9 +1495,10 @@ void register_callbacks_and_create_menu(void) {
 	glutAddSubMenu("2. Read .ply File and Prepair I-Geometry", submenu);
 	glutAddMenuEntry("3. Construct Kd-tree from I-Geometry", 300);  
 	glutAddMenuEntry("4. Dump Kd-tree and I-Geometry to Files", 400);
-	glutAddMenuEntry("4-1. Dump I-Geometry to obj File", 800);
+	glutAddMenuEntry("4-1. Dump I-Geometry to obj File", 700);
 	glutAddMenuEntry("5. Read Kd-tree from File", 500);
 	glutAddMenuEntry("7. CUDA Rendering (Interactive Toggle)", 600);
+	glutAddMenuEntry("8. ply all build", 800);
 	glutAddMenuEntry("Exit", 999); 
 
 	glutAttachMenu(GLUT_RIGHT_BUTTON); 

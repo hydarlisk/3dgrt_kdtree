@@ -13,8 +13,19 @@
 
 #define SUPER_SAMPLING false
 
-#define MAX_HITS 256
-#define SCENE_NUM 1
+#define HIT_AND_NODE_COUNT_DEBUG false			// Ray 마다 hitcount, node count 확인
+#define ROTATION false							// R(45degree,1,1,1)
+
+#define MAX_HITS 128
+#define TILE_SIZE 32							// kernel2에서 Sort위한 Tile Size
+
+#define DIM_X 16
+#define DIM_Y 16
+#define SHORT_STACK_DEPTH 12					// for kernel sh.mem
+
+#define USE_KERNEL_SCALE false					// 기존의 OptiX처럼 kernelScale 사용
+
+#define SCENE_NUM 1								// obj 로드할때만 0으로 변경
 
 #if SCENE_NUM == 0
 #define MODEL_PATH "../../Data/Obj/hotdog_3dgrt.obj"
@@ -97,7 +108,7 @@ inline float uint_as_float_H(const unsigned int a) { return *(float*)&(a); }
 bool initCuda();
 
 /**
- * @brief CompositeObject를 CUDA로 렌더링하는 유일한 Public 함수.
+ * @brief CompositeObject를 CUDA로 렌더링하는 Public 함수.
  * @param object 렌더링할 CompositeObject (Kd-tree 포함).
  * @param camera 현재 카메라 정보.
  * @param width 결과 이미지 너비.
@@ -127,7 +138,7 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
 void renderGaussianWithCudaFrame(const Camera& camera, int width, int height, float* d_framebuffer);
 void cleanupCudaResources();
 
-#if 0
+#if 1
 // -----------------------------------------------------------
 // kdtree node
 // -----------------------------------------------------------

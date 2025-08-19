@@ -756,18 +756,31 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pTriangleInfo
 		// 각 child node 에 맞게 삼각형 clipping
 		clip_triangle(bestCost.n_left, bestCost, pLeftTriangles, 0);
 		clip_triangle(bestCost.n_right, bestCost, pRightTriangles, 1);
-
+		/*//shyun
+		int currLeftIndex = 0;
+		int currRightIndex = 0;
+		for (unsigned int i = 0; i < triangleSize; i++) {
+			if (pTriangleInfos[i].AABB.min[bestCost.axis] <= bestCost.splitPos) {
+				pLeftTriangles[currLeftIndex++] = pTriangleInfos[i];
+			}
+			if (pTriangleInfos[i].AABB.max[bestCost.axis] >= bestCost.splitPos) {
+				pRightTriangles[currRightIndex++] = pTriangleInfos[i];
+			}
+		}
+		//shyun end*/
 		/**
 		 *	더이상 pTriangleInfos 는 필요없으므로 메모리 공간 절약을 위해 없앤다.
 		 *	반드시 pushChildTriangles 를 수행한 이후에 없애야 한다.
 		 */
-		delete[] pTriangleInfos;
+		//delete[] pTriangleInfos;
 		/**
 		 *	Left, Right 재귀 탐색.
 		 *	pLeftTriangles, pRightTriangles 는 build_kd_tree_recursive 함수 안에서 사용하고 바로 없앤다.
 		 */
 		build_kd_tree_recursive(bEdge, pLeftTriangles, bestCost.n_left, leftnBounds, inNodeLevel + 1, &g_pKdTree_Node_Array[nodeNum]);
 		build_kd_tree_recursive(bEdge, pRightTriangles, bestCost.n_right, rightnBounds, inNodeLevel + 1, &g_pKdTree_Node_Array[nodeNum + 1]);
+
+		delete[] pTriangleInfos;
 	}
 
 	if (DEBUG_FLAG) {
@@ -780,13 +793,20 @@ void build_TriAccList(CompositeObject *poly_model, TriAccel*& pTriAcc)
 	int iTriangleSize  = poly_model->n_triangles;
 	printf("build_TriAccList triangle:%d\n", iTriangleSize);
 
-	//pTriAcc = (TriAccel*) _aligned_malloc(iTriangleSize * sizeof(TriAccel), 16);
+	if (!pTriAcc) {
+		pTriAcc = (TriAccel*)_aligned_malloc(sizeof(TriAccel) * iTriangleSize, 16);
+		if (!pTriAcc) {
+			fprintf(stderr, "ERROR: Failed to allocate memory for TriAccel list! (size: %d)\n", iTriangleSize);
+			throw std::bad_alloc();
+		}
+	}
+	memset(pTriAcc, 0, sizeof(TriAccel)* iTriangleSize);
 
 	// pTriAcc가 NULL인지 확인 (메모리 할당 실패 여부 검사)
-	if (pTriAcc == NULL) {
-		fprintf(stderr, "ERROR: Failed to allocate memory for TriAccel list! (size: %d)\n", iTriangleSize);
-		return; // 함수를 안전하게 종료
-	}
+	//if (pTriAcc == NULL) {
+	//	fprintf(stderr, "ERROR: Failed to allocate memory for TriAccel list! (size: %d)\n", iTriangleSize);
+	//	return; // 함수를 안전하게 종료
+	//}
 
 	float A[3], B[3], C[3];
 	float b[3], c[3];

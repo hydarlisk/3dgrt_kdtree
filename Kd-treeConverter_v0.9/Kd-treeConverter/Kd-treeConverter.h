@@ -7,10 +7,12 @@
 #pragma once
 #include <vector>
 
+ //shyun
 #define TRAVL_COST 1.0
-#define ISCET_COST 20000.0
-#define MIN_TRI 30
+#define ISCET_COST 5.0
+#define MIN_TRI 4
 #define EMTPY_BONUS 0.9
+//shyun end
 
 #define X 0
 #define Y 1
@@ -126,9 +128,9 @@ typedef struct _Ray {
 } Ray;
 
 int build_kd_tree_for_composite_object(CompositeObject *);
+int build_kd_tree_for_composite_object2(CompositeObject* c_object, const char* filename);
 void dump_kd_tree_for_composite_object(CompositeObject *, const char *, int, const char *);
 int read_kd_tree_from_file(CompositeObject *, const char *, int);
 int find_ray_object_intersection(KdTree *, Ray *, float *, float *);
-
-bool initialize_kdtree_for_gaussians(const std::vector<Gaussian>& gaussians);
+//bool initialize_kdtree_for_gaussians(const std::vector<Gaussian>& gaussians);
 //}
