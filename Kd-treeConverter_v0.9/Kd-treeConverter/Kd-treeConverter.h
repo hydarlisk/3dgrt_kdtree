@@ -9,9 +9,58 @@
 
  //shyun
 #define TRAVL_COST 1.0
-#define ISCET_COST 5.0
-#define MIN_TRI 4
+#define ISCET_COST 2000.0
+#define MIN_TRI 30
 #define EMTPY_BONUS 0.9
+
+#define FORCE_SPLIT_THRESHOLD 128				// kd-tree 강제분할
+
+#define ALPHA_MIN 0.01f
+#define KERNEL_DEGREE 2.0f
+
+#define OPACITY_THRESHOLD 0.95f
+
+#define SUPER_SAMPLING false
+
+#define HIT_AND_NODE_COUNT_DEBUG false			// Ray 마다 hitcount, node count 확인
+#define ROTATION true							// R(45degree,1,1,1)
+
+#define MAX_HITS 128
+#define TILE_SIZE 32							// kernel2에서 Sort위한 Tile Size
+
+#define DIM_X 16
+#define DIM_Y 16
+#define SHORT_STACK_DEPTH 12					// for kernel sh.mem
+
+#define USE_KERNEL_SCALE false					// 기존의 OptiX처럼 kernelScale 사용
+
+#define SCENE_NUM 1								// obj 로드할때만 0으로 변경
+
+#if SCENE_NUM == 0
+#define MODEL_PATH "../../Data/Obj/hotdog_3dgrt.obj"
+#define KDTREE_PATH "../../Data/Obj/hotdog_tree.kdt"
+#define IGEOM_PATH "../../Data/Obj/hotdog_igeom.bin"
+#elif SCENE_NUM == 1
+#define MODEL_PATH "../../Data/ply/hotdog/hotdog_3dgrt.ply"
+#define KDTREE_PATH "../../Data/ply/hotdog/hotdog_tree.kdt"
+#define IGEOM_PATH "../../Data/ply/hotdog/hotdog_igeom.bin"
+#elif SCENE_NUM == 2
+#define MODEL_PATH "../../Data/ply/lego/lego_3dgrt.ply"
+#define KDTREE_PATH "../../Data/ply/lego/lego_tree.kdt"
+#define IGEOM_PATH "../../Data/ply/lego/lego_igeom.bin"
+#elif SCENE_NUM == 3
+#define MODEL_PATH "../../Data/ply/bonsai/bonsai.ply"
+#define KDTREE_PATH "../../Data/ply/bonsai/bonsai_tree.kdt"
+#define IGEOM_PATH "../../Data/ply/bonsai/bonsai_igeom.bin"
+#elif SCENE_NUM == 4
+#define MODEL_PATH "../../Data/ply/chair/chair_3dgrt.ply"
+#define KDTREE_PATH "../../Data/ply/chair/chair_tree.kdt"
+#define IGEOM_PATH "../../Data/ply/chair/chair_igeom.bin"
+#elif SCENE_NUM == 5
+#define MODEL_PATH "../../Data/ply/flowers/flowers.ply"
+#define KDTREE_PATH "../../Data/ply/flowers/flowers_tree.kdt"
+#define IGEOM_PATH "../../Data/ply/flowers/flowers_igeom.bin"
+#endif
 //shyun end
 
 #define X 0
@@ -27,7 +76,7 @@
 
 #define KD_TREE_DUMP_IN_ASCII 0
 #define KD_TREE_DUMP_IN_BINARY 1
-//namespace KDTConverter{
+
 typedef struct _MeshGeom {
 	int nvertices;
 	int nfaces;
@@ -132,5 +181,13 @@ int build_kd_tree_for_composite_object2(CompositeObject* c_object, const char* f
 void dump_kd_tree_for_composite_object(CompositeObject *, const char *, int, const char *);
 int read_kd_tree_from_file(CompositeObject *, const char *, int);
 int find_ray_object_intersection(KdTree *, Ray *, float *, float *);
+
 //bool initialize_kdtree_for_gaussians(const std::vector<Gaussian>& gaussians);
-//}
+void collectLeafNodeStats_recursive(
+	const KdTree* kd_tree,
+	int nodeIndex,
+	unsigned int& leaf_count,
+	unsigned int& total_triangles,
+	unsigned int& max_triangles,
+	unsigned int& min_triangles
+);

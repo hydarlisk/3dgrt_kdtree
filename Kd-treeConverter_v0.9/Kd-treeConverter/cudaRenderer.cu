@@ -1037,9 +1037,10 @@ __device__ void singlePassIntersectGaussian1(
 
                 if (local_hit_count > 0) {
                     // 정렬: 이 리프 노드 내의 충돌만 정렬
+                    if (local_hit_count > 1)
                     //sortHits(local_hits, local_hit_count);
-                    //shellSort(local_hits, local_hit_count);
-                    bitonicSort(local_hits, local_hit_count);
+                    shellSort(local_hits, local_hit_count);
+                    //bitonicSort(local_hits, local_hit_count);
 #if HIT_AND_NODE_COUNT_DEBUG
                     hitCount += local_hit_count;
 #endif
@@ -1087,6 +1088,119 @@ __device__ void singlePassIntersectGaussian1(
     return node_visit_count;
 #endif
 }
+
+__device__ void singlePassIntersectGaussian2( // 매번 하나씩 선택(정렬X)
+    cuRay& currRay,
+    float3& accumulated_color,      // 수정: 누적 색상을 직접 업데이트
+    float& accumulated_opacity    // 수정: 누적 알파를 직접 업데이트
+) {
+    // 광선의 유효 범위 설정
+    float t_near = RAY_START_EPSILON, t_far = FLT_MAX;
+    if (BoundsRayIntersect(g_SceneBBoxMin, g_SceneBBoxMax, currRay, t_near, t_far)) {
+
+        // Kd-tree 순회를 위한 스택 초기화
+        shortStack stack;
+        stack.init(threadIdx.x + threadIdx.y * blockDim.x);
+        kdtreeNode node = tex1Dfetch(inKdTreeNodeTex, 0);
+
+        // 메인 순회 루프
+        //while (true) {
+        while (accumulated_opacity < OPACITY_THRESHOLD) {
+            while (!IS_LEAF(node)) {
+                unsigned axis = SPLIT_AXIS(node);
+                float split_pos = SPLIT_POS(node);
+                float dir_axis = (&(currRay.dir.x))[axis];
+                if (fabsf(dir_axis) < 1e-8f) { // 광선이 축과 평행한 경우
+                    node = tex1Dfetch(inKdTreeNodeTex, FIRST_CHILD_OFFSET(node) + 1); // 임의로 한쪽으로 보냄
+                    continue;
+                }
+                float pos_axis = (&(currRay.pos.x))[axis];
+                float t_split = (split_pos - pos_axis) / dir_axis;
+                unsigned near_child = FIRST_CHILD_OFFSET(node) + (pos_axis < split_pos || (pos_axis == split_pos && dir_axis < 0) ? 0 : 1);
+                unsigned far_child = FIRST_CHILD_OFFSET(node) + (pos_axis < split_pos || (pos_axis == split_pos && dir_axis < 0) ? 1 : 0);
+                if (t_split > t_far || t_split < 0) {
+                    node = tex1Dfetch(inKdTreeNodeTex, near_child);
+                }
+                else if (t_split < t_near) {
+                    node = tex1Dfetch(inKdTreeNodeTex, far_child);
+                }
+                else {
+                    stack.push(far_child, t_far);
+                    node = tex1Dfetch(inKdTreeNodeTex, near_child);
+                    t_far = t_split;
+                }
+            }
+
+            // --- 리프 노드 처리 로직 ---
+            unsigned int offset = OBJECTLIST_OFFSET(node);
+            unsigned int count = OBJECT_SIZE(node);
+            if (count > 0) {
+                // 수집: 이 리프 노드 내의 모든 충돌을 임시 로컬 배열에 저장
+                HitRecord local_hits[MAX_HITS];
+                int local_hit_count = 0;
+
+                for (unsigned i = 0; i < count; ++i) {
+                    unsigned tri_idx = tex1Dfetch(inObjectOffsetListTex, offset + i);
+                    singlePassIntersectRoutineGaussian1(currRay, tri_idx, t_near, t_far, local_hits, local_hit_count);
+                }
+
+                // 수집된 교차점이 있다면, 임계값을 채울 때까지 가장 가까운 교차점을 반복해서 찾고 처리
+                if (local_hit_count > 0) {
+                    // 블렌딩: 정렬된 순서대로 알파 블렌딩 수행
+                    for (int i = 0; i < local_hit_count; ++i) {
+                        // 아직 처리되지 않은 교차점 중에서 최솟값(가장 가까운 점)을 찾음
+                        float min_t = FLT_MAX;
+                        int min_idx = -1;
+                        for (int j = 0; j < local_hit_count; ++j) {
+                            if (local_hits[j].t < min_t) {
+                                min_t = local_hits[j].t;
+                                min_idx = j;
+                            }
+                        }
+
+                        if (min_idx != -1) {
+                            float4 d2 = tex1Dfetch(inTriAccelTex, local_hits[i].triIndex * 3 + 2);
+                            int gaussianID = __float_as_int(d2.w);
+                            //Gaussian g = g_d_gaussians[gaussianID];
+                            Gaussian g = fetch_gaussian(gaussianID);
+
+                            float sample_opacity = 1.0f / (1.0f + expf(-g.opacity));
+                            float3 view_dir = normalize(make_float3(g.pos[0], g.pos[1], g.pos[2]) - currRay.pos);
+                            float3 sample_color = eval_sh_final(3, view_dir, g);
+                            //// SH DC 계수는 -0.5~0.5 범위일 수 있으므로 0~1로 변환
+                            //float3 sample_color = make_float3(
+                            //    0.5f + 0.5f * g.f_dc[0], 
+                            //    0.5f + 0.5f * g.f_dc[1],
+                            //    0.5f + 0.5f * g.f_dc[2]
+                            //);
+                            accumulated_color += sample_color * sample_opacity * (1.0f - accumulated_opacity);
+                            accumulated_opacity += sample_opacity * (1.0f - accumulated_opacity);
+
+                            local_hits[min_idx].t = FLT_MAX;
+                        }
+                        else {
+                            break;
+                        }
+                        // 블렌딩 중에도 조기 종료 조건을 계속 확인
+                        if (accumulated_opacity > OPACITY_THRESHOLD) {
+                            //printf("hitCount:%d\n", hitCount);
+                            break;
+                        }
+                    }
+                } // if (local_hit_count > 0)
+            } //if (count > 0)
+
+            if (stack.empty()) {
+                //printf("(empty) hitCount:%d\n", hitCount);
+                break;
+            }
+            cu_traceState next = stack.top(); stack.pop();
+            t_near = t_far; t_far = next.tMax;
+            node = tex1Dfetch(inKdTreeNodeTex, next.nodeID);
+        } // while(true)
+    } // if (BoundsRayIntersect)
+}
+
 
 __global__ void renderKernelGaussian1(float* pFrameBuffer
 #if HIT_AND_NODE_COUNT_DEBUG

@@ -416,6 +416,35 @@ typedef enum _SL_KDT_CONFIG_command_ID {
 } SL_KDT_CONFIG_command_ID;
 
 //shyun
+void printKdTreeLeafNodeInfo() {
+	if (uip.poly_model.kd_tree) {
+		printf("\n--- Analyzing triangles per leaf node ---\n");
+
+		// 1. 통계 변수 초기화
+		unsigned int leaf_count = 0;
+		unsigned int total_triangles = 0;
+		unsigned int max_triangles = 0;
+		// 최솟값을 매우 큰 수로 초기화해야 정확한 비교 가능
+		unsigned int min_triangles = UINT_MAX;
+
+		// 2. 통계 수집 함수 호출 (루트 노드 0부터 시작)
+		collectLeafNodeStats_recursive(uip.poly_model.kd_tree, 0, leaf_count, total_triangles, max_triangles, min_triangles);
+
+		// 3. 최종 결과 계산 및 출력
+		if (leaf_count > 0) {
+			float avg_triangles = (float)total_triangles / leaf_count;
+			printf(" -> Total Leaf Nodes Found: %u\n", leaf_count);
+			printf(" -> Max triangles in a leaf: %u\n", max_triangles);
+			printf(" -> Min triangles in a leaf: %u\n", min_triangles);
+			printf(" -> Avg triangles per leaf: %.2f\n", avg_triangles);
+		}
+		else {
+			printf(" -> No leaf nodes found in the tree.\n");
+		}
+		printf("-------------------------------------------\n\n");
+	}
+}
+
 bool loadGaussiansFromPly(const char* filename, std::vector<Gaussian>& gaussians) {
 	std::ifstream file(filename, std::ios::binary);
 	if (!file.is_open()) {
@@ -1384,6 +1413,7 @@ void main_menu_action(int selection) {
 			//printf("tri_accel_list size: %d\n", sizeof(uip.poly_model.kd_tree->tri_accel_list) / sizeof(*(uip.poly_model.kd_tree->tri_accel_list)));
 		}
 		print_current_time("kdtree build end");
+		printKdTreeLeafNodeInfo();
 		break;
 	case 400:
 		strcpy(full_kd_tree_file_name, uip.kd_tree_dump_dir);
@@ -1419,6 +1449,9 @@ void main_menu_action(int selection) {
 		}
 		printf("full_kd_tree_file_name:%s\n", full_kd_tree_file_name);
 		read_kd_tree_from_file(&uip.poly_model, full_kd_tree_file_name, uip.kd_tree_dump_format);
+
+		printKdTreeLeafNodeInfo();
+
 		glutPostRedisplay();
 		break;
 	case 600:

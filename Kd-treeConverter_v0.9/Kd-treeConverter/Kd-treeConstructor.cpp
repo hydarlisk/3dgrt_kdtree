@@ -650,10 +650,54 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pTriangleInfo
 		}
 	}
 
+	//shyun
+	// ================== 강제 분할 로직 추가 시작 ==================
+	// 만약 SAH가 좋은 분할을 찾지 못했어도(is_valid() == false),
+	// 삼각형 개수가 우리가 설정한 임계값(FORCE_SPLIT_THRESHOLD)보다 많다면 강제로 분할을 시도한다.
+	if (!bestCost.is_valid() && triangleSize > FORCE_SPLIT_THRESHOLD) {
+
+		// 대체 전략: 경계 상자(bounding box)의 가장 긴 축을 중앙에서 분할한다.
+
+		// 현재 경계 상자의 가장 긴 축(axis)을 찾는다.
+		float extents[3];
+		extents[0] = bbox.max[0] - bbox.min[0];
+		extents[1] = bbox.max[1] - bbox.min[1];
+		extents[2] = bbox.max[2] - bbox.min[2];
+
+		int force_axis = 0;
+		if (extents[1] > extents[0]) force_axis = 1;
+		if (extents[2] > extents[force_axis]) force_axis = 2;
+
+		// 해당 축의 중앙 지점을 분할 위치로 설정한다.
+		float force_split_pos = bbox.min[force_axis] + extents[force_axis] * 0.5f;
+
+		// bestCost 구조체에 강제 분할 정보를 채워넣는다.
+		// 이렇게 하면 is_valid()가 true가 되어 아래의 'else' 블록(내부 노드 생성)이 실행된다.
+		bestCost.axis = force_axis;
+		bestCost.splitPos = force_split_pos;
+
+		// 메모리 할당을 위해 자식 노드에 들어갈 삼각형 개수를 다시 계산한다.
+		int n_left_actual = 0;
+		int n_right_actual = 0;
+		for (unsigned int i = 0; i < triangleSize; i++) {
+			if (pTriangleInfos[i].AABB.min[force_axis] <= force_split_pos) {
+				n_left_actual++;
+			}
+			if (pTriangleInfos[i].AABB.max[force_axis] >= force_split_pos) {
+				n_right_actual++;
+			}
+		}
+		bestCost.n_left = n_left_actual;
+		bestCost.n_right = n_right_actual;
+	}
+	//shyun end
+
 	// ----------------------------------------------------------------------------
 	// Leaf node 생성
 	// ----------------------------------------------------------------------------
 	if (!bestCost.is_valid()) {
+		//fprintf(stdout, "-> Leaf Node generated with %u triangles.\n", triangleSize);
+
 		unsigned int iTriOffset;
 
 		{
@@ -686,7 +730,7 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pTriangleInfo
 		/**
 		 *	더이상 pTriangleInfos 는 필요없으므로 메모리 공간 절약을 위해 없앤다.
 		 */
-		//delete[] pTriangleInfos;
+		delete[] pTriangleInfos;
 
 	}
 	else

@@ -360,3 +360,35 @@ int find_ray_object_intersection(KdTree *kd_tree, Ray *ray, float *point, float 
 		return is.material_ID;
 	}
 }
+
+void collectLeafNodeStats_recursive(
+	const KdTree* kd_tree,
+	int nodeIndex,
+	unsigned int& leaf_count,
+	unsigned int& total_triangles,
+	unsigned int& max_triangles,
+	unsigned int& min_triangles
+) {
+	const KdTreeNode& node = kd_tree->tree[nodeIndex];
+
+	if (IS_LEAF(node)) {
+		// Leaf Node를 찾으면 통계 변수들을 업데이트.
+		unsigned int triangleCount = OBJECT_SIZE(node);
+		total_triangles += triangleCount; // 삼각형 개수 누적
+		//printf("-> Leaf Node [Index: %d] contains %u triangles.\n", nodeIndex, triangleCount);
+
+		leaf_count++; // leaf node 개수 1 증가
+
+		if (triangleCount > max_triangles) max_triangles = triangleCount; // 최댓값 갱신
+		if (triangleCount < min_triangles) min_triangles = triangleCount; // 최솟값 갱신
+
+		return;
+	}
+
+	// 내부 노드라면 자식 노드들을 계속 탐색합니다.
+	unsigned int leftChildIndex = FIRST_CHILD_OFFSET(node);
+	unsigned int rightChildIndex = leftChildIndex + 1;
+
+	collectLeafNodeStats_recursive(kd_tree, leftChildIndex, leaf_count, total_triangles, max_triangles, min_triangles);
+	collectLeafNodeStats_recursive(kd_tree, rightChildIndex, leaf_count, total_triangles, max_triangles, min_triangles);
+}
