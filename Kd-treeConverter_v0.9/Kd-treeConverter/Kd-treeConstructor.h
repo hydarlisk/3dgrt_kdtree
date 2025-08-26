@@ -19,7 +19,8 @@
 
 typedef enum { BOTH_SIDE, MINCOST_SIDE } PlanarTriangleAddMode;
 #define KD_TREE_PLANAR_TRIANGLE_ADD_MODE  MINCOST_SIDE
-//namespace KDTConstructor {
+//#define KD_TREE_PLANAR_TRIANGLE_ADD_MODE  BOTH_SIDE
+
 typedef struct _BoundingBox {
 	union {
 		struct {
@@ -106,4 +107,3 @@ void build_kd_tree_recursive(BoundEdge *bEdge, const TriangleList *pTriangleInfo
                              BoundingBox &bbox, unsigned int inNodeLevel, KdTreeNode *inNode);
 
 void build_TriAccList(CompositeObject *poly_model, TriAccel*& pTriAcc);
-//}

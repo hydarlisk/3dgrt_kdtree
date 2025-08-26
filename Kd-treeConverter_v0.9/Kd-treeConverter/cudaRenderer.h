@@ -6,17 +6,22 @@
 //#include <vector_types.h>
 #include <cstring>
 
+#define MAX_GLOBAL_STACK_DEPTH 64
+
 struct float3x3 {
 	float m[3][3];
 };
+
+typedef struct { unsigned nodeID; float tMax; } cu_traceState;
 
 #define M_PI 3.14159265358979323846f
 #define icosaHedronNumVrt 12
 #define icosaHedronNumTri 20
 
 const float goldenRatio = 1.618033988749895f;
-//const float icosaEdge = 1.323169076499215f;
 const float unitspherefactor = 0.5257311121191335703f;
+
+const float icosaEdge = 1.323169076499215f;
 
 const float ICO_VERTICES[icosaHedronNumVrt][3] = {
 	{-1, goldenRatio, 0}, {1, goldenRatio, 0}, {0, 1, -goldenRatio},
@@ -88,7 +93,7 @@ void renderObjWithCuda(
 //	bool& is_done
 //);
 void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vector<Gaussian>& gaussians);
-void renderGaussianWithCudaFrame(const Camera& camera, int width, int height, float* d_framebuffer);
+void renderGaussianWithCudaFrame(const Camera& camera, int width, int height, float* d_framebuffer, cu_traceState* d_global_stack, int* d_global_stack_pointers);
 void cleanupCudaResources();
 
 #if 1

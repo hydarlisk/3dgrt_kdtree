@@ -9,11 +9,12 @@
 
  //shyun
 #define TRAVL_COST 1.0
-#define ISCET_COST 2000.0
-#define MIN_TRI 30
+#define ISCET_COST 20.0
+#define MAX_LEVEL 128
+#define MIN_TRI 32
 #define EMTPY_BONUS 0.9
 
-#define FORCE_SPLIT_THRESHOLD 128				// kd-tree 강제분할
+#define FORCE_SPLIT_THRESHOLD 64				// kd-tree 강제분할
 
 #define ALPHA_MIN 0.01f
 #define KERNEL_DEGREE 2.0f
@@ -112,8 +113,8 @@ typedef __declspec(align(16)) struct _TriAccel {
 	int material_ID;
 
 	// normal vector
-	//float N[3];
-	//int pad;
+	float N[3];
+	int pad;
 } TriAccel;
 
 typedef struct _KdTreeNode {
@@ -152,6 +153,7 @@ struct Gaussian {
 	float opacity;      // 불투명도 (0.0 ~ 1.0)
 	float f_dc[3];      // 기본 색상 (R, G, B)
 	float f_rest[45];
+	//float3x3
 	float pad;
 };
 //236 + 4 (240 = 16 * 15)

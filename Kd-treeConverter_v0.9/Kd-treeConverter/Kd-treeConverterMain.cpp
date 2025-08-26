@@ -48,8 +48,8 @@ char* kdtree_build_path;
 int submenu[6] = { 101,1012,102,103,104,105 };
 
 bool render_gaussian = false;
-float* g_render_framebuffer = nullptr;
-float* g_d_render_framebuffer = nullptr;
+//float* g_render_framebuffer = nullptr;
+//float* g_d_render_framebuffer = nullptr;
 int g_render_width = MAIN_WINDOW_WIDTH;
 int g_render_height = MAIN_WINDOW_HEIGHT;
 bool g_cuda_rendering_done = false;
@@ -59,6 +59,12 @@ std::vector<Gaussian> g_gaussians; // 전역 변수로 가우시안 데이터를
 float g_fps = 0.0f; // FPS를 저장할 전역 변수
 int frame_count = 0;
 float total_frame = 0.0f;
+
+GLuint pbo;
+struct cudaGraphicsResource* pbo_cuda_resource;
+
+cu_traceState* g_d_global_stack = nullptr;
+int* g_d_global_stack_pointers = nullptr;
 
 // FPS를 화면 좌측 상단에 그리는 함수
 void draw_fps() {
@@ -106,8 +112,8 @@ void print_current_time(const char* com) {
 #endif
 	std::cout << com << " time: " << std::put_time(&buf, "%Y-%m-%d %H:%M:%S") << std::endl;
 }
-
 //shyun end
+
 UIParameters uip;
 Camera camera;
 KdTree kd_tree;
@@ -131,7 +137,8 @@ void load_poly_model_into_OpenGL(void) {
  
 void display(void) {
 	// CUDA 렌더링이 완료되었으면 프레임버퍼를 화면에 그립니다.
-	if ((g_cuda_interactive_mode || g_cuda_rendering_done) && g_render_framebuffer != nullptr) {
+	//if ((g_cuda_interactive_mode || g_cuda_rendering_done) && g_render_framebuffer != nullptr) {
+	if (g_cuda_interactive_mode || g_cuda_rendering_done) {
 		glDisable(GL_LIGHTING);
 		glDisable(GL_DEPTH_TEST);
 
@@ -142,7 +149,10 @@ void display(void) {
 
 		// glDrawPixels는 좌하단이 기준이므로 y좌표를 뒤집을 필요가 없음
 		glRasterPos2f(-1.0f, -1.0f);
-		glDrawPixels(g_render_width, g_render_height, GL_RGB, GL_FLOAT, g_render_framebuffer);
+		//glDrawPixels(g_render_width, g_render_height, GL_RGB, GL_FLOAT, g_render_framebuffer);
+		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo);
+		glDrawPixels(g_render_width, g_render_height, GL_RGB, GL_FLOAT, (GLvoid*)0);
+		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 
 		draw_fps(); // FPS
 		glEnable(GL_DEPTH_TEST);
@@ -445,6 +455,17 @@ void printKdTreeLeafNodeInfo() {
 	}
 }
 
+inline void fMyVecNormalize4D(float v[4]) {
+	float len_sq = v[0] * v[0] + v[1] * v[1] + v[2] * v[2] + v[3] * v[3];
+	if (len_sq > 0.00001f) { // 0으로 나누는 것을 방지
+		float len_inv = 1.0f / sqrtf(len_sq);
+		v[0] *= len_inv;
+		v[1] *= len_inv;
+		v[2] *= len_inv;
+		v[3] *= len_inv;
+	}
+}
+
 bool loadGaussiansFromPly(const char* filename, std::vector<Gaussian>& gaussians) {
 	std::ifstream file(filename, std::ios::binary);
 	if (!file.is_open()) {
@@ -493,26 +514,20 @@ bool loadGaussiansFromPly(const char* filename, std::vector<Gaussian>& gaussians
 		memcpy(g.pos, pv.pos, sizeof(float) * 3);
 		memcpy(g.f_dc, pv.f_dc, sizeof(float) * 3);
 		memcpy(g.f_rest, pv.f_rest, sizeof(float) * 45);
-		g.opacity = pv.opacity;
+		//g.opacity = pv.opacity;
+		g.opacity = 1.0f / (1.0f + expf(-pv.opacity));
 		memcpy(g.scale, pv.scale, sizeof(float) * 3);
+		g.scale[0] = expf(g.scale[0]);
+		g.scale[1] = expf(g.scale[1]);
+		g.scale[2] = expf(g.scale[2]);
 		//printf("%f, %f, %f\n", g.scale[0], g.scale[1], g.scale[2]);
 		memcpy(g.rot, pv.rot, sizeof(float) * 4);
+		fMyVecNormalize4D(g.rot); // 쿼터니언 정규화
 		gaussians.push_back(g);
 	}
 
 	fprintf(stderr, "Loaded %zu gaussians.\n", gaussians.size());
 	return true;
-}
-
-inline void fMyVecNormalize4D(float v[4]) {
-	float len_sq = v[0] * v[0] + v[1] * v[1] + v[2] * v[2] + v[3] * v[3];
-	if (len_sq > 0.00001f) { // 0으로 나누는 것을 방지
-		float len_inv = 1.0f / sqrtf(len_sq);
-		v[0] *= len_inv;
-		v[1] *= len_inv;
-		v[2] *= len_inv;
-		v[3] *= len_inv;
-	}
 }
 
 void transform_vector_by_matrix_transpose(const float v[3], const float3x3& rot, float result[3]) {
@@ -528,9 +543,9 @@ void quaternionToMatrixTranspose(const float q[4], float3x3& rot) {
 	float xy = x * y, xz = x * z, yz = y * z;
 	float wx = w * x, wy = w * y, wz = w * z;
 
-	rot.m[0][0] = 1.0f - 2.0f * (yy + zz); rot.m[1][0] = 2.0f * (xy - wz); rot.m[2][0] = 2.0f * (xz + wy);
-	rot.m[0][1] = 2.0f * (xy + wz);	rot.m[1][1] = 1.0f - 2.0f * (xx + zz); rot.m[2][1] = 2.0f * (yz - wx);
-	rot.m[0][2] = 2.0f * (xz - wy); rot.m[1][2] = 2.0f * (yz + wx); rot.m[2][2] = 1.0f - 2.0f * (xx + yy);
+	rot.m[0][0] = 1.0f - 2.0f * (yy + zz); rot.m[1][0] = 2.0f * (xy - wz);		  rot.m[2][0] = 2.0f * (xz + wy);
+	rot.m[0][1] = 2.0f * (xy + wz);		   rot.m[1][1] = 1.0f - 2.0f * (xx + zz); rot.m[2][1] = 2.0f * (yz - wx);
+	rot.m[0][2] = 2.0f * (xz - wy);		   rot.m[1][2] = 2.0f * (yz + wx);		  rot.m[2][2] = 1.0f - 2.0f * (xx + yy);
 }
 
 float kernelScale_final(float density, float min_response, float kernel_degree) {
@@ -611,34 +626,44 @@ void create_composite_object_from_gaussians(
 		const Gaussian& g = gaussians[i];
 
 		//회전
-		float q_normalized[4];
-		memcpy(q_normalized, g.rot, sizeof(float) * 4);
-		fMyVecNormalize4D(q_normalized); // 쿼터니언 정규화
+		//float q_normalized[4];
+		//memcpy(q_normalized, g.rot, sizeof(float) * 4);
+		//fMyVecNormalize4D(q_normalized); // 쿼터니언 정규화
 		float3x3 rot_transpose;
-		quaternionToMatrixTranspose(q_normalized, rot_transpose);
+		quaternionToMatrixTranspose(g.rot, rot_transpose);
 
 		//sigma(density) 계산
+		const float sigma = g.opacity;
+		//const float sigma = 1.0f / (1.0f + expf(-g.opacity));
 #if USE_KERNEL_SCALE
-		printf("%d, sigma: %f\n", i, sigma);
-		printf("%d, k_iso: %f\n", i, k_iso);
+		//printf("%d, sigma: %f\n", i, sigma);
+		if (g.opacity < alpha_min) { // 예: 0.01
+			continue;
+		}
 		// kernelScale_final 함수를 호출하여 k_iso 계산
 		float k_iso = kernelScale_final(sigma, alpha_min, kernel_degree);
+		//printf("%d, k_iso: %f\n", i, k_iso);
 
 		float final_scale[3] = {
-			expf(g.scale[0]) * k_iso * 0.5f * icosaEdge,
-			expf(g.scale[1]) * k_iso * 0.5f * icosaEdge,
-			expf(g.scale[2]) * k_iso * 0.5f * icosaEdge
+			//expf(g.scale[0]) * k_iso * 0.5f * icosaEdge,
+			//expf(g.scale[1]) * k_iso * 0.5f * icosaEdge,
+			//expf(g.scale[2]) * k_iso * 0.5f * icosaEdge
+			g.scale[0] * k_iso * 0.5f * icosaEdge,
+			g.scale[1] * k_iso * 0.5f * icosaEdge,
+			g.scale[2] * k_iso * 0.5f * icosaEdge
 		};
 #else
-		const float sigma = 1.0f / (1.0f + expf(-g.opacity));
 		float k_iso = 0.0f;
 		if (sigma / alpha_min > 1.0f) {
 			k_iso = sqrtf(2.0f * logf(sigma / alpha_min));
 		}
 		float final_scale[3] = {
-			expf(g.scale[0]) * k_iso * unitspherefactor,
-			expf(g.scale[1]) * k_iso * unitspherefactor,
-			expf(g.scale[2]) * k_iso * unitspherefactor
+			//expf(g.scale[0]) * k_iso * unitspherefactor,
+			//expf(g.scale[1]) * k_iso * unitspherefactor,
+			//expf(g.scale[2]) * k_iso * unitspherefactor
+			g.scale[0] * k_iso * unitspherefactor,
+			g.scale[1] * k_iso * unitspherefactor,
+			g.scale[2] * k_iso * unitspherefactor
 		};
 #endif
 		//printf("scale : %e %e %e\n", final_scale[0], final_scale[1], final_scale[2]);
@@ -700,8 +725,25 @@ void create_composite_object_from_gaussians(
 	printf("Successfully created CompositeObject with %d triangles from %ld Gaussians.\n", uip.poly_model.n_triangles, num_gaussians);
 }
 
+// 축-각도 표현을 쿼터니언으로 변환
+void fMyQuatFromAngleAxis(float q[4], float angle_rad, const float axis[3]) {
+	float s = sinf(angle_rad / 2.0f);
+	q[0] = cosf(angle_rad / 2.0f); // w
+	q[1] = axis[0] * s;             // x
+	q[2] = axis[1] * s;             // y
+	q[3] = axis[2] * s;             // z
+}
+
+// 두 쿼터니언을 곱 (result = q1 * q2)
+void fMyQuatMul(float result[4], const float q1[4], const float q2[4]) {
+	result[0] = q1[0] * q2[0] - q1[1] * q2[1] - q1[2] * q2[2] - q1[3] * q2[3]; // w
+	result[1] = q1[0] * q2[1] + q1[1] * q2[0] + q1[2] * q2[3] - q1[3] * q2[2]; // x
+	result[2] = q1[0] * q2[2] - q1[1] * q2[3] + q1[2] * q2[0] + q1[3] * q2[1]; // y
+	result[3] = q1[0] * q2[3] + q1[1] * q2[2] - q1[2] * q2[1] + q1[3] * q2[0]; // z
+}
+
 // CompositeObject의 모든 정점을 Y축 기준으로 회전시키는 함수
-void rotate_composite_object(CompositeObject& object, float angle_degrees, float axis_x, float axis_y, float axis_z) {
+void rotate_composite_object(std::vector<Gaussian>& gaussians, float angle_degrees, float axis_x, float axis_y, float axis_z) {
 	// 회전축 벡터 정규화
 	float axis_vec[3] = { axis_x, axis_y, axis_z };
 	fMyVecNormalize(axis_vec);
@@ -729,10 +771,33 @@ void rotate_composite_object(CompositeObject& object, float angle_degrees, float
 	R[2][1] = uz * uy * one_minus_cos + ux * sin_theta;
 	R[2][2] = cos_theta + uz * uz * one_minus_cos;
 
+	// [추가] 가우시안 방향(rot) 회전을 위한 쿼터니언 생성
+	float rot_quat[4];
+	fMyQuatFromAngleAxis(rot_quat, angle_rad, axis_vec);
+
+	// --- 2. [추가된 부분] 원본 가우시안 데이터 회전 ---
+	for (size_t i = 0; i < gaussians.size(); ++i) {
+		// 2.1. 가우시안 위치 회전
+		float* pos = gaussians[i].pos;
+		float ox = pos[0], oy = pos[1], oz = pos[2];
+		pos[0] = ox * R[0][0] + oy * R[0][1] + oz * R[0][2];
+		pos[1] = ox * R[1][0] + oy * R[1][1] + oz * R[1][2];
+		pos[2] = ox * R[2][0] + oy * R[2][1] + oz * R[2][2];
+
+		// 2.2. 가우시안 방향(쿼터니언) 회전
+		float current_rot[4];
+		memcpy(current_rot, gaussians[i].rot, sizeof(float) * 4);
+
+		float new_rot[4];
+		fMyQuatMul(new_rot, rot_quat, current_rot);
+		memcpy(gaussians[i].rot, new_rot, sizeof(float) * 4);
+		fMyVecNormalize4D(gaussians[i].rot);
+	}
+
 	// 모든 정점을 순회하며 회전 변환 적용
-	int total_vertices = object.n_triangles * 3;
+	int total_vertices = uip.poly_model.n_triangles * 3;
 	for (int i = 0; i < total_vertices; ++i) {
-		float* v = object.extended_vertices[i].vertex;
+		float* v = uip.poly_model.extended_vertices[i].vertex;
 
 		float ox = v[0], oy = v[1], oz = v[2]; // 원본 좌표
 
@@ -742,16 +807,16 @@ void rotate_composite_object(CompositeObject& object, float angle_degrees, float
 	}
 
 	// AABB 다시 계산
-	object.AABB[XMIN] = object.AABB[YMIN] = object.AABB[ZMIN] = FLT_MAX;
-	object.AABB[XMAX] = object.AABB[YMAX] = object.AABB[ZMAX] = -FLT_MAX;
+	uip.poly_model.AABB[XMIN] = uip.poly_model.AABB[YMIN] = uip.poly_model.AABB[ZMIN] = FLT_MAX;
+	uip.poly_model.AABB[XMAX] = uip.poly_model.AABB[YMAX] = uip.poly_model.AABB[ZMAX] = -FLT_MAX;
 	for (int i = 0; i < total_vertices; ++i) {
-		float* v = object.extended_vertices[i].vertex;
-		object.AABB[XMIN] = fminf(object.AABB[XMIN], v[0]);
-		object.AABB[XMAX] = fmaxf(object.AABB[XMAX], v[0]);
-		object.AABB[YMIN] = fminf(object.AABB[YMIN], v[1]);
-		object.AABB[YMAX] = fmaxf(object.AABB[YMAX], v[1]);
-		object.AABB[ZMIN] = fminf(object.AABB[ZMIN], v[2]);
-		object.AABB[ZMAX] = fmaxf(object.AABB[ZMAX], v[2]);
+		float* v = uip.poly_model.extended_vertices[i].vertex;
+		uip.poly_model.AABB[XMIN] = fminf(uip.poly_model.AABB[XMIN], v[0]);
+		uip.poly_model.AABB[XMAX] = fmaxf(uip.poly_model.AABB[XMAX], v[0]);
+		uip.poly_model.AABB[YMIN] = fminf(uip.poly_model.AABB[YMIN], v[1]);
+		uip.poly_model.AABB[YMAX] = fmaxf(uip.poly_model.AABB[YMAX], v[1]);
+		uip.poly_model.AABB[ZMIN] = fminf(uip.poly_model.AABB[ZMIN], v[2]);
+		uip.poly_model.AABB[ZMAX] = fmaxf(uip.poly_model.AABB[ZMAX], v[2]);
 	}
 
 	printf("CompositeObject rotated by %.1f degrees around axis (%.2f, %.2f, %.2f).\n",
@@ -1339,7 +1404,7 @@ void subMenuHandler(int value) {
 	create_composite_object_from_gaussians(g_gaussians);
 #if ROTATION
 	//printf("%s\n%s\n%s\n", ply_kdtree_path, ply_igeom_path, ply_to_obj);
-	rotate_composite_object(uip.poly_model, 45.0f, 1.0f, 1.0f, 1.0f);
+	rotate_composite_object(g_gaussians, 45.0f, 1.0f, 1.0f, 1.0f);
 #endif
 	uip.composite_object_read = 1;
 
@@ -1457,16 +1522,27 @@ void main_menu_action(int selection) {
 	case 600:
 		g_cuda_interactive_mode = !g_cuda_interactive_mode; // 인터랙티브 모드 토글
 		if (g_cuda_interactive_mode) {
-			if (g_d_render_framebuffer) {
-				cudaFree(g_d_render_framebuffer);
-			}
-			cudaMalloc((void**)&g_d_render_framebuffer, (size_t)g_render_width * g_render_height * 3 * sizeof(float));
+			//if (g_d_render_framebuffer) {
+			//	cudaFree(g_d_render_framebuffer);
+			//}
+			//cudaMalloc((void**)&g_d_render_framebuffer, (size_t)g_render_width * g_render_height * 3 * sizeof(float));
 
 			renderGaussianWithCudaSetup(uip.poly_model, g_gaussians);
+
+			if (g_d_global_stack) cudaFree(g_d_global_stack);
+			if (g_d_global_stack_pointers) cudaFree(g_d_global_stack_pointers);
+			cudaMalloc((void**)&g_d_global_stack, (size_t)g_render_width * g_render_height * MAX_GLOBAL_STACK_DEPTH * sizeof(cu_traceState));
+			cudaMalloc((void**)&g_d_global_stack_pointers, (size_t)g_render_width * g_render_height * sizeof(int));
+
 			g_camera_dirty = true; // 모드를 켜는 즉시 한 번 렌더링하도록 설정
 			printf("CUDA Interactive Mode: ON\n");
 		}
 		else {
+			if (g_d_global_stack) cudaFree(g_d_global_stack);
+			if (g_d_global_stack_pointers) cudaFree(g_d_global_stack_pointers);
+			g_d_global_stack = nullptr;
+			g_d_global_stack_pointers = nullptr;
+
 			printf("CUDA Interactive Mode: OFF\n");
 			// 인터랙티브 모드를 끄면 다시 OpenGL 뷰로 돌아가도록 화면 갱신
 			glutPostRedisplay();
@@ -1577,7 +1653,8 @@ void init_KDT_system(void) {
 	v_KD_TREE_TRAVL_COST = TRAVL_COST;
 	//v_KD_TREE_ISECT_COST = 1.5;
 	v_KD_TREE_ISECT_COST = ISCET_COST;
-	v_KD_TREE_MAX_LEVEL = 100;
+	//v_KD_TREE_MAX_LEVEL = 100;
+	v_KD_TREE_MAX_LEVEL = MAX_LEVEL;
 	//v_KD_TREE_MIN_TRIANGLE = 4;
 	v_KD_TREE_MIN_TRIANGLE = MIN_TRI;
 	//v_KD_TREE_EMTPY_BONUS = 0.9;
@@ -1619,6 +1696,13 @@ void idle() {
 	if (g_cuda_interactive_mode && g_camera_dirty) {
 		g_camera_dirty = false; // 플래그 리셋
 
+		// PBO를 CUDA에서 사용할 수 있도록 매핑
+		float* d_pbo_ptr;
+		cudaGraphicsMapResources(1, &pbo_cuda_resource, 0);
+		size_t num_bytes;// = (size_t)g_render_width * g_render_height * 3 * sizeof(float);
+		cudaGraphicsResourceGetMappedPointer((void**)&d_pbo_ptr, &num_bytes, pbo_cuda_resource);
+
+
 		cudaEvent_t start, stop;
 		cudaEventCreate(&start);
 		cudaEventCreate(&stop);
@@ -1626,14 +1710,14 @@ void idle() {
 		cudaEventRecord(start); // 시작 기록
 		// CUDA 렌더링 실행 (기존 렌더링 함수 재사용)
 #if SCENE_NUM < 1
-		renderObjWithCuda(uip.poly_model, camera, g_render_width, g_render_height, g_render_framebuffer, g_cuda_rendering_done);
+		renderObjWithCuda(uip.poly_model, camera, g_render_width, g_render_height, d_pbo_ptr, g_cuda_rendering_done);
 #else
-		//renderGaussianWithCuda(uip.poly_model, g_gaussians, camera, g_render_width, g_render_height, g_render_framebuffer, g_cuda_rendering_done);
-		renderGaussianWithCudaFrame(camera, g_render_width, g_render_height, g_d_render_framebuffer);
-		size_t framebuffer_size = (size_t)g_render_width * g_render_height * 3 * sizeof(float);
-		if (g_render_framebuffer) delete[] g_render_framebuffer;
-		g_render_framebuffer = new float[framebuffer_size / sizeof(float)];
-		cudaMemcpy(g_render_framebuffer, g_d_render_framebuffer, framebuffer_size, cudaMemcpyDeviceToHost);
+		//renderGaussianWithCuda(uip.poly_model, g_gaussians, camera, g_render_width, g_render_height, d_pbo_ptr, g_cuda_rendering_done);
+
+		renderGaussianWithCudaFrame(camera, g_render_width, g_render_height, d_pbo_ptr
+			, g_d_global_stack, g_d_global_stack_pointers);
+		cudaGraphicsUnmapResources(1, &pbo_cuda_resource, 0);
+		
 		g_cuda_rendering_done = true;
 #endif
 		cudaEventRecord(stop); // 종료 기록
@@ -1664,15 +1748,25 @@ void main(int argc, char **argv) {
 	glutInitWindowSize(MAIN_WINDOW_WIDTH, MAIN_WINDOW_HEIGHT);
 	glutInitContextVersion(4, 0);
 	glutInitContextProfile(GLUT_COMPATIBILITY_PROFILE);
-	uip.main_window_ID = glutCreateWindow("SL Mesh-to-Kd-Tree Converter SW: Verion 1.0_glut");
+	uip.main_window_ID = glutCreateWindow("Ply-to-Kd-Tree Converter-Tracer SW: Verion 1.0_glut");
+	initialize_glew();
+//shyun
+	// PBO 생성
+	glGenBuffers(1, &pbo);
+	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo);
+	glBufferData(GL_PIXEL_UNPACK_BUFFER, MAIN_WINDOW_WIDTH * MAIN_WINDOW_HEIGHT * 3 * sizeof(float), NULL, GL_DYNAMIC_DRAW);
+	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+
+	// CUDA가 이 PBO를 인식하도록 등록
+	cudaGraphicsGLRegisterBuffer(&pbo_cuda_resource, pbo, cudaGraphicsRegisterFlagsWriteDiscard);
 
 	if (!initCuda()) {
 		fprintf(stderr, "Failed to initialize CUDA. Exiting.\n");
 		system("pause");
 		exit(1);
 	}
+//shyun end
 
-	initialize_glew(); 
 	register_callbacks_and_create_menu();
 	glutIdleFunc(idle);
 
