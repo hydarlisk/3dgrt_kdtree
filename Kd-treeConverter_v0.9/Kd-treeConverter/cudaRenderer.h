@@ -6,11 +6,18 @@
 //#include <vector_types.h>
 #include <cstring>
 
-#define MAX_GLOBAL_STACK_DEPTH 64
-
-struct float3x3 {
-	float m[3][3];
+// 스택 연산을 기록할 로그 구조체
+struct DebugLog {
+	int operation;  // 1: push_short, 2: push_global, -1: pop_short, -2: pop_global
+	int short_top;  // 연산 후 shortStack의 _top 값
+	int global_ptr; // 연산 후 global_stack_ptr 값
+	int node_id;    // 처리 대상이 된 노드 ID
 };
+
+// 추적할 픽셀 좌표와 로그 버퍼 크기 정의
+#define TRACE_PIXEL_X 519
+#define TRACE_PIXEL_Y 413
+#define MAX_LOG_ENTRIES 512 // 기록할 최대 로그 수
 
 typedef struct { unsigned nodeID; float tMax; } cu_traceState;
 
@@ -39,19 +46,19 @@ const int ICO_FACES[icosaHedronNumTri][3] = {
 #define SH_C0 0.28209479177387814f	// sqrt(1 / (4 * pi))
 #define SH_C1 0.4886025119029199f	// sqrt(3 / (4 * pi))
 
-#define SH_C2_0 1.0925484306f
-#define SH_C2_1 -1.0925484306f
-#define SH_C2_2 0.3153915652f
-#define SH_C2_3 -1.0925484306f
-#define SH_C2_4 0.5462742153f
+#define SH_C2_0 1.0925484305920792f
+#define SH_C2_1 -1.0925484305920792f
+#define SH_C2_2 0.31539156525252005f
+#define SH_C2_3 -1.0925484305920792f
+#define SH_C2_4 0.5462742152960396f
 
-#define SH_C3_0 -0.5900435899f
-#define SH_C3_1 2.8906114426f
-#define SH_C3_2 -0.4570457996f
-#define SH_C3_3 0.3731763326f
-#define SH_C3_4 -0.4570457996f
-#define SH_C3_5 1.4453057213f
-#define SH_C3_6 -0.5900435899f
+#define SH_C3_0 -0.5900435899266435f
+#define SH_C3_1 2.890611442640554f
+#define SH_C3_2 -0.4570457994644658f
+#define SH_C3_3 0.3731763325901154f
+#define SH_C3_4 -0.4570457994644658f
+#define SH_C3_5 1.445305721320277f
+#define SH_C3_6 -0.5900435899266435f
 
 inline float fminf(const float a, const float b) { return (b > a) ? a : b; }
 inline float fmaxf(const float a, const float b) { return (b < a) ? a : b; }
@@ -93,7 +100,13 @@ void renderObjWithCuda(
 //	bool& is_done
 //);
 void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vector<Gaussian>& gaussians);
-void renderGaussianWithCudaFrame(const Camera& camera, int width, int height, float* d_framebuffer, cu_traceState* d_global_stack, int* d_global_stack_pointers);
+
+int renderGaussianWithCudaFrame(const Camera& camera, int width, int height, float* d_framebuffer,
+#if USE_GLOBAL_STACK
+	cu_traceState* d_global_stack, int* d_global_stack_pointers
+#endif
+);
+
 void cleanupCudaResources();
 
 #if 1

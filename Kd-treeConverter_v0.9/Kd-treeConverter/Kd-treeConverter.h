@@ -7,10 +7,10 @@
 #pragma once
 #include <vector>
 
- //shyun
+//shyun
 #define TRAVL_COST 1.0
 #define ISCET_COST 20.0
-#define MAX_LEVEL 128
+#define MAX_LEVEL 100
 #define MIN_TRI 32
 #define EMTPY_BONUS 0.9
 
@@ -19,7 +19,7 @@
 #define ALPHA_MIN 0.01f
 #define KERNEL_DEGREE 2.0f
 
-#define OPACITY_THRESHOLD 0.95f
+#define OPACITY_THRESHOLD 0.98f
 
 #define SUPER_SAMPLING false
 
@@ -27,13 +27,14 @@
 #define ROTATION true							// R(45degree,1,1,1)
 
 #define MAX_HITS 128
-#define TILE_SIZE 32							// kernel2에서 Sort위한 Tile Size
 
 #define DIM_X 16
 #define DIM_Y 16
+#define USE_GLOBAL_STACK true					// GlobalStack 같이 사용
 #define SHORT_STACK_DEPTH 12					// for kernel sh.mem
+#define MAX_GLOBAL_STACK_DEPTH 64
 
-#define USE_KERNEL_SCALE false					// 기존의 OptiX처럼 kernelScale 사용
+#define USE_KERNEL_SCALE false					// 기존의 OptiX 방식 kernelScale 사용
 
 #define SCENE_NUM 1								// obj 로드할때만 0으로 변경
 
@@ -62,6 +63,10 @@
 #define KDTREE_PATH "../../Data/ply/flowers/flowers_tree.kdt"
 #define IGEOM_PATH "../../Data/ply/flowers/flowers_igeom.bin"
 #endif
+
+struct float3x3 {
+	float m[3][3];
+};
 //shyun end
 
 #define X 0
@@ -149,14 +154,15 @@ typedef struct _CompositeObject {
 struct Gaussian {
 	float pos[3];       // 3D 위치 (x, y, z)
 	float scale[3];     // 3축 스케일 (sx, sy, sz)
-	float rot[4];       // 회전 쿼터니언 (qw, qx, qy, qz)
+	//float rot[4];       // 회전 쿼터니언 (qw, qx, qy, qz)
+	float3x3 rot_matrix; // 미리 계산된 회전 행렬 (전치된 상태, R^T)
 	float opacity;      // 불투명도 (0.0 ~ 1.0)
 	float f_dc[3];      // 기본 색상 (R, G, B)
 	float f_rest[45];
-	//float3x3
-	float pad;
+	//float pad;
 };
 //236 + 4 (240 = 16 * 15)
+//256
 //shyun end
 
 typedef struct _Ray {

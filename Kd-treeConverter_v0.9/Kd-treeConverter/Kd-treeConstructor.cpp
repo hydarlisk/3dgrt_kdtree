@@ -715,7 +715,7 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pTriangleInfo
 		leftnBounds = bbox;  leftnBounds.max[bestCost.axis] = bestCost.splitPos;
 		rightnBounds = bbox;  rightnBounds.min[bestCost.axis] = bestCost.splitPos;
 
-//shyun
+///shyun
 		// SAH가 예측한 bestCost.n_left/n_right는 실제 필요한 양보다 적을 수 있어 충돌을 유발.
 		// 따라서 메모리를 할당하기 직전에, 실제 필요한 크기를 다시 정확하게 계산.
 		int n_left_actual = 0;
@@ -754,13 +754,54 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pTriangleInfo
 		// TriangleInfo 부터 bEdge 를 생성 및 정렬
 		set_bound_edge(bestCost.axis, pTriangleInfos, n_bEdge, bEdge);
 
+/*//shyun
+		// --- 실제 분배될 삼각형 개수를 "정확하게" 미리 계산 ---
+		int n_left_actual = 0;
+		int n_right_actual = 0;
+
+		if (KD_TREE_PLANAR_TRIANGLE_ADD_MODE == BOTH_SIDE) {
+			for (unsigned int i = 0; i < n_bEdge; ++i) {
+				if (!bEdge[i].isPlanar) {
+					if (bEdge[i].t < bestCost.splitPos && bEdge[i].type == BoundEdge::START) n_left_actual++;
+					else if (bEdge[i].t > bestCost.splitPos && bEdge[i].type == BoundEdge::END) n_right_actual++;
+				}
+				else if (bEdge[i].type == BoundEdge::START) {
+					if (bEdge[i].t <= bestCost.splitPos) n_left_actual++;
+					if (bEdge[i].t >= bestCost.splitPos) n_right_actual++;
+				}
+			}
+		}
+		else { // MINCOST_SIDE
+			for (unsigned int i = 0; i < n_bEdge; ++i) {
+				if (!bEdge[i].isPlanar) {
+					if (bEdge[i].t < bestCost.splitPos && bEdge[i].type == BoundEdge::START) n_left_actual++;
+					else if (bEdge[i].t > bestCost.splitPos && bEdge[i].type == BoundEdge::END) n_right_actual++;
+				}
+				else if (bEdge[i].type == BoundEdge::START) {
+					if (bEdge[i].t < bestCost.splitPos) n_left_actual++;
+					else if (bEdge[i].t > bestCost.splitPos) n_right_actual++;
+					else {
+						if (bestCost.planar_side == BoundEdge::START) n_left_actual++;
+						else n_right_actual++;
+					}
+				}
+			}
+		}
+
+		// --- 정확하게 계산된 크기만큼만 메모리 할당 ---
+		TriangleList* pLeftTriangles = new TriangleList[n_left_actual];
+		TriangleList* pRightTriangles = new TriangleList[n_right_actual];
+//shyun*/
+
 		// bEdge 로 부터 pLeftTriangle, pRightTriangle 을 생성
 		push_triangles_to_child(n_bEdge, bEdge, pLeftTriangles, pRightTriangles, bestCost);
 
 		// 각 child node 에 맞게 삼각형 clipping
 		clip_triangle(bestCost.n_left, bestCost, pLeftTriangles, 0);
 		clip_triangle(bestCost.n_right, bestCost, pRightTriangles, 1);
-		/*//shyun
+		//clip_triangle(n_left_actual, bestCost, pLeftTriangles, 0);
+		//clip_triangle(n_right_actual, bestCost, pRightTriangles, 1);
+		/*//shyun/
 		int currLeftIndex = 0;
 		int currRightIndex = 0;
 		for (unsigned int i = 0; i < triangleSize; i++) {
@@ -844,6 +885,15 @@ void build_TriAccList(CompositeObject *poly_model, TriAccel*& pTriAcc)
 		c[2] = B[2] - A[2];
 		fMyVecCrossProduct(b, c, N);
 		fMyVecNormalize(N);
+
+//shyun
+		if (N[0] == 0.0f && N[1] == 0.0f && N[2] == 0.0f) {
+			// 이 삼각형은 유효하지 않으므로 모든 값을 0으로 설정하고 건너뜁니다.
+			// 이렇게 하면 '0으로 나누기'를 방지하고 트리에 포함되지 않게 됩니다.
+			memset(&pTriAcc[i], 0, sizeof(TriAccel));
+			continue; // 다음 삼각형으로 넘어감
+		}
+//shyun
 
 		k = (fabsf(N[0]) > fabsf(N[1])) ? ( (fabsf(N[0])>fabsf(N[2]))?0:2 ):( (fabsf(N[1])>fabsf(N[2]))?1:2 );
 		u = modulo[k+1];

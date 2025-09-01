@@ -70,6 +70,9 @@
     <Filter Include="SGRTx2Lib\Pipeline\CPURenderPipeline">
       <UniqueIdentifier>{7bc2a1ff-d11f-4ac1-9676-05d2e4c3bb50}</UniqueIdentifier>
     </Filter>
+    <Filter Include="쉐이더">
+      <UniqueIdentifier>{a72d4860-2a3a-4320-8ac3-f0459642e814}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Kd-treeConverter.cpp">
