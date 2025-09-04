@@ -101,15 +101,15 @@ void renderObjWithCuda(
 //);
 void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vector<Gaussian>& gaussians);
 
-int renderGaussianWithCudaFrame(const Camera& camera, int width, int height, float* d_framebuffer,
+float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, float* d_framebuffer
 #if USE_GLOBAL_STACK
-	cu_traceState* d_global_stack, int* d_global_stack_pointers
+	, cu_traceState* d_global_stack, int* d_global_stack_pointers
 #endif
 );
 
 void cleanupCudaResources();
 
-#if 1
+#if 0
 // -----------------------------------------------------------
 // kdtree node
 // -----------------------------------------------------------

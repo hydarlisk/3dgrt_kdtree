@@ -529,6 +529,9 @@
     <CudaCompile Include="SGRTx2Lib\cuda_math.h">
       <Filter>SGRTx2Lib\Pipeline\cudaRenderPipeline</Filter>
     </CudaCompile>
+    <CudaCompile Include="cudaRenderer_legacy.cu">
+      <Filter>CUDA</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <Text Include="SGRTx2Lib\TODO.txt">

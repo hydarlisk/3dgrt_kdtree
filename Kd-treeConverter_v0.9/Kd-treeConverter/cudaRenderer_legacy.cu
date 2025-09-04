@@ -187,7 +187,7 @@ __constant__ float3 g_SceneBBoxMax;
 
 kdtreeNode* g_d_kdtree_nodes = nullptr;
 unsigned int* g_d_tri_offsets = nullptr;
-float4* g_d_tri_accel = nullptr;
+TriAccel* g_d_tri_accel = nullptr;
 Gaussian* g_d_gaussians_persistent = nullptr;
 
 cudaEvent_t start_ev, stop_ev;

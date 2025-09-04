@@ -19,7 +19,7 @@
 #define ALPHA_MIN 0.01f
 #define KERNEL_DEGREE 2.0f
 
-#define OPACITY_THRESHOLD 0.98f
+#define OPACITY_THRESHOLD 0.90f
 
 #define SUPER_SAMPLING false
 
@@ -30,10 +30,17 @@
 
 #define DIM_X 16
 #define DIM_Y 16
-#define USE_GLOBAL_STACK true					// GlobalStack 같이 사용
+#define USE_GLOBAL_STACK 1					// 1: GlobalStack 같이 사용 2: GlobalStack만 사용
+
+#if USE_GLOBAL_STACK < 2
 #define SHORT_STACK_DEPTH 12					// for kernel sh.mem
+#else
+#define SHORT_STACK_DEPTH 0
+#endif
+
 #define MAX_GLOBAL_STACK_DEPTH 64
 
+#define SPH_EVAL_DEGREE 3
 #define USE_KERNEL_SCALE false					// 기존의 OptiX 방식 kernelScale 사용
 
 #define SCENE_NUM 1								// obj 로드할때만 0으로 변경

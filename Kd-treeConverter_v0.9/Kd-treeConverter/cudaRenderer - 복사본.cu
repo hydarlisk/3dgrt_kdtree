@@ -12,7 +12,7 @@
 //#include <cuda_texture_types.h>
 #include <device_launch_parameters.h>
 //#include <texture_fetch_functions.h>
-#include <texture_indirect_functions.h>
+//#include <texture_indirect_functions.h>
 #include <vector_types.h>
 
 #define CUDA_CHECK(ans) { gpuAssert((ans), __FILE__, __LINE__); }
@@ -34,12 +34,9 @@ struct cuRay {
     float3 pos;
     float3 dir;
     __device__ float2 get_dir_pos(const unsigned axis) const {
-        float2 ret;
-        switch (axis) {
-            case 0:     ret.x = pos.x; ret.y = dir.x; return ret;
-            case 1:     ret.x = pos.y; ret.y = dir.y; return ret;
-            default:    ret.x = pos.z; ret.y = dir.z; return ret;
-        }
+        if (axis == 0) return make_float2(pos.x, dir.x);
+        if (axis == 1) return make_float2(pos.y, dir.y);
+        return make_float2(pos.z, dir.z);
     }
 };
 
@@ -71,8 +68,13 @@ struct cuObjectMaterial {
 
 // Kd-tree 노드 (GKDTreeNode.h에서 추출)
 typedef uint2 kdtreeNode;
+//#define IS_LEAF(node)               (((node).x & 3) == 3)
+//#define SPLIT_AXIS(node)            ( (node).x & 3)
+//#define FIRST_CHILD_OFFSET(node)    ( (node).x >> 3)
+//#define SPLIT_POS(node)             (*(float *)&((node).y))
+//#define OBJECT_SIZE(node)           ( (node).x >> 3)
+//#define OBJECTLIST_OFFSET(node)     ( (node).y)
 
-#if SHORT_STACK_DEPTH > 0
 // 스택 (cudaRenderPipelineCommonKernel.cu에서 추출)
 extern __shared__ cu_traceState smemBuffer[SHORT_STACK_DEPTH * DIM_X * DIM_Y];
 
@@ -80,21 +82,22 @@ struct shortStack {
     unsigned _top, quant, baseOffset;
     __device__ shortStack() : _top(SHORT_STACK_DEPTH - 1), quant(0) {}
     __device__ inline void init(const unsigned smem_baseOffset) {
-        baseOffset = smem_baseOffset * (SHORT_STACK_DEPTH);
+        baseOffset = smem_baseOffset * SHORT_STACK_DEPTH;
+        _top = SHORT_STACK_DEPTH - 1;
+        quant = 0;
     }
     __device__ inline cu_traceState top() { return smemBuffer[baseOffset + _top]; }
     __device__ inline void push(unsigned id, float t_max) {
-        if (++_top == SHORT_STACK_DEPTH)
-            _top = 0;
-        quant = min(quant + 1, SHORT_STACK_DEPTH);
+        if (++_top == SHORT_STACK_DEPTH) _top = 0;
+        //quant = min(quant + 1, SHORT_STACK_DEPTH);
+        quant = (quant + 1) % SHORT_STACK_DEPTH;
         smemBuffer[baseOffset + _top].nodeID = id;
         smemBuffer[baseOffset + _top].tMax = t_max;
     }
-    __device__ inline int empty() { return quant == 0; }
+    __device__ inline bool empty() { return quant == 0; }
     __device__ inline int full() { return quant == SHORT_STACK_DEPTH; }
     __device__ inline void pop() {
-        if (_top == 0)
-            _top = SHORT_STACK_DEPTH;
+        if (_top == 0) _top = SHORT_STACK_DEPTH;
         --_top; --quant;
     }
 };
@@ -144,7 +147,6 @@ struct ShortStackCache {
         return smemBuffer[baseOffset + tail];
     }
 };
-#endif
 
 //// --- Device-side Helper Functions ---
 //
@@ -165,19 +167,12 @@ struct ShortStackCache {
 //texture<uint2, 1, cudaReadModeElementType> inKdTreeNodeTex;
 //texture<uint, 1, cudaReadModeElementType> inObjectOffsetListTex;
 //texture<float4, 1, cudaReadModeElementType> inTriAccelTex;
-
 //texture<float4, 1, cudaReadModeElementType> inGaussianTex;
-//texture<float4, 1, cudaReadModeElementType> inVertexTex;
 
-//__device__ cudaTextureObject_t inKdTreeNodeTex;
-//__device__ cudaTextureObject_t inObjectOffsetListTex;
-//__device__ cudaTextureObject_t inTriAccelTex;
-//__device__ cudaTextureObject_t inGaussianTex;
-
-cudaTextureObject_t h_inKdTreeNodeTex = 0;
-cudaTextureObject_t h_inObjectOffsetListTex = 0;
-cudaTextureObject_t h_inTriAccelTex = 0;
-//cudaTextureObject_t h_inGaussianTex = 0;
+__device__ cudaTextureObject_t g_d_kdtree_tex = 0;
+__device__ cudaTextureObject_t g_d_offsets_tex = 0;
+__device__ cudaTextureObject_t g_d_triaccel_tex = 0;
+__device__ cudaTextureObject_t g_d_gaussian_tex = 0;
 
 struct SceneInfo { int resX, resY; };
 //struct SceneInfo {
@@ -190,12 +185,13 @@ __constant__ SceneInfo g_SceneInfo;
 __constant__ CameraInfo g_CameraInfo;
 __constant__ float3 g_SceneBBoxMin;
 __constant__ float3 g_SceneBBoxMax;
-
+//__device__ Gaussian* g_d_gaussians;
 //__device__ ExtendedVertex* g_d_all_vertices;
-//__device__ kdtreeNode* g_d_kdtree;
-//__device__ unsigned int* g_d_offsets;
-//__device__ float4* g_d_accel;
-__device__ Gaussian* g_d_gaussians;
+
+//__device__ kdtreeNode* g_kdtree_nodes = nullptr;
+//__device__ unsigned int* g_tri_offsets = nullptr;
+//__device__ float4* g_tri_accel = nullptr;
+//__device__ Gaussian* g_gaussians = nullptr;
 
 kdtreeNode* g_d_kdtree_nodes = nullptr;
 unsigned int* g_d_tri_offsets = nullptr;
@@ -203,12 +199,15 @@ TriAccel* g_d_tri_accel = nullptr;
 Gaussian* g_d_gaussians_persistent = nullptr;
 
 cudaEvent_t start_ev, stop_ev;
+float k_fps = 0.0f; // FPS를 저장할 전역 변수
+int frame_count = 0;
+float total_frame = 0.0f;
 
 // =================================================================================
 // CUDA 커널 코드 (사용자 제공 커널)
 // =================================================================================
 
-/*__device__ bool BoundsRayIntersect(const float3& bmin, const float3& bmax, const cuRay& ray, float& tmin, float& tmax) {
+__device__ bool BoundsRayIntersect(const float3& bmin, const float3& bmax, const cuRay& ray, float& tmin, float& tmax) {
     float3 invD = 1.0f / ray.dir;
     float3 t0s = (bmin - ray.pos) * invD;
     float3 t1s = (bmax - ray.pos) * invD;
@@ -220,29 +219,34 @@ cudaEvent_t start_ev, stop_ev;
     //float3 tbigger = make_float3(fmaxf(t0s.x, t1s.x), fmaxf(t0s.y, t1s.y), fmaxf(t0s.z, t1s.z));
     tmin = fmaxf(tmin, fmaxf(tsmaller.x, fmaxf(tsmaller.y, tsmaller.z)));
     tmax = fminf(tmax, fminf(tbigger.x, fminf(tbigger.y, tbigger.z)));
+
+    int x = blockIdx.x * blockDim.x + threadIdx.x;
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
+    //printf("(%d, %d) BoundsRayIntersect Done\n",x,y);
     return ((tmin < tmax) & (tmax >= 0.f));
-}*/
+}
 
-__device__ inline bool BoundsRayIntersect(const float3& bmin, const float3& bmax, const cuRay* ray, float* tmin, float* tmax) {
-    float l1 = 0.0f;
-    float l2 = 0.0f;
+// =================================================================================
+// Host-Side Public Render Function
+// =================================================================================
 
-    l1 = __fdividef(bmin.x - ray->pos.x, ray->dir.x);
-    l2 = __fdividef(bmax.x - ray->pos.x, ray->dir.x);
-    *tmin = fmaxf(fminf(l1, l2), *tmin);
-    *tmax = fminf(fmaxf(l1, l2), *tmax);
+bool initCuda() {
+    CUDA_CHECK(cudaGetLastError());
 
-    l1 = __fdividef(bmin.y - ray->pos.y, ray->dir.y);
-    l2 = __fdividef(bmax.y - ray->pos.y, ray->dir.y);
-    *tmin = fmaxf(fminf(l1, l2), *tmin);
-    *tmax = fminf(fmaxf(l1, l2), *tmax);
-
-    l1 = __fdividef(bmin.z - ray->pos.z, ray->dir.z);
-    l2 = __fdividef(bmax.z - ray->pos.z, ray->dir.z);
-    *tmin = fmaxf(fminf(l1, l2), *tmin);
-    *tmax = fminf(fmaxf(l1, l2), *tmax);
-
-    return ((*tmax >= *tmin) & (*tmax >= 0.f));
+    int deviceCount = 0;
+    cudaError_t err = cudaGetDeviceCount(&deviceCount);
+    printf("CUDA devices: %d\n", deviceCount);
+    if (err != cudaSuccess || deviceCount == 0) {
+        std::cerr << "[CUDA Init] No CUDA devices found." << std::endl;
+        return false;
+    }
+    err = cudaSetDevice(0);
+    if (err != cudaSuccess) {
+        std::cerr << "[CUDA Init] Failed to set device 0." << cudaGetErrorString(err) << std::endl;
+        return false;
+    }
+    std::cout << "[CUDA Init] CUDA device initialized successfully." << std::endl;
+    return true;
 }
 
 //-----------------------------------------------------------------------
@@ -254,7 +258,7 @@ struct HitRecord {
 };
 
 __device__ void sortHits(HitRecord* hits, int count) {
-    if (count > 25) printf("local sort count: %d\n", count);
+    //if (count > 25) printf("local sort count: %d\n", count);
     for (int i = 1; i < count; i++) {
         HitRecord key = hits[i];
         int j = i - 1;
@@ -263,6 +267,20 @@ __device__ void sortHits(HitRecord* hits, int count) {
             j = j - 1;
         }
         hits[j + 1] = key;
+    }
+}
+
+__device__ void shellSort(HitRecord* hits, int count) {
+    if(count>25) printf("local sort count: %d\n", count);
+    for (int gap = count / 2; gap > 0; gap /= 2) {
+        for (int i = gap; i < count; i += 1) {
+            HitRecord temp = hits[i];
+            int j;
+            for (j = i; j >= gap && hits[j - gap].t > temp.t; j -= gap) {
+                hits[j] = hits[j - gap];
+            }
+            hits[j] = temp;
+        }
     }
 }
 
@@ -288,25 +306,24 @@ __device__ __forceinline__ float3 eval_sh_final(
     // 1. 계산을 용이하게 하기 위해 g.f_dc와 g.f_rest를 하나의 배열로 합칩니다.
     float3 sphCoefficients[16];
     sphCoefficients[0] = make_float3(g.f_dc[0], g.f_dc[1], g.f_dc[2]);
-//#pragma unroll
-//    for (int i = 0; i < 15; ++i) {
-//        sphCoefficients[i + 1] = make_float3(g.f_rest[i], g.f_rest[15 + i], g.f_rest[30 + i]);
-//    }
-    sphCoefficients[1] = make_float3(g.f_rest[0], g.f_rest[15], g.f_rest[30]);
-    sphCoefficients[2] = make_float3(g.f_rest[1], g.f_rest[16], g.f_rest[31]);
-    sphCoefficients[3] = make_float3(g.f_rest[2], g.f_rest[17], g.f_rest[32]);
-    sphCoefficients[4] = make_float3(g.f_rest[3], g.f_rest[18], g.f_rest[33]);
-    sphCoefficients[5] = make_float3(g.f_rest[4], g.f_rest[19], g.f_rest[34]);
-    sphCoefficients[6] = make_float3(g.f_rest[5], g.f_rest[20], g.f_rest[35]);
-    sphCoefficients[7] = make_float3(g.f_rest[6], g.f_rest[21], g.f_rest[36]);
-    sphCoefficients[8] = make_float3(g.f_rest[7], g.f_rest[22], g.f_rest[37]);
-    sphCoefficients[9] = make_float3(g.f_rest[8], g.f_rest[23], g.f_rest[38]);
-    sphCoefficients[10] = make_float3(g.f_rest[9], g.f_rest[24], g.f_rest[39]);
-    sphCoefficients[11] = make_float3(g.f_rest[10], g.f_rest[25], g.f_rest[40]);
-    sphCoefficients[12] = make_float3(g.f_rest[11], g.f_rest[26], g.f_rest[41]);
-    sphCoefficients[13] = make_float3(g.f_rest[12], g.f_rest[27], g.f_rest[42]);
-    sphCoefficients[14] = make_float3(g.f_rest[13], g.f_rest[28], g.f_rest[43]);
-    sphCoefficients[15] = make_float3(g.f_rest[14], g.f_rest[29], g.f_rest[44]);
+#pragma unroll
+    for (int i = 0; i < 15; ++i) {
+        sphCoefficients[i + 1] = make_float3(g.f_rest[i * 3 + 0], g.f_rest[i * 3 + 1], g.f_rest[i * 3 + 2]);
+    }
+    //sphCoefficients[1] = make_float3(g.f_rest[3], g.f_rest[4], g.f_rest[5]);
+    //sphCoefficients[2] = make_float3(g.f_rest[6], g.f_rest[7], g.f_rest[8]);
+    //sphCoefficients[3] = make_float3(g.f_rest[9], g.f_rest[10], g.f_rest[11]);
+    //sphCoefficients[4] = make_float3(g.f_rest[12], g.f_rest[13], g.f_rest[14]);
+    //sphCoefficients[5] = make_float3(g.f_rest[15], g.f_rest[16], g.f_rest[17]);
+    //sphCoefficients[6] = make_float3(g.f_rest[18], g.f_rest[19], g.f_rest[20]);
+    //sphCoefficients[7] = make_float3(g.f_rest[21], g.f_rest[22], g.f_rest[23]);
+    //sphCoefficients[8] = make_float3(g.f_rest[24], g.f_rest[25], g.f_rest[26]);
+    //sphCoefficients[9] = make_float3(g.f_rest[27], g.f_rest[28], g.f_rest[29]);
+    //sphCoefficients[10] = make_float3(g.f_rest[30], g.f_rest[31], g.f_rest[32]);
+    //sphCoefficients[11] = make_float3(g.f_rest[33], g.f_rest[34], g.f_rest[35]);
+    //sphCoefficients[12] = make_float3(g.f_rest[36], g.f_rest[37], g.f_rest[38]);
+    //sphCoefficients[13] = make_float3(g.f_rest[39], g.f_rest[40], g.f_rest[41]);
+    //sphCoefficients[14] = make_float3(g.f_rest[42], g.f_rest[43], g.f_rest[44]);
 
     // --- 2. 3dgrt의 radianceFromSpH 로직을 그대로 적용 ---
     float3 rad = SH_C0 * sphCoefficients[0]; // 0차 SH
@@ -347,7 +364,7 @@ __device__ __forceinline__ float3 eval_sh_final(
 
     // 3. 최종 활성화: 원본과 동일하게 0.5를 더하고, 0 미만 값은 0으로 클램핑합니다.
     rad += make_float3(0.5f);
-    return min(max(rad, make_float3(0.f)), make_float3(1.f));
+    return max(rad, make_float3(0.0f));
     //return sigmoid(rad);
 }
 
@@ -376,29 +393,17 @@ __device__ __forceinline__ float evaluateGaussianResponse(const cuRay& ray, cons
 
     const float3 p = ray.pos - g_pos; // (o - μ)
 
-    //// 위치 벡터 회전: o_os = R^T * p
-    //float3 o_os;
-    //o_os.x = g.rot_matrix.m[0][0] * p.x + g.rot_matrix.m[0][1] * p.y + g.rot_matrix.m[0][2] * p.z;
-    //o_os.y = g.rot_matrix.m[1][0] * p.x + g.rot_matrix.m[1][1] * p.y + g.rot_matrix.m[1][2] * p.z;
-    //o_os.z = g.rot_matrix.m[2][0] * p.x + g.rot_matrix.m[2][1] * p.y + g.rot_matrix.m[2][2] * p.z;
-    //// 방향 벡터 회전: d_os = R^T * d
-    //float3 d_os;
-    //d_os.x = g.rot_matrix.m[0][0] * ray.dir.x + g.rot_matrix.m[0][1] * ray.dir.y + g.rot_matrix.m[0][2] * ray.dir.z;
-    //d_os.y = g.rot_matrix.m[1][0] * ray.dir.x + g.rot_matrix.m[1][1] * ray.dir.y + g.rot_matrix.m[1][2] * ray.dir.z;
-    //d_os.z = g.rot_matrix.m[2][0] * ray.dir.x + g.rot_matrix.m[2][1] * ray.dir.y + g.rot_matrix.m[2][2] * ray.dir.z;
-    
     // 위치 벡터 회전: o_os = R^T * p
     float3 o_os;
-    // CPU에서 생성된 Column-major 순서(m[열][행])에 맞게 인덱스 수정
-    o_os.x = g.rot_matrix.m[0][0] * p.x + g.rot_matrix.m[1][0] * p.y + g.rot_matrix.m[2][0] * p.z;
-    o_os.y = g.rot_matrix.m[0][1] * p.x + g.rot_matrix.m[1][1] * p.y + g.rot_matrix.m[2][1] * p.z;
-    o_os.z = g.rot_matrix.m[0][2] * p.x + g.rot_matrix.m[1][2] * p.y + g.rot_matrix.m[2][2] * p.z;
+    o_os.x = g.rot_matrix.m[0][0] * p.x + g.rot_matrix.m[0][1] * p.y + g.rot_matrix.m[0][2] * p.z;
+    o_os.y = g.rot_matrix.m[1][0] * p.x + g.rot_matrix.m[1][1] * p.y + g.rot_matrix.m[1][2] * p.z;
+    o_os.z = g.rot_matrix.m[2][0] * p.x + g.rot_matrix.m[2][1] * p.y + g.rot_matrix.m[2][2] * p.z;
+
     // 방향 벡터 회전: d_os = R^T * d
     float3 d_os;
-    // CPU에서 생성된 Column-major 순서(m[열][행])에 맞게 인덱스 수정
-    d_os.x = g.rot_matrix.m[0][0] * ray.dir.x + g.rot_matrix.m[1][0] * ray.dir.y + g.rot_matrix.m[2][0] * ray.dir.z;
-    d_os.y = g.rot_matrix.m[0][1] * ray.dir.x + g.rot_matrix.m[1][1] * ray.dir.y + g.rot_matrix.m[2][1] * ray.dir.z;
-    d_os.z = g.rot_matrix.m[0][2] * ray.dir.x + g.rot_matrix.m[1][2] * ray.dir.y + g.rot_matrix.m[2][2] * ray.dir.z;
+    d_os.x = g.rot_matrix.m[0][0] * ray.dir.x + g.rot_matrix.m[0][1] * ray.dir.y + g.rot_matrix.m[0][2] * ray.dir.z;
+    d_os.y = g.rot_matrix.m[1][0] * ray.dir.x + g.rot_matrix.m[1][1] * ray.dir.y + g.rot_matrix.m[1][2] * ray.dir.z;
+    d_os.z = g.rot_matrix.m[2][0] * ray.dir.x + g.rot_matrix.m[2][1] * ray.dir.y + g.rot_matrix.m[2][2] * ray.dir.z;
 
     //const float4 g_rot = make_float4(g.rot[1], g.rot[2], g.rot[3], g.rot[0]); // (x,y,z,w)
     //const float4 inv_rot = quat_inverse(g_rot); // R^T
@@ -520,9 +525,8 @@ __device__ __forceinline__ float evaluateGaussianResponse_3dgrt(const cuRay& ray
 }
 
 // Gaussian 데이터를 텍스처에서 읽어오는 헬퍼 함수
-__device__ Gaussian fetch_gaussian(int gaussianID
-    , cudaTextureObject_t inGaussianTex
-) {
+//__device__ Gaussian fetch_gaussian(cudaTextureObject_t gaussianTex, int gaussianID) {
+__device__ Gaussian fetch_gaussian(int gaussianID) {
     Gaussian g;
     // 패딩이 추가된 Gaussian 크기는 240바이트 = float4(16바이트) * 15개
     const int num_float4s = sizeof(Gaussian) / sizeof(float4);
@@ -533,7 +537,7 @@ __device__ Gaussian fetch_gaussian(int gaussianID
 #pragma unroll
     for (int i = 0; i < num_float4s; ++i) {
         //data[i] = tex1Dfetch(inGaussianTex, base_idx + i);
-        data[i] = tex1Dfetch<float4>(inGaussianTex, base_idx + i);
+        data[i] = tex1D<float4>(g_d_gaussian_tex, base_idx + i);
     }
 
     // 가져온 데이터를 Gaussian 구조체로 복사
@@ -541,14 +545,11 @@ __device__ Gaussian fetch_gaussian(int gaussianID
     return g;
 }
 
-__device__ void singlePassIntersectRoutineGaussian_sortNode(const cuRay& ray, int id, float t_near, float t_far, HitRecord* local_hits, int& local_hit_count
-    , cudaTextureObject_t inTriAccelTex
-) {
+__device__ void singlePassIntersectRoutineGaussian_sortNode(const cuRay& ray, int id, float t_near, float t_far, HitRecord* local_hits, int& local_hit_count) {
     if (local_hit_count >= MAX_HITS) return;
 
-    //float4 d0 = tex1Dfetch(inTriAccelTex, id * 4 + 0);
-    float4 d0 = tex1Dfetch<float4>(inTriAccelTex, id * 4 + 0);
-    //float4 d0 = g_d_accel[id * 4 + 0];
+    float4 d0 = tex1D<float4>(g_d_triaccel_tex, id * 4 + 0);
+    //float4 d0 = g_tri_accel[id * 4 + 0];
     unsigned int packed_flags = __float_as_uint(d0.w);
     unsigned int k = packed_flags & 0x3;
     float n_u = d0.x, n_v = d0.y, n_d = d0.z;
@@ -571,10 +572,10 @@ __device__ void singlePassIntersectRoutineGaussian_sortNode(const cuRay& ray, in
     //if (t >= hit.tHit || t <= t_near || t >= t_far) return;
     if (t <= t_near || t >= t_far) return;
 
-    //float4 d1 = tex1Dfetch(inTriAccelTex, id * 4 + 1);
-    float4 d1 = tex1Dfetch<float4>(inTriAccelTex, id * 4 + 1);
-    //float4 d2 = tex1Dfetch(inTriAccelTex, id * 4 + 2);
-    float4 d2 = tex1Dfetch<float4>(inTriAccelTex, id * 4 + 2);
+    float4 d1 = tex1D<float4>(g_d_triaccel_tex, id * 4 + 1);
+    float4 d2 = tex1D<float4>(g_d_triaccel_tex, id * 4 + 2);
+    //float4 d1 = g_tri_accel[id * 4 + 1];
+    //float4 d2 = g_tri_accel[id * 4 + 2];
 
     float u_coord = p_pos.x + t * p_dir.x;
     float v_coord = p_pos.y + t * p_dir.y;
@@ -583,8 +584,8 @@ __device__ void singlePassIntersectRoutineGaussian_sortNode(const cuRay& ray, in
     float gamma = u_coord * d2.x + v_coord * d2.y + d2.z;
 
     if (beta >= -BARYCENTRY_EPSILON && gamma >= -BARYCENTRY_EPSILON && (beta + gamma) <= 1.0f + BARYCENTRY_EPSILON) {
-        //float4 N_packed = tex1Dfetch(inTriAccelTex, id * 4 + 3);
-        float4 N_packed = tex1Dfetch<float4>(inTriAccelTex, id * 4 + 3);
+        float4 N_packed = tex1D<float4>(g_d_triaccel_tex, id * 4 + 3);
+        //float4 N_packed = g_tri_accel[id * 4 + 3];
         float3 N = make_float3(N_packed.x, N_packed.y, N_packed.z);
 
         // 법선 벡터와 광선 방향의 내적(dot product)을 계산
@@ -598,57 +599,69 @@ __device__ void singlePassIntersectRoutineGaussian_sortNode(const cuRay& ray, in
         local_hit_count++;
     }
 }
-#if SHORT_STACK_DEPTH > 0
+
 #if HIT_AND_NODE_COUNT_DEBUG
-    __device__ int singlePassIntersectGaussian_sortNode_hybridStack(
-        cuRay& currRay,
-        float3& accumulated_color,      // 수정: 누적 색상을 직접 업데이트
-        float& accumulated_opacity,    // 수정: 누적 알파를 직접 업데이트
-        int& hitCount
-        , cu_traceState* global_stack, int& global_stack_ptr
-    ) {
-        hitCount = 0;
-        int node_visit_count = 0;
+__device__ int singlePassIntersectGaussian_sortNode_globalStack(
+    cuRay& currRay,
+    float3& accumulated_color,      // 누적 색상을 직접 업데이트
+    float& accumulated_opacity,      // 누적 알파를 직접 업데이트
+    int& hitCount
+    , cu_traceState* global_stack, int& global_stack_ptr
+) {
+    hitCount = 0;
+    int node_visit_count = 0;
 #else
-__device__ void singlePassIntersectGaussian_sortNode_hybridStack(
+__device__ void singlePassIntersectGaussian_sortNode_globalStack(
     cuRay & currRay,
-    float3 & accumulated_color,      // 수정: 누적 색상을 직접 업데이트
-    float& accumulated_opacity    // 수정: 누적 알파를 직접 업데이트
-    , cudaTextureObject_t inKdTreeNodeTex
-    , cudaTextureObject_t inObjectOffsetListTex
-    , cudaTextureObject_t inTriAccelTex
-    //, cudaTextureObject_t inGaussianTex
-    , cu_traceState * global_stack, int& global_stack_ptr
+    float3 & accumulated_color,      // 누적 색상을 직접 업데이트
+    float& accumulated_opacity,      // 누적 알파를 직접 업데이트
+    cu_traceState * global_stack, int& global_stack_ptr
 ) {
 #endif
     // 광선의 유효 범위 설정
-    float t_scene_near = RAY_START_EPSILON, t_scene_far = FLT_MAX;
-    //int x = blockIdx.x * blockDim.x + threadIdx.x;
-    //int y = blockIdx.y * blockDim.y + threadIdx.y;
-    //printf("(%d,%d) ", x, y);
-    if (BoundsRayIntersect(g_SceneBBoxMin, g_SceneBBoxMax, &currRay, &t_scene_near, &t_scene_far)) {
-    //if (BoundsRayIntersect(g_SceneBBoxMin, g_SceneBBoxMax, currRay, t_scene_near, t_scene_far)) {
-        float t_near = t_scene_near, t_far = t_scene_far;
+    //printf("test\n");
+    float t_near = RAY_START_EPSILON, t_far = FLT_MAX;
+    if (BoundsRayIntersect(g_SceneBBoxMin, g_SceneBBoxMax, currRay, t_near, t_far)) {
+        //printf("test ");
         // Kd-tree 순회를 위한 스택 초기화
         ShortStackCache cache;
-        //shortStack cache;
-        cache.init(threadIdx.y * blockDim.x + threadIdx.x);
-        kdtreeNode node = tex1Dfetch<kdtreeNode>(inKdTreeNodeTex, 0);
+        cache.init(threadIdx.x + threadIdx.y * blockDim.x);
+        unsigned int node_idx = 0;
+        kdtreeNode node = tex1D<uint2>(g_d_kdtree_tex, node_idx);
+        //kdtreeNode node = g_kdtree_nodes[node_idx];
         // 메인 순회 루프
         //while (true) {
         while (accumulated_opacity < OPACITY_THRESHOLD) {
             while (!IS_LEAF(node)) {
-                const unsigned childOffset = FIRST_CHILD_OFFSET(node);
-
-                const float2 pos_dir = currRay.get_dir_pos(SPLIT_AXIS(node));
-
-                const float t_split = __fdividef(SPLIT_POS(node) - pos_dir.x, pos_dir.y);
-                const unsigned sign = signbit(pos_dir.y);
-
-                unsigned idx = childOffset + (sign ^ (t_split <= t_near));
-
-                if (t_near < t_split && t_split < t_far) {
-                    cu_traceState item_to_push = { childOffset + (sign ^ 1), t_far };
+                node = tex1D<uint2>(g_d_kdtree_tex, node_idx);
+                //node = g_kdtree_nodes[node_idx];
+#if HIT_AND_NODE_COUNT_DEBUG
+                node_visit_count++;
+#endif
+                unsigned axis = SPLIT_AXIS(node);
+                float split_pos = SPLIT_POS(node);
+                float dir_axis = (&(currRay.dir.x))[axis];
+                if (fabsf(dir_axis) < 1e-8f) { // 광선이 축과 평행한 경우
+                    // 임의로 한쪽으로 보냄
+                    node_idx = FIRST_CHILD_OFFSET(node) + 1;
+                    //node = tex1D<uint2>(kdtreeTex, FIRST_CHILD_OFFSET(node) + 1);
+                    continue;
+                }
+                float pos_axis = (&(currRay.pos.x))[axis];
+                float t_split = (split_pos - pos_axis) / dir_axis;
+                unsigned near_child = FIRST_CHILD_OFFSET(node) + (pos_axis < split_pos || (pos_axis == split_pos && dir_axis < 0) ? 0 : 1);
+                unsigned far_child = FIRST_CHILD_OFFSET(node) + (pos_axis < split_pos || (pos_axis == split_pos && dir_axis < 0) ? 1 : 0);
+                if (t_split > t_far || t_split < 0) {
+                    node_idx = near_child;
+                    //node = tex1D<uint2>(kdtreeTex, near_child);
+                }
+                else if (t_split < t_near) {
+                    node_idx = far_child;
+                    //node = tex1D<uint2>(kdtreeTex, far_child);
+                }
+                else {
+                    //stack.push(far_child, t_far);
+                    cu_traceState item_to_push = { far_child, t_far };
                     bool was_full = cache.is_full();
                     cu_traceState evicted_item = cache.push(item_to_push);
                     if (was_full) { // 캐시가 꽉 차서 아이템이 밀려났다면 global_stack으로 보냄
@@ -658,15 +671,18 @@ __device__ void singlePassIntersectGaussian_sortNode_hybridStack(
                                 //printf("global Stack access(push): %d\n", global_stack_ptr);
                         }
                     }
+                    node_idx = near_child;
+                    //node = tex1D<uint2>(kdtreeTex, near_child);
                     t_far = t_split;
                 }
-                node = tex1Dfetch<kdtreeNode>(inKdTreeNodeTex, idx);
+                node = tex1D<uint2>(g_d_kdtree_tex, node_idx);
             }
+
             // --- 리프 노드 처리 로직 ---
 #if HIT_AND_NODE_COUNT_DEBUG
             node_visit_count++;
 #endif
-            unsigned int baseOffset = OBJECTLIST_OFFSET(node);
+            unsigned int offset = OBJECTLIST_OFFSET(node);
             unsigned int count = OBJECT_SIZE(node);
             //if (count <= 0) continue;
             if (count > 0) {
@@ -675,10 +691,9 @@ __device__ void singlePassIntersectGaussian_sortNode_hybridStack(
                 int local_hit_count = 0;
 
                 for (unsigned i = 0; i < count; ++i) {
-                    //unsigned tri_idx = tex1Dfetch(inObjectOffsetListTex, baseOffset + i);
-                    unsigned tri_idx = tex1Dfetch<unsigned int>(inObjectOffsetListTex, baseOffset + i);
-                    //unsigned tri_idx = g_d_offsets[baseOffset + i];
-                    singlePassIntersectRoutineGaussian_sortNode(currRay, tri_idx, t_near, t_far, local_hits, local_hit_count, inTriAccelTex);
+                    unsigned tri_idx = tex1D<unsigned int>(g_d_offsets_tex, offset + i);
+                    //unsigned tri_idx = g_tri_offsets[offset + i];
+                    singlePassIntersectRoutineGaussian_sortNode(currRay, tri_idx, t_near, t_far, local_hits, local_hit_count);
                 }
 
                 if (local_hit_count > 0) {
@@ -686,13 +701,11 @@ __device__ void singlePassIntersectGaussian_sortNode_hybridStack(
                     sortHits(local_hits, local_hit_count);
                     // 블렌딩: 정렬된 순서대로 알파 블렌딩 수행
                     for (int i = 0; i < local_hit_count; ++i) {
-                        //float4 d2 = tex1Dfetch(inTriAccelTex, local_hits[i].triIndex * 4 + 2);
-                        float4 d2 = tex1Dfetch<float4>(inTriAccelTex, local_hits[i].triIndex * 4 + 2);
-                        //float4 d2 = g_d_accel[local_hits[i].triIndex * 4 + 2];
+                        float4 d2 = tex1D<float4>(g_d_triaccel_tex, local_hits[i].triIndex * 4 + 2);
+                        //float4 d2 = g_tri_accel[local_hits[i].triIndex * 4 + 2];
                         int gaussianID = __float_as_int(d2.w);
-                        //Gaussian g = fetch_gaussian(gaussianID);
-                        //Gaussian g = fetch_gaussian(gaussianID, inGaussianTex);
-                        Gaussian g = g_d_gaussians[gaussianID];
+                        //Gaussian g = g_gaussians[gaussianID];
+                        Gaussian g = fetch_gaussian(gaussianID);
 
                         //sample_opacity = g.opacity;
 #if USE_KERNEL_SCALE
@@ -702,7 +715,7 @@ __device__ void singlePassIntersectGaussian_sortNode_hybridStack(
 #endif
 
                         float3 view_dir = normalize(make_float3(g.pos[0], g.pos[1], g.pos[2]) - currRay.pos);
-                        float3 sample_color = eval_sh_final(SPH_EVAL_DEGREE, view_dir, g);
+                        float3 sample_color = eval_sh_final(3, view_dir, g);
 
                         accumulated_color += sample_color * sample_opacity * (1.0f - accumulated_opacity);
                         accumulated_opacity += sample_opacity * (1.0f - accumulated_opacity);
@@ -718,27 +731,24 @@ __device__ void singlePassIntersectGaussian_sortNode_hybridStack(
                 } // if (local_hit_count > 0)
             } //if (count > 0)
 
-            //if (cache.empty()) {
+            //if (stack.empty()) {
             if (cache.is_empty() && global_stack_ptr == 0) {
                 //printf("(empty) hitCount:%d\n", hitCount);
-                //node = tex1Dfetch<kdtreeNode>(inKdTreeNodeTex, 0); // 루트에서 재시작
-                //t_near = t_far; t_far = t_scene_far; // 탐색 구간을 뒤로 미룸
                 break;
             }
+            //cu_traceState next = stack.top(); stack.pop();
             cu_traceState next;
             if (!cache.is_empty()) {
                 next = cache.pop();
             }
             else {
-                //cu_traceState next;
                 next = global_stack[--global_stack_ptr];
                 //printf("global Stack access(pop): %d\n", global_stack_ptr);
             }
-            //const cu_traceState& trace = stack.top(); stack.pop();
-            node = tex1Dfetch<kdtreeNode>(inKdTreeNodeTex, next.nodeID);
-            t_near = t_far;
-            t_far = next.tMax;
-            //}
+            t_near = t_far; t_far = next.tMax;
+            node_idx = next.nodeID;
+            node = tex1D<uint2>(g_d_kdtree_tex, node_idx);
+            //node = g_kdtree_nodes[node_idx];
         } // while(true)
     } // if (BoundsRayIntersect)
 #if HIT_AND_NODE_COUNT_DEBUG
@@ -746,149 +756,94 @@ __device__ void singlePassIntersectGaussian_sortNode_hybridStack(
 #endif
 }
 
-__device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
+
+#if HIT_AND_NODE_COUNT_DEBUG
+__device__ int singlePassIntersectGaussian_sortNode_shortStack(
     cuRay& currRay,
-    float3& accumulated_color,      // 수정: 누적 색상을 직접 업데이트
-    float& accumulated_opacity    // 수정: 누적 알파를 직접 업데이트
-    , cudaTextureObject_t inKdTreeNodeTex
-    , cudaTextureObject_t inObjectOffsetListTex
-    , cudaTextureObject_t inTriAccelTex
-    //, cudaTextureObject_t inGaussianTex
+    float3& accumulated_color,       // 누적 색상을 직접 업데이트
+    float& accumulated_opacity,      // 누적 알파를 직접 업데이트
+    cudaTextureObject_t kdtreeTex,
+    cudaTextureObject_t offsetTex,
+    cudaTextureObject_t triAccelTex,
+    cudaTextureObject_t gaussianTex
+    int& hitCount
 ) {
-    // 광선의 유효 범위 설정
-    float t_scene_near = RAY_START_EPSILON, t_scene_far = FLT_MAX;
-    if (BoundsRayIntersect(g_SceneBBoxMin, g_SceneBBoxMax, &currRay, &t_scene_near, &t_scene_far)) {
-        float t_near = t_scene_near, t_far = t_scene_far;
-        // Kd-tree 순회를 위한 스택 초기화
-        //shortStack cache;
-        ShortStackCache cache;
-        cache.init(threadIdx.y * blockDim.x + threadIdx.x);
-        kdtreeNode node = tex1Dfetch<kdtreeNode>(inKdTreeNodeTex, 0);
-        // 메인 순회 루프
-        while (accumulated_opacity < OPACITY_THRESHOLD) { //while (true) {
-            while (!IS_LEAF(node)) {
-                const unsigned childOffset = FIRST_CHILD_OFFSET(node);
-
-                const float2 pos_dir = currRay.get_dir_pos(SPLIT_AXIS(node));
-
-                const float t_split = __fdividef(SPLIT_POS(node) - pos_dir.x, pos_dir.y);
-                const unsigned sign = signbit(pos_dir.y);
-
-                unsigned idx = childOffset + (sign ^ (t_split <= t_near));
-
-                if (t_near < t_split && t_split < t_far) {
-                    //cache.push(childOffset + (sign ^ 1), t_far);
-                    cache.push({ childOffset + (sign ^ 1), t_far });
-                    t_far = t_split;
-                }
-                node = tex1Dfetch<kdtreeNode>(inKdTreeNodeTex, idx);
-            }
-            // --- 리프 노드 처리 로직 ---
-            unsigned int baseOffset = OBJECTLIST_OFFSET(node);
-            int objectSize = OBJECT_SIZE(node) + baseOffset;
-            //if (count <= 0) continue;
-            if (objectSize > 0) {
-                // 수집: 이 리프 노드 내의 모든 충돌을 임시 로컬 배열에 저장
-                HitRecord local_hits[MAX_HITS];
-                int local_hit_count = 0;
-
-                for (; baseOffset < objectSize; baseOffset++) {
-                    const unsigned tri_idx = tex1Dfetch<unsigned int>(inObjectOffsetListTex, baseOffset);
-                    singlePassIntersectRoutineGaussian_sortNode(currRay, tri_idx, t_near, t_far, local_hits, local_hit_count, inTriAccelTex);
-                }
-
-                if (local_hit_count > 0) {
-                    // 정렬: 이 리프 노드 내의 충돌만 정렬
-                    sortHits(local_hits, local_hit_count);
-                    // 블렌딩: 정렬된 순서대로 알파 블렌딩 수행
-                    for (int i = 0; i < local_hit_count; ++i) {
-                        float4 d2 = tex1Dfetch<float4>(inTriAccelTex, local_hits[i].triIndex * 4 + 2);
-                        int gaussianID = __float_as_int(d2.w);
-                        //Gaussian g = fetch_gaussian(gaussianID, inGaussianTex);
-                        Gaussian g = g_d_gaussians[gaussianID];
-
-#if USE_KERNEL_SCALE
-                        float sample_opacity = evaluateGaussianResponse_3dgrt(currRay, g);
+    hitCount = 0;
+    int node_visit_count = 0;
 #else
-                        float sample_opacity = evaluateGaussianResponse(currRay, g);
-#endif
-
-                        float3 view_dir = normalize(make_float3(g.pos[0], g.pos[1], g.pos[2]) - currRay.pos);
-                        float3 sample_color = eval_sh_final(SPH_EVAL_DEGREE, view_dir, g);
-
-                        accumulated_color += sample_color * sample_opacity * (1.0f - accumulated_opacity);
-                        accumulated_opacity += sample_opacity * (1.0f - accumulated_opacity);
-                        // 블렌딩 중에도 조기 종료 조건을 계속 확인
-                        if (accumulated_opacity > OPACITY_THRESHOLD) {
-                            //printf("hitCount:%d\n", hitCount);
-                            break;
-                        }
-                    }
-                } // if (local_hit_count > 0)
-            } //if (count > 0)
-
-            //if (cache.empty()) {
-            if (cache.is_empty()) {
-                node = tex1Dfetch<kdtreeNode>(inKdTreeNodeTex, 0); // 루트에서 재시작
-                t_near = t_far; t_far = t_scene_far; // 탐색 구간을 뒤로 미룸
-            }
-            else {
-                //const cu_traceState& trace = cache.top(); cache.pop();
-                const cu_traceState& trace = cache.pop();
-                node = tex1Dfetch<kdtreeNode>(inKdTreeNodeTex, trace.nodeID);
-                t_near = t_far;
-                t_far = trace.tMax;
-            }
-        } // while(true)
-    } // if (BoundsRayIntersect)
-}
-#endif
-
-__device__ void singlePassIntersectGaussian_sortNode_onlyGlobalStack(
+__device__ void singlePassIntersectGaussian_sortNode_shortStack(
     cuRay & currRay,
-    float3 & accumulated_color,      // 수정: 누적 색상을 직접 업데이트
-    float& accumulated_opacity    // 수정: 누적 알파를 직접 업데이트
-    , cudaTextureObject_t inKdTreeNodeTex
-    , cudaTextureObject_t inObjectOffsetListTex
-    , cudaTextureObject_t inTriAccelTex
-    //, cudaTextureObject_t inGaussianTex
-    , cu_traceState * global_stack, int& global_stack_ptr
+    float3 & accumulated_color,      // 누적 색상을 직접 업데이트
+    float& accumulated_opacity,      // 누적 알파를 직접 업데이트
+    cudaTextureObject_t kdtreeTex,
+    cudaTextureObject_t offsetTex,
+    cudaTextureObject_t triAccelTex,
+    cudaTextureObject_t gaussianTex
 ) {
+#endif
     // 광선의 유효 범위 설정
-    float t_scene_near = RAY_START_EPSILON, t_scene_far = FLT_MAX;
-    //int x = blockIdx.x * blockDim.x + threadIdx.x;
-    //int y = blockIdx.y * blockDim.y + threadIdx.y;
-    //printf("(%d,%d) ", x, y);
-    if (BoundsRayIntersect(g_SceneBBoxMin, g_SceneBBoxMax, &currRay, &t_scene_near, &t_scene_far)) {
-        //if (BoundsRayIntersect(g_SceneBBoxMin, g_SceneBBoxMax, currRay, t_scene_near, t_scene_far)) {
-        float t_near = t_scene_near, t_far = t_scene_far;
+    float t_near_global = RAY_START_EPSILON, t_far_global = FLT_MAX;
+    if (!BoundsRayIntersect(g_SceneBBoxMin, g_SceneBBoxMax, currRay, t_near_global, t_far_global)) {
+#if HIT_AND_NODE_COUNT_DEBUG
+        return 0;
+#else
+        return;
+#endif
+    }
+   
+    while (t_near_global < t_far_global) {
+
+        unsigned int node_idx = 0;
         // Kd-tree 순회를 위한 스택 초기화
-        kdtreeNode node = tex1Dfetch<kdtreeNode>(inKdTreeNodeTex, 0);
+        ShortStackCache stack; // 그림의 로직을 따르는 새로운 캐시 구조체 사용
+        stack.init(threadIdx.x + threadIdx.y * blockDim.x);
+
+        float t_near = t_near_global;
+        float t_far = t_far_global;
+
         // 메인 순회 루프
         //while (true) {
         while (accumulated_opacity < OPACITY_THRESHOLD) {
+            kdtreeNode node = tex1D<uint2>(kdtreeTex, node_idx);
+
             while (!IS_LEAF(node)) {
-                const unsigned childOffset = FIRST_CHILD_OFFSET(node);
+#if HIT_AND_NODE_COUNT_DEBUG
+                node_visit_count++;
+#endif
+                unsigned axis = SPLIT_AXIS(node);
+                float split_pos = SPLIT_POS(node);
+                float dir_axis = (&currRay.dir.x)[axis];
+                if (fabsf(dir_axis) < 1e-8f) { // 광선이 축과 평행한 경우
+                    node_idx = FIRST_CHILD_OFFSET(node) + 1; // 임의로 한쪽으로 보냄
+                    continue;
+                }
+                float pos_axis = (&(currRay.pos.x))[axis];
+                float t_split = (split_pos - pos_axis) / dir_axis;
+                unsigned near_child = FIRST_CHILD_OFFSET(node) + (pos_axis < split_pos || (pos_axis == split_pos && dir_axis < 0) ? 0 : 1);
+                unsigned far_child = FIRST_CHILD_OFFSET(node) + (pos_axis < split_pos || (pos_axis == split_pos && dir_axis < 0) ? 1 : 0);
 
-                const float2 pos_dir = currRay.get_dir_pos(SPLIT_AXIS(node));
 
-                const float t_split = __fdividef(SPLIT_POS(node) - pos_dir.x, pos_dir.y);
-                const unsigned sign = signbit(pos_dir.y);
-
-                unsigned idx = childOffset + (sign ^ (t_split <= t_near));
-
-                if (t_near < t_split && t_split < t_far) {
-                    //cache.push(childOffset + (sign ^ 1), t_far);
-                    cu_traceState item_to_push = { childOffset + (sign ^ 1), t_far };
-                    if (global_stack_ptr < MAX_GLOBAL_STACK_DEPTH) {
-                        global_stack[global_stack_ptr++] = item_to_push;
-                    }
+                if (t_split > t_far || t_split < 0) {
+                    node_idx = near_child;
+                }
+                else if (t_split < t_near) {
+                    node_idx = far_child;
+                }
+                else {
+                    //stack.push(far_child, t_far);
+                    cu_traceState item_to_push = { far_child, t_far };
+                    cu_traceState evicted_item = stack.push(item_to_push);
+                    node_idx = near_child;
                     t_far = t_split;
                 }
-                node = tex1Dfetch<kdtreeNode>(inKdTreeNodeTex, idx);
+                node = tex1D<uint2>(kdtreeTex, node_idx);
             }
+
+#if HIT_AND_NODE_COUNT_DEBUG
+            node_visit_count++;
+#endif
             // --- 리프 노드 처리 로직 ---
-            unsigned int baseOffset = OBJECTLIST_OFFSET(node);
+            unsigned int offset = OBJECTLIST_OFFSET(node);
             unsigned int count = OBJECT_SIZE(node);
             //if (count <= 0) continue;
             if (count > 0) {
@@ -897,10 +852,8 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyGlobalStack(
                 int local_hit_count = 0;
 
                 for (unsigned i = 0; i < count; ++i) {
-                    //unsigned tri_idx = tex1Dfetch(inObjectOffsetListTex, baseOffset + i);
-                    unsigned tri_idx = tex1Dfetch<unsigned int>(inObjectOffsetListTex, baseOffset + i);
-                    //unsigned tri_idx = g_d_offsets[baseOffset + i];
-                    singlePassIntersectRoutineGaussian_sortNode(currRay, tri_idx, t_near, t_far, local_hits, local_hit_count, inTriAccelTex);
+                    unsigned tri_idx = tex1D<unsigned int>(offsetTex, offset + i);
+                    //singlePassIntersectRoutineGaussian_sortNode(currRay, tri_idx, t_near, t_far, local_hits, local_hit_count);
                 }
 
                 if (local_hit_count > 0) {
@@ -908,27 +861,26 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyGlobalStack(
                     sortHits(local_hits, local_hit_count);
                     // 블렌딩: 정렬된 순서대로 알파 블렌딩 수행
                     for (int i = 0; i < local_hit_count; ++i) {
-                        //float4 d2 = tex1Dfetch(inTriAccelTex, local_hits[i].triIndex * 4 + 2);
-                        float4 d2 = tex1Dfetch<float4>(inTriAccelTex, local_hits[i].triIndex * 4 + 2);
-                        //float4 d2 = g_d_accel[local_hits[i].triIndex * 4 + 2];
+                        float4 d2 = tex1D<float4>(triAccelTex, local_hits[i].triIndex * 4 + 2);
                         int gaussianID = __float_as_int(d2.w);
-                        //Gaussian g = fetch_gaussian(gaussianID);
-                        //Gaussian g = fetch_gaussian(gaussianID, inGaussianTex);
-                        Gaussian g = g_d_gaussians[gaussianID];
-
-                        //sample_opacity = g.opacity;
+                        //Gaussian g = g_d_gaussians[gaussianID];
+                        //Gaussian g = fetch_gaussian(gaussianTex, gaussianID);
+                        Gaussian g = fetch_gaussian(gaussianID);
 #if USE_KERNEL_SCALE
                         float sample_opacity = evaluateGaussianResponse_3dgrt(currRay, g);
 #else
                         float sample_opacity = evaluateGaussianResponse(currRay, g);
 #endif
+                        //sample_opacity = g.opacity;
 
                         float3 view_dir = normalize(make_float3(g.pos[0], g.pos[1], g.pos[2]) - currRay.pos);
-                        float3 sample_color = eval_sh_final(SPH_EVAL_DEGREE, view_dir, g);
-
+                        float3 sample_color = eval_sh_final(3, view_dir, g);
                         accumulated_color += sample_color * sample_opacity * (1.0f - accumulated_opacity);
                         accumulated_opacity += sample_opacity * (1.0f - accumulated_opacity);
-
+#if HIT_AND_NODE_COUNT_DEBUG
+                        //hitCount++;
+                        atomicAdd(&hitCount, 1);
+#endif
                         // 블렌딩 중에도 조기 종료 조건을 계속 확인
                         if (accumulated_opacity > OPACITY_THRESHOLD) {
                             //printf("hitCount:%d\n", hitCount);
@@ -938,33 +890,38 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyGlobalStack(
                 } // if (local_hit_count > 0)
             } //if (count > 0)
 
-            if (global_stack_ptr == 0) {
+            if (stack.is_empty()) {
+                //printf("(empty) hitCount:%d\n", hitCount);
                 break;
             }
-            cu_traceState next = global_stack[--global_stack_ptr];
-            node = tex1Dfetch<kdtreeNode>(inKdTreeNodeTex, next.nodeID);
-            t_near = t_far;
-            t_far = next.tMax;
-        } // while(true)
-    } // if (BoundsRayIntersect)
+            //cu_traceState next = stack.top(); stack.pop();
+            cu_traceState next = stack.pop();
+            t_near = t_far; t_far = next.tMax;
+            node_idx = next.nodeID;
+        } // while(true): while(accumulated_opacity < OPACITY_THRESHOLD)
+
+        //TODO: Ray를 다시 쏘면서 진행
+        if (accumulated_opacity < OPACITY_THRESHOLD) break;
+        t_near_global = t_far;
+    } // while(t_near_global < t_far_global)
+#if HIT_AND_NODE_COUNT_DEBUG
+    return node_visit_count;
+#endif
 }
 
-__global__
-//__launch_bounds__(256, 2)
-void renderKernelGaussian_sortNode(float* pFrameBuffer
-    , cudaTextureObject_t inKdTreeNodeTex
-    , cudaTextureObject_t inObjectOffsetListTex
-    , cudaTextureObject_t inTriAccelTex
-    //, cudaTextureObject_t inGaussianTex
+__global__ void renderKernelGaussian_sortNode(float* pFrameBuffer
 #if HIT_AND_NODE_COUNT_DEBUG
     , int* hitsum, int* maxhit, int* hcount, int* g_d_total_nodes, int* g_d_max_nodes
 #endif
 #if USE_GLOBAL_STACK
-    , cu_traceState* d_global_stack, int* d_global_stack_pointers // 추가
+    , cu_traceState* d_global_stack, int* d_global_stack_pointers
 #endif
 ) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
+    if (x == 0 && y == 0) { // for debug
+        printf("[Step 1] Kernel has started.\n");
+    }
     if (x >= g_SceneInfo.resX || y >= g_SceneInfo.resY) return;
 
     // 광선 생성
@@ -982,42 +939,25 @@ void renderKernelGaussian_sortNode(float* pFrameBuffer
     cu_traceState* my_global_stack = d_global_stack + thread_idx * MAX_GLOBAL_STACK_DEPTH;
     int my_global_stack_ptr = d_global_stack_pointers[thread_idx];
 #endif
-    // 수정된 메인 탐색/블렌딩 함수 호출
+
 #if HIT_AND_NODE_COUNT_DEBUG
     int hitCount = 0;
-#if USE_GLOBAL_STACK
-    int node_visits = singlePassIntersectGaussian_sortNode_hybridStack(ray, accumulated_color, accumulated_opacity, hitCount
+    #if USE_GLOBAL_STACK
+    int node_visits = singlePassIntersectGaussian_sortNode_globalStack(ray, accumulated_color, accumulated_opacity, hitCount,
+        kdtreeTex, offsetTex, triAccelTex, gaussianTex
         , my_global_stack, my_global_stack_ptr
-    );
-#else
+        );
+    #else
     int node_visits = singlePassIntersectGaussian_sortNode_shortStack(ray, accumulated_color, accumulated_opacity, hitCount);
-#endif
-    //int node_visits = singlePassIntersectGaussian_selectNode(ray, accumulated_color, accumulated_opacity, hitCount);
+    #endif
 #else
-#if USE_GLOBAL_STACK == 0
-    singlePassIntersectGaussian_sortNode_onlyShortStack(ray, accumulated_color, accumulated_opacity
-        , inKdTreeNodeTex
-        , inObjectOffsetListTex
-        , inTriAccelTex
-        //, inGaussianTex
-    );
-#elif USE_GLOBAL_STACK == 1
-    singlePassIntersectGaussian_sortNode_hybridStack(ray, accumulated_color, accumulated_opacity
-        , inKdTreeNodeTex
-        , inObjectOffsetListTex
-        , inTriAccelTex
-        //, inGaussianTex
+    #if USE_GLOBAL_STACK
+    singlePassIntersectGaussian_sortNode_globalStack(ray, accumulated_color, accumulated_opacity
         , my_global_stack, my_global_stack_ptr
     );
-#elif USE_GLOBAL_STACK == 2
-    singlePassIntersectGaussian_sortNode_onlyGlobalStack(ray, accumulated_color, accumulated_opacity
-        , inKdTreeNodeTex
-        , inObjectOffsetListTex
-        , inTriAccelTex
-        //, inGaussianTex
-        , my_global_stack, my_global_stack_ptr);
-#endif
-    //singlePassIntersectGaussian_selectNode(ray, accumulated_color, accumulated_opacity);
+    #else
+    singlePassIntersectGaussian_sortNode_shortStack(ray, accumulated_color, accumulated_opacity);
+    #endif
 #endif
 
 #if USE_GLOBAL_STACK
@@ -1047,28 +987,17 @@ void renderKernelGaussian_sortNode(float* pFrameBuffer
 #endif
 }
 
-// =================================================================================
-// Host-Side Public Render Function
-// =================================================================================
-
-bool initCuda() {
-    int deviceCount = 0;
-    cudaError_t err = cudaGetDeviceCount(&deviceCount);
-    if (err != cudaSuccess || deviceCount == 0) {
-        std::cerr << "[CUDA Init] No CUDA devices found." << std::endl;
-        return false;
-    }
-    err = cudaSetDevice(0);
-    if (err != cudaSuccess) {
-        std::cerr << "[CUDA Init] Failed to set device 0." << std::endl;
-        return false;
-    }
-    std::cout << "[CUDA Init] CUDA device initialized successfully." << std::endl;
-    return true;
-}
-
-void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vector<Gaussian>& gaussians) {
+void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vector<Gaussian>& gaussians) { 
     printf("Setting up static data for CUDA rendering...\n");
+
+    int dev = 0;
+    cudaDeviceProp prop;
+    cudaGetDeviceProperties(&prop, dev);
+    printf("Using GPU %d: %s\n", dev, prop.name);
+    cudaError_t err = cudaSetDevice(dev);
+    if (err != cudaSuccess) {
+        printf("cudaSetDevice failed: %s\n", cudaGetErrorString(err));
+    }
 
     KdTree* kdTree = object.kd_tree;
     if (!kdTree || object.n_triangles == 0) {
@@ -1106,15 +1035,13 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
         h_triangles[i * 4 + 2] = make_float4(src.c_nu, src.c_nv, src.c_d, int_as_float_H(src.material_ID));
         h_triangles[i * 4 + 3] = make_float4(src.N[0], src.N[1], src.N[2], 0.0f);
     }
-    //printf("1. Data packing done\n");
+    printf("1. Data packing done\n");
 
     // GPU 메모리 할당 및 데이터 전송
-    cudaError_t err;
-
-    if (g_d_kdtree_nodes) cudaFree(g_d_kdtree_nodes);
-    if (g_d_tri_offsets) cudaFree(g_d_tri_offsets);
-    if (g_d_tri_accel) cudaFree(g_d_tri_accel);
-    if (g_d_gaussians_persistent) cudaFree(g_d_gaussians_persistent);
+    if (g_d_kdtree_nodes) CUDA_CHECK(cudaFree(g_d_kdtree_nodes));
+    if (g_d_tri_offsets) CUDA_CHECK(cudaFree(g_d_tri_offsets));
+    if (g_d_tri_accel) CUDA_CHECK(cudaFree(g_d_tri_accel));
+    if (g_d_gaussians_persistent) CUDA_CHECK(cudaFree(g_d_gaussians_persistent));
 
     size_t node_size = kdTree->tree_node_count * sizeof(kdtreeNode);
     CUDA_CHECK(cudaMalloc(&g_d_kdtree_nodes, node_size));
@@ -1128,92 +1055,95 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
     CUDA_CHECK(cudaMalloc(&g_d_tri_accel, accel_size));
     CUDA_CHECK(cudaMemcpy(g_d_tri_accel, h_triangles.data(), accel_size, cudaMemcpyHostToDevice));
 
-    //CUDA_CHECK(cudaMalloc(&g_d_gaussians_persistent, gaussians.size() * sizeof(Gaussian)));
-    //CUDA_CHECK(cudaMemcpy(g_d_gaussians_persistent, gaussians.data(), gaussians.size() * sizeof(Gaussian), cudaMemcpyHostToDevice));
-
     //new
     size_t gaussians_bytes = gaussians.size() * sizeof(Gaussian);
     CUDA_CHECK(cudaMalloc(&g_d_gaussians_persistent, gaussians_bytes));
     CUDA_CHECK(cudaMemcpy(g_d_gaussians_persistent, gaussians.data(), gaussians_bytes, cudaMemcpyHostToDevice));
 
-    //CUDA_CHECK(cudaMemcpyToSymbol(g_d_kdtree, &g_d_kdtree_nodes, sizeof(kdtreeNode*)));
-    //CUDA_CHECK(cudaMemcpyToSymbol(g_d_offsets, &g_d_tri_offsets, sizeof(unsigned int*)));
-    //CUDA_CHECK(cudaMemcpyToSymbol(g_d_accel, &g_d_tri_accel, sizeof(float4*)));
-    CUDA_CHECK(cudaMemcpyToSymbol(g_d_gaussians, &g_d_gaussians_persistent, sizeof(Gaussian*)));
+    //CUDA_CHECK(cudaMemcpyToSymbol(g_kdtree_nodes, &g_d_kdtree_nodes, sizeof(kdtreeNode*)));
+    //CUDA_CHECK(cudaMemcpyToSymbol(g_tri_offsets, &g_d_tri_offsets, sizeof(unsigned int*)));
+    //CUDA_CHECK(cudaMemcpyToSymbol(g_tri_accel, &g_d_tri_accel, sizeof(float4*)));
+    //CUDA_CHECK(cudaMemcpyToSymbol(g_gaussians, &g_d_gaussians_persistent, sizeof(Gaussian*)));
     //new end
 
     err = cudaGetLastError();
     if (err != cudaSuccess) {
         std::cerr << "[CUDA Error] GPU memcpy failed: " << cudaGetErrorString(err) << std::endl;
     }
-    //printf("2. gpu memcpy done\n");
+    printf("2. gpu memcpy done\n");
 
-    // 텍스처 바인딩
-
+    //// 텍스처 바인딩
     //cudaChannelFormatDesc node_desc = cudaCreateChannelDesc<uint2>();
     //cudaChannelFormatDesc offset_desc = cudaCreateChannelDesc<unsigned int>();
     //cudaChannelFormatDesc tri_desc = cudaCreateChannelDesc<float4>();
     //CUDA_CHECK(cudaBindTexture(0, &inKdTreeNodeTex, g_d_kdtree_nodes, &node_desc, node_size));
     //CUDA_CHECK(cudaBindTexture(0, &inObjectOffsetListTex, g_d_tri_offsets, &offset_desc, offset_size));
     //CUDA_CHECK(cudaBindTexture(0, &inTriAccelTex, g_d_tri_accel, &tri_desc, accel_size));
+
     //cudaChannelFormatDesc gaussian_desc = cudaCreateChannelDesc<float4>();
     //CUDA_CHECK(cudaBindTexture(0, &inGaussianTex, g_d_gaussians_persistent, &gaussian_desc, gaussians_bytes));
-    //--
-    // 리소스 디스크립터(Resource Descriptor) 설정
-    cudaResourceDesc resDesc;
-    memset(&resDesc, 0, sizeof(resDesc));
-    resDesc.resType = cudaResourceTypeLinear; // 1D 배열이므로 Linear 타입
 
-    // 텍스처 디스크립터(Texture Descriptor) 설정
-    cudaTextureDesc texDesc;
+    //---텍스처 객체 생성--------------------------------------------------------------
+
+    //  Kd-Tree 노드 텍스처 객체 생성
+    cudaResourceDesc resDescNode;
+    memset(&resDescNode, 0, sizeof(resDescNode));
+    resDescNode.resType = cudaResourceTypeLinear;
+    resDescNode.res.linear.devPtr = g_d_kdtree_nodes;
+    resDescNode.res.linear.desc = cudaCreateChannelDesc<uint2>();
+    resDescNode.res.linear.sizeInBytes = kdTree->tree_node_count * sizeof(kdtreeNode);
+
+    cudaTextureDesc texDesc; // 모든 텍스처에 재사용 가능
     memset(&texDesc, 0, sizeof(texDesc));
-    texDesc.addressMode[0] = cudaAddressModeClamp; // 주소 지정 모드
-    texDesc.filterMode = cudaFilterModePoint;      // 필터링 없음 (tex1Dfetch와 동일)
-    texDesc.readMode = cudaReadModeElementType;    // 원본 타입 그대로 읽기
-    texDesc.normalizedCoords = 1;                  // 정규화되지 않은 좌표 사용
+    texDesc.addressMode[0] = cudaAddressModeClamp;
+    texDesc.filterMode = cudaFilterModePoint;
+    texDesc.readMode = cudaReadModeElementType;
+    texDesc.normalizedCoords = 0;
 
-    // 각 버퍼에 대해 텍스처 객체 생성 및 전역 변수에 복사
-    // k-d 트리 노드 텍스처 객체 생성
-    resDesc.res.linear.devPtr = g_d_kdtree_nodes;
-    resDesc.res.linear.desc = cudaCreateChannelDesc<uint2>();
-    resDesc.res.linear.sizeInBytes = node_size;
+    if (g_d_kdtree_tex) CUDA_CHECK(cudaDestroyTextureObject(g_d_kdtree_tex)); // 기존 객체 파괴
+    CUDA_CHECK(cudaCreateTextureObject(&g_d_kdtree_tex, &resDescNode, &texDesc, NULL));
 
-    // 지역 변수(texNode) 대신 호스트 전역 변수(h_inKdTreeNodeTex)에 핸들을 저장합니다.
-    CUDA_CHECK(cudaCreateTextureObject(&h_inKdTreeNodeTex, &resDesc, &texDesc, NULL));
-    //CUDA_CHECK(cudaMemcpyToSymbol(inKdTreeNodeTex, &h_inKdTreeNodeTex, sizeof(cudaTextureObject_t)));
+    // 오프셋 리스트 텍스처 객체 생성 (resDesc만 변경)
+    cudaResourceDesc resDescOffset;
+    memset(&resDescOffset, 0, sizeof(resDescOffset));
+    resDescOffset.resType = cudaResourceTypeLinear;
+    resDescOffset.res.linear.devPtr = g_d_tri_offsets;
+    resDescOffset.res.linear.desc = cudaCreateChannelDesc<unsigned int>();
+    resDescOffset.res.linear.sizeInBytes = kdTree->tri_offset_count * sizeof(unsigned int);
 
-    // 삼각형 오프셋 텍스처 객체 생성
-    resDesc.res.linear.devPtr = g_d_tri_offsets;
-    resDesc.res.linear.desc = cudaCreateChannelDesc<unsigned int>();
-    resDesc.res.linear.sizeInBytes = offset_size;
+    if (g_d_offsets_tex) CUDA_CHECK(cudaDestroyTextureObject(g_d_offsets_tex));
+    CUDA_CHECK(cudaCreateTextureObject(&g_d_offsets_tex, &resDescOffset, &texDesc, NULL));
 
-    // 호스트 전역 변수에 핸들을 저장합니다.
-    CUDA_CHECK(cudaCreateTextureObject(&h_inObjectOffsetListTex, &resDesc, &texDesc, NULL));
-    //CUDA_CHECK(cudaMemcpyToSymbol(inObjectOffsetListTex, &h_inObjectOffsetListTex, sizeof(cudaTextureObject_t)));
+    // Triangle Acceleration 텍스처 객체 생성 (resDesc만 변경)
+    cudaResourceDesc resDescAccel;
+    memset(&resDescAccel, 0, sizeof(resDescAccel));
+    resDescAccel.resType = cudaResourceTypeLinear;
+    resDescAccel.res.linear.devPtr = g_d_tri_accel;
+    resDescAccel.res.linear.desc = cudaCreateChannelDesc<float4>();
+    resDescAccel.res.linear.sizeInBytes = h_triangles.size() * sizeof(float4);
 
-    // 삼각형 가속 구조체 텍스처 객체 생성
-    resDesc.res.linear.devPtr = g_d_tri_accel;
-    resDesc.res.linear.desc = cudaCreateChannelDesc<float4>();
-    resDesc.res.linear.sizeInBytes = accel_size;
+    if (g_d_triaccel_tex) CUDA_CHECK(cudaDestroyTextureObject(g_d_triaccel_tex));
+    CUDA_CHECK(cudaCreateTextureObject(&g_d_triaccel_tex, &resDescAccel, &texDesc, NULL));
 
-    // 호스트 전역 변수에 핸들을 저장합니다.
-    CUDA_CHECK(cudaCreateTextureObject(&h_inTriAccelTex, &resDesc, &texDesc, NULL));
-    //CUDA_CHECK(cudaMemcpyToSymbol(inTriAccelTex, &h_inTriAccelTex, sizeof(cudaTextureObject_t)));
+    // Gaussian 데이터 텍스처 객체 생성 (resDesc만 변경)
+    cudaResourceDesc resDescGaussian;
+    memset(&resDescGaussian, 0, sizeof(resDescGaussian));
+    resDescGaussian.resType = cudaResourceTypeLinear;
+    resDescGaussian.res.linear.devPtr = g_d_gaussians_persistent;
+    resDescGaussian.res.linear.desc = cudaCreateChannelDesc<float4>();
+    resDescGaussian.res.linear.sizeInBytes = gaussians.size() * sizeof(Gaussian);
 
-    // 가우시안 데이터 텍스처 객체 생성
-    //resDesc.res.linear.devPtr = g_d_gaussians_persistent;
-    //resDesc.res.linear.desc = cudaCreateChannelDesc<float4>();
-    //resDesc.res.linear.sizeInBytes = gaussians_bytes;
+    if (g_d_gaussian_tex) CUDA_CHECK(cudaDestroyTextureObject(g_d_gaussian_tex));
+    CUDA_CHECK(cudaCreateTextureObject(&g_d_gaussian_tex, &resDescGaussian, &texDesc, NULL));
 
-    // 호스트 전역 변수에 핸들을 저장합니다.
-    //CUDA_CHECK(cudaCreateTextureObject(&h_inGaussianTex, &resDesc, &texDesc, NULL));
-    //CUDA_CHECK(cudaMemcpyToSymbol(inGaussianTex, &h_inGaussianTex, sizeof(cudaTextureObject_t)));
+    //---------------------------------------------------------------------------------*/
+
 
 
     if (err != cudaSuccess) {
         std::cerr << "[CUDA Error] texture bind failed: " << cudaGetErrorString(err) << std::endl;
     }
-    //printf("3. texture Bind done\n");
+    printf("3. texture Bind done\n");
 
     // 상수 메모리 설정
     float3 h_bbox_min = make_float3(object.AABB[XMIN], object.AABB[YMIN], object.AABB[ZMIN]);
@@ -1226,36 +1156,34 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
     if (err != cudaSuccess) {
         std::cerr << "[CUDA Error] const memory set failed: " << cudaGetErrorString(err) << std::endl;
     }
-    //printf("4. const memory set done\n");
+    printf("4. const memory set done\n");
 
-    int deviceID;
-    cudaGetDevice(&deviceID);
 
-    int maxSharedMemPerBlock;
-    // 현재 GPU의 "블록 당 최대 공유 메모리" 속성 값을 가져옵니다.
-    cudaDeviceGetAttribute(
-        &maxSharedMemPerBlock,
-        cudaDevAttrMaxSharedMemoryPerBlock,
-        deviceID
-    );
-    printf("This GPU's max shared memory per block: %d bytes\n", maxSharedMemPerBlock);
-    // 49152 bytes
-    // 49152 / (256 * 8) = 24
+    //int deviceID;
+    //cudaGetDevice(&deviceID);
+
+    //int maxSharedMemPerBlock;
+    //// 현재 GPU의 "블록 당 최대 공유 메모리" 속성 값을 가져옵니다.
+    //cudaDeviceGetAttribute(
+    //    &maxSharedMemPerBlock,
+    //    cudaDevAttrMaxSharedMemoryPerBlock,
+    //    deviceID
+    //);
+    //printf("This GPU's max shared memory per block: %d bytes\n", maxSharedMemPerBlock);
+    //// 49152 bytes
+    //// 49152 / (256 * 8) = 24
 
     //cudaFuncSetAttribute(
     //    renderKernelGaussian_sortNode,
     //    cudaFuncAttributeMaxDynamicSharedMemorySize,
     //    maxSharedMemPerBlock
     //);
-    //cudaFuncSetCacheConfig(renderKernelGaussian_sortNode, cudaFuncCachePreferShared);
-    //cudaFuncSetCacheConfig(renderKernelGaussian_sortNode, cudaFuncCachePreferL1);
-    //cudaFuncSetCacheConfig(renderKernelGaussian_sortNode, cudaFuncCachePreferEqual);
 
-    CUDA_CHECK(cudaEventCreate(&start_ev));
-    CUDA_CHECK(cudaEventCreate(&stop_ev));
+    cudaEventCreate(&start_ev);
+    cudaEventCreate(&stop_ev);
 }
 
-float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, float* d_framebuffer
+int renderGaussianWithCudaFrame(const Camera& camera, int width, int height, float* d_framebuffer
 #if USE_GLOBAL_STACK
     , cu_traceState* d_global_stack, int* d_global_stack_pointers
 #endif
@@ -1268,19 +1196,19 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
     h_camera_info.u = make_float3(camera.uaxis[0], camera.uaxis[1], camera.uaxis[2]);
     h_camera_info.v = make_float3(camera.vaxis[0], camera.vaxis[1], camera.vaxis[2]);
     float3 n_axis = make_float3(camera.naxis[0], camera.naxis[1], camera.naxis[2]);
-
     float fov_rad = camera.fovy * (M_PI / 180.0f);
     float plane_height = 2.0f * camera.near_c * tanf(fov_rad * 0.5f);
     float plane_width = plane_height * camera.aspect;
     h_camera_info.stepX = plane_width / width;
     h_camera_info.stepY = plane_height / height;
     h_camera_info.startPoint = h_camera_info.eye - n_axis * camera.near_c
-        - h_camera_info.u * (plane_width * 0.5f)
-        + h_camera_info.v * (plane_height * 0.5f);
+                            - h_camera_info.u * (plane_width * 0.5f)
+                            + h_camera_info.v * (plane_height * 0.5f);
     CUDA_CHECK(cudaMemcpyToSymbol(g_CameraInfo, &h_camera_info, sizeof(CameraInfo)));
 #if USE_GLOBAL_STACK
     CUDA_CHECK(cudaMemset(d_global_stack_pointers, 0, (size_t)width * height * sizeof(int)));
 #endif
+    printf("3\n");
 
     // 커널 실행
     dim3 threads(DIM_X, DIM_Y);
@@ -1307,9 +1235,12 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
 #if USE_GLOBAL_STACK
         , d_global_stack, d_global_stack_pointers
 #endif
+        , d_debug_log_buffer, d_debug_log_counter // 커널에 인자 전달
         );
     cudaEventRecord(stop_ev); // 종료 기록
     cudaEventSynchronize(stop_ev); // GPU 작업 완료까지 대기
+    //CUDA_CHECK(cudaGetLastError());        // launch 실패 확인
+    //CUDA_CHECK(cudaDeviceSynchronize()); // 실행 중 오류 확인
 
     int h_total_hits = 0, h_max_hit = 0, h_pixel_count = 0, h_total_nodes = 0, h_max_nodes = 0;
     cudaMemcpy(&h_total_hits, d_hitsum, sizeof(int), cudaMemcpyDeviceToHost);
@@ -1332,21 +1263,21 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
     cudaFree(d_total_nodes);
     cudaFree(d_max_nodes);
 #else
-    CUDA_CHECK(cudaEventRecord(start_ev)); // 시작 기록
+    cudaEventRecord(start_ev); // 시작 기록
     renderKernelGaussian_sortNode << < blocks, threads, shared_mem_size >> > (d_framebuffer
-        , h_inKdTreeNodeTex, h_inObjectOffsetListTex, h_inTriAccelTex
 #if USE_GLOBAL_STACK
         , d_global_stack, d_global_stack_pointers
 #endif
         );
-    //CUDA_CHECK(cudaGetLastError());        // DEBUG: launch 실패 확인
-    //CUDA_CHECK(cudaDeviceSynchronize());   // DEBUG: 실행 중 오류 확인
-    CUDA_CHECK(cudaEventRecord(stop_ev)); // 종료 기록
-    CUDA_CHECK(cudaEventSynchronize(stop_ev)); // GPU 작업 완료까지 대기
+    CUDA_CHECK(cudaGetLastError());        // launch 실패 확인
+    CUDA_CHECK(cudaDeviceSynchronize()); // 실행 중 오류 확인
+    cudaEventRecord(stop_ev); // 종료 기록
+    cudaEventSynchronize(stop_ev); // GPU 작업 완료까지 대기
 #endif
+    printf("4\n");
     float milliseconds = 0;
-    CUDA_CHECK(cudaEventElapsedTime(&milliseconds, start_ev, stop_ev));
-    float k_fps = 1000.0f / milliseconds; // 전역 변수에 FPS 저장
+    cudaEventElapsedTime(&milliseconds, start_ev, stop_ev);
+    k_fps = 1000.0f / milliseconds; // 전역 변수에 FPS 저장
     //total_frame += k_fps;
     printf("FPS : %f\n", k_fps);
     //if (++frame_count >= 100) {
@@ -1354,7 +1285,7 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
     //    frame_count = 0;
     //    total_frame = 0.0f;
     //}
-
+    
     // 결과 복사 및 메모리 해제
     //if (out_framebuffer) delete[] out_framebuffer;
     //out_framebuffer = new float[width * height * 3];
@@ -1372,25 +1303,20 @@ void cleanupCudaResources() {
     if (g_d_tri_accel) cudaFree(g_d_tri_accel);
     if (g_d_gaussians_persistent) cudaFree(g_d_gaussians_persistent);
 
-    //if (g_d_kdtree) cudaFree(g_d_kdtree);
-    //if (g_d_offsets) cudaFree(g_d_offsets);
-    //if (g_d_accel) cudaFree(g_d_accel);
     //if (g_d_gaussians) cudaFree(g_d_gaussians);
+    //if (g_kdtree_nodes) cudaFree(g_kdtree_nodes);
+    //if (g_tri_offsets) cudaFree(g_tri_offsets);
+    //if (g_tri_accel) cudaFree(g_tri_accel);
+    //if (g_gaussians) cudaFree(g_gaussians);
 
     //cudaUnbindTexture(inKdTreeNodeTex);
     //cudaUnbindTexture(inObjectOffsetListTex);
     //cudaUnbindTexture(inTriAccelTex);
     //cudaUnbindTexture(inGaussianTex);
-
-    //if (inKdTreeNodeTex)       cudaDestroyTextureObject(inKdTreeNodeTex);
-    //if (inObjectOffsetListTex) cudaDestroyTextureObject(inObjectOffsetListTex);
-    //if (inTriAccelTex)         cudaDestroyTextureObject(inTriAccelTex);
-    //if (inGaussianTex)         cudaDestroyTextureObject(inGaussianTex);
-
-    if (h_inKdTreeNodeTex)       cudaDestroyTextureObject(h_inKdTreeNodeTex);
-    if (h_inObjectOffsetListTex) cudaDestroyTextureObject(h_inObjectOffsetListTex);
-    if (h_inTriAccelTex)         cudaDestroyTextureObject(h_inTriAccelTex);
-    //if (h_inGaussianTex)         cudaDestroyTextureObject(h_inGaussianTex);
+    if (g_d_kdtree_tex) cudaDestroyTextureObject(g_d_kdtree_tex);
+    if (g_d_offsets_tex) cudaDestroyTextureObject(g_d_offsets_tex);
+    if (g_d_triaccel_tex) cudaDestroyTextureObject(g_d_triaccel_tex);
+    if (g_d_gaussian_tex) cudaDestroyTextureObject(g_d_gaussian_tex);
 
     cudaEventDestroy(start_ev);
     cudaEventDestroy(stop_ev);

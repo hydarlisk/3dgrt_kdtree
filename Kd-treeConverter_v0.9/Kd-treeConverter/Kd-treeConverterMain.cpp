@@ -208,7 +208,7 @@ void display(void) {
 
 		glDisable(GL_TEXTURE_2D);
 
-		//draw_fps(); // FPS
+		draw_fps(); // FPS
 		glutSwapBuffers();
 		return; // CUDA 결과를 그렸으므로 나머지 OpenGL 렌더링은 건너뜁니다.
 	}
@@ -1966,7 +1966,7 @@ void main(int argc, char **argv) {
 	print_OpenGL_GLSL_GLEW_version();
 	show_greetings();
 
-	//glutTimerFunc(16, timer_callback, 0);
+	glutTimerFunc(16, timer_callback, 0);
 
 	glutMainLoop ();
 }
