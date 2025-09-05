@@ -38,10 +38,25 @@
 #define SHORT_STACK_DEPTH 0
 #endif
 
-#define MAX_GLOBAL_STACK_DEPTH 64
+#define MAX_GLOBAL_STACK_DEPTH 256
 
 #define SPH_EVAL_DEGREE 3
+#define QUATERNION false
 #define USE_KERNEL_SCALE false					// 기존의 OptiX 방식 kernelScale 사용
+
+#define MAIN_WINDOW_WIDTH 960
+#define MAIN_WINDOW_HEIGHT 640
+#define RENDERING_WIDTH 1920
+#define RENDERING_HEIGHT 1080
+ /*
+ * List of resolutions
+ *
+ *		  width		*		height
+ * 4K	: 3840		*		2160
+ * S24	: 3200		*		1440
+ * QHD	: 2560		*		1440
+ * FHD	: 1920		*		1080
+ */
 
 #define SCENE_NUM 1								// obj 로드할때만 0으로 변경
 
@@ -161,15 +176,21 @@ typedef struct _CompositeObject {
 struct Gaussian {
 	float pos[3];       // 3D 위치 (x, y, z)
 	float scale[3];     // 3축 스케일 (sx, sy, sz)
-	//float rot[4];       // 회전 쿼터니언 (qw, qx, qy, qz)
+#if QUATERNION
+	float rot[4];       // 회전 쿼터니언 (qw, qx, qy, qz)
+#else
 	float3x3 rot_matrix; // 미리 계산된 회전 행렬 (전치된 상태, R^T)
+#endif
 	float opacity;      // 불투명도 (0.0 ~ 1.0)
 	float f_dc[3];      // 기본 색상 (R, G, B)
 	float f_rest[45];
-	//float pad;
+#if QUATERNION
+	float pad[5];
+#endif
 };
-//236 + 4 (240 = 16 * 15)
-//256
+// pad    : 236 + 4 (240 = 16 * 15)
+// pad[5] : 236 + 20 (256)
+// rot_mat: 256
 //shyun end
 
 typedef struct _Ray {

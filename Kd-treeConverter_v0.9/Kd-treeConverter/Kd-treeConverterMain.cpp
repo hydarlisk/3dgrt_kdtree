@@ -553,7 +553,10 @@ void quaternionToMatrixTranspose(const float q[4], float3x3& rot) {
 	rot.m[0][2] = 2.0f * (xz - wy);		   rot.m[1][2] = 2.0f * (yz + wx);		  rot.m[2][2] = 1.0f - 2.0f * (xx + yy);
 }
 
-void rotate_vector_by_quaternion(float v[3], const float q[4], float v_out[3]) {
+void rotate_vector_by_quaternion2(float v[3], const float q[4], float v_out[3]) {
+	// v_out = v + 2.0f * cross(q.xyz, cross(q.xyz, v) + q.w * v)
+	// 좀 더 효율적인 공식: t = 2 * cross(q.xyz, v); v' = v + q.w * t + cross(q.xyz, t);
+
 	float uv[3], uuv[3];
 	float q_vec[3] = { q[1], q[2], q[3] };
 
@@ -568,74 +571,21 @@ void rotate_vector_by_quaternion(float v[3], const float q[4], float v_out[3]) {
 	}
 }
 
-bool loadGaussiansFromPly2(const char* filename, std::vector<Gaussian>& gaussians) {
-	std::ifstream file(filename, std::ios::binary);
-	if (!file.is_open()) {
-		fprintf(stderr, "Error: Cannot open PLY file %s\n", filename);
-		return false;
+void rotate_vector_by_quaternion(float p_out[3], float r[3], const float q[4]) {
+	// v_out = v + 2.0f * cross(q.xyz, cross(q.xyz, v) + q.w * v)
+	// 좀 더 효율적인 공식: t = 2 * cross(q.xyz, v); v' = v + q.w * t + cross(q.xyz, t);
+
+	float q_vec[3] = { q[1], q[2], q[3] };
+	float VcR[3];
+	fMyVecCrossProduct(q_vec, r, VcR);
+
+	for (int i = 0; i < 3; ++i) {
+		p_out[i] = (q[0] * q[0] - fMyVecDotProduct(q_vec, q_vec)) * r[i]
+			+ 2.0f * q_vec[i] * fMyVecDotProduct(q_vec, r)
+			+ 2.0f * q[0] * VcR[i];
 	}
-
-	// --- Header Parsing ---
-	std::string line;
-	long num_vertices = 0;
-	while (std::getline(file, line) && line != "end_header") {
-		std::stringstream ss(line);
-		std::string token;
-		ss >> token;
-		if (token == "element" && (ss >> token, token == "vertex")) {
-			ss >> num_vertices;
-		}
-	}
-
-	if (num_vertices == 0) return false;
-
-	gaussians.clear();
-	gaussians.reserve(num_vertices);
-
-	// --- Binary Data Reading ---
-	// This struct must exactly match the binary layout in the PLY file
-	struct PlyVertex {
-		float pos[3];
-		float normal[3]; // Skip
-		float f_dc[3];
-		float f_rest[45]; // Skip
-		float opacity;
-		float scale[3];
-		float rot[4];
-	};
-
-	for (long i = 0; i < num_vertices; ++i) {
-		PlyVertex pv;
-		file.read(reinterpret_cast<char*>(&pv), sizeof(PlyVertex));
-		if (!file) {
-			fprintf(stderr, "Error reading vertex data at index %d\n", i);
-			return false;
-		}
-
-		Gaussian g;
-		memcpy(g.pos, pv.pos, sizeof(float) * 3);
-		memcpy(g.f_dc, pv.f_dc, sizeof(float) * 3);
-		memcpy(g.f_rest, pv.f_rest, sizeof(float) * 45);
-		//g.opacity = pv.opacity;
-		g.opacity = 1.0f / (1.0f + expf(-pv.opacity));
-		memcpy(g.scale, pv.scale, sizeof(float) * 3);
-		g.scale[0] = expf(g.scale[0]);
-		g.scale[1] = expf(g.scale[1]);
-		g.scale[2] = expf(g.scale[2]);
-
-		//memcpy(g.rot, pv.rot, sizeof(float) * 4);
-		//fMyVecNormalize4D(g.rot); // 쿼터니언 정규화
-		float normalized_quat[4];
-		memcpy(normalized_quat, pv.rot, sizeof(float) * 4);
-		fMyVecNormalize4D(normalized_quat);
-		quaternionToMatrixTranspose(normalized_quat, g.rot_matrix);
-		
-		gaussians.push_back(g);
-	}
-
-	fprintf(stderr, "Loaded %zu gaussians.\n", gaussians.size());
-	return true;
 }
+
 
 bool loadGaussiansFromPly(const char* filename, std::vector<Gaussian>& gaussians) {
 	std::ifstream file(filename, std::ios::binary);
@@ -644,7 +594,7 @@ bool loadGaussiansFromPly(const char* filename, std::vector<Gaussian>& gaussians
 		return false;
 	}
 
-	// --- 1. 헤더 파싱 ---
+	// --- 헤더 파싱 ---
 	std::string line;
 	long num_vertices = 0;
 
@@ -683,7 +633,7 @@ bool loadGaussiansFromPly(const char* filename, std::vector<Gaussian>& gaussians
 	gaussians.clear();
 	gaussians.reserve(num_vertices);
 
-	// --- 2. 헤더 정보에 기반한 바이너리 데이터 읽기 ---
+	// ---  헤더 정보에 기반한 바이너리 데이터 읽기 ---
 	std::vector<char> buffer(vertex_byte_size); // 한 정점 크기의 버퍼 생성
 
 	for (long i = 0; i < num_vertices; ++i) {
@@ -706,19 +656,22 @@ bool loadGaussiansFromPly(const char* filename, std::vector<Gaussian>& gaussians
 		}
 
 		memcpy(&g.opacity, &buffer[property_offsets["opacity"]], sizeof(float));
-		memcpy(g.scale, &buffer[property_offsets["scale_0"]], sizeof(float) * 3);
-
-		float quat[4];
-		memcpy(quat, &buffer[property_offsets["rot_0"]], sizeof(float) * 4);
-
-		// --- 3. 데이터 후처리 (기존과 동일) ---
 		g.opacity = 1.0f / (1.0f + expf(-g.opacity));
+
+		memcpy(g.scale, &buffer[property_offsets["scale_0"]], sizeof(float) * 3);
 		g.scale[0] = expf(g.scale[0]);
 		g.scale[1] = expf(g.scale[1]);
 		g.scale[2] = expf(g.scale[2]);
 
+#if QUATERNION
+		memcpy(g.rot, &buffer[property_offsets["rot_0"]], sizeof(float) * 4);
+		fMyVecNormalize4D(g.rot);
+#else
+		float quat[4];
+		memcpy(quat, &buffer[property_offsets["rot_0"]], sizeof(float) * 4);
 		fMyVecNormalize4D(quat);
 		quaternionToMatrixTranspose(quat, g.rot_matrix);
+#endif
 
 		gaussians.push_back(g);
 	}
@@ -793,13 +746,6 @@ void create_composite_object_from_gaussians(
 	//for (long i = 0; i < 1; ++i) {
 		const Gaussian& g = gaussians[i];
 
-		//회전
-		//float q_normalized[4];
-		//memcpy(q_normalized, g.rot, sizeof(float) * 4);
-		//fMyVecNormalize4D(q_normalized); // 쿼터니언 정규화
-		//float3x3 rot_transpose;
-		//quaternionToMatrixTranspose(g.rot, rot_transpose);
-
 		//sigma(density) 계산
 		const float sigma = g.opacity;
 		//const float sigma = 1.0f / (1.0f + expf(-g.opacity));
@@ -862,9 +808,11 @@ void create_composite_object_from_gaussians(
 				//printf("%f, %f, %f\n", expf(g.scale[0]), expf(g.scale[1]), expf(g.scale[2]));
 
 				// 회전 적용
-				//rotate_vector_by_quaternion(v_scaled, normalized_rot, v_rotated);
-				//transform_vector_by_matrix_transpose(v_scaled, rot_transpose, v_rotated);
+#if QUATERNION
+				rotate_vector_by_quaternion(v_rotated, v_scaled, g.rot);
+#else
 				transform_vector_by_matrix_transpose(v_scaled, g.rot_matrix, v_rotated);
+#endif
 
 				// 위치(Translate) 적용
 				v_final[0] = v_rotated[0] + g.pos[0];
@@ -924,7 +872,13 @@ void matrix_multiply(float3x3& C, const float3x3& A, const float3x3& B) {
 	}
 }
 
-// CompositeObject의 모든 정점을 Y축 기준으로 회전시키는 함수
+void fMyQuatInv(float* q) {
+	q[1] *= -1;
+	q[2] *= -1;
+	q[3] *= -1;
+}
+
+// CompositeObject의 모든 정점을 축 기준으로 회전시키는 함수
 void rotate_composite_object(std::vector<Gaussian>& gaussians, float angle_degrees, float axis_x, float axis_y, float axis_z) {
 	// 회전축 벡터 정규화
 	float axis_vec[3] = { axis_x, axis_y, axis_z };
@@ -953,15 +907,19 @@ void rotate_composite_object(std::vector<Gaussian>& gaussians, float angle_degre
 	R[2][1] = uz * uy * one_minus_cos + ux * sin_theta;
 	R[2][2] = cos_theta + uz * uz * one_minus_cos;
 
-	// [추가] 가우시안 방향(rot) 회전을 위한 쿼터니언 생성
-	//float rot_quat[4];
-	//fMyQuatFromAngleAxis(rot_quat, angle_rad, axis_vec);
+#if QUATERNION
+	// 가우시안 방향(rot) 회전을 위한 쿼터니언 생성
+	float rot_quat[4];
+	fMyQuatFromAngleAxis(rot_quat, angle_rad, axis_vec);
+	//fMyQuatInv(rot_quat);
+#else
 	float3x3 R_T;
 	for (int i = 0; i < 3; ++i) {
 		for (int j = 0; j < 3; ++j) {
 			R_T.m[i][j] = R[j][i];
 		}
 	}
+#endif
 	// --- 원본 가우시안 데이터 회전 ---
 	for (size_t i = 0; i < gaussians.size(); ++i) {
 		// 가우시안 위치 회전
@@ -970,18 +928,19 @@ void rotate_composite_object(std::vector<Gaussian>& gaussians, float angle_degre
 		pos[0] = ox * R[0][0] + oy * R[0][1] + oz * R[0][2];
 		pos[1] = ox * R[1][0] + oy * R[1][1] + oz * R[1][2];
 		pos[2] = ox * R[2][0] + oy * R[2][1] + oz * R[2][2];
-
+#if QUATERNION
 		// 가우시안 방향(쿼터니언) 회전
-		/*float current_rot[4];
+		float current_rot[4];
 		memcpy(current_rot, gaussians[i].rot, sizeof(float) * 4);
 
 		float new_rot[4];
 		fMyQuatMul(new_rot, rot_quat, current_rot);
 		memcpy(gaussians[i].rot, new_rot, sizeof(float) * 4);
-		fMyVecNormalize4D(gaussians[i].rot);*/
-
+		fMyVecNormalize4D(gaussians[i].rot);
+#else
 		float3x3 old_matrix = gaussians[i].rot_matrix;
 		matrix_multiply(gaussians[i].rot_matrix, old_matrix, R_T);
+#endif
 	}
 
 	// 모든 정점을 순회하며 회전 변환 적용

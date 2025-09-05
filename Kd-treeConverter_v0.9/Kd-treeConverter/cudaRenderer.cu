@@ -288,25 +288,25 @@ __device__ __forceinline__ float3 eval_sh_final(
     // 1. 계산을 용이하게 하기 위해 g.f_dc와 g.f_rest를 하나의 배열로 합칩니다.
     float3 sphCoefficients[16];
     sphCoefficients[0] = make_float3(g.f_dc[0], g.f_dc[1], g.f_dc[2]);
-//#pragma unroll
-//    for (int i = 0; i < 15; ++i) {
-//        sphCoefficients[i + 1] = make_float3(g.f_rest[i], g.f_rest[15 + i], g.f_rest[30 + i]);
-//    }
-    sphCoefficients[1] = make_float3(g.f_rest[0], g.f_rest[15], g.f_rest[30]);
-    sphCoefficients[2] = make_float3(g.f_rest[1], g.f_rest[16], g.f_rest[31]);
-    sphCoefficients[3] = make_float3(g.f_rest[2], g.f_rest[17], g.f_rest[32]);
-    sphCoefficients[4] = make_float3(g.f_rest[3], g.f_rest[18], g.f_rest[33]);
-    sphCoefficients[5] = make_float3(g.f_rest[4], g.f_rest[19], g.f_rest[34]);
-    sphCoefficients[6] = make_float3(g.f_rest[5], g.f_rest[20], g.f_rest[35]);
-    sphCoefficients[7] = make_float3(g.f_rest[6], g.f_rest[21], g.f_rest[36]);
-    sphCoefficients[8] = make_float3(g.f_rest[7], g.f_rest[22], g.f_rest[37]);
-    sphCoefficients[9] = make_float3(g.f_rest[8], g.f_rest[23], g.f_rest[38]);
-    sphCoefficients[10] = make_float3(g.f_rest[9], g.f_rest[24], g.f_rest[39]);
-    sphCoefficients[11] = make_float3(g.f_rest[10], g.f_rest[25], g.f_rest[40]);
-    sphCoefficients[12] = make_float3(g.f_rest[11], g.f_rest[26], g.f_rest[41]);
-    sphCoefficients[13] = make_float3(g.f_rest[12], g.f_rest[27], g.f_rest[42]);
-    sphCoefficients[14] = make_float3(g.f_rest[13], g.f_rest[28], g.f_rest[43]);
-    sphCoefficients[15] = make_float3(g.f_rest[14], g.f_rest[29], g.f_rest[44]);
+#pragma unroll
+    for (int i = 0; i < 15; ++i) {
+        sphCoefficients[i + 1] = make_float3(g.f_rest[i], g.f_rest[15 + i], g.f_rest[30 + i]);
+    }
+    //sphCoefficients[1] = make_float3(g.f_rest[0], g.f_rest[15], g.f_rest[30]);
+    //sphCoefficients[2] = make_float3(g.f_rest[1], g.f_rest[16], g.f_rest[31]);
+    //sphCoefficients[3] = make_float3(g.f_rest[2], g.f_rest[17], g.f_rest[32]);
+    //sphCoefficients[4] = make_float3(g.f_rest[3], g.f_rest[18], g.f_rest[33]);
+    //sphCoefficients[5] = make_float3(g.f_rest[4], g.f_rest[19], g.f_rest[34]);
+    //sphCoefficients[6] = make_float3(g.f_rest[5], g.f_rest[20], g.f_rest[35]);
+    //sphCoefficients[7] = make_float3(g.f_rest[6], g.f_rest[21], g.f_rest[36]);
+    //sphCoefficients[8] = make_float3(g.f_rest[7], g.f_rest[22], g.f_rest[37]);
+    //sphCoefficients[9] = make_float3(g.f_rest[8], g.f_rest[23], g.f_rest[38]);
+    //sphCoefficients[10] = make_float3(g.f_rest[9], g.f_rest[24], g.f_rest[39]);
+    //sphCoefficients[11] = make_float3(g.f_rest[10], g.f_rest[25], g.f_rest[40]);
+    //sphCoefficients[12] = make_float3(g.f_rest[11], g.f_rest[26], g.f_rest[41]);
+    //sphCoefficients[13] = make_float3(g.f_rest[12], g.f_rest[27], g.f_rest[42]);
+    //sphCoefficients[14] = make_float3(g.f_rest[13], g.f_rest[28], g.f_rest[43]);
+    //sphCoefficients[15] = make_float3(g.f_rest[14], g.f_rest[29], g.f_rest[44]);
 
     // --- 2. 3dgrt의 radianceFromSpH 로직을 그대로 적용 ---
     float3 rad = SH_C0 * sphCoefficients[0]; // 0차 SH
@@ -358,8 +358,12 @@ __device__ __forceinline__ float4 quat_inverse(const float4& q) {
 
 // 쿼터니언을 사용하여 벡터를 회전시킵니다.
 __device__ __forceinline__ float3 quat_rotate(const float3& v, const float4& q) {
-    float3 t = 2.0f * cross(make_float3(q.x, q.y, q.z), v);
-    return v + q.w * t + cross(make_float3(q.x, q.y, q.z), t);
+    //float3 t = 2.0f * cross(make_float3(q.x, q.y, q.z), v);
+    //return v + q.w * t + cross(make_float3(q.x, q.y, q.z), t);
+    float3 q_vec = make_float3(q.x, q.y, q.z);
+    return (q.w * q.w - dot(q_vec, q_vec)) * v
+        + 2.0f * v * dot(q_vec, v)
+        + 2.0f * q.w * cross(q_vec, v);
 }
 
 /**
@@ -373,42 +377,32 @@ __device__ __forceinline__ float evaluateGaussianResponse(const cuRay& ray, cons
     // 파라미터 정리
     const float3 g_pos = make_float3(g.pos[0], g.pos[1], g.pos[2]);   // μ
     const float3 g_scale = make_float3(g.scale[0], g.scale[1], g.scale[2]); // 대각 S (표준편차)
-
-    const float3 p = ray.pos - g_pos; // (o - μ)
-
-    //// 위치 벡터 회전: o_os = R^T * p
-    //float3 o_os;
-    //o_os.x = g.rot_matrix.m[0][0] * p.x + g.rot_matrix.m[0][1] * p.y + g.rot_matrix.m[0][2] * p.z;
-    //o_os.y = g.rot_matrix.m[1][0] * p.x + g.rot_matrix.m[1][1] * p.y + g.rot_matrix.m[1][2] * p.z;
-    //o_os.z = g.rot_matrix.m[2][0] * p.x + g.rot_matrix.m[2][1] * p.y + g.rot_matrix.m[2][2] * p.z;
-    //// 방향 벡터 회전: d_os = R^T * d
-    //float3 d_os;
-    //d_os.x = g.rot_matrix.m[0][0] * ray.dir.x + g.rot_matrix.m[0][1] * ray.dir.y + g.rot_matrix.m[0][2] * ray.dir.z;
-    //d_os.y = g.rot_matrix.m[1][0] * ray.dir.x + g.rot_matrix.m[1][1] * ray.dir.y + g.rot_matrix.m[1][2] * ray.dir.z;
-    //d_os.z = g.rot_matrix.m[2][0] * ray.dir.x + g.rot_matrix.m[2][1] * ray.dir.y + g.rot_matrix.m[2][2] * ray.dir.z;
-    
-    // 위치 벡터 회전: o_os = R^T * p
-    float3 o_os;
-    // CPU에서 생성된 Column-major 순서(m[열][행])에 맞게 인덱스 수정
-    o_os.x = g.rot_matrix.m[0][0] * p.x + g.rot_matrix.m[1][0] * p.y + g.rot_matrix.m[2][0] * p.z;
-    o_os.y = g.rot_matrix.m[0][1] * p.x + g.rot_matrix.m[1][1] * p.y + g.rot_matrix.m[2][1] * p.z;
-    o_os.z = g.rot_matrix.m[0][2] * p.x + g.rot_matrix.m[1][2] * p.y + g.rot_matrix.m[2][2] * p.z;
-    // 방향 벡터 회전: d_os = R^T * d
-    float3 d_os;
-    // CPU에서 생성된 Column-major 순서(m[열][행])에 맞게 인덱스 수정
-    d_os.x = g.rot_matrix.m[0][0] * ray.dir.x + g.rot_matrix.m[1][0] * ray.dir.y + g.rot_matrix.m[2][0] * ray.dir.z;
-    d_os.y = g.rot_matrix.m[0][1] * ray.dir.x + g.rot_matrix.m[1][1] * ray.dir.y + g.rot_matrix.m[2][1] * ray.dir.z;
-    d_os.z = g.rot_matrix.m[0][2] * ray.dir.x + g.rot_matrix.m[1][2] * ray.dir.y + g.rot_matrix.m[2][2] * ray.dir.z;
-
-    //const float4 g_rot = make_float4(g.rot[1], g.rot[2], g.rot[3], g.rot[0]); // (x,y,z,w)
-    //const float4 inv_rot = quat_inverse(g_rot); // R^T
+#if QUATERNION
+    const float4 g_rot = make_float4(g.rot[1], g.rot[2], g.rot[3], g.rot[0]); // (x,y,z,w)
+    const float4 inv_rot = quat_inverse(g_rot);
 
     // 월드 → 가우시안 정렬좌표로 회전(R^T)한 뒤, 스케일의 역수(S^{-1})를 적용
+    float3 o_os = quat_rotate(ray.pos - g_pos, inv_rot);                                  //R^T (o-μ)
+    float3 d_os = quat_rotate(ray.dir, inv_rot);                                          //R^T d
+#else
+    const float3 p = ray.pos - g_pos; // (o - μ)
+
+    // 위치 벡터 회전: o_os = R^T * p
+    float3 o_os;
+    o_os.x = g.rot_matrix.m[0][0] * p.x + g.rot_matrix.m[0][1] * p.y + g.rot_matrix.m[0][2] * p.z;
+    o_os.y = g.rot_matrix.m[1][0] * p.x + g.rot_matrix.m[1][1] * p.y + g.rot_matrix.m[1][2] * p.z;
+    o_os.z = g.rot_matrix.m[2][0] * p.x + g.rot_matrix.m[2][1] * p.y + g.rot_matrix.m[2][2] * p.z;
+
+    // 방향 벡터 회전: d_os = R^T * d
+    float3 d_os;
+    d_os.x = g.rot_matrix.m[0][0] * ray.dir.x + g.rot_matrix.m[0][1] * ray.dir.y + g.rot_matrix.m[0][2] * ray.dir.z;
+    d_os.y = g.rot_matrix.m[1][0] * ray.dir.x + g.rot_matrix.m[1][1] * ray.dir.y + g.rot_matrix.m[1][2] * ray.dir.z;
+    d_os.z = g.rot_matrix.m[2][0] * ray.dir.x + g.rot_matrix.m[2][1] * ray.dir.y + g.rot_matrix.m[2][2] * ray.dir.z;
+#endif
     // o_g = S^{-1} R^T (o - μ),  d_g = S^{-1} R^T d
-    //float3 o_os = quat_rotate(ray.pos - g_pos, inv_rot);                                  //R^T (o-μ)
-    //float3 d_os = quat_rotate(ray.dir, inv_rot);                                          //R^T d
     float3 o_g = make_float3(o_os.x / g_scale.x, o_os.y / g_scale.y, o_os.z / g_scale.z); //S^-1 R^T (o-μ)
     float3 d_g = make_float3(d_os.x / g_scale.x, d_os.y / g_scale.y, d_os.z / g_scale.z); //S^-1 R^T d
+
 
     // τ_max = - (o_g·d_g) / (d_g·d_g)  (식 8)
     float denom = dot(d_g, d_g);
@@ -419,7 +413,7 @@ __device__ __forceinline__ float evaluateGaussianResponse(const cuRay& ray, cons
     //float3 p_g = ray.pos + tau * ray.dir;
     float3 p_g = o_g + tau * d_g;
     float  expo = -0.5f * dot(p_g, p_g);
-    //float  expo = -1.f * dot(p_g, p_g);
+
     float  rho = expf(expo);
 
     return g.opacity * rho;
@@ -485,13 +479,14 @@ __device__ __forceinline__ float evaluateGaussianResponse_3dgrt(const cuRay& ray
     // 가우시안 파라미터 준비
     const float3 g_pos = make_float3(g.pos[0], g.pos[1], g.pos[2]);
     const float3 g_scale = make_float3(g.scale[0], g.scale[1], g.scale[2]);
-    //const float4 g_rot = make_float4(g.rot[1], g.rot[2], g.rot[3], g.rot[0]);
-
-    // 광선을 가우시안의 로컬 좌표계로 변환 (회전 및 스케일링)
-    //const float4 inv_rot = quat_inverse(g_rot);
     const float3 gposc = ray.pos - g_pos; // (o - μ)
-    //const float3 gposcr = quat_rotate(gposc, inv_rot);
-
+    // 광선을 가우시안의 로컬 좌표계로 변환 (회전 및 스케일링)
+#if QUATERNION
+    const float4 g_rot = make_float4(g.rot[1], g.rot[2], g.rot[3], g.rot[0]);
+    const float4 inv_rot = quat_inverse(g_rot);
+    const float3 gposcr = quat_rotate(gposc, inv_rot); // R^T * (o - μ)
+    const float3 rayDirR = quat_rotate(ray.dir, inv_rot); // R^T * d
+#else
     float3 gposcr; // R^T * (o - μ)
     gposcr.x = g.rot_matrix.m[0][0] * gposc.x + g.rot_matrix.m[0][1] * gposc.y + g.rot_matrix.m[0][2] * gposc.z;
     gposcr.y = g.rot_matrix.m[1][0] * gposc.x + g.rot_matrix.m[1][1] * gposc.y + g.rot_matrix.m[1][2] * gposc.z;
@@ -501,10 +496,10 @@ __device__ __forceinline__ float evaluateGaussianResponse_3dgrt(const cuRay& ray
     rayDirR.x = g.rot_matrix.m[0][0] * ray.dir.x + g.rot_matrix.m[0][1] * ray.dir.y + g.rot_matrix.m[0][2] * ray.dir.z;
     rayDirR.y = g.rot_matrix.m[1][0] * ray.dir.x + g.rot_matrix.m[1][1] * ray.dir.y + g.rot_matrix.m[1][2] * ray.dir.z;
     rayDirR.z = g.rot_matrix.m[2][0] * ray.dir.x + g.rot_matrix.m[2][1] * ray.dir.y + g.rot_matrix.m[2][2] * ray.dir.z;
+#endif
 
     const float3 gro = gposcr / g_scale;
 
-    //const float3 rayDirR = quat_rotate(ray.dir, inv_rot);
     const float3 grdu = rayDirR / g_scale;
     const float3 grd = normalize(grdu);
 
@@ -598,17 +593,21 @@ __device__ void singlePassIntersectRoutineGaussian_sortNode(const cuRay& ray, in
         local_hit_count++;
     }
 }
+
 #if SHORT_STACK_DEPTH > 0
 #if HIT_AND_NODE_COUNT_DEBUG
-    __device__ int singlePassIntersectGaussian_sortNode_hybridStack(
-        cuRay& currRay,
-        float3& accumulated_color,      // 수정: 누적 색상을 직접 업데이트
-        float& accumulated_opacity,    // 수정: 누적 알파를 직접 업데이트
-        int& hitCount
-        , cu_traceState* global_stack, int& global_stack_ptr
-    ) {
-        hitCount = 0;
-        int node_visit_count = 0;
+__device__ int singlePassIntersectGaussian_sortNode_hybridStack(
+    cuRay& currRay,
+    float3& accumulated_color,      // 수정: 누적 색상을 직접 업데이트
+    float& accumulated_opacity    // 수정: 누적 알파를 직접 업데이트
+    , cudaTextureObject_t inKdTreeNodeTex
+    , cudaTextureObject_t inObjectOffsetListTex
+    , cudaTextureObject_t inTriAccelTex
+    , int& hitCount
+    , cu_traceState* global_stack, int& global_stack_ptr
+) {
+    hitCount = 0;
+    int node_visit_count = 0;
 #else
 __device__ void singlePassIntersectGaussian_sortNode_hybridStack(
     cuRay & currRay,
@@ -986,7 +985,11 @@ void renderKernelGaussian_sortNode(float* pFrameBuffer
 #if HIT_AND_NODE_COUNT_DEBUG
     int hitCount = 0;
 #if USE_GLOBAL_STACK
-    int node_visits = singlePassIntersectGaussian_sortNode_hybridStack(ray, accumulated_color, accumulated_opacity, hitCount
+    int node_visits = singlePassIntersectGaussian_sortNode_hybridStack(ray, accumulated_color, accumulated_opacity
+        , inKdTreeNodeTex
+        , inObjectOffsetListTex
+        , inTriAccelTex
+        , hitCount
         , my_global_stack, my_global_stack_ptr
     );
 #else
@@ -1303,7 +1306,9 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
 
     cudaEventRecord(start_ev); // 시작 기록
     //renderKernelGaussian << < blocks, threads, shared_mem_size >> > (d_framebuffer, d_hitsum, d_maxhit, hitcount);
-    renderKernelGaussian_sortNode << < blocks, threads, shared_mem_size >> > (d_framebuffer, d_hitsum, d_maxhit, d_hcount, d_total_nodes, d_max_nodes
+    renderKernelGaussian_sortNode << < blocks, threads, shared_mem_size >> > (d_framebuffer
+        , h_inKdTreeNodeTex, h_inObjectOffsetListTex, h_inTriAccelTex
+        , d_hitsum, d_maxhit, d_hcount, d_total_nodes, d_max_nodes
 #if USE_GLOBAL_STACK
         , d_global_stack, d_global_stack_pointers
 #endif
