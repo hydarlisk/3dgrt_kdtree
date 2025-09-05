@@ -23,7 +23,7 @@
 
 #define SUPER_SAMPLING false
 
-#define HIT_AND_NODE_COUNT_DEBUG false			// Ray 마다 hitcount, node count 확인
+#define HIT_AND_NODE_COUNT_DEBUG true			// Ray 마다 hitcount, node count 확인
 #define ROTATION true							// R(45degree,1,1,1)
 
 #define MAX_HITS 128
@@ -41,13 +41,14 @@
 #define MAX_GLOBAL_STACK_DEPTH 256
 
 #define SPH_EVAL_DEGREE 3
-#define QUATERNION false
+#define QUATERNION true
 #define USE_KERNEL_SCALE false					// 기존의 OptiX 방식 kernelScale 사용
 
 #define MAIN_WINDOW_WIDTH 960
 #define MAIN_WINDOW_HEIGHT 640
-#define RENDERING_WIDTH 1920
-#define RENDERING_HEIGHT 1080
+
+#define RENDERING_WIDTH 960
+#define RENDERING_HEIGHT 640
  /*
  * List of resolutions
  *

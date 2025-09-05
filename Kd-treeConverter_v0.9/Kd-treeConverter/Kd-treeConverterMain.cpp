@@ -54,8 +54,8 @@ char* kdtree_build_path;
 int submenu[6] = { 101,1012,102,104,105 };
 
 bool render_gaussian = false;
-int g_render_width = MAIN_WINDOW_WIDTH;
-int g_render_height = MAIN_WINDOW_HEIGHT;
+int g_render_width = RENDERING_WIDTH;
+int g_render_height = RENDERING_HEIGHT;
 bool g_cuda_rendering_done = false;
 bool g_cuda_interactive_mode = false; // CUDA 인터랙티브 모드 활성화 플래그
 bool g_camera_dirty = true;           // 카메라가 변경되었는지 확인하는 플래그
@@ -309,8 +309,8 @@ void keyboard(unsigned char key, int x, int y) {
 }
 
 void reshape(int width, int height) {
-	g_render_width = width;   // 전역 변수 업데이트
-	g_render_height = height; // 전역 변수 업데이트
+	//g_render_width = width;   // 전역 변수 업데이트
+	//g_render_height = height; // 전역 변수 업데이트
 
 	glViewport(0, 0, width, height);
 
@@ -320,14 +320,14 @@ void reshape(int width, int height) {
 	gluPerspective(camera.fovy, camera.aspect, camera.near_c, camera.far_c);
 
 	if (g_cuda_interactive_mode) {
-#if USE_GLOBAL_STACK
-		if (g_d_global_stack) cudaFree(g_d_global_stack);
-		if (g_d_global_stack_pointers) cudaFree(g_d_global_stack_pointers);
-
-		cudaMalloc((void**)&g_d_global_stack, (size_t)width * height * MAX_GLOBAL_STACK_DEPTH * sizeof(cu_traceState));
-		cudaMalloc((void**)&g_d_global_stack_pointers, (size_t)width * height * sizeof(int));
-		cudaMemset((void**)g_d_global_stack_pointers, 0, (size_t)width * height * sizeof(int));
-#endif
+//#if USE_GLOBAL_STACK
+//		if (g_d_global_stack) cudaFree(g_d_global_stack);
+//		if (g_d_global_stack_pointers) cudaFree(g_d_global_stack_pointers);
+//
+//		cudaMalloc((void**)&g_d_global_stack, (size_t)width * height * MAX_GLOBAL_STACK_DEPTH * sizeof(cu_traceState));
+//		cudaMalloc((void**)&g_d_global_stack_pointers, (size_t)width * height * sizeof(int));
+//		cudaMemset((void**)g_d_global_stack_pointers, 0, (size_t)width * height * sizeof(int));
+//#endif
 
 		g_camera_dirty = true;
 	}
@@ -553,37 +553,32 @@ void quaternionToMatrixTranspose(const float q[4], float3x3& rot) {
 	rot.m[0][2] = 2.0f * (xz - wy);		   rot.m[1][2] = 2.0f * (yz + wx);		  rot.m[2][2] = 1.0f - 2.0f * (xx + yy);
 }
 
-void rotate_vector_by_quaternion2(float v[3], const float q[4], float v_out[3]) {
+void rotate_vector_by_quaternion(float v_out[3], float v[3], const float q[4]) {
 	// v_out = v + 2.0f * cross(q.xyz, cross(q.xyz, v) + q.w * v)
-	// 좀 더 효율적인 공식: t = 2 * cross(q.xyz, v); v' = v + q.w * t + cross(q.xyz, t);
+	// t = 2 * cross(q.xyz, v); v' = v + q.w * t + cross(q.xyz, t);
 
-	float uv[3], uuv[3];
+	float qv[3], qqv[3];
 	float q_vec[3] = { q[1], q[2], q[3] };
 
 	// u = 2.0f * (q_vec X v)
-	fMyVecCrossProduct(q_vec, v, uv);
-	for (int i = 0; i < 3; ++i) uv[i] *= 2.0f;
+	fMyVecCrossProduct(q_vec, v, qv);
+	for (int i = 0; i < 3; ++i) qv[i] *= 2.0f;
 
 	// v_out = v + q[0] * u + (q_vec X u)
-	fMyVecCrossProduct(q_vec, uv, uuv);
+	fMyVecCrossProduct(q_vec, qv, qqv);
 	for (int i = 0; i < 3; ++i) {
-		v_out[i] = v[i] + q[0] * uv[i] + uuv[i];
+		v_out[i] = v[i] + q[0] * qv[i] + qqv[i];
 	}
-}
 
-void rotate_vector_by_quaternion(float p_out[3], float r[3], const float q[4]) {
-	// v_out = v + 2.0f * cross(q.xyz, cross(q.xyz, v) + q.w * v)
-	// 좀 더 효율적인 공식: t = 2 * cross(q.xyz, v); v' = v + q.w * t + cross(q.xyz, t);
+	//float q_vec[3] = { q[1], q[2], q[3] };
+	//float VcR[3];
+	//fMyVecCrossProduct(q_vec, v, VcR);
 
-	float q_vec[3] = { q[1], q[2], q[3] };
-	float VcR[3];
-	fMyVecCrossProduct(q_vec, r, VcR);
-
-	for (int i = 0; i < 3; ++i) {
-		p_out[i] = (q[0] * q[0] - fMyVecDotProduct(q_vec, q_vec)) * r[i]
-			+ 2.0f * q_vec[i] * fMyVecDotProduct(q_vec, r)
-			+ 2.0f * q[0] * VcR[i];
-	}
+	//for (int i = 0; i < 3; ++i) {
+	//	v_out[i] = (q[0] * q[0] - fMyVecDotProduct(q_vec, q_vec)) * v[i]
+	//		+ 2.0f * q_vec[i] * fMyVecDotProduct(q_vec, v)
+	//		+ 2.0f * q[0] * VcR[i];
+	//}
 }
 
 
@@ -1857,7 +1852,6 @@ void idle() {
 		size_t num_bytes;// = (size_t)g_render_width * g_render_height * 3 * sizeof(float);
 		cudaGraphicsResourceGetMappedPointer((void**)&d_pbo_ptr, &num_bytes, pbo_cuda_resource);
 
-		//cudaEventRecord(start_ev); // 시작 기록
 		// CUDA 렌더링 실행 (기존 렌더링 함수 재사용)
 #if SCENE_NUM < 1
 		renderObjWithCuda(uip.poly_model, camera, g_render_width, g_render_height, d_pbo_ptr, g_cuda_rendering_done);
@@ -1873,19 +1867,6 @@ void idle() {
 		
 		g_cuda_rendering_done = true;
 #endif
-		//cudaEventRecord(stop_ev); // 종료 기록
-		//cudaEventSynchronize(stop_ev); // GPU 작업 완료까지 대기
-
-		//float milliseconds = 0;
-		//cudaEventElapsedTime(&milliseconds, start_ev, stop_ev);
-		//g_fps = 1000.0f / milliseconds; // 전역 변수에 FPS 저장
-		//total_frame += g_fps;
-		//printf("FPS : %f\n", g_fps);
-		//if (++frame_count >= 100) {
-		//	printf("avg FPS for 100 frame : %f\n", (float)(total_frame / frame_count));
-		//	frame_count = 0;
-		//	total_frame = 0.0f;
-		//}
 
 		// PBO의 내용을 텍스처로 복사
 		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo);

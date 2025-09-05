@@ -266,13 +266,6 @@ __device__ void sortHits(HitRecord* hits, int count) {
     }
 }
 
-__device__ __forceinline__ float3 sigmoid(const float3& v) {
-    return make_float3(
-        1.0f / (1.0f + expf(-v.x)),
-        1.0f / (1.0f + expf(-v.y)),
-        1.0f / (1.0f + expf(-v.z))
-    );
-}
 /**
  * @brief 3dgrt 원본 코드(radianceFromSpH)의 로직을 그대로 구현한 구면 조화 함수(SH) 평가 함수
  * @param degree 계산할 SH 차수 (최대 3)
@@ -348,7 +341,6 @@ __device__ __forceinline__ float3 eval_sh_final(
     // 3. 최종 활성화: 원본과 동일하게 0.5를 더하고, 0 미만 값은 0으로 클램핑합니다.
     rad += make_float3(0.5f);
     return min(max(rad, make_float3(0.f)), make_float3(1.f));
-    //return sigmoid(rad);
 }
 
 // 쿼터니언의 역(conjugate)을 계산합니다.
@@ -358,12 +350,12 @@ __device__ __forceinline__ float4 quat_inverse(const float4& q) {
 
 // 쿼터니언을 사용하여 벡터를 회전시킵니다.
 __device__ __forceinline__ float3 quat_rotate(const float3& v, const float4& q) {
-    //float3 t = 2.0f * cross(make_float3(q.x, q.y, q.z), v);
-    //return v + q.w * t + cross(make_float3(q.x, q.y, q.z), t);
-    float3 q_vec = make_float3(q.x, q.y, q.z);
-    return (q.w * q.w - dot(q_vec, q_vec)) * v
-        + 2.0f * v * dot(q_vec, v)
-        + 2.0f * q.w * cross(q_vec, v);
+    float3 t = 2.0f * cross(make_float3(q.x, q.y, q.z), v);
+    return v + q.w * t + cross(make_float3(q.x, q.y, q.z), t);
+    //float3 q_vec = make_float3(q.x, q.y, q.z);
+    //return (q.w * q.w - dot(q_vec, q_vec)) * v
+    //    + 2.0f * q_vec * dot(q_vec, v)
+    //    + 2.0f * q.w * cross(q_vec, v);
 }
 
 /**
