@@ -888,6 +888,11 @@ void rotate_composite_object(std::vector<Gaussian>& gaussians, float angle_degre
 	float sin_theta = sinf(angle_rad);
 	float one_minus_cos = 1.0f - cos_theta;
 
+#if QUATERNION
+	// 가우시안 방향(rot) 회전을 위한 쿼터니언 생성
+	float rot_quat[4];
+	fMyQuatFromAngleAxis(rot_quat, angle_rad, axis_vec);
+#else
 	// 임의 축 회전 행렬 (Row-major)
 	float R[3][3];
 	R[0][0] = cos_theta + ux * ux * one_minus_cos;
@@ -901,13 +906,6 @@ void rotate_composite_object(std::vector<Gaussian>& gaussians, float angle_degre
 	R[2][0] = uz * ux * one_minus_cos - uy * sin_theta;
 	R[2][1] = uz * uy * one_minus_cos + ux * sin_theta;
 	R[2][2] = cos_theta + uz * uz * one_minus_cos;
-
-#if QUATERNION
-	// 가우시안 방향(rot) 회전을 위한 쿼터니언 생성
-	float rot_quat[4];
-	fMyQuatFromAngleAxis(rot_quat, angle_rad, axis_vec);
-	//fMyQuatInv(rot_quat);
-#else
 	float3x3 R_T;
 	for (int i = 0; i < 3; ++i) {
 		for (int j = 0; j < 3; ++j) {
@@ -917,13 +915,10 @@ void rotate_composite_object(std::vector<Gaussian>& gaussians, float angle_degre
 #endif
 	// --- 원본 가우시안 데이터 회전 ---
 	for (size_t i = 0; i < gaussians.size(); ++i) {
-		// 가우시안 위치 회전
-		float* pos = gaussians[i].pos;
-		float ox = pos[0], oy = pos[1], oz = pos[2];
-		pos[0] = ox * R[0][0] + oy * R[0][1] + oz * R[0][2];
-		pos[1] = ox * R[1][0] + oy * R[1][1] + oz * R[1][2];
-		pos[2] = ox * R[2][0] + oy * R[2][1] + oz * R[2][2];
 #if QUATERNION
+		// 가우시안 위치 회전
+		rotate_vector_by_quaternion(gaussians[i].pos, gaussians[i].pos, rot_quat);
+
 		// 가우시안 방향(쿼터니언) 회전
 		float current_rot[4];
 		memcpy(current_rot, gaussians[i].rot, sizeof(float) * 4);
@@ -933,6 +928,13 @@ void rotate_composite_object(std::vector<Gaussian>& gaussians, float angle_degre
 		memcpy(gaussians[i].rot, new_rot, sizeof(float) * 4);
 		fMyVecNormalize4D(gaussians[i].rot);
 #else
+		// 가우시안 위치 회전
+		float* pos = gaussians[i].pos;
+		float ox = pos[0], oy = pos[1], oz = pos[2];
+		pos[0] = ox * R[0][0] + oy * R[0][1] + oz * R[0][2];
+		pos[1] = ox * R[1][0] + oy * R[1][1] + oz * R[1][2];
+		pos[2] = ox * R[2][0] + oy * R[2][1] + oz * R[2][2];
+
 		float3x3 old_matrix = gaussians[i].rot_matrix;
 		matrix_multiply(gaussians[i].rot_matrix, old_matrix, R_T);
 #endif
@@ -942,12 +944,16 @@ void rotate_composite_object(std::vector<Gaussian>& gaussians, float angle_degre
 	int total_vertices = uip.poly_model.n_triangles * 3;
 	for (int i = 0; i < total_vertices; ++i) {
 		float* v = uip.poly_model.extended_vertices[i].vertex;
-
+#if QUATERNION
+		rotate_vector_by_quaternion(v, v, rot_quat);
+#else
+		float* v = uip.poly_model.extended_vertices[i].vertex;
 		float ox = v[0], oy = v[1], oz = v[2]; // 원본 좌표
 
 		v[0] = ox * R[0][0] + oy * R[0][1] + oz * R[0][2];
 		v[1] = ox * R[1][0] + oy * R[1][1] + oz * R[1][2];
 		v[2] = ox * R[2][0] + oy * R[2][1] + oz * R[2][2];
+#endif
 	}
 
 	// AABB 다시 계산

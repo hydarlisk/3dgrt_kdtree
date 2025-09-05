@@ -30,10 +30,10 @@
 
 #define DIM_X 16
 #define DIM_Y 16
-#define USE_GLOBAL_STACK 1					// 1: GlobalStack 같이 사용 2: GlobalStack만 사용
+#define USE_GLOBAL_STACK 0						// 0: ShortStack만 사용 1: GlobalStack 같이 사용 2: GlobalStack만 사용
 
 #if USE_GLOBAL_STACK < 2
-#define SHORT_STACK_DEPTH 12					// for kernel sh.mem
+#define SHORT_STACK_DEPTH 7					// for kernel sh.mem
 #else
 #define SHORT_STACK_DEPTH 0
 #endif

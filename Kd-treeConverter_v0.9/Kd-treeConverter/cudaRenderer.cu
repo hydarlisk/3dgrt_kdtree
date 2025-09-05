@@ -589,28 +589,21 @@ __device__ void singlePassIntersectRoutineGaussian_sortNode(const cuRay& ray, in
 #if SHORT_STACK_DEPTH > 0
 #if HIT_AND_NODE_COUNT_DEBUG
 __device__ int singlePassIntersectGaussian_sortNode_hybridStack(
+    int& hitCount,
+#else
+__device__ void singlePassIntersectGaussian_sortNode_hybridStack(
+#endif
     cuRay& currRay,
     float3& accumulated_color,      // 수정: 누적 색상을 직접 업데이트
     float& accumulated_opacity    // 수정: 누적 알파를 직접 업데이트
     , cudaTextureObject_t inKdTreeNodeTex
     , cudaTextureObject_t inObjectOffsetListTex
     , cudaTextureObject_t inTriAccelTex
-    , int& hitCount
     , cu_traceState* global_stack, int& global_stack_ptr
 ) {
+#if HIT_AND_NODE_COUNT_DEBUG
     hitCount = 0;
     int node_visit_count = 0;
-#else
-__device__ void singlePassIntersectGaussian_sortNode_hybridStack(
-    cuRay & currRay,
-    float3 & accumulated_color,      // 수정: 누적 색상을 직접 업데이트
-    float& accumulated_opacity    // 수정: 누적 알파를 직접 업데이트
-    , cudaTextureObject_t inKdTreeNodeTex
-    , cudaTextureObject_t inObjectOffsetListTex
-    , cudaTextureObject_t inTriAccelTex
-    //, cudaTextureObject_t inGaussianTex
-    , cu_traceState * global_stack, int& global_stack_ptr
-) {
 #endif
     // 광선의 유효 범위 설정
     float t_scene_near = RAY_START_EPSILON, t_scene_far = FLT_MAX;
@@ -652,23 +645,21 @@ __device__ void singlePassIntersectGaussian_sortNode_hybridStack(
                     t_far = t_split;
                 }
                 node = tex1Dfetch<kdtreeNode>(inKdTreeNodeTex, idx);
+#if HIT_AND_NODE_COUNT_DEBUG
+                node_visit_count++;
+#endif
             }
             // --- 리프 노드 처리 로직 ---
-#if HIT_AND_NODE_COUNT_DEBUG
-            node_visit_count++;
-#endif
-            unsigned int baseOffset = OBJECTLIST_OFFSET(node);
-            unsigned int count = OBJECT_SIZE(node);
+            unsigned baseOffset = OBJECTLIST_OFFSET(node);
+            int objectSize = OBJECT_SIZE(node) + baseOffset;
             //if (count <= 0) continue;
-            if (count > 0) {
+            if (objectSize > 0) {
                 // 수집: 이 리프 노드 내의 모든 충돌을 임시 로컬 배열에 저장
                 HitRecord local_hits[MAX_HITS];
                 int local_hit_count = 0;
 
-                for (unsigned i = 0; i < count; ++i) {
-                    //unsigned tri_idx = tex1Dfetch(inObjectOffsetListTex, baseOffset + i);
-                    unsigned tri_idx = tex1Dfetch<unsigned int>(inObjectOffsetListTex, baseOffset + i);
-                    //unsigned tri_idx = g_d_offsets[baseOffset + i];
+                for (; baseOffset < objectSize; baseOffset++) {
+                    unsigned tri_idx = tex1Dfetch<unsigned int>(inObjectOffsetListTex, baseOffset);
                     singlePassIntersectRoutineGaussian_sortNode(currRay, tri_idx, t_near, t_far, local_hits, local_hit_count, inTriAccelTex);
                 }
 
@@ -737,15 +728,23 @@ __device__ void singlePassIntersectGaussian_sortNode_hybridStack(
 #endif
 }
 
+#if HIT_AND_NODE_COUNT_DEBUG
+__device__ int singlePassIntersectGaussian_sortNode_onlyShortStack(
+    int& hitCount,
+#else
 __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
+#endif
     cuRay& currRay,
     float3& accumulated_color,      // 수정: 누적 색상을 직접 업데이트
     float& accumulated_opacity    // 수정: 누적 알파를 직접 업데이트
     , cudaTextureObject_t inKdTreeNodeTex
     , cudaTextureObject_t inObjectOffsetListTex
     , cudaTextureObject_t inTriAccelTex
-    //, cudaTextureObject_t inGaussianTex
 ) {
+#if HIT_AND_NODE_COUNT_DEBUG
+    hitCount = 0;
+    int node_visit_count = 0;
+#endif
     // 광선의 유효 범위 설정
     float t_scene_near = RAY_START_EPSILON, t_scene_far = FLT_MAX;
     if (BoundsRayIntersect(g_SceneBBoxMin, g_SceneBBoxMax, &currRay, &t_scene_near, &t_scene_far)) {
@@ -773,51 +772,55 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
                     t_far = t_split;
                 }
                 node = tex1Dfetch<kdtreeNode>(inKdTreeNodeTex, idx);
+#if HIT_AND_NODE_COUNT_DEBUG
+                node_visit_count++;
+#endif
             }
             // --- 리프 노드 처리 로직 ---
             unsigned int baseOffset = OBJECTLIST_OFFSET(node);
             int objectSize = OBJECT_SIZE(node) + baseOffset;
             //if (count <= 0) continue;
-            if (objectSize > 0) {
                 // 수집: 이 리프 노드 내의 모든 충돌을 임시 로컬 배열에 저장
-                HitRecord local_hits[MAX_HITS];
-                int local_hit_count = 0;
+            HitRecord local_hits[MAX_HITS];
+            int local_hit_count = 0;
 
-                for (; baseOffset < objectSize; baseOffset++) {
-                    const unsigned tri_idx = tex1Dfetch<unsigned int>(inObjectOffsetListTex, baseOffset);
-                    singlePassIntersectRoutineGaussian_sortNode(currRay, tri_idx, t_near, t_far, local_hits, local_hit_count, inTriAccelTex);
-                }
+            for (; baseOffset < objectSize; baseOffset++) {
+                const unsigned tri_idx = tex1Dfetch<unsigned int>(inObjectOffsetListTex, baseOffset);
+                singlePassIntersectRoutineGaussian_sortNode(currRay, tri_idx, t_near, t_far, local_hits, local_hit_count, inTriAccelTex);
+            }
 
-                if (local_hit_count > 0) {
-                    // 정렬: 이 리프 노드 내의 충돌만 정렬
-                    sortHits(local_hits, local_hit_count);
-                    // 블렌딩: 정렬된 순서대로 알파 블렌딩 수행
-                    for (int i = 0; i < local_hit_count; ++i) {
-                        float4 d2 = tex1Dfetch<float4>(inTriAccelTex, local_hits[i].triIndex * 4 + 2);
-                        int gaussianID = __float_as_int(d2.w);
-                        //Gaussian g = fetch_gaussian(gaussianID, inGaussianTex);
-                        Gaussian g = g_d_gaussians[gaussianID];
+            if (local_hit_count > 0) {
+                // 정렬: 이 리프 노드 내의 충돌만 정렬
+                sortHits(local_hits, local_hit_count);
+                // 블렌딩: 정렬된 순서대로 알파 블렌딩 수행
+                for (int i = 0; i < local_hit_count; ++i) {
+                    float4 d2 = tex1Dfetch<float4>(inTriAccelTex, local_hits[i].triIndex * 4 + 2);
+                    int gaussianID = __float_as_int(d2.w);
+                    //Gaussian g = fetch_gaussian(gaussianID, inGaussianTex);
+                    Gaussian g = g_d_gaussians[gaussianID];
 
 #if USE_KERNEL_SCALE
-                        float sample_opacity = evaluateGaussianResponse_3dgrt(currRay, g);
+                    float sample_opacity = evaluateGaussianResponse_3dgrt(currRay, g);
 #else
-                        float sample_opacity = evaluateGaussianResponse(currRay, g);
+                    float sample_opacity = evaluateGaussianResponse(currRay, g);
 #endif
 
-                        float3 view_dir = normalize(make_float3(g.pos[0], g.pos[1], g.pos[2]) - currRay.pos);
-                        float3 sample_color = eval_sh_final(SPH_EVAL_DEGREE, view_dir, g);
+                    float3 view_dir = normalize(make_float3(g.pos[0], g.pos[1], g.pos[2]) - currRay.pos);
+                    float3 sample_color = eval_sh_final(SPH_EVAL_DEGREE, view_dir, g);
 
-                        accumulated_color += sample_color * sample_opacity * (1.0f - accumulated_opacity);
-                        accumulated_opacity += sample_opacity * (1.0f - accumulated_opacity);
-                        // 블렌딩 중에도 조기 종료 조건을 계속 확인
-                        if (accumulated_opacity > OPACITY_THRESHOLD) {
-                            //printf("hitCount:%d\n", hitCount);
-                            break;
-                        }
+                    accumulated_color += sample_color * sample_opacity * (1.0f - accumulated_opacity);
+                    accumulated_opacity += sample_opacity * (1.0f - accumulated_opacity);
+#if HIT_AND_NODE_COUNT_DEBUG
+                    hitCount++;
+#endif
+                    // 블렌딩 중에도 조기 종료 조건을 계속 확인
+                    if (accumulated_opacity > OPACITY_THRESHOLD) {
+                        break;
                     }
-                } // if (local_hit_count > 0)
-            } //if (count > 0)
-
+                }
+            } // if (local_hit_count > 0)
+            if (accumulated_opacity > OPACITY_THRESHOLD | t_far >= t_scene_far)
+                break;
             //if (cache.empty()) {
             if (cache.is_empty()) {
                 node = tex1Dfetch<kdtreeNode>(inKdTreeNodeTex, 0); // 루트에서 재시작
@@ -832,24 +835,32 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
             }
         } // while(true)
     } // if (BoundsRayIntersect)
+#if HIT_AND_NODE_COUNT_DEBUG
+    return node_visit_count;
+#endif
 }
 #endif
 
+#if HIT_AND_NODE_COUNT_DEBUG
+__device__ int singlePassIntersectGaussian_sortNode_onlyGlobalStack(
+    int& hitCount,
+#else
 __device__ void singlePassIntersectGaussian_sortNode_onlyGlobalStack(
-    cuRay & currRay,
-    float3 & accumulated_color,      // 수정: 누적 색상을 직접 업데이트
+#endif
+    cuRay& currRay,
+    float3& accumulated_color,      // 수정: 누적 색상을 직접 업데이트
     float& accumulated_opacity    // 수정: 누적 알파를 직접 업데이트
     , cudaTextureObject_t inKdTreeNodeTex
     , cudaTextureObject_t inObjectOffsetListTex
     , cudaTextureObject_t inTriAccelTex
-    //, cudaTextureObject_t inGaussianTex
-    , cu_traceState * global_stack, int& global_stack_ptr
+    , cu_traceState* global_stack, int& global_stack_ptr
 ) {
+#if HIT_AND_NODE_COUNT_DEBUG
+    hitCount = 0;
+    int node_visit_count = 0;
+#endif
     // 광선의 유효 범위 설정
     float t_scene_near = RAY_START_EPSILON, t_scene_far = FLT_MAX;
-    //int x = blockIdx.x * blockDim.x + threadIdx.x;
-    //int y = blockIdx.y * blockDim.y + threadIdx.y;
-    //printf("(%d,%d) ", x, y);
     if (BoundsRayIntersect(g_SceneBBoxMin, g_SceneBBoxMax, &currRay, &t_scene_near, &t_scene_far)) {
         //if (BoundsRayIntersect(g_SceneBBoxMin, g_SceneBBoxMax, currRay, t_scene_near, t_scene_far)) {
         float t_near = t_scene_near, t_far = t_scene_far;
@@ -877,6 +888,9 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyGlobalStack(
                     t_far = t_split;
                 }
                 node = tex1Dfetch<kdtreeNode>(inKdTreeNodeTex, idx);
+#if HIT_AND_NODE_COUNT_DEBUG
+                node_visit_count++;
+#endif
             }
             // --- 리프 노드 처리 로직 ---
             unsigned int baseOffset = OBJECTLIST_OFFSET(node);
@@ -976,43 +990,56 @@ void renderKernelGaussian_sortNode(float* pFrameBuffer
     // 수정된 메인 탐색/블렌딩 함수 호출
 #if HIT_AND_NODE_COUNT_DEBUG
     int hitCount = 0;
-#if USE_GLOBAL_STACK
-    int node_visits = singlePassIntersectGaussian_sortNode_hybridStack(ray, accumulated_color, accumulated_opacity
-        , inKdTreeNodeTex
-        , inObjectOffsetListTex
-        , inTriAccelTex
-        , hitCount
-        , my_global_stack, my_global_stack_ptr
-    );
+    #if USE_GLOBAL_STACK == 0
+        int node_visits = singlePassIntersectGaussian_sortNode_onlyShortStack(hitCount,
+            ray, accumulated_color, accumulated_opacity
+            , inKdTreeNodeTex
+            , inObjectOffsetListTex
+            , inTriAccelTex
+            //, inGaussianTex
+        );
+    #elif USE_GLOBAL_STACK == 1
+        int node_visits = singlePassIntersectGaussian_sortNode_hybridStack(hitCount,
+            ray, accumulated_color, accumulated_opacity
+            , inKdTreeNodeTex
+            , inObjectOffsetListTex
+            , inTriAccelTex
+            //, inGaussianTex
+            , my_global_stack, my_global_stack_ptr
+        );
+    #elif USE_GLOBAL_STACK == 2
+        int node_visits = singlePassIntersectGaussian_sortNode_onlyGlobalStack(hitCount,
+            ray, accumulated_color, accumulated_opacity
+            , inKdTreeNodeTex
+            , inObjectOffsetListTex
+            , inTriAccelTex
+            //, inGaussianTex
+            , my_global_stack, my_global_stack_ptr);
+    #endif
 #else
-    int node_visits = singlePassIntersectGaussian_sortNode_shortStack(ray, accumulated_color, accumulated_opacity, hitCount);
-#endif
-    //int node_visits = singlePassIntersectGaussian_selectNode(ray, accumulated_color, accumulated_opacity, hitCount);
-#else
-#if USE_GLOBAL_STACK == 0
-    singlePassIntersectGaussian_sortNode_onlyShortStack(ray, accumulated_color, accumulated_opacity
-        , inKdTreeNodeTex
-        , inObjectOffsetListTex
-        , inTriAccelTex
-        //, inGaussianTex
-    );
-#elif USE_GLOBAL_STACK == 1
-    singlePassIntersectGaussian_sortNode_hybridStack(ray, accumulated_color, accumulated_opacity
-        , inKdTreeNodeTex
-        , inObjectOffsetListTex
-        , inTriAccelTex
-        //, inGaussianTex
-        , my_global_stack, my_global_stack_ptr
-    );
-#elif USE_GLOBAL_STACK == 2
-    singlePassIntersectGaussian_sortNode_onlyGlobalStack(ray, accumulated_color, accumulated_opacity
-        , inKdTreeNodeTex
-        , inObjectOffsetListTex
-        , inTriAccelTex
-        //, inGaussianTex
-        , my_global_stack, my_global_stack_ptr);
-#endif
-    //singlePassIntersectGaussian_selectNode(ray, accumulated_color, accumulated_opacity);
+    #if USE_GLOBAL_STACK == 0
+        singlePassIntersectGaussian_sortNode_onlyShortStack(ray, accumulated_color, accumulated_opacity
+            , inKdTreeNodeTex
+            , inObjectOffsetListTex
+            , inTriAccelTex
+            //, inGaussianTex
+        );
+    #elif USE_GLOBAL_STACK == 1
+        singlePassIntersectGaussian_sortNode_hybridStack(ray, accumulated_color, accumulated_opacity
+            , inKdTreeNodeTex
+            , inObjectOffsetListTex
+            , inTriAccelTex
+            //, inGaussianTex
+            , my_global_stack, my_global_stack_ptr
+        );
+    #elif USE_GLOBAL_STACK == 2
+        singlePassIntersectGaussian_sortNode_onlyGlobalStack(ray, accumulated_color, accumulated_opacity
+            , inKdTreeNodeTex
+            , inObjectOffsetListTex
+            , inTriAccelTex
+            //, inGaussianTex
+            , my_global_stack, my_global_stack_ptr);
+    #endif
 #endif
 
 #if USE_GLOBAL_STACK
