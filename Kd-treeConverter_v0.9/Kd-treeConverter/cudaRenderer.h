@@ -102,36 +102,9 @@ void renderObjWithCuda(
 void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vector<Gaussian>& gaussians);
 
 float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, float* d_framebuffer
-#if USE_GLOBAL_STACK
+#if USE_STACK > SHORT_STACK
 	, cu_traceState* d_global_stack, int* d_global_stack_pointers
 #endif
 );
 
 void cleanupCudaResources();
-
-#if 0
-// -----------------------------------------------------------
-// kdtree node
-// -----------------------------------------------------------
-	// macros for extracting node information
-	#define IS_LEAF(node)				(((node).x & 3) == 3)
-	#define IS_ROPE(node)				(((node).x & 4) == 4)
-
-	#define SPLIT_AXIS(node)			( (node).x & 3)
-	#define FIRST_CHILD_OFFSET(node)	( (node).x >> 3)
-	#define SECOND_CHILD_OFFSET(node)	(((node).x >> 3) + 1)
-
-	#define SPLIT_POS(node)				(*(float *)&((node).y))
-	#define OBJECT_SIZE(node)			( (node).x >> 3)
-
-	#define OBJECTLIST_OFFSET(node)		( (node).y)
-	#define ROPE_NODE_OFFSET(node)		( (node).y)
-#else
-	#define IS_LEAF(node)				(((node).x & 7) == 3)
-	#define SPLIT_AXIS(node)			( (node).x & 3)
-	#define FIRST_CHILD_OFFSET(node)	( (node).x >> 3)
-	#define SECOND_CHILD_OFFSET(node)	(((node).x >> 3) + 1)
-	#define SPLIT_POS(node)				(*(float *)&((node).y))
-	#define OBJECT_SIZE(node)			( (node).x >> 3)
-	#define OBJECTLIST_OFFSET(node)		( (node).y)
-#endif

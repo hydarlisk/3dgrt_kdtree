@@ -67,8 +67,9 @@ GLuint pbo;
 struct cudaGraphicsResource* pbo_cuda_resource;
 GLuint result_texture_id; // 렌더링 결과를 담을 텍스처 ID
 GLuint quad_vao;          // 화면 전체 사각형 VAO
+//GLuint quad_vbo, quad_ebo;
 
-#if USE_GLOBAL_STACK
+#if USE_STACK > SHORT_STACK
 cu_traceState* g_d_global_stack = nullptr;
 int* g_d_global_stack_pointers = nullptr;
 #endif
@@ -320,7 +321,7 @@ void reshape(int width, int height) {
 	gluPerspective(camera.fovy, camera.aspect, camera.near_c, camera.far_c);
 
 	if (g_cuda_interactive_mode) {
-//#if USE_GLOBAL_STACK
+//#if USE_STACK
 //		if (g_d_global_stack) cudaFree(g_d_global_stack);
 //		if (g_d_global_stack_pointers) cudaFree(g_d_global_stack_pointers);
 //
@@ -1090,9 +1091,6 @@ int read_OBJ_file(const char* obj_filename)
 
 	uip.poly_model.kd_tree = new KdTree();
 
-	//build_kd_tree_for_composite_object(&uip.poly_model);
-	//printf("> KD-tree built successfully!\n");
-
 	free(mesh_geom.vertices);
 	free(mesh_geom.faces);
 	printf("AABB: X [%f, %f] Y [%f, %f] Z [%f, %f]\n",
@@ -1621,14 +1619,21 @@ void main_menu_action(int selection) {
 	}
 	case 300:
 		print_current_time("kdtree build start");
+#if USE_STACK == STACK_FREE
+		build_kd_tree_for_composite_object_parallel(&uip.poly_model);
+#else
 		build_kd_tree_for_composite_object(&uip.poly_model);
+#endif
+
 		if (uip.poly_model.kd_tree->tri_accel_list == NULL) printf("tri_accel_list NULL\n");
 		else {
 			printf("triangle num: %d\n", uip.poly_model.n_triangles);
 			//printf("tri_accel_list size: %d\n", sizeof(uip.poly_model.kd_tree->tri_accel_list) / sizeof(*(uip.poly_model.kd_tree->tri_accel_list)));
 		}
 		print_current_time("kdtree build end");
+#if USE_STACK > STACK_FREE
 		printKdTreeLeafNodeInfo();
+#endif
 		break;
 	case 400:
 		strcpy(full_kd_tree_file_name, uip.kd_tree_dump_dir);
@@ -1670,9 +1675,6 @@ void main_menu_action(int selection) {
 		glutPostRedisplay();
 		break;
 	case 600:
-
-		//cudaEventCreate(&start_ev);
-		//cudaEventCreate(&stop_ev);
 		g_cuda_interactive_mode = !g_cuda_interactive_mode; // 인터랙티브 모드 토글
 		if (g_cuda_interactive_mode) {
 			//if (g_d_render_framebuffer) {
@@ -1681,7 +1683,7 @@ void main_menu_action(int selection) {
 			//cudaMalloc((void**)&g_d_render_framebuffer, (size_t)g_render_width * g_render_height * 3 * sizeof(float));
 
 			renderGaussianWithCudaSetup(uip.poly_model, g_gaussians);
-#if USE_GLOBAL_STACK
+#if USE_STACK > SHORT_STACK
 			if (g_d_global_stack) cudaFree(g_d_global_stack);
 			if (g_d_global_stack_pointers) cudaFree(g_d_global_stack_pointers);
 			cudaMalloc((void**)&g_d_global_stack, (size_t)g_render_width * g_render_height * MAX_GLOBAL_STACK_DEPTH * sizeof(cu_traceState));
@@ -1692,7 +1694,7 @@ void main_menu_action(int selection) {
 			printf("CUDA Interactive Mode: ON\n");
 		}
 		else {
-#if USE_GLOBAL_STACK
+#if USE_STACK > SHORT_STACK
 			if (g_d_global_stack) cudaFree(g_d_global_stack);
 			if (g_d_global_stack_pointers) cudaFree(g_d_global_stack_pointers);
 			g_d_global_stack = nullptr;
@@ -1865,12 +1867,13 @@ void idle() {
 		//renderGaussianWithCuda(uip.poly_model, g_gaussians, camera, g_render_width, g_render_height, d_pbo_ptr, g_cuda_rendering_done);
 
 		g_fps = renderGaussianWithCudaFrame(camera, g_render_width, g_render_height, d_pbo_ptr
-#if USE_GLOBAL_STACK
+#if USE_STACK > SHORT_STACK
 			, g_d_global_stack, g_d_global_stack_pointers
 #endif
 		);
+		// CUDA → OpenGL 동기화 해제
 		cudaGraphicsUnmapResources(1, &pbo_cuda_resource, 0);
-		
+
 		g_cuda_rendering_done = true;
 #endif
 

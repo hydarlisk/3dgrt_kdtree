@@ -70,7 +70,7 @@
     <Filter Include="SGRTx2Lib\Pipeline\CPURenderPipeline">
       <UniqueIdentifier>{7bc2a1ff-d11f-4ac1-9676-05d2e4c3bb50}</UniqueIdentifier>
     </Filter>
-    <Filter Include="쉐이더">
+    <Filter Include="parallel">
       <UniqueIdentifier>{a72d4860-2a3a-4320-8ac3-f0459642e814}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -263,6 +263,9 @@
     </ClCompile>
     <ClCompile Include="SGRTx2Lib\SSERenderPipeline4x4.cpp">
       <Filter>SGRTx2Lib\Pipeline\CPURenderPipeline</Filter>
+    </ClCompile>
+    <ClCompile Include="ParallelKdTreeBuilder.cpp">
+      <Filter>parallel</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -490,6 +493,9 @@
     </ClInclude>
     <ClInclude Include="SGRTx2Lib\cudaRenderPipeline.h">
       <Filter>SGRTx2Lib\Pipeline\cudaRenderPipeline</Filter>
+    </ClInclude>
+    <ClInclude Include="ParallelKdTreeBuilder.h">
+      <Filter>parallel</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

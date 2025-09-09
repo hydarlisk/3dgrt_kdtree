@@ -1642,7 +1642,7 @@ __global__ void renderKernelGaussian_sortNode(float* pFrameBuffer
 #if HIT_AND_NODE_COUNT_DEBUG
     , int* hitsum, int* maxhit, int* hcount, int* g_d_total_nodes, int* g_d_max_nodes
 #endif
-#if USE_GLOBAL_STACK
+#if USE_STACK
     , cu_traceState* d_global_stack, int* d_global_stack_pointers // 추가
 #endif
     , DebugLog* d_debug_log_buffer, int* d_debug_log_counter // 인자 추가
@@ -1675,7 +1675,7 @@ for (int s = 0; s < samples_per_pixel; ++s) {
     // 누적 변수 초기화
     float3 accumulated_color = make_float3(0.0f, 0.0f, 0.0f);
     float accumulated_opacity = 0.0f;
-#if USE_GLOBAL_STACK
+#if USE_STACK
     // 스레드에 해당하는 전역 스택 포인터 가져오기
     int thread_idx = y * g_SceneInfo.resX + x;
     cu_traceState* my_global_stack = d_global_stack + thread_idx * MAX_GLOBAL_STACK_DEPTH;
@@ -1684,7 +1684,7 @@ for (int s = 0; s < samples_per_pixel; ++s) {
     // 수정된 메인 탐색/블렌딩 함수 호출
 #if HIT_AND_NODE_COUNT_DEBUG
     int hitCount = 0;
-    #if USE_GLOBAL_STACK
+    #if USE_STACK
     int node_visits = singlePassIntersectGaussian_sortNode_globalStack(ray, accumulated_color, accumulated_opacity, hitCount
         , my_global_stack, my_global_stack_ptr
         );
@@ -1693,7 +1693,7 @@ for (int s = 0; s < samples_per_pixel; ++s) {
     #endif
     //int node_visits = singlePassIntersectGaussian_selectNode(ray, accumulated_color, accumulated_opacity, hitCount);
 #else
-    #if USE_GLOBAL_STACK
+    #if USE_STACK
     singlePassIntersectGaussian_sortNode_globalStack(ray, accumulated_color, accumulated_opacity
         , my_global_stack, my_global_stack_ptr
     );
@@ -1703,7 +1703,7 @@ for (int s = 0; s < samples_per_pixel; ++s) {
     //singlePassIntersectGaussian_selectNode(ray, accumulated_color, accumulated_opacity);
 #endif
 
-#if USE_GLOBAL_STACK
+#if USE_STACK
     // 최종 스택 포인터 저장
     d_global_stack_pointers[thread_idx] = my_global_stack_ptr;
 #endif
@@ -1883,7 +1883,7 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
 }
 
 int renderGaussianWithCudaFrame(const Camera& camera, int width, int height, float* d_framebuffer
-#if USE_GLOBAL_STACK
+#if USE_STACK
     , cu_traceState* d_global_stack, int* d_global_stack_pointers
 #endif
     , DebugLog* d_debug_log_buffer, int* d_debug_log_counter // 인자 추가
@@ -1906,7 +1906,7 @@ int renderGaussianWithCudaFrame(const Camera& camera, int width, int height, flo
                             - h_camera_info.u * (plane_width * 0.5f)
                             + h_camera_info.v * (plane_height * 0.5f);
     CUDA_CHECK(cudaMemcpyToSymbol(g_CameraInfo, &h_camera_info, sizeof(CameraInfo)));
-#if USE_GLOBAL_STACK
+#if USE_STACK
     CUDA_CHECK(cudaMemset(d_global_stack_pointers, 0, (size_t)width * height * sizeof(int)));
 #endif
 
@@ -1932,7 +1932,7 @@ int renderGaussianWithCudaFrame(const Camera& camera, int width, int height, flo
     cudaEventRecord(start_ev); // 시작 기록
     //renderKernelGaussian << < blocks, threads, shared_mem_size >> > (d_framebuffer, d_hitsum, d_maxhit, hitcount);
     renderKernelGaussian_sortNode << < blocks, threads, shared_mem_size >> > (d_framebuffer, d_hitsum, d_maxhit, d_hcount, d_total_nodes, d_max_nodes
-#if USE_GLOBAL_STACK
+#if USE_STACK
         , d_global_stack, d_global_stack_pointers
 #endif
         , d_debug_log_buffer, d_debug_log_counter // 커널에 인자 전달
@@ -1965,7 +1965,7 @@ int renderGaussianWithCudaFrame(const Camera& camera, int width, int height, flo
 #else
     cudaEventRecord(start_ev); // 시작 기록
     renderKernelGaussian_sortNode << < blocks, threads, shared_mem_size >> > (d_framebuffer
-#if USE_GLOBAL_STACK
+#if USE_STACK
         , d_global_stack, d_global_stack_pointers
 #endif
         , d_debug_log_buffer, d_debug_log_counter // 커널에 인자 전달

@@ -23,19 +23,26 @@
 
 #define SUPER_SAMPLING false
 
-#define HIT_AND_NODE_COUNT_DEBUG true			// Ray 마다 hitcount, node count 확인
-#define ROTATION true							// R(45degree,1,1,1)
+#define HIT_AND_NODE_COUNT_DEBUG false			// Ray 마다 hitcount, node count 확인
+#define ROTATION false							// R(45degree,1,1,1)
 
-#define MAX_HITS 128
+#define MAX_HITS 256
 
 #define DIM_X 16
 #define DIM_Y 16
-#define USE_GLOBAL_STACK 0						// 0: ShortStack만 사용 1: GlobalStack 같이 사용 2: GlobalStack만 사용
 
-#if USE_GLOBAL_STACK < 2
-#define SHORT_STACK_DEPTH 7					// for kernel sh.mem
-#else
+#define STACK_FREE 0
+#define SHORT_STACK 1
+#define HYBRID_STACK 2
+#define GLOBAL_STACK 3
+#define USE_STACK STACK_FREE					// STACK_FREE	(0): Stack 사용 안함
+												// SHORT_STACK	(1): ShortStack만 사용
+												// HYBRID_STACK	(2): GlobalStack 같이 사용
+												// GLOBAL_STACK	(3): GlobalStack만 사용
+#if USE_STACK > HYBRID_STACK || USE_STACK == STACK_FREE
 #define SHORT_STACK_DEPTH 0
+#else
+#define SHORT_STACK_DEPTH 12					// for kernel sh.mem
 #endif
 
 #define MAX_GLOBAL_STACK_DEPTH 256
@@ -49,6 +56,8 @@
 
 #define RENDERING_WIDTH 960
 #define RENDERING_HEIGHT 640
+//#define RENDERING_WIDTH 1920
+//#define RENDERING_HEIGHT 1080
  /*
  * List of resolutions
  *
@@ -214,12 +223,14 @@ typedef struct _Ray {
 } Ray;
 
 int build_kd_tree_for_composite_object(CompositeObject *);
+//shyun
 int build_kd_tree_for_composite_object2(CompositeObject* c_object, const char* filename);
+int build_kd_tree_for_composite_object_parallel(CompositeObject* c_object);
+//shyun end
 void dump_kd_tree_for_composite_object(CompositeObject *, const char *, int, const char *);
 int read_kd_tree_from_file(CompositeObject *, const char *, int);
 int find_ray_object_intersection(KdTree *, Ray *, float *, float *);
 
-//bool initialize_kdtree_for_gaussians(const std::vector<Gaussian>& gaussians);
 void collectLeafNodeStats_recursive(
 	const KdTree* kd_tree,
 	int nodeIndex,
@@ -228,3 +239,30 @@ void collectLeafNodeStats_recursive(
 	unsigned int& max_triangles,
 	unsigned int& min_triangles
 );
+
+#if 0
+// -----------------------------------------------------------
+// kdtree node
+// -----------------------------------------------------------
+	// macros for extracting node information
+#define IS_LEAF(node)				(((node).x & 3) == 3)
+#define IS_ROPE(node)				(((node).x & 4) == 4)
+
+#define SPLIT_AXIS(node)			( (node).x & 3)
+#define FIRST_CHILD_OFFSET(node)	( (node).x >> 3)
+#define SECOND_CHILD_OFFSET(node)	(((node).x >> 3) + 1)
+
+#define SPLIT_POS(node)				(*(float *)&((node).y))
+#define OBJECT_SIZE(node)			( (node).x >> 3)
+
+#define OBJECTLIST_OFFSET(node)		( (node).y)
+#define ROPE_NODE_OFFSET(node)		( (node).y)
+#else
+#define IS_LEAF(node)				(((node).x & 7) == 3)
+#define SPLIT_AXIS(node)			( (node).x & 3)
+#define FIRST_CHILD_OFFSET(node)	( (node).x >> 3)
+#define SECOND_CHILD_OFFSET(node)	(((node).x >> 3) + 1)
+#define SPLIT_POS(node)				(*(float *)&((node).y))
+#define OBJECT_SIZE(node)			( (node).x >> 3)
+#define OBJECTLIST_OFFSET(node)		( (node).y)
+#endif
