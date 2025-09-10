@@ -832,15 +832,6 @@ void build_TriAccList(CompositeObject *poly_model, TriAccel*& pTriAcc)
 		fMyVecCrossProduct(b, c, N);
 		fMyVecNormalize(N);
 
-//shyun
-		if (N[0] == 0.0f && N[1] == 0.0f && N[2] == 0.0f) {
-			// 이 삼각형은 유효하지 않으므로 모든 값을 0으로 설정하고 건너뜁니다.
-			// 이렇게 하면 '0으로 나누기'를 방지하고 트리에 포함되지 않게 됩니다.
-			memset(&pTriAcc[i], 0, sizeof(TriAccel));
-			continue; // 다음 삼각형으로 넘어감
-		}
-//shyun
-
 		k = (fabsf(N[0]) > fabsf(N[1])) ? ( (fabsf(N[0])>fabsf(N[2]))?0:2 ):( (fabsf(N[1])>fabsf(N[2]))?1:2 );
 		u = modulo[k+1];
 		v = modulo[k+2];
@@ -855,6 +846,7 @@ void build_TriAccList(CompositeObject *poly_model, TriAccel*& pTriAcc)
 		N[1] *= fRcp_N_k;
 		N[2] *= fRcp_N_k;
 
+		pTriAcc[i].paccked_flags = 0; // shyun: 먼저 모든 비트를 0으로 초기화
 		pTriAcc[i].k   = k;
 		pTriAcc[i].n_u = N[u];						// N'u
 		pTriAcc[i].n_v = N[v];						// N'v

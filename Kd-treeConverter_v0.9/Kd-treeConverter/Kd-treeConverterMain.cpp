@@ -142,11 +142,13 @@ void print_current_time(const char* com) {
 	std::cout << com << " time: " << std::put_time(&buf, "%Y-%m-%d %H:%M:%S") << std::endl;
 }
 
+bool timerRunning = false;
 void timer_callback(int value) {
-	// 렌더링이 필요하다고 플래그를 설정.
-	g_camera_dirty = true;
+	if (timerRunning) {
+		g_camera_dirty = true;
 
-	glutPostRedisplay();
+		glutPostRedisplay();
+	}
 
 	glutTimerFunc(1000 / 60, timer_callback, 0);
 }
@@ -303,6 +305,9 @@ void keyboard(unsigned char key, int x, int y) {
 			}
 			glutPostRedisplay();
 			break;
+		case 't':
+			timerRunning = !timerRunning;
+			break;
 		case 'q':
 			exit(0);
 			break;
@@ -321,15 +326,6 @@ void reshape(int width, int height) {
 	gluPerspective(camera.fovy, camera.aspect, camera.near_c, camera.far_c);
 
 	if (g_cuda_interactive_mode) {
-//#if USE_STACK
-//		if (g_d_global_stack) cudaFree(g_d_global_stack);
-//		if (g_d_global_stack_pointers) cudaFree(g_d_global_stack_pointers);
-//
-//		cudaMalloc((void**)&g_d_global_stack, (size_t)width * height * MAX_GLOBAL_STACK_DEPTH * sizeof(cu_traceState));
-//		cudaMalloc((void**)&g_d_global_stack_pointers, (size_t)width * height * sizeof(int));
-//		cudaMemset((void**)g_d_global_stack_pointers, 0, (size_t)width * height * sizeof(int));
-//#endif
-
 		g_camera_dirty = true;
 	}
 }
@@ -1619,11 +1615,8 @@ void main_menu_action(int selection) {
 	}
 	case 300:
 		print_current_time("kdtree build start");
-#if USE_STACK == STACK_FREE
-		build_kd_tree_for_composite_object_parallel(&uip.poly_model);
-#else
+
 		build_kd_tree_for_composite_object(&uip.poly_model);
-#endif
 
 		if (uip.poly_model.kd_tree->tri_accel_list == NULL) printf("tri_accel_list NULL\n");
 		else {
@@ -1631,9 +1624,8 @@ void main_menu_action(int selection) {
 			//printf("tri_accel_list size: %d\n", sizeof(uip.poly_model.kd_tree->tri_accel_list) / sizeof(*(uip.poly_model.kd_tree->tri_accel_list)));
 		}
 		print_current_time("kdtree build end");
-#if USE_STACK > STACK_FREE
+
 		printKdTreeLeafNodeInfo();
-#endif
 		break;
 	case 400:
 		strcpy(full_kd_tree_file_name, uip.kd_tree_dump_dir);

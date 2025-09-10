@@ -17,51 +17,6 @@
 #include "RayTraversal.h"
 #include "MyMathUtility.h"
 
-int build_kd_tree_for_composite_object_parallel(CompositeObject* c_object) {
-	fprintf(stdout, "\n> Constructing Kd-tree from I-geometry using PARALLEL-STYLE BUILDER\n");
-	fprintf(stdout, "\n  * # of triangles: %d\n", c_object->n_triangles);
-	fprintf(stdout, "\n  * AABB: [%7.2f, %7.2f] x [%7.2f, %7.2f] x [%7.2f, %7.2f]\n", c_object->AABB[0], c_object->AABB[1],
-		c_object->AABB[2], c_object->AABB[3], c_object->AABB[4], c_object->AABB[5]);
-
-	// 1. 기존과 동일하게 초기화 (g_pTriangleInfos 생성)
-	if (initialize_kd_tree(c_object) == 0) {
-		fprintf(stderr, "Kd-tree construction error during initialization.\n");
-		return 0;
-	}
-
-	// 2. 새로운 병렬 빌드 함수 호출
-	fprintf(stdout, "\n  - Building a left-balanced kd-tree via iterative sorting...\n");
-	if (!build_kdtree_parallel(c_object)) {
-		fprintf(stderr, "Parallel-style kd-tree construction failed.\n");
-		uninitialize_kd_tree(); // 정리
-		return 0;
-	}
-	fprintf(stdout, "  - Done!\n\n");
-	fprintf(stdout, "   * Tree Level: %d\n", g_iKdTree_Level);
-	fprintf(stdout, "   * Node Count: %d (All nodes are leaves or parents of leaves)\n", g_iKdTree_Node_Count);
-	fprintf(stdout, "   * Leaf Node Count: %d\n", g_iKdTree_LeafNode_Count);
-	fprintf(stdout, "   * Triangles per Leaf: %d (by definition of this build method)\n", g_iKdTree_MaxTriInLeafNode_Count);
-
-
-	fprintf(stdout, "\n  - Building a kd-tree triangle accerlaration list\n");
-	TriAccel* pTriAcc = NULL;
-	build_TriAccList(c_object, pTriAcc);
-	if (!pTriAcc) {
-		fprintf(stderr, "TriAccel build failed\n");
-		return 0;
-	}
-	fprintf(stdout, "  - Done!\n");
-
-	c_object->kd_tree = new KdTree;
-	c_object->kd_tree->tree = g_pKdTree_Node_Array;
-	c_object->kd_tree->tree_node_count = g_iKdTree_Node_Count;
-	c_object->kd_tree->tri_offset_list = g_pKdTree_TriOffset_Array;
-	c_object->kd_tree->tri_offset_count = g_iKdTree_TriOffset_Count;
-	c_object->kd_tree->tri_accel_list = pTriAcc;
-	fprintf(stdout, "\n> Done!\n\n");
-	return 1;
-}
-
 int build_kd_tree_for_composite_object(CompositeObject *c_object) {
 	// Returns 1 if a kd-tree was constructed successfully, or 0 otherwise.
 	// Input: "c_object->n_triangles" & "c_object->extended_vertices"

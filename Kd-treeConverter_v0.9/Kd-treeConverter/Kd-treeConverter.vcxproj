@@ -131,6 +131,7 @@
       </IgnoreSpecificDefaultLibraries>
     </Link>
     <CudaCompile />
+    <CudaCompile />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -185,6 +186,7 @@
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <CodeGeneration>compute_89,sm_89</CodeGeneration>
+      <GPUDebugInfo>true</GPUDebugInfo>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -193,7 +195,6 @@
     <ClCompile Include="Kd-treeConverterMain.cpp" />
     <ClCompile Include="MyMathUtility.cpp" />
     <ClCompile Include="OpenGLStuffs.cpp" />
-    <ClCompile Include="ParallelKdTreeBuilder.cpp" />
     <ClCompile Include="RayTraversal.cpp" />
     <ClCompile Include="SGRTx2Lib\GBaseThread.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
@@ -431,7 +432,6 @@
     <ClInclude Include="Kd-treeConverterMain.h" />
     <ClInclude Include="MyMathUtility.h" />
     <ClInclude Include="OpenGLStuffs.h" />
-    <ClInclude Include="ParallelKdTreeBuilder.h" />
     <ClInclude Include="RayTraversal.h" />
     <ClInclude Include="test.h" />
     <CudaCompile Include="cudaRenderer.cu">
