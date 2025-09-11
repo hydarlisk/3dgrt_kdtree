@@ -23,7 +23,7 @@
 
 #define SUPER_SAMPLING false
 
-#define HIT_AND_NODE_COUNT_DEBUG false			// Ray 마다 hitcount, node count 확인
+#define HIT_AND_NODE_COUNT_DEBUG true			// Ray 마다 hitcount, node count 확인
 #define ROTATION true							// R(45degree,1,1,1)
 
 #define MAX_HITS 64

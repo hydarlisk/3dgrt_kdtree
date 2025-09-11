@@ -855,24 +855,27 @@ __device__ void singlePassIntersectGaussian_sortNode_hybridStack(
 #endif
 }
 
-#if HIT_AND_NODE_COUNT_DEBUG
-__device__ int singlePassIntersectGaussian_sortNode_onlyShortStack(
-    int& hitCount,
-#else
 __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
-#endif
     cuRay& currRay,
     float3& accumulated_color,      // 수정: 누적 색상을 직접 업데이트
     float& accumulated_opacity    // 수정: 누적 알파를 직접 업데이트
-    //, cudaTextureObject_t inKdTreeNodeTex
-    //, cudaTextureObject_t inObjectOffsetListTex
-    //, cudaTextureObject_t inTriAccelTex
+#if HIT_AND_NODE_COUNT_DEBUG
+    , int& node_visits
+    , int& leaf_visits
+    , int& intersection_tests
+    , int& hits_found
+    , int& blend_ops
+    , int& max_sort_size
+#endif
 ) {
 #if HIT_AND_NODE_COUNT_DEBUG
-    hitCount = 0;
-    int node_visit_count = 0;
+    node_visits = 0;
+    leaf_visits = 0;
+    intersection_tests = 0;
+    hits_found = 0;
+    blend_ops = 0;
+    max_sort_size = 0;
 #endif
-    //int level = 0;
     // 광선의 유효 범위 설정
     float t_scene_near = RAY_START_EPSILON, t_scene_far = FLT_MAX;
     if (BoundsRayIntersect(g_SceneBBoxMin, g_SceneBBoxMax, &currRay, &t_scene_near, &t_scene_far)) {
@@ -901,7 +904,7 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
                     t_far = t_split;
                 }
 #if HIT_AND_NODE_COUNT_DEBUG
-                node_visit_count++;
+                node_visits++;
 #endif
                 node = tex1Dfetch<kdtreeNode>(inKdTreeNodeTex, idx);
             }
@@ -913,19 +916,32 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
                 // 수집: 이 리프 노드 내의 모든 충돌을 임시 로컬 배열에 저장
             HitRecord local_hits[MAX_HITS];
             int local_hit_count = 0;
-
+#if HIT_AND_NODE_COUNT_DEBUG
+            leaf_visits++;
+#endif
             for (; baseOffset < objectSize; baseOffset++) {
+#if HIT_AND_NODE_COUNT_DEBUG
+                intersection_tests++;
+                int tmp = local_hit_count;
+#endif
                 const unsigned tri_idx = tex1Dfetch<unsigned int>(inObjectOffsetListTex, baseOffset);
-                singlePassIntersectRoutineGaussian_sortNode(currRay, tri_idx, t_near, t_far, local_hits, local_hit_count
-                    //, inTriAccelTex
-                );
+                singlePassIntersectRoutineGaussian_sortNode(currRay, tri_idx, t_near, t_far, local_hits, local_hit_count);
+#if HIT_AND_NODE_COUNT_DEBUG
+                if (tmp != local_hit_count) hits_found++;
+#endif
             }
+#if HIT_AND_NODE_COUNT_DEBUG
+            max_sort_size = max_sort_size > local_hit_count ? max_sort_size : local_hit_count;
+#endif
 
             if (local_hit_count > 0) {
                 // 정렬: 이 리프 노드 내의 충돌만 정렬
                 sortHits(local_hits, local_hit_count);
                 // 블렌딩: 정렬된 순서대로 알파 블렌딩 수행
                 for (int i = 0; i < local_hit_count; ++i) {
+#if HIT_AND_NODE_COUNT_DEBUG
+                    blend_ops++;
+#endif
                     float4 d2 = tex1Dfetch<float4>(inTriAccelTex, local_hits[i].triIndex * 4 + 2);
                     int gaussianID = __float_as_int(d2.w);
                     //Gaussian g = fetch_gaussian(gaussianID, inGaussianTex);
@@ -942,9 +958,7 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
 
                     accumulated_color += sample_color * sample_opacity * (1.0f - accumulated_opacity);
                     accumulated_opacity += sample_opacity * (1.0f - accumulated_opacity);
-#if HIT_AND_NODE_COUNT_DEBUG
-                    hitCount++;
-#endif
+
                     // 블렌딩 중에도 조기 종료 조건을 계속 확인
                     if (accumulated_opacity > OPACITY_THRESHOLD) {
                         break;
@@ -970,9 +984,6 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
             }
         } // while(true)
     } // if (BoundsRayIntersect)
-#if HIT_AND_NODE_COUNT_DEBUG
-    return node_visit_count;
-#endif
 }
 
 #if HIT_AND_NODE_COUNT_DEBUG
@@ -1174,10 +1185,11 @@ __global__
 //__launch_bounds__(256, 2)
 void renderKernelGaussian_sortNode(float* pFrameBuffer
 #if HIT_AND_NODE_COUNT_DEBUG
-    , int* hitsum, int* maxhit, int* hcount, int* g_d_total_nodes, int* g_d_max_nodes
+    , float3* d_debug_buffer1
+    , float3* d_debug_buffer2
 #endif
 #if USE_STACK > SHORT_STACK
-    , cu_traceState* d_global_stack, int* d_global_stack_pointers // 추가
+    , cu_traceState* d_global_stack, int* d_global_stack_pointers
 #endif
 ) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -1201,40 +1213,32 @@ void renderKernelGaussian_sortNode(float* pFrameBuffer
 #endif
     // 수정된 메인 탐색/블렌딩 함수 호출
 #if HIT_AND_NODE_COUNT_DEBUG
-    int hitCount = 0;
+    int node_visits = 0;        // 총 순회 노드 수
+    int leaf_visits = 0;        // 방문한 리프 노드 수
+    int intersection_tests = 0; // 총 삼각형 교차 판정 횟수
+    int hits_found = 0;         // 교차에 성공한 삼각형 수
+    int blend_ops = 0;          // 최종 블렌딩에 사용된 가우시안 수
+    int max_sort_size = 0;      // 단일 리프에서 정렬한 최대 아이템 수
     #if USE_STACK == SHORT_STACK
-        int node_visits = singlePassIntersectGaussian_sortNode_onlyShortStack(hitCount,
-            ray, accumulated_color, accumulated_opacity
-            //, inKdTreeNodeTex
-            //, inObjectOffsetListTex
-            //, inTriAccelTex
-            //, inGaussianTex
+        singlePassIntersectGaussian_sortNode_onlyShortStack(ray, accumulated_color, accumulated_opacity
+        , node_visits
+        , leaf_visits
+        , intersection_tests
+        , hits_found
+        , blend_ops
+        , max_sort_size
         );
     #elif USE_STACK == HYBRID_STACK
-        int node_visits = singlePassIntersectGaussian_sortNode_hybridStack(hitCount,
-            ray, accumulated_color, accumulated_opacity
-            , inKdTreeNodeTex
-            , inObjectOffsetListTex
-            , inTriAccelTex
-            //, inGaussianTex
+        node_visits = singlePassIntersectGaussian_sortNode_hybridStack(ray, accumulated_color, accumulated_opacity,
             , my_global_stack, my_global_stack_ptr
         );
     #elif USE_STACK == GLOBAL_STACK
-        int node_visits = singlePassIntersectGaussian_sortNode_onlyGlobalStack(hitCount,
-            ray, accumulated_color, accumulated_opacity
-            , inKdTreeNodeTex
-            , inObjectOffsetListTex
-            , inTriAccelTex
-            //, inGaussianTex
+        node_visits = singlePassIntersectGaussian_sortNode_onlyGlobalStack(ray, accumulated_color, accumulated_opacity,
             , my_global_stack, my_global_stack_ptr);
     #endif
 #else
     #if USE_STACK == SHORT_STACK
         singlePassIntersectGaussian_sortNode_onlyShortStack(ray, accumulated_color, accumulated_opacity
-            //, inKdTreeNodeTex
-            //, inObjectOffsetListTex
-            //, inTriAccelTex
-            //, inGaussianTex
         );
     #elif USE_STACK == HYBRID_STACK
         singlePassIntersectGaussian_sortNode_hybridStack(ray, accumulated_color, accumulated_opacity
@@ -1270,14 +1274,18 @@ void renderKernelGaussian_sortNode(float* pFrameBuffer
     pFrameBuffer[idx + 2] = final_color.z;
 
 #if HIT_AND_NODE_COUNT_DEBUG
-    if (hitCount > 0) {
-        //if(accumulated_opacity<OPACITY_THRESHOLD) printf("hitCount %d | ao: %f\n", hit.hitCount, accumulated_opacity);
-        atomicAdd(hitsum, hitCount);
-        atomicMax(maxhit, hitCount);
-        atomicAdd(hcount, 1);
-        atomicAdd(g_d_total_nodes, node_visits);
-        atomicMax(g_d_max_nodes, node_visits);
-    }
+    int id = y * g_SceneInfo.resX + x;
+    //printf("id(%d, %d) %d\n",x,y,id);
+    d_debug_buffer1[id] = make_float3(
+        (float)node_visits,
+        (float)leaf_visits,
+        (float)intersection_tests
+    );
+    d_debug_buffer2[id] = make_float3(
+        (float)hits_found,
+        (float)blend_ops,
+        (float)max_sort_size
+    );
 #endif
 }
 
@@ -1510,63 +1518,69 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
         - h_camera_info.u * (plane_width * 0.5f)
         + h_camera_info.v * (plane_height * 0.5f);
     CUDA_CHECK(cudaMemcpyToSymbol(g_CameraInfo, &h_camera_info, sizeof(CameraInfo)));
-#if USE_STACK > SHORT_STACK
-    //CUDA_CHECK(cudaMemset(d_global_stack_pointers, 0, (size_t)width * height * sizeof(int)));
-#endif
 
     // 커널 실행
     dim3 threads(DIM_X, DIM_Y);
     dim3 blocks((width + threads.x - 1) / threads.x, (height + threads.y - 1) / threads.y);
-    //size_t shared_mem_size = threads.x * threads.y * SHORT_STACK_DEPTH * sizeof(cu_traceState);
 
 #if HIT_AND_NODE_COUNT_DEBUG
-    int* d_hitsum, * d_maxhit, * d_hcount, * d_total_nodes, * d_max_nodes;
-    cudaMalloc(&d_hitsum, sizeof(int));
-    cudaMalloc(&d_maxhit, sizeof(int));
-    cudaMalloc(&d_hcount, sizeof(int));
-    cudaMalloc(&d_total_nodes, sizeof(int));
-    cudaMalloc(&d_max_nodes, sizeof(int));
+    
+    float3* d_debug_buffer1;
+    float3* d_debug_buffer2;
+    CUDA_CHECK(cudaMalloc(&d_debug_buffer1, width * height * sizeof(float3)));
+    CUDA_CHECK(cudaMalloc(&d_debug_buffer2, width * height * sizeof(float3)));
 
-    cudaMemset(d_hitsum, 0, sizeof(int));
-    cudaMemset(d_maxhit, 0, sizeof(int));
-    cudaMemset(d_hcount, 0, sizeof(int));
-    cudaMemset(d_total_nodes, 0, sizeof(int));
-    cudaMemset(d_max_nodes, 0, sizeof(int));
-
-    cudaEventRecord(start_ev); // 시작 기록
-    //renderKernelGaussian << < blocks, threads, shared_mem_size >> > (d_framebuffer, d_hitsum, d_maxhit, hitcount);
-    renderKernelGaussian_sortNode << < blocks, threads, shared_mem_size >> > (d_framebuffer
-        , d_hitsum, d_maxhit, d_hcount, d_total_nodes, d_max_nodes
+    CUDA_CHECK(cudaEventRecord(start_ev));
+    renderKernelGaussian_sortNode << < blocks, threads >> > (d_framebuffer
+        , d_debug_buffer1, d_debug_buffer2
 #if USE_STACK > SHORT_STACK
         , d_global_stack, d_global_stack_pointers
 #endif
         );
-    cudaEventRecord(stop_ev); // 종료 기록
-    cudaEventSynchronize(stop_ev); // GPU 작업 완료까지 대기
+    CUDA_CHECK(cudaGetLastError());        // DEBUG: launch 실패 확인
+    CUDA_CHECK(cudaDeviceSynchronize());   // DEBUG: 실행 중 오류 확인
+    CUDA_CHECK(cudaEventRecord(stop_ev));
+    CUDA_CHECK(cudaEventSynchronize(stop_ev));
 
-    int h_total_hits = 0, h_max_hit = 0, h_pixel_count = 0, h_total_nodes = 0, h_max_nodes = 0;
-    cudaMemcpy(&h_total_hits, d_hitsum, sizeof(int), cudaMemcpyDeviceToHost);
-    cudaMemcpy(&h_max_hit, d_maxhit, sizeof(int), cudaMemcpyDeviceToHost);
-    cudaMemcpy(&h_pixel_count, d_hcount, sizeof(int), cudaMemcpyDeviceToHost);
-    cudaMemcpy(&h_total_nodes, d_total_nodes, sizeof(int), cudaMemcpyDeviceToHost);
-    cudaMemcpy(&h_max_nodes, d_max_nodes, sizeof(int), cudaMemcpyDeviceToHost);
+    float3* h_debug_buffer1 = new float3[width * height];
+    float3* h_debug_buffer2 = new float3[width * height];
+    CUDA_CHECK(cudaMemcpy(h_debug_buffer1, d_debug_buffer1, width * height * sizeof(float3), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(h_debug_buffer2, d_debug_buffer2, width * height * sizeof(float3), cudaMemcpyDeviceToHost));
 
-    if (h_pixel_count > 0) {
-        float avg_hits = (float)h_total_hits / h_pixel_count;
-        float avg_nodes = (float)h_total_nodes / h_pixel_count; // ★ 평균 계산
-        printf("Avg Hits/Pixel: %.2f (Max: %d) | Avg Nodes/Pixel: %.2f (Max: %d) | Rendered Pixels: %d\n",
-            avg_hits, h_max_hit, avg_nodes, h_max_nodes, h_pixel_count);
+    CUDA_CHECK(cudaFree(d_debug_buffer1));
+    CUDA_CHECK(cudaFree(d_debug_buffer2));
+
+    int max_node_visits = 0;
+    int max_leaf_visits = 0;
+    int max_intersection_tests = 0;
+    int max_hits_found = 0;
+    int max_blend_ops = 0;
+    int max_max_sort_size = 0;
+
+    // 각 버퍼에서 올바른 값을 가져와 최댓값을 계산합니다.
+    for (int i = 0; i < width * height; i++) {
+        max_node_visits = max(max_node_visits, (int)h_debug_buffer1[i].x);
+        max_leaf_visits = max(max_leaf_visits, (int)h_debug_buffer1[i].y);
+        max_intersection_tests = max(max_intersection_tests, (int)h_debug_buffer1[i].z);
+
+        max_hits_found = max(max_hits_found, (int)h_debug_buffer2[i].x);
+        max_blend_ops = max(max_blend_ops, (int)h_debug_buffer2[i].y);
+        max_max_sort_size = max(max_max_sort_size, (int)h_debug_buffer2[i].z);
     }
 
-    // --- 4. 메모리 해제 ---
-    cudaFree(d_hitsum);
-    cudaFree(d_maxhit);
-    cudaFree(d_hcount);
-    cudaFree(d_total_nodes);
-    cudaFree(d_max_nodes);
+    // 수정된 변수들로 결과를 출력합니다.
+    printf("max_node_visits\t\t: %d\n", max_node_visits);
+    printf("max_leaf_visits\t\t: %d\n", max_leaf_visits);
+    printf("max_intersection_tests\t: %d\n", max_intersection_tests);
+    printf("max_hits_found\t\t: %d\n", max_hits_found);
+    printf("max_blend_ops\t\t: %d\n", max_blend_ops);
+    printf("max_max_sort_size\t: %d\n", max_max_sort_size);
+
+    delete[] h_debug_buffer1;
+    delete[] h_debug_buffer2;
 #else
     CUDA_CHECK(cudaEventRecord(start_ev)); // 시작 기록
-    //renderKernelGaussian_sortNode_test << < blocks, threads, shared_mem_size >> > (d_framebuffer
+    //renderKernelGaussian_sortNode_test << < blocks, threads >> > (d_framebuffer
     renderKernelGaussian_sortNode << < blocks, threads >> > (d_framebuffer
         //, h_inKdTreeNodeTex, h_inObjectOffsetListTex, h_inTriAccelTex
 #if USE_STACK > SHORT_STACK
