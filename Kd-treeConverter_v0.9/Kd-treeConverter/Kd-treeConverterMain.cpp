@@ -712,10 +712,15 @@ void create_composite_object_from_gaussians(
 		uip.poly_model.extended_vertices = nullptr;
 	}
 
+#if DEBUG_SIGMA_HISTOGRAM
+	int sigma_histogram[DEBUG_SIGMA_HISTOGRAM] = { 0 };
+#endif
+
 	// 메모리 할당
 	long num_gaussians = gaussians.size();
 	long num_total_triangles = num_gaussians * icosaHedronNumTri;
 	long num_total_vertices = num_total_triangles * 3;
+	num_total_triangles = 0;
 
 	uip.poly_model.n_triangles = 0; // 시작은 0
 	uip.poly_model.extended_vertices = (ExtendedVertex*)malloc(num_total_vertices * sizeof(ExtendedVertex));
@@ -730,20 +735,30 @@ void create_composite_object_from_gaussians(
 	uip.poly_model.AABB[XMAX] = uip.poly_model.AABB[YMAX] = uip.poly_model.AABB[ZMAX] = -FLT_MAX;
 
 	//const float ICOSA_VRT_SCALE = 0.5f * icosaEdge;
-	int cnt = 0;
+	int cnt_sigma = 0;
+	int cnt_scale = 0;
 	float k_iso_max = 0;
 
 	// 모든 가우시안에 대해 20면체 생성
 	for (long i = 0; i < num_gaussians; ++i) {
-	//for (long i = 0; i < 1; ++i) {
+		//for (long i = 0; i < 1; ++i) {
 		const Gaussian& g = gaussians[i];
 
 		//sigma(density) 계산
 		const float sigma = g.opacity;
 		//const float sigma = 1.0f / (1.0f + expf(-g.opacity));
+
+#if DEBUG_SIGMA_HISTOGRAM
+		int bin_index = static_cast<int>(sigma * DEBUG_SIGMA_HISTOGRAM);
+		if (bin_index >= DEBUG_SIGMA_HISTOGRAM) { // sigma가 1.0일 경우를 대비한 안전장치
+			bin_index = DEBUG_SIGMA_HISTOGRAM - 1;
+		}
+		sigma_histogram[bin_index]++;
+#endif
+		if (sigma < SIGMA_THRESHOLD) { cnt_sigma++; continue; }
 		float k_iso = 0.0f;
+
 #if USE_KERNEL_SCALE
-		//printf("%d, sigma: %f\n", i, sigma);
 		//if (sigma / alpha_min > 1.0f)
 			// kernelScale_final 함수를 호출하여 k_iso 계산
 			k_iso = kernelScale_final(sigma, alpha_min, kernel_degree);
@@ -751,38 +766,30 @@ void create_composite_object_from_gaussians(
 		//k_iso = fminf(k_iso, 3.0f);
 
 		float final_scale[3] = {
-			//expf(g.scale[0]) * k_iso * 0.5f * icosaEdge,
-			//expf(g.scale[1]) * k_iso * 0.5f * icosaEdge,
-			//expf(g.scale[2]) * k_iso * 0.5f * icosaEdge
-			//g.scale[0] * k_iso * 0.5f * icosaEdge,
-			//g.scale[1] * k_iso * 0.5f * icosaEdge,
-			//g.scale[2] * k_iso * 0.5f * icosaEdge
-			g.scale[0] * k_iso * unitspherefactor,
-			g.scale[1] * k_iso * unitspherefactor,
-			g.scale[2] * k_iso * unitspherefactor
+			g.scale[0] * k_iso * 0.5f * icosaEdge,
+			g.scale[1] * k_iso * 0.5f * icosaEdge,
+			g.scale[2] * k_iso * 0.5f * icosaEdge
+			//g.scale[0] * k_iso * unitspherefactor,
+			//g.scale[1] * k_iso * unitspherefactor,
+			//g.scale[2] * k_iso * unitspherefactor
 		};
 #else
 		if (sigma / alpha_min > 1.0f) {
 			k_iso = sqrtf(2.0f * logf(sigma / alpha_min));
 		}
 		float final_scale[3] = {
-			//expf(g.scale[0]) * k_iso * unitspherefactor,
-			//expf(g.scale[1]) * k_iso * unitspherefactor,
-			//expf(g.scale[2]) * k_iso * unitspherefactor
 			g.scale[0] * k_iso * unitspherefactor,
 			g.scale[1] * k_iso * unitspherefactor,
 			g.scale[2] * k_iso * unitspherefactor
 		};
 #endif
 		k_iso_max = fmaxf(k_iso_max, k_iso);
-		//printf("scale : %e %e %e\n", final_scale[0], final_scale[1], final_scale[2]);
-		if (final_scale[0] < 1e-6f && final_scale[1] < 1e-6f && final_scale[2] < 1e-6f) {
-			cnt++;
-			continue;
-		}
 
+		//if (final_scale[0] < 1e-6f && final_scale[1] < 1e-6f && final_scale[2] < 1e-6f) { cnt_scale++; continue; }
+
+		num_total_triangles += icosaHedronNumTri;
 		// 아이코사헤드론의 20개 면(삼각형)을 생성
-		for (int j = 0; j < 20; ++j) {
+		for (int j = 0; j < icosaHedronNumTri; ++j) {
 			const int* face_indices = ICO_FACES[j];
 
 			// 3개의 정점을 변환하여 저장
@@ -830,13 +837,46 @@ void create_composite_object_from_gaussians(
 			}
 		}
 	}
+	long num_final_vertices = uip.poly_model.n_triangles * 3;
+
+#if DEBUG_SIGMA_HISTOGRAM
+	printf("\n--- Sigma (Opacity) Histogram ---\n");
+	int max_count = 0;
+	for (int i = 0; i < DEBUG_SIGMA_HISTOGRAM; ++i) {
+		if (sigma_histogram[i] > max_count) {
+			max_count = sigma_histogram[i];
+		}
+	}
+
+	const int MAX_BAR_WIDTH = 50; // 막대그래프의 최대 너비
+	for (int i = 0; i < DEBUG_SIGMA_HISTOGRAM; ++i) {
+		float min_range = (float)i / DEBUG_SIGMA_HISTOGRAM;
+		float max_range = (float)(i + 1) / DEBUG_SIGMA_HISTOGRAM;
+		int bar_width = 0;
+		if (max_count > 0) {
+			bar_width = static_cast<int>((float)sigma_histogram[i] / max_count * MAX_BAR_WIDTH);
+		}
+		printf("Bin %3d [%.2f-%.2f): %-7d |", i, min_range, max_range, sigma_histogram[i]);
+		for (int j = 0; j < bar_width; ++j) {
+			printf("#");
+		}
+		printf("\n");
+	}
+	printf("---------------------------------\n\n");
+#endif
+
 	printf("k_iso_max: %f\n", k_iso_max);
-	printf("cnt %d\n", cnt);
-	// 최종 삼각형 개수 설정
+	printf("delete by SIGMA cnt: %d\n", cnt_sigma);
+	printf("delete by SCALE cnt: %d\n", cnt_scale);
+	printf("\n");
+	printf("vtx_cnt_temp: %d\n", num_total_vertices);
+	printf("vtx_cnt_real: %d\n", num_final_vertices);
+	//uip.poly_model.extended_vertices = (ExtendedVertex*)realloc(uip.poly_model.extended_vertices, num_final_vertices * sizeof(ExtendedVertex));
+
 	uip.poly_model.n_triangles = num_total_triangles;
-	//uip.poly_model.n_triangles = icosaHedronNumTri;
 	uip.composite_object_read = 1;
-	printf("Successfully created CompositeObject with %d triangles from %ld Gaussians.\n", uip.poly_model.n_triangles, num_gaussians);
+	printf("\nSuccessfully created CompositeObject with %d triangles from %ld Gaussians.\n\n", uip.poly_model.n_triangles, num_gaussians);
+	//printf("\nSuccessfully created CompositeObject with %d triangles from %ld Gaussians.\n\n", uip.poly_model.n_triangles, num_gaussians - (cnt_sigma + cnt_scale));
 }
 
 // 축-각도 표현을 쿼터니언으로 변환

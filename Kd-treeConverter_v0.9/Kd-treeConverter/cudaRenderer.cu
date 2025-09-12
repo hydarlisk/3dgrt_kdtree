@@ -15,6 +15,7 @@
 #include <texture_indirect_functions.h>
 #include <vector_types.h>
 
+cudaDeviceProp deviceProp;
 #define CUDA_CHECK(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 inline void gpuAssert(cudaError_t code, const char* file, int line) {
     if (code != cudaSuccess) {
@@ -148,7 +149,8 @@ struct __align__(16) cuWaldTriangleInfo {
 
 #if SHORT_STACK_DEPTH > 0
 // 스택 (cudaRenderPipelineCommonKernel.cu에서 추출)
-extern __shared__ cu_traceState smemBuffer[SHORT_STACK_DEPTH * DIM_X * DIM_Y];
+//extern __shared__ cu_traceState smemBuffer[SHORT_STACK_DEPTH * DIM_X * DIM_Y];
+extern __shared__ cu_traceState smemBuffer[];
 
 struct shortStack {
     unsigned _top, quant, baseOffset;
@@ -331,7 +333,7 @@ struct HitRecord {
 };
 
 __device__ void sortHits(HitRecord* hits, int count) {
-    if (count > 25) printf("local sort count: %d\n", count);
+    //if (count > 25) printf("local sort count: %d\n", count);
     for (int i = 1; i < count; i++) {
         HitRecord key = hits[i];
         int j = i - 1;
@@ -968,21 +970,17 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
             if (accumulated_opacity > OPACITY_THRESHOLD | t_far >= t_scene_far)
                 break;
             if (cache.empty()) {
-            //if (cache.is_empty()) {
-                //printf("(%d,%d) cache.empty\n",TID_X, TID_Y);
-                //printf("%d,%d\n",TID_X, TID_Y);
                 node = tex1Dfetch<kdtreeNode>(inKdTreeNodeTex, 0); // 루트에서 재시작
                 t_near = t_far; t_far = t_scene_far; // 탐색 구간을 뒤로 미룸
             }
             else {
                 const cu_traceState& trace = cache.top(); cache.pop();
-                //const cu_traceState& trace = cache.pop();
                 
                 node = tex1Dfetch<kdtreeNode>(inKdTreeNodeTex, trace.nodeID);
                 t_near = t_far;
                 t_far = trace.tMax;
             }
-        } // while(true)
+        } // while(true) == while(accumulated_opacity < OPACITY_THRESHOLD)
     } // if (BoundsRayIntersect)
 }
 
@@ -1470,6 +1468,11 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
     int deviceID;
     cudaGetDevice(&deviceID);
 
+    int deviceId;
+    CUDA_CHECK(cudaGetDevice(&deviceId));
+
+    CUDA_CHECK(cudaGetDeviceProperties(&deviceProp, deviceId));
+
     int maxSharedMemPerBlock;
     // 현재 GPU의 "블록 당 최대 공유 메모리" 속성 값을 가져옵니다.
     cudaDeviceGetAttribute(
@@ -1522,6 +1525,7 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
     // 커널 실행
     dim3 threads(DIM_X, DIM_Y);
     dim3 blocks((width + threads.x - 1) / threads.x, (height + threads.y - 1) / threads.y);
+    size_t shared_mem_size = threads.x * threads.y * SHORT_STACK_DEPTH * sizeof(cu_traceState);
 
 #if HIT_AND_NODE_COUNT_DEBUG
     
@@ -1531,7 +1535,7 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
     CUDA_CHECK(cudaMalloc(&d_debug_buffer2, width * height * sizeof(float3)));
 
     CUDA_CHECK(cudaEventRecord(start_ev));
-    renderKernelGaussian_sortNode << < blocks, threads >> > (d_framebuffer
+    renderKernelGaussian_sortNode << < blocks, threads, shared_mem_size >> > (d_framebuffer
         , d_debug_buffer1, d_debug_buffer2
 #if USE_STACK > SHORT_STACK
         , d_global_stack, d_global_stack_pointers
@@ -1581,7 +1585,7 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
 #else
     CUDA_CHECK(cudaEventRecord(start_ev)); // 시작 기록
     //renderKernelGaussian_sortNode_test << < blocks, threads >> > (d_framebuffer
-    renderKernelGaussian_sortNode << < blocks, threads >> > (d_framebuffer
+    renderKernelGaussian_sortNode << < blocks, threads, shared_mem_size >> > (d_framebuffer
         //, h_inKdTreeNodeTex, h_inObjectOffsetListTex, h_inTriAccelTex
 #if USE_STACK > SHORT_STACK
         , d_global_stack, d_global_stack_pointers
@@ -1592,11 +1596,59 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
     CUDA_CHECK(cudaEventRecord(stop_ev)); // 종료 기록
     CUDA_CHECK(cudaEventSynchronize(stop_ev)); // GPU 작업 완료까지 대기
 #endif
+
+#if WARP_OCCUPANCY
+    std::cout << "========= GPU Device Properties =========" << std::endl;
+    std::cout << "Device: " << deviceProp.name << std::endl;
+    std::cout << "Max Shared Memory per Block: " << deviceProp.sharedMemPerBlock << " bytes" << std::endl;
+    std::cout << "Max Shared Memory per SM: " << deviceProp.sharedMemPerMultiprocessor << " bytes" << std::endl;
+    std::cout << "Max Registers per Block: " << deviceProp.regsPerBlock << std::endl;
+    std::cout << "Max Registers per SM: " << deviceProp.regsPerMultiprocessor << std::endl;
+
+    cudaFuncAttributes attr;
+    CUDA_CHECK(cudaFuncGetAttributes(&attr, renderKernelGaussian_sortNode));
+
+    std::cout << "========= Kernel Properties ('myKernelWithSharedMemory') =========" << std::endl;
+    std::cout << "Registers used per Thread: " << attr.numRegs << std::endl;
+    std::cout << "Static Shared Memory used per Block: " << attr.sharedSizeBytes << " bytes" << std::endl;
+
+    int blockSize = DIM_X * DIM_Y;
+    // SM 당 최대 활성 블록 개수 계산
+    int maxActiveBlocks;
+
+    CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+        &maxActiveBlocks,
+        renderKernelGaussian_sortNode,
+        blockSize,
+        shared_mem_size
+    ));
+
+    // 점유율(Occupancy) 계산
+    // SM이 최대로 가질 수 있는 스레드(Warp) 수
+    int maxThreadsPerSM = deviceProp.maxThreadsPerMultiProcessor;
+    int warpSize = deviceProp.warpSize;
+    int maxWarpsPerSM = maxThreadsPerSM / warpSize;
+
+    // 현재 커널 설정에서 활성화되는 Warp 수
+    int activeWarpsPerSM = maxActiveBlocks * (blockSize / warpSize);
+
+    // 최종 점유율 (%)
+    double occupancy = (double)activeWarpsPerSM / maxWarpsPerSM;
+
+    std::cout << "========= Occupancy Calculation =========" << std::endl;
+    std::cout << "Block Size: " << blockSize << std::endl;
+    std::cout << "Max Active Blocks per SM: " << maxActiveBlocks << std::endl;
+    std::cout << "Dynamic Shared Memory per Block: " << shared_mem_size << " bytes" << std::endl;
+    std::cout << "Max Warps per SM on this device: " << maxWarpsPerSM << std::endl;
+    std::cout << "Active Warps per SM for this kernel: " << activeWarpsPerSM << std::endl;
+    std::cout << "Theoretical Occupancy: " << occupancy * 100.0 << "%" << std::endl;
+#endif
+
     float milliseconds = 0;
     CUDA_CHECK(cudaEventElapsedTime(&milliseconds, start_ev, stop_ev));
     float k_fps = 1000.0f / milliseconds; // 전역 변수에 FPS 저장
     //total_frame += k_fps;
-    //if(k_fps < 100.0f)
+    if(k_fps < 100.0f)
     printf("FPS : %f-------------------------------------------------------------\n", k_fps);
     //if (++frame_count >= 100) {
     //    printf("avg FPS for 100 frame : %f\n", (float)(total_frame / frame_count));

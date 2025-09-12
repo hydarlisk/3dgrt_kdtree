@@ -186,7 +186,7 @@
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <CodeGeneration>compute_89,sm_89</CodeGeneration>
-      <GPUDebugInfo>true</GPUDebugInfo>
+      <GPUDebugInfo>false</GPUDebugInfo>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
