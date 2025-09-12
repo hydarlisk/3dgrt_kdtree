@@ -837,7 +837,7 @@ void create_composite_object_from_gaussians(
 			}
 		}
 	}
-	long num_final_vertices = uip.poly_model.n_triangles * 3;
+	long num_final_vertices = num_total_triangles * 3;
 
 #if DEBUG_SIGMA_HISTOGRAM
 	printf("\n--- Sigma (Opacity) Histogram ---\n");
@@ -871,12 +871,12 @@ void create_composite_object_from_gaussians(
 	printf("\n");
 	printf("vtx_cnt_temp: %d\n", num_total_vertices);
 	printf("vtx_cnt_real: %d\n", num_final_vertices);
-	//uip.poly_model.extended_vertices = (ExtendedVertex*)realloc(uip.poly_model.extended_vertices, num_final_vertices * sizeof(ExtendedVertex));
+	uip.poly_model.extended_vertices = (ExtendedVertex*)realloc(uip.poly_model.extended_vertices, num_final_vertices * sizeof(ExtendedVertex));
 
 	uip.poly_model.n_triangles = num_total_triangles;
 	uip.composite_object_read = 1;
-	printf("\nSuccessfully created CompositeObject with %d triangles from %ld Gaussians.\n\n", uip.poly_model.n_triangles, num_gaussians);
-	//printf("\nSuccessfully created CompositeObject with %d triangles from %ld Gaussians.\n\n", uip.poly_model.n_triangles, num_gaussians - (cnt_sigma + cnt_scale));
+	//printf("\nSuccessfully created CompositeObject with %d triangles from %ld Gaussians.\n\n", uip.poly_model.n_triangles, num_gaussians);
+	printf("\nSuccessfully created CompositeObject with %d triangles from %ld Gaussians.\n\n", uip.poly_model.n_triangles, num_gaussians - (cnt_sigma + cnt_scale));
 }
 
 // 축-각도 표현을 쿼터니언으로 변환

@@ -23,7 +23,7 @@
 
 #define SUPER_SAMPLING false
 
-#define SIGMA_THRESHOLD 0//.01f					// sigma(density) 작은 가우시안 제거
+#define SIGMA_THRESHOLD 0.01f					// sigma(density) 작은 가우시안 제거
 #define DEBUG_SIGMA_HISTOGRAM 100				// gaussian의 sigma들 도식화
 #define WARP_OCCUPANCY false					// warp occupancy 출력
 #define HIT_AND_NODE_COUNT_DEBUG false			// Ray 마다 hitcount, node count, ... 확인
@@ -43,7 +43,7 @@
 #if USE_STACK > HYBRID_STACK
 #define SHORT_STACK_DEPTH 0
 #else
-#define SHORT_STACK_DEPTH 8					// for kernel sh.mem
+#define SHORT_STACK_DEPTH 12					// for kernel sh.mem
 #endif
 
 #define MAX_GLOBAL_STACK_DEPTH 64
