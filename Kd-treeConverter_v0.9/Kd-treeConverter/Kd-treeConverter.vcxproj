@@ -101,7 +101,6 @@
       <AdditionalIncludeDirectories>$(CUDA_PATH)\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalOptions>glut32.lib %(AdditionalOptions)</AdditionalOptions>
       <AdditionalDependencies>freeglut.lib;glew32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
@@ -122,8 +121,7 @@
       <AdditionalIncludeDirectories>$(CUDA_PATH)\include(CUDA_INC_PATH)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalOptions>glut32.lib %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalDependencies>freeglut.lib;glew32.lib;cudart_static.lib;C:\Users\grviolet\Desktop\Project\3dgrt_kdtree\Kd-treeConverter_v0.9\x64\Debug\glut32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>freeglut.lib;glew32.lib;cudart_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <AdditionalLibraryDirectories>$(CUDA_PATH)\lib\$(Platform)</AdditionalLibraryDirectories>
@@ -177,7 +175,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <AdditionalLibraryDirectories>$(CUDA_PATH)\lib\$(Platform)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>freeglut.lib;glew32.lib;cudart_static.lib;C:\Users\grviolet\Desktop\Project\3dgrt_kdtree\Kd-treeConverter_v0.9\x64\Debug\glut32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>freeglut.lib;glew32.lib;cudart_static.lib;;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalOptions>/fixed:no
 /LARGEADDRESSAWARE %(AdditionalOptions)</AdditionalOptions>
       <IgnoreSpecificDefaultLibraries>
