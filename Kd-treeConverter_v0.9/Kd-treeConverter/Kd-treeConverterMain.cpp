@@ -32,18 +32,9 @@
 #include <iomanip>
 #include <cuda_gl_interop.h>
 #include <vector>
-//#include "sgrt_interface.h"
-//#include "SGRT_Integration.h"
 #include "test.h"
 #include "cudaRenderer.h"
 //#include "SGRTx2Lib/cuda_math.h"
-//#include "cudaKDTreeTracer.h"
-//#include "cudaRayTracingKernel.cu"
-//#include "SGRTx2Lib/GKDTreeStructure.h"
-//#include "SGRTx2Lib/GGPURayTracer.h"
-//#include "SGRTx2Lib/GGPUExperimentalRayTracer.h"
-//using namespace KDTConverter;
-//using namespace KDTConstructor;
 char* ply_file_path;
 char* ply_kdtree_path;
 char* ply_igeom_path;
@@ -51,7 +42,7 @@ char* ply_to_obj;
 
 //cudaEvent_t start_ev, stop_ev;
 char* kdtree_build_path;
-int submenu[6] = { 101,1012,102,104,105 };
+int submenu[5] = { 101,1012,102,104,105 };
 
 bool render_gaussian = false;
 int g_render_width = RENDERING_WIDTH;
@@ -74,8 +65,10 @@ cu_traceState* g_d_global_stack = nullptr;
 int* g_d_global_stack_pointers = nullptr;
 #endif
 
-DebugLog* g_d_debug_log_buffer = nullptr;
-int* g_d_debug_log_counter = nullptr;
+int visualize_kdtree_mode = 6;
+float3* h_debug_buffer1_main = nullptr;
+float3* h_debug_buffer2_main = nullptr;
+int max_debug_values[6] = { 0, };
 
 void setup_interop_resources() {
 	// PBO 생성 (기존 코드와 유사)
@@ -176,9 +169,73 @@ void load_poly_model_into_OpenGL(void) {
 }
  
 void display(void) {
+	if (visualize_kdtree_mode < 6 && h_debug_buffer1_main != nullptr && h_debug_buffer2_main != nullptr) {
+		//printf("[DEBUG] Visualizing heatmap. Max node visits value: %d\n", max_debug_values[0]);
+
+		float* color_buffer = new float[g_render_width * g_render_height * 3];
+		for (int i = 0; i < g_render_width * g_render_height; i++) {
+			float normalized_value = 0.0f;
+			if (max_debug_values[visualize_kdtree_mode] > 0) {
+				switch (visualize_kdtree_mode) {
+					case 0:
+						normalized_value = (float)((int)h_debug_buffer1_main[i].x) / max_debug_values[0];
+						break;
+					case 1:
+						normalized_value = (float)((int)h_debug_buffer1_main[i].y) / max_debug_values[1];
+						break;
+					case 2:
+						normalized_value = (float)((int)h_debug_buffer1_main[i].z) / max_debug_values[2];
+						break;
+					case 3:
+						normalized_value = (float)((int)h_debug_buffer2_main[i].x) / max_debug_values[3];
+						break;
+					case 4:
+						normalized_value = (float)((int)h_debug_buffer2_main[i].y) / max_debug_values[4];
+						break;
+					case 5:
+						normalized_value = (float)((int)h_debug_buffer2_main[i].z) / max_debug_values[5];
+						break;
+				}
+				
+			}
+
+			// Grayscale: 값이 클수록 밝아짐 (흰색)
+			int pixel_idx = (g_render_height - 1 - (i / g_render_width)) * g_render_width + (i % g_render_width); // y좌표 뒤집기
+			color_buffer[pixel_idx * 3 + 0] = normalized_value; // R
+			color_buffer[pixel_idx * 3 + 1] = normalized_value; // G
+			color_buffer[pixel_idx * 3 + 2] = normalized_value; // B
+		}
+
+		glClear(GL_COLOR_BUFFER_BIT);
+		//glRasterPos2f(-1.0f, -1.0f);
+		//glDrawPixels(g_render_width, g_render_height, GL_RGB, GL_FLOAT, color_buffer);
+		// 
+		// 2D 렌더링을 위해 행렬 상태를 초기화
+		glMatrixMode(GL_PROJECTION);
+		glPushMatrix(); // 현재 3D Projection 행렬을 스택에 저장
+		glLoadIdentity();   // Projection 행렬을 단위 행렬로 초기화
+
+		glMatrixMode(GL_MODELVIEW);
+		glPushMatrix(); // 현재 3D ModelView 행렬을 스택에 저장
+		glLoadIdentity();   // ModelView 행렬을 단위 행렬로 초기화
+		// ----------------------------------------------------------------
+
+		glRasterPos2f(-1.0f, -1.0f);
+		glDrawPixels(g_render_width, g_render_height, GL_RGB, GL_FLOAT, color_buffer);
+
+		// 그리기 끝난 후 원래 행렬 상태로 복원
+		glMatrixMode(GL_PROJECTION);
+		glPopMatrix(); // 저장했던 Projection 행렬 복원
+
+		glMatrixMode(GL_MODELVIEW);
+		glPopMatrix(); // 저장했던 ModelView 행렬 복원
+		// ----------------------------------------------------
+
+		delete[] color_buffer; // 메모리 해제
+		draw_fps(); // FPS
+	}
 	// CUDA 렌더링이 완료되었으면 프레임버퍼를 화면에 그립니다.
-	//if ((g_cuda_interactive_mode || g_cuda_rendering_done) && g_render_framebuffer != nullptr) {
-	if (g_cuda_interactive_mode || g_cuda_rendering_done) {
+	else if (g_cuda_interactive_mode || g_cuda_rendering_done) {
 		//glClear(GL_COLOR_BUFFER_BIT);
 		glDisable(GL_LIGHTING);
 		glDisable(GL_DEPTH_TEST);
@@ -212,58 +269,59 @@ void display(void) {
 		glDisable(GL_TEXTURE_2D);
 
 		draw_fps(); // FPS
-		glutSwapBuffers();
-		return; // CUDA 결과를 그렸으므로 나머지 OpenGL 렌더링은 건너뜁니다.
 	}
+	else {
 
-	int i;
-	ExtendedVertex *ptr_ev;
- 
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
- 	glEnable(GL_DEPTH_TEST);
- 
-	glMatrixMode(GL_MODELVIEW);
-	glPushMatrix();
-	glTranslatef(-(uip.poly_model.AABB[XMIN]+uip.poly_model.AABB[XMAX])/2.0,
-					-(uip.poly_model.AABB[YMIN]+uip.poly_model.AABB[YMAX])/2.0, 
-					-(uip.poly_model.AABB[ZMIN]+uip.poly_model.AABB[ZMAX])/2.0);
+		int i;
+		ExtendedVertex* ptr_ev;
 
-	draw_axes(100.0);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glEnable(GL_DEPTH_TEST);
 
-	if (uip.composite_object_read == 1) {
-		
-		if (uip.bounding_box_display_mode)
-			draw_AABB(uip.poly_model.AABB);
+		glMatrixMode(GL_MODELVIEW);
+		glPushMatrix();
+		glTranslatef(-(uip.poly_model.AABB[XMIN] + uip.poly_model.AABB[XMAX]) / 2.0,
+			-(uip.poly_model.AABB[YMIN] + uip.poly_model.AABB[YMAX]) / 2.0,
+			-(uip.poly_model.AABB[ZMIN] + uip.poly_model.AABB[ZMAX]) / 2.0);
 
-		/* suffering memory problem for the entire model
-		glBindBuffer(GL_ARRAY_BUFFER, buf_obj);
-		glColor3f(1.0, 0.7, 0.1);
- 		glDrawArrays(GL_TRIANGLES, 0, 3*uip.poly_model.n_triangles);
-		*/
-		 	
-		// use an old way of drawing
-		glColor3f(1.0, 0.7, 0.1);
+		draw_axes(100.0);
 
-		ptr_ev = uip.poly_model.extended_vertices;
-		glBegin(GL_TRIANGLES);
-	 	for (i = 0; i < uip.poly_model.n_triangles; i++) {
-	 		//glNormal3fv(ptr_ev->normal);  
-			glVertex3fv(ptr_ev->vertex); 
-			ptr_ev++;
+		if (uip.composite_object_read == 1) {
 
-	 		//glNormal3fv(ptr_ev->normal);  
-			glVertex3fv(ptr_ev->vertex); 
-			ptr_ev++;
+			if (uip.bounding_box_display_mode)
+				draw_AABB(uip.poly_model.AABB);
 
-	 		//glNormal3fv(ptr_ev->normal);  
-			glVertex3fv(ptr_ev->vertex); 
-			ptr_ev++;
+			/* suffering memory problem for the entire model
+			glBindBuffer(GL_ARRAY_BUFFER, buf_obj);
+			glColor3f(1.0, 0.7, 0.1);
+			glDrawArrays(GL_TRIANGLES, 0, 3*uip.poly_model.n_triangles);
+			*/
+
+			// use an old way of drawing
+			glColor3f(1.0, 0.7, 0.1);
+
+			ptr_ev = uip.poly_model.extended_vertices;
+			glBegin(GL_TRIANGLES);
+			for (i = 0; i < uip.poly_model.n_triangles; i++) {
+				//glNormal3fv(ptr_ev->normal);  
+				glVertex3fv(ptr_ev->vertex);
+				ptr_ev++;
+
+				//glNormal3fv(ptr_ev->normal);  
+				glVertex3fv(ptr_ev->vertex);
+				ptr_ev++;
+
+				//glNormal3fv(ptr_ev->normal);  
+				glVertex3fv(ptr_ev->vertex);
+				ptr_ev++;
+			}
+			glEnd();
+			// use an old way of drawing
 		}
-		glEnd();
-		// use an old way of drawing
+
+		glPopMatrix();
 	}
 
-	glPopMatrix();
 	glutSwapBuffers(); 
 }
 
@@ -308,6 +366,37 @@ void keyboard(unsigned char key, int x, int y) {
 		case 't':
 			timerRunning = !timerRunning;
 			break;
+#if HIT_AND_NODE_COUNT_DEBUG
+		case 'v':
+			visualize_kdtree_mode = (visualize_kdtree_mode + 1) % 7;
+			g_camera_dirty = true;
+			printf("Kd-tree visualization mode: ");
+			switch (visualize_kdtree_mode) {
+				case 0:
+					printf("max_node_visits\n");
+					break;
+				case 1:
+					printf("max_leaf_visits\n");
+					break;
+				case 2:
+					printf("max_intersection_tests\n");
+					break;
+				case 3:
+					printf("max_hits_found\n");
+					break;
+				case 4:
+					printf("max_blend_ops\n");
+					break;
+				case 5:
+					printf("max_max_sort_size\n");
+					break;
+				case 6:
+					printf("OFF\n");
+					break;
+			}
+			glutPostRedisplay();
+			break;
+#endif
 		case 'q':
 			exit(0);
 			break;
@@ -474,8 +563,15 @@ void clean_up_system(void) {
 	// free memory and etc
 	cleanupCudaResources();
 	glutDestroyWindow(uip.main_window_ID);
-	//cudaEventDestroy(start_ev);
-	//cudaEventDestroy(stop_ev);
+
+	if (h_debug_buffer1_main != nullptr) {
+		delete[] h_debug_buffer1_main;
+		h_debug_buffer1_main = nullptr;
+	}
+	if (h_debug_buffer2_main != nullptr) {
+		delete[] h_debug_buffer2_main;
+		h_debug_buffer2_main = nullptr;
+	}
 }
 
 
@@ -1750,7 +1846,7 @@ void main_menu_action(int selection) {
 		break;
 	case 800:
 		print_current_time("all_build_start\n");
-		for (int i = 0; i < 6; i++) {
+		for (int i = 0; i < 5; i++) {
 			subMenuHandler(submenu[i]);
 
 			build_kd_tree_for_composite_object2(&uip.poly_model, kdtree_build_path);
@@ -1899,6 +1995,9 @@ void idle() {
 		//renderGaussianWithCuda(uip.poly_model, g_gaussians, camera, g_render_width, g_render_height, d_pbo_ptr, g_cuda_rendering_done);
 
 		g_fps = renderGaussianWithCudaFrame(camera, g_render_width, g_render_height, d_pbo_ptr
+#if HIT_AND_NODE_COUNT_DEBUG
+			, h_debug_buffer1_main, h_debug_buffer2_main
+#endif
 #if USE_STACK > SHORT_STACK
 			, g_d_global_stack, g_d_global_stack_pointers
 #endif
@@ -1907,6 +2006,23 @@ void idle() {
 		cudaGraphicsUnmapResources(1, &pbo_cuda_resource, 0);
 
 		g_cuda_rendering_done = true;
+
+#if HIT_AND_NODE_COUNT_DEBUG
+		// 최댓값을 계산하여 전역 변수에 저장
+		memset(max_debug_values, 0, sizeof(max_debug_values));
+		if (h_debug_buffer1_main != nullptr) {
+			for (int i = 0; i < g_render_width * g_render_height; i++) {
+				max_debug_values[0] = (max_debug_values[0] > (int)h_debug_buffer1_main[i].x) ? max_debug_values[0] : (int)h_debug_buffer1_main[i].x;
+				max_debug_values[1] = (max_debug_values[1] > (int)h_debug_buffer1_main[i].y) ? max_debug_values[1] : (int)h_debug_buffer1_main[i].y;
+				max_debug_values[2] = (max_debug_values[2] > (int)h_debug_buffer1_main[i].z) ? max_debug_values[2] : (int)h_debug_buffer1_main[i].z;
+			}
+			for (int i = 0; i < g_render_width * g_render_height; i++) {
+				max_debug_values[3] = (max_debug_values[3] > (int)h_debug_buffer2_main[i].x) ? max_debug_values[3] : (int)h_debug_buffer2_main[i].x;
+				max_debug_values[4] = (max_debug_values[4] > (int)h_debug_buffer2_main[i].y) ? max_debug_values[4] : (int)h_debug_buffer2_main[i].y;
+				max_debug_values[5] = (max_debug_values[5] > (int)h_debug_buffer2_main[i].z) ? max_debug_values[5] : (int)h_debug_buffer2_main[i].z;
+			}
+		}
+#endif
 #endif
 
 		// PBO의 내용을 텍스처로 복사

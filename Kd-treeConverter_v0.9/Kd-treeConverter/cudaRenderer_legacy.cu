@@ -1951,7 +1951,7 @@ int renderGaussianWithCudaFrame(const Camera& camera, int width, int height, flo
 
     if (h_pixel_count > 0) {
         float avg_hits = (float)h_total_hits / h_pixel_count;
-        float avg_nodes = (float)h_total_nodes / h_pixel_count; // ★ 평균 계산
+        float avg_nodes = (float)h_total_nodes / h_pixel_count; // 평균 계산
         printf("Avg Hits/Pixel: %.2f (Max: %d) | Avg Nodes/Pixel: %.2f (Max: %d) | Rendered Pixels: %d\n",
             avg_hits, h_max_hit, avg_nodes, h_max_nodes, h_pixel_count);
     }

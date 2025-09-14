@@ -185,6 +185,7 @@
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <CodeGeneration>compute_89,sm_89</CodeGeneration>
       <GPUDebugInfo>false</GPUDebugInfo>
+      <AdditionalOptions>-maxrregcount=0 %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>

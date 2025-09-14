@@ -644,7 +644,9 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pTriangleInfo
 
 	// Calculate cost function (in case of no partition)
 	bestCost.cost = double(triangleSize) * v_KD_TREE_ISECT_COST;
+#if FORCE_SPLIT_THRESHOLD
 	if (triangleSize > FORCE_SPLIT_THRESHOLD) bestCost.cost = DBL_MAX;
+#endif
 
 	// Calculate cost function (in case of trying to partition)
 	if (inNodeLevel < v_KD_TREE_MAX_LEVEL && triangleSize > v_KD_TREE_MIN_TRIANGLE) {
