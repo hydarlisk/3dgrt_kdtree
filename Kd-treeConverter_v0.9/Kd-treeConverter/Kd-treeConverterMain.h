@@ -43,3 +43,4 @@ typedef struct _UIParameters {
 } UIParameters;
 
 void append_mesh_geom_to_composite_object(CompositeObject* c_object, MeshGeom* mesh_geom, int mat_type, float* AABB);
+void set_kd_tree_leaf_node();

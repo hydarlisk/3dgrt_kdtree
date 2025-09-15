@@ -11,6 +11,8 @@
 #include <string.h>
 #include <limits.h>
 
+#include <stack>
+
 #include "Kd-treeConverter.h"
 #include "Kd-treeConstructor.h"
 #include "MyMathUtility.h"
@@ -874,5 +876,187 @@ void build_TriAccList(CompositeObject *poly_model, TriAccel*& pTriAcc)
 		//printf("k(%d): %u\n", i, pTriAcc[i].k);
 	}
 	//printf("k(%d): %u\n", 315728, pTriAcc[315728].k);
-	printf("build_TriAccList triacc:%d\n", sizeof(pTriAcc)/sizeof(*pTriAcc));
+}
+
+//from JJH
+std::vector<BoundingBox> extract_leaves_from_kd_tree()
+{
+	KdTreeNode* node = &g_pKdTree_Node_Array[0];
+
+	struct KdStack {
+		KdTreeNode* node;
+		BoundingBox box;
+	};
+
+	std::stack<KdStack> kd_stack;
+	kd_stack.push({ node, g_root_AABB });
+
+	std::vector<BoundingBox> leaf_node_boxes;
+	BoundingBox box{};
+
+	while (!kd_stack.empty()) {
+		KdStack data = kd_stack.top();
+		kd_stack.pop();
+		node = data.node;
+		box = data.box;
+		if (IS_LEAF(*node)) {
+			leaf_node_boxes.push_back(box);
+		}
+		else {
+			const float node_split = SPLIT_POS(*node);
+			const uint32_t dim = SPLIT_AXIS(*node);
+
+			BoundingBox right_box = box;
+			right_box.min[dim] = node_split;
+			kd_stack.push({ &g_pKdTree_Node_Array[SECOND_CHILD_OFFSET(*node)], right_box });
+
+			BoundingBox left_box = box;
+			left_box.max[dim] = node_split;
+			kd_stack.push({ &g_pKdTree_Node_Array[FIRST_CHILD_OFFSET(*node)], left_box });
+		}
+	}
+
+	return leaf_node_boxes;
+}
+
+//std::vector<LeafNodeInfo> extract_all_leaf_data(CompositeObject* c_object) {
+//	KdTreeNode* node = &g_pKdTree_Node_Array[0];
+//
+//	struct KdStack {
+//		KdTreeNode* node;
+//		BoundingBox box;
+//	};
+//
+//	std::stack<KdStack> kd_stack;
+//	kd_stack.push({ node, g_root_AABB });
+//
+//	// 반환할 데이터 타입 변경
+//	std::vector<LeafNodeInfo> all_leaf_info;
+//	BoundingBox box{};
+//
+//	while (!kd_stack.empty()) {
+//		KdStack data = kd_stack.top();
+//		kd_stack.pop();
+//		node = data.node;
+//		box = data.box;
+//
+//		if (IS_LEAF(*node)) {
+//			LeafNodeInfo current_leaf;
+//			current_leaf.aabb = box; // 1. 바운딩 박스 저장
+//
+//			// 리프 노드에서 삼각형 오프셋과 개수 가져오기
+//			unsigned int offset = OBJECTLIST_OFFSET(*node);
+//			unsigned int count = OBJECT_SIZE(*node) + offset;
+//
+//			// 전역 오프셋 리스트에서 삼각형 인덱스를 가져와 저장
+//			current_leaf.triangle_indices.reserve(count); // 메모리 미리 할당
+//			for (; offset < count; offset++) {
+//				current_leaf.triangle_indices.push_back(c_object->kd_tree->tri_offset_list[offset]);
+//			}
+//
+//			all_leaf_info.push_back(current_leaf);
+//			if (OBJECT_SIZE(*node) > 1000) {
+//				printf("%dth node size: %d\n", all_leaf_info.size(), OBJECT_SIZE(*node));
+//			}
+//			// ------------------------------------
+//		}
+//		else {
+//			const float node_split = SPLIT_POS(*node);
+//			const uint32_t dim = SPLIT_AXIS(*node);
+//
+//			BoundingBox right_box = box;
+//			right_box.min[dim] = node_split;
+//			kd_stack.push({ &g_pKdTree_Node_Array[SECOND_CHILD_OFFSET(*node)], right_box });
+//
+//			BoundingBox left_box = box;
+//			left_box.max[dim] = node_split;
+//			kd_stack.push({ &g_pKdTree_Node_Array[FIRST_CHILD_OFFSET(*node)], left_box });
+//		}
+//	}
+//
+//	return all_leaf_info;
+//}
+
+std::vector<LeafNodeInfo> extract_all_leaf_data(CompositeObject* c_object, int& largest_leaf_index) {
+	// Kd-tree가 없으면 빈 벡터 반환
+	if (c_object == nullptr || c_object->kd_tree == nullptr || c_object->kd_tree->tree == nullptr) {
+		return {};
+	}
+
+	// 전역 변수 대신 c_object에서 직접 데이터 가져오기
+	KdTreeNode* root_node = &c_object->kd_tree->tree[0];
+	unsigned int* tri_offset_list = c_object->kd_tree->tri_offset_list;
+
+	struct KdStack {
+		KdTreeNode* node;
+		BoundingBox box;
+	};
+
+	BoundingBox root_bbox;
+	root_bbox.min[0] = c_object->AABB[XMIN];
+	root_bbox.max[0] = c_object->AABB[XMAX];
+	root_bbox.min[1] = c_object->AABB[YMIN];
+	root_bbox.max[1] = c_object->AABB[YMAX];
+	root_bbox.min[2] = c_object->AABB[ZMIN];
+	root_bbox.max[2] = c_object->AABB[ZMAX];
+
+	std::stack<KdStack> kd_stack;
+	kd_stack.push({ root_node, root_bbox });
+
+	std::vector<LeafNodeInfo> all_leaf_info;
+
+	unsigned int max_triangles_found = 0;
+	int largest_leaf_idx = -1;
+
+	while (!kd_stack.empty()) {
+		KdStack data = kd_stack.top();
+		kd_stack.pop();
+		KdTreeNode* current_node = data.node;
+		BoundingBox current_box = data.box;
+
+		if (IS_LEAF(*current_node)) {
+			LeafNodeInfo leaf;
+			leaf.aabb = current_box;
+
+			unsigned int offset = OBJECTLIST_OFFSET(*current_node);
+			unsigned int num_triangles = OBJECT_SIZE(*current_node);
+
+			// 개수만큼 메모리를 예약
+			if (num_triangles > 0) {
+				leaf.triangle_indices.reserve(num_triangles);
+			}
+
+			// 루프를 돌며 인덱스 추가
+			for (unsigned int i = 0; i < num_triangles; ++i) {
+				leaf.triangle_indices.push_back(tri_offset_list[offset + i]);
+			}
+			// --------------------
+
+			all_leaf_info.push_back(leaf);
+			if (num_triangles > max_triangles_found) {
+				max_triangles_found = num_triangles;
+				largest_leaf_idx = all_leaf_info.size() - 1;
+			}
+		}
+		else {
+			const float node_split = SPLIT_POS(*current_node);
+			const uint32_t dim = SPLIT_AXIS(*current_node);
+
+			// 전역 g_pKdTree_Node_Array 대신 c_object의 tree 포인터 사용
+			BoundingBox right_box = current_box;
+			right_box.min[dim] = node_split;
+			kd_stack.push({ &c_object->kd_tree->tree[SECOND_CHILD_OFFSET(*current_node)], right_box });
+
+			BoundingBox left_box = current_box;
+			left_box.max[dim] = node_split;
+			kd_stack.push({ &c_object->kd_tree->tree[FIRST_CHILD_OFFSET(*current_node)], left_box });
+		}
+	}
+	largest_leaf_index = largest_leaf_idx;
+	if (largest_leaf_index != -1) {
+		printf("[INFO] Largest leaf found at index %d with %u triangles.\n",
+			largest_leaf_index, max_triangles_found);
+	}
+
+	return all_leaf_info;
 }

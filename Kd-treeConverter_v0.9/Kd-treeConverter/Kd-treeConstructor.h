@@ -107,3 +107,11 @@ void build_kd_tree_recursive(BoundEdge *bEdge, const TriangleList *pTriangleInfo
                              BoundingBox &bbox, unsigned int inNodeLevel, KdTreeNode *inNode);
 
 void build_TriAccList(CompositeObject *poly_model, TriAccel*& pTriAcc);
+
+//shyun
+struct LeafNodeInfo {
+	BoundingBox aabb;
+	std::vector<unsigned int> triangle_indices;
+};
+std::vector<BoundingBox> extract_leaves_from_kd_tree();
+std::vector<LeafNodeInfo> extract_all_leaf_data(CompositeObject* c_object, int& largest_leaf_index);

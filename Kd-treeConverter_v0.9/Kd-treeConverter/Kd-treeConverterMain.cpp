@@ -50,7 +50,7 @@ int g_render_height = RENDERING_HEIGHT;
 bool g_cuda_rendering_done = false;
 bool g_cuda_interactive_mode = false; // CUDA 인터랙티브 모드 활성화 플래그
 bool g_camera_dirty = true;           // 카메라가 변경되었는지 확인하는 플래그
-std::vector<Gaussian> g_gaussians; // 전역 변수로 가우시안 데이터를 저장할 벡터 선언
+std::vector<Gaussian> g_gaussians;	  // 전역 변수로 가우시안 데이터를 저장할 벡터
 
 float g_fps = 0.0f; // FPS를 저장할 전역 변수
 
@@ -69,6 +69,14 @@ int visualize_kdtree_mode = 6;
 float3* h_debug_buffer1_main = nullptr;
 float3* h_debug_buffer2_main = nullptr;
 int max_debug_values[6] = { 0, };
+
+ExtendedVertex* original_vertices = nullptr;
+int num_original_vertices = 0;
+std::vector<LeafNodeInfo> leaf_nodes; // 모든 리프 노드 정보
+int selected_leaf_index = -1;       // 현재 선택된 리프 노드 인덱스 (-1은 전체 보기)
+ExtendedVertex* leaf_display_vertices = nullptr; // 리프 시각화용 임시 정점 버퍼
+BoundingBox original_model_AABB;
+int largest_leaf_index = -1; // 가장 큰 리프 노드의 인덱스를 저장
 
 void setup_interop_resources() {
 	// PBO 생성 (기존 코드와 유사)
@@ -169,6 +177,7 @@ void load_poly_model_into_OpenGL(void) {
 }
  
 void display(void) {
+	// kd-tree debug 인자에 따른 hitmap
 	if (visualize_kdtree_mode < 6 && h_debug_buffer1_main != nullptr && h_debug_buffer2_main != nullptr) {
 		//printf("[DEBUG] Visualizing heatmap. Max node visits value: %d\n", max_debug_values[0]);
 
@@ -234,7 +243,7 @@ void display(void) {
 		delete[] color_buffer; // 메모리 해제
 		draw_fps(); // FPS
 	}
-	// CUDA 렌더링이 완료되었으면 프레임버퍼를 화면에 그립니다.
+	// CUDA 렌더링 완료 => 프레임버퍼를 화면에 그림
 	else if (g_cuda_interactive_mode || g_cuda_rendering_done) {
 		//glClear(GL_COLOR_BUFFER_BIT);
 		glDisable(GL_LIGHTING);
@@ -366,6 +375,59 @@ void keyboard(unsigned char key, int x, int y) {
 		case 't':
 			timerRunning = !timerRunning;
 			break;
+#if LEAF_NODE_DEBUG
+		case 'm':
+			if (largest_leaf_index == -1) {
+				printf("Largest leaf index not found. Please extract leaf data first.\n");
+				break;
+			}
+			selected_leaf_index = largest_leaf_index;
+			set_kd_tree_leaf_node();
+			g_camera_dirty = true;
+			glutPostRedisplay();
+			break;
+		case'i':
+			if (leaf_nodes.empty()) {
+				printf("Leaf node data is not extracted yet.\n");
+				break;
+			}
+			printf("input node index: ");
+			fscanf(stdin, "%d", &selected_leaf_index);
+			set_kd_tree_leaf_node();
+			g_camera_dirty = true; // 뷰가 변경되었으므로 다시 그리도록 플래그 설정
+			glutPostRedisplay();
+			break;
+		case 'j':
+			if (leaf_nodes.empty()) {
+				printf("Leaf node data is not extracted yet.\n");
+				break;
+			}
+			selected_leaf_index--;
+			set_kd_tree_leaf_node();
+			g_camera_dirty = true; // 뷰가 변경되었으므로 다시 그리도록 플래그 설정
+			glutPostRedisplay();
+			break;
+		case 'k':
+			if (leaf_nodes.empty()) {
+				printf("Leaf node data is not extracted yet.\n");
+				break;
+			}
+			selected_leaf_index = -1;
+			set_kd_tree_leaf_node();
+			g_camera_dirty = true; // 뷰가 변경되었으므로 다시 그리도록 플래그 설정
+			glutPostRedisplay();
+			break;
+		case 'l':
+			if (leaf_nodes.empty()) {
+				printf("Leaf node data is not extracted yet.\n");
+				break;
+			}
+			selected_leaf_index++;
+			set_kd_tree_leaf_node();
+			g_camera_dirty = true; // 뷰가 변경되었으므로 다시 그리도록 플래그 설정
+			glutPostRedisplay();
+			break;
+#endif
 #if HIT_AND_NODE_COUNT_DEBUG
 		case 'v':
 			visualize_kdtree_mode = (visualize_kdtree_mode + 1) % 7;
@@ -563,7 +625,7 @@ void clean_up_system(void) {
 	// free memory and etc
 	cleanupCudaResources();
 	glutDestroyWindow(uip.main_window_ID);
-
+#if HIT_AND_NODE_COUNT_DEBUG
 	if (h_debug_buffer1_main != nullptr) {
 		delete[] h_debug_buffer1_main;
 		h_debug_buffer1_main = nullptr;
@@ -572,6 +634,17 @@ void clean_up_system(void) {
 		delete[] h_debug_buffer2_main;
 		h_debug_buffer2_main = nullptr;
 	}
+#endif
+#if LEAF_NODE_DEBUG
+	if (original_vertices != nullptr) {
+		delete[] original_vertices;
+		original_vertices = nullptr;
+	}
+	if (leaf_display_vertices != nullptr) {
+		delete[] leaf_display_vertices;
+		leaf_display_vertices = nullptr;
+	}
+#endif
 }
 
 
@@ -588,6 +661,75 @@ typedef enum _SL_KDT_CONFIG_command_ID {
 } SL_KDT_CONFIG_command_ID;
 
 //shyun
+void set_kd_tree_leaf_node() {
+	if (selected_leaf_index >= (int)leaf_nodes.size()) {
+		selected_leaf_index = -1; // -1은 전체 보기로 돌아감을 의미
+	}
+	if (selected_leaf_index < -1) {
+		selected_leaf_index = (int)leaf_nodes.size() - 1;
+	}
+
+	//  이전에 사용한 임시 버퍼가 있다면 메모리를 해제합니다.
+	if (leaf_display_vertices != nullptr) {
+		delete[] leaf_display_vertices;
+		leaf_display_vertices = nullptr;
+	}
+
+	//  '전체 보기' 모드 처리
+	if (selected_leaf_index == -1) {
+		printf("Displaying all %d triangles.\n", num_original_vertices / 3);
+		uip.poly_model.extended_vertices = original_vertices;
+		uip.poly_model.n_triangles = num_original_vertices / 3;
+		uip.poly_model.AABB[XMIN] = original_model_AABB.min[0];
+		uip.poly_model.AABB[YMIN] = original_model_AABB.min[1];
+		uip.poly_model.AABB[ZMIN] = original_model_AABB.min[2];
+		uip.poly_model.AABB[XMAX] = original_model_AABB.max[0];
+		uip.poly_model.AABB[YMAX] = original_model_AABB.max[1];
+		uip.poly_model.AABB[ZMAX] = original_model_AABB.max[2];
+	}
+	//  '단일 리프 노드 보기' 모드 처리
+	else {
+		const auto& selected_leaf = leaf_nodes[selected_leaf_index];
+		const auto& indices = selected_leaf.triangle_indices;
+
+		printf("Displaying leaf %d / %zu (%zu triangles)\n",
+			selected_leaf_index, leaf_nodes.size(), indices.size());
+
+		uip.poly_model.AABB[XMIN] = selected_leaf.aabb.min[0];
+		uip.poly_model.AABB[YMIN] = selected_leaf.aabb.min[1];
+		uip.poly_model.AABB[ZMIN] = selected_leaf.aabb.min[2];
+		uip.poly_model.AABB[XMAX] = selected_leaf.aabb.max[0];
+		uip.poly_model.AABB[YMAX] = selected_leaf.aabb.max[1];
+		uip.poly_model.AABB[ZMAX] = selected_leaf.aabb.max[2];
+
+		if (!indices.empty()) {
+			// 선택된 리프의 삼각형들을 담을 임시 버퍼를 새로 할당합니다.
+			int num_leaf_vertices = indices.size() * 3;
+			leaf_display_vertices = new ExtendedVertex[num_leaf_vertices];
+
+			// 원본 정점 데이터에서 해당 삼각형들만 임시 버퍼로 복사합니다.
+			for (size_t i = 0; i < indices.size(); ++i) {
+				unsigned int tri_idx = indices[i];
+				// tri_idx번째 삼각형(정점 3개)을 통째로 복사
+				memcpy(&leaf_display_vertices[i * 3], &original_vertices[tri_idx * 3], sizeof(ExtendedVertex) * 3);
+			}
+
+			// display() 함수가 임시 버퍼를 그리도록 포인터를 교체합니다.
+			uip.poly_model.extended_vertices = leaf_display_vertices;
+			uip.poly_model.n_triangles = indices.size();
+		}
+		else {
+			// 빈 리프 노드일 경우, 그릴 삼각형이 없음을 명시합니다.
+			uip.poly_model.n_triangles = 0;
+		}
+	}
+
+	printf("AABB: X [%f, %f] Y [%f, %f] Z [%f, %f]\n",
+		uip.poly_model.AABB[XMIN], uip.poly_model.AABB[XMAX],
+		uip.poly_model.AABB[YMIN], uip.poly_model.AABB[YMAX],
+		uip.poly_model.AABB[ZMIN], uip.poly_model.AABB[ZMAX]);
+}
+
 void printKdTreeLeafNodeInfo() {
 	if (uip.poly_model.kd_tree) {
 		printf("\n--- Analyzing triangles per leaf node ---\n");
@@ -770,7 +912,7 @@ bool loadGaussiansFromPly(const char* filename, std::vector<Gaussian>& gaussians
 
 float kernelScale_final(float density, float minResponse, float kernel_degree) {
 	// 여기서는 생략하고 직접 min_response를 사용합니다.
-	const float responseModulation = (0 & (1 << 0)) != 0 ? density : 1.0f;
+	const float responseModulation = (1 & (1 << 0)) != 0 ? density : 1.0f;
 	const float min_response = fminf(minResponse / responseModulation, 0.97f);
 
 	// kernelDegree < 0 (Bump Kernel)
@@ -856,8 +998,8 @@ void create_composite_object_from_gaussians(
 
 #if USE_KERNEL_SCALE
 		//if (sigma / alpha_min > 1.0f)
-			// kernelScale_final 함수를 호출하여 k_iso 계산
-			k_iso = kernelScale_final(sigma, alpha_min, kernel_degree);
+		// kernelScale_final 함수를 호출하여 k_iso 계산
+		k_iso = kernelScale_final(sigma, alpha_min, kernel_degree);
 		//printf("%d, k_iso: %f\n", i, k_iso);
 		//k_iso = fminf(k_iso, 3.0f);
 
@@ -973,6 +1115,27 @@ void create_composite_object_from_gaussians(
 	uip.composite_object_read = 1;
 	//printf("\nSuccessfully created CompositeObject with %d triangles from %ld Gaussians.\n\n", uip.poly_model.n_triangles, num_gaussians);
 	printf("\nSuccessfully created CompositeObject with %d triangles from %ld Gaussians.\n\n", uip.poly_model.n_triangles, num_gaussians - (cnt_sigma + cnt_scale));
+
+#if LEAF_NODE_DEBUG
+	if (original_vertices != nullptr) {
+		delete[] original_vertices;
+		original_vertices = nullptr;
+	}
+	num_original_vertices = uip.poly_model.n_triangles * 3;
+	if (num_original_vertices > 0) {
+		original_vertices = new ExtendedVertex[num_original_vertices];
+
+		size_t total_bytes = num_original_vertices * sizeof(ExtendedVertex);
+		memcpy(original_vertices, uip.poly_model.extended_vertices, total_bytes);
+
+		original_model_AABB.min[0] = uip.poly_model.AABB[XMIN];
+		original_model_AABB.min[1] = uip.poly_model.AABB[YMIN];
+		original_model_AABB.min[2] = uip.poly_model.AABB[ZMIN];
+		original_model_AABB.max[0] = uip.poly_model.AABB[XMAX];
+		original_model_AABB.max[1] = uip.poly_model.AABB[YMAX];
+		original_model_AABB.max[2] = uip.poly_model.AABB[ZMAX];
+	}
+#endif
 }
 
 // 축-각도 표현을 쿼터니언으로 변환
@@ -1232,74 +1395,6 @@ int read_OBJ_file(const char* obj_filename)
 
 	return 1;
 }
-/*bool load_obj_to_composite_object(const char* filename, CompositeObject* c_object) {
-	std::ifstream infile(filename);
-	if (!infile.is_open()) {
-		fprintf(stderr, "Failed to open OBJ file: %s\n", filename);
-		return false;
-	}
-
-	std::vector<float> vertices;
-	std::vector<unsigned int> indices;
-	std::string line;
-	while (std::getline(infile, line)) {
-		std::istringstream iss(line);
-		std::string prefix;
-		iss >> prefix;
-		if (prefix == "v") {
-			float x, y, z;
-			iss >> x >> y >> z;
-			vertices.push_back(x);
-			vertices.push_back(y);
-			vertices.push_back(z);
-		}
-		else if (prefix == "f") {
-			unsigned int i1, i2, i3;
-			iss >> i1 >> i2 >> i3;
-			// .obj는 1-based index이므로 -1
-			indices.push_back(i1 - 1);
-			indices.push_back(i2 - 1);
-			indices.push_back(i3 - 1);
-		}
-	}
-	infile.close();
-
-	size_t n_triangles = indices.size() / 3;
-	c_object->n_triangles = static_cast<int>(n_triangles);
-	c_object->extended_vertices = new ExtendedVertex[3 * n_triangles];
-
-	// AABB 초기화
-	for (int i = 0; i < 3; ++i) {
-		c_object->AABB[2 * i + 0] = FLT_MAX;
-		c_object->AABB[2 * i + 1] = -FLT_MAX;
-	}
-
-	for (size_t t = 0; t < n_triangles; ++t) {
-		for (int k = 0; k < 3; ++k) {
-			unsigned int vidx = indices[3 * t + k];
-			float* pos = &vertices[3 * vidx];
-
-			for (int i = 0; i < 3; ++i) {
-				c_object->AABB[2 * i + 0] = fmin(c_object->AABB[2 * i + 0], pos[i]);
-				c_object->AABB[2 * i + 1] = fmax(c_object->AABB[2 * i + 1], pos[i]);
-			}
-
-			ExtendedVertex& ev = c_object->extended_vertices[3 * t + k];
-			ev.vertex[0] = pos[0];
-			ev.vertex[1] = pos[1];
-			ev.vertex[2] = pos[2];
-			ev.normal[0] = 0.0f;  // 필요시 노멀 계산 가능, gaussian index 넣어야할듯
-			ev.normal[1] = 0.0f;
-			ev.normal[2] = 0.0f;
-			ev.material_ID = 0;
-		}
-	}
-	printf("AABB: X [%f, %f] Y [%f, %f] Z [%f, %f]\n",
-		c_object->AABB[XMIN], c_object->AABB[XMAX],
-		c_object->AABB[YMIN], c_object->AABB[YMAX],
-		c_object->AABB[ZMIN], c_object->AABB[ZMAX]);
-	return true;
-}*/
 
 bool save_composite_object_to_obj(const CompositeObject& object, const char* filename) {
 	// 파일 스트림 열기
@@ -1691,7 +1786,6 @@ void subMenuHandler(int value) {
 	load_poly_model_into_OpenGL();
 	g_cuda_rendering_done = false;
 	glutPostRedisplay();
-	printf("draw DONE\n");
 }
 
 void main_menu_action(int selection) {
@@ -1729,7 +1823,7 @@ void main_menu_action(int selection) {
 		glutPostRedisplay();
 		break;
 
-	case 200: {
+	case 200: { // obj loader
 		render_gaussian = true;
 		const char* file_path = MODEL_PATH;  // obj 경로
 		if (!read_OBJ_file(file_path)) {
@@ -1749,7 +1843,7 @@ void main_menu_action(int selection) {
 		printf("draw DONE\n");
 		break;
 	}
-	case 300:
+	case 300: // construct kd-tree
 		print_current_time("kdtree build start");
 
 		build_kd_tree_for_composite_object(&uip.poly_model);
@@ -1760,10 +1854,10 @@ void main_menu_action(int selection) {
 			//printf("tri_accel_list size: %d\n", sizeof(uip.poly_model.kd_tree->tri_accel_list) / sizeof(*(uip.poly_model.kd_tree->tri_accel_list)));
 		}
 		print_current_time("kdtree build end");
-
+		leaf_nodes = extract_all_leaf_data(&uip.poly_model, largest_leaf_index);
 		printKdTreeLeafNodeInfo();
 		break;
-	case 400:
+	case 400: // dump kd-tree
 		strcpy(full_kd_tree_file_name, uip.kd_tree_dump_dir);
 		strcat(full_kd_tree_file_name, "/");
 		strcat(full_kd_tree_file_name, uip.kd_tree_filename);
@@ -1785,7 +1879,7 @@ void main_menu_action(int selection) {
 				uip.kd_tree_dump_format, full_i_geometry_file_name);
 		}
 		break;
-	case 500:
+	case 500: // load kd-tree
 		strcpy(full_kd_tree_file_name, uip.kd_tree_dump_dir);
 		printf("uip.kd_tree_dump_dir:%s\n", uip.kd_tree_dump_dir);
 		strcat(full_kd_tree_file_name, "/");
@@ -1799,6 +1893,8 @@ void main_menu_action(int selection) {
 		read_kd_tree_from_file(&uip.poly_model, full_kd_tree_file_name, uip.kd_tree_dump_format);
 
 		printKdTreeLeafNodeInfo();
+
+		leaf_nodes = extract_all_leaf_data(&uip.poly_model, largest_leaf_index);
 
 		glutPostRedisplay();
 		break;
@@ -2000,6 +2096,9 @@ void idle() {
 #endif
 #if USE_STACK > SHORT_STACK
 			, g_d_global_stack, g_d_global_stack_pointers
+#endif
+#if LEAF_NODE_DEBUG
+			, uip.poly_model
 #endif
 		);
 		// CUDA → OpenGL 동기화 해제

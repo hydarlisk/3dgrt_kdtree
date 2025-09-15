@@ -14,7 +14,7 @@
 #define MIN_TRI 32
 #define EMTPY_BONUS 0.9
 
-#define FORCE_SPLIT_THRESHOLD 0				// kd-tree 강제분할
+#define FORCE_SPLIT_THRESHOLD 64				// kd-tree 강제분할
 
 #define ALPHA_MIN 0.01f
 #define KERNEL_DEGREE 2.0f
@@ -24,11 +24,11 @@
 #define SUPER_SAMPLING false
 
 #define SIGMA_THRESHOLD 0.01f					// sigma(density) 작은 가우시안 제거
-#define ROTATION true							// R(45degree,1,1,1)
+#define ROTATION false							// R(45degree,1,1,1)
 
 #define MAX_HITS 128
 
-#define DIM_X 8
+#define DIM_X 16
 #define DIM_Y 8
 
 #define SHORT_STACK 0
@@ -40,7 +40,7 @@
 #if USE_STACK > HYBRID_STACK
 #define SHORT_STACK_DEPTH 0
 #else
-#define SHORT_STACK_DEPTH 12					// for kernel sh.mem
+#define SHORT_STACK_DEPTH 10					// for kernel sh.mem
 #endif
 
 #define MAX_GLOBAL_STACK_DEPTH 64
@@ -51,8 +51,10 @@
 
 //Debug Flags=====================================================================================
 #define DEBUG_SIGMA_HISTOGRAM 100				// gaussian의 sigma들의 histogram 출력
-#define WARP_OCCUPANCY true						// warp occupancy 출력
-#define HIT_AND_NODE_COUNT_DEBUG false			// Ray 마다 hitcount, node count, ... 확인
+#define WARP_OCCUPANCY false						// warp occupancy 출력
+#define HIT_AND_NODE_COUNT_DEBUG true			// Ray 마다 hitcount, node count, ... 확인
+												// kd-tree hitmap 확인 가능
+#define LEAF_NODE_DEBUG false					// kd-tree leaf node 렌더링
 
 #define TID_X (blockDim.x * blockIdx.x + threadIdx.x)
 #define TID_Y (blockDim.y * blockIdx.y + threadIdx.y)
@@ -63,8 +65,6 @@
 
 #define RENDERING_WIDTH MAIN_WINDOW_WIDTH
 #define RENDERING_HEIGHT MAIN_WINDOW_HEIGHT
-//#define RENDERING_WIDTH 1920
-//#define RENDERING_HEIGHT 1080
  /*
  * List of resolutions
  *

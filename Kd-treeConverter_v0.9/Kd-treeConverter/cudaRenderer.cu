@@ -1710,7 +1710,18 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
 #if USE_STACK > SHORT_STACK
     , cu_traceState* d_global_stack, int* d_global_stack_pointers
 #endif
+#if LEAF_NODE_DEBUG
+    , const CompositeObject& object
+#endif
 ) {
+
+#if LEAF_NODE_DEBUG
+    float3 h_bbox_min = make_float3(object.AABB[XMIN], object.AABB[YMIN], object.AABB[ZMIN]);
+    float3 h_bbox_max = make_float3(object.AABB[XMAX], object.AABB[YMAX], object.AABB[ZMAX]);
+    CUDA_CHECK(cudaMemcpyToSymbol(g_SceneBBoxMin, &h_bbox_min, sizeof(float3)));
+    CUDA_CHECK(cudaMemcpyToSymbol(g_SceneBBoxMax, &h_bbox_max, sizeof(float3)));
+#endif
+
     SceneInfo h_scene_info = { width, height };
     CUDA_CHECK(cudaMemcpyToSymbol(g_SceneInfo, &h_scene_info, sizeof(SceneInfo)));
 

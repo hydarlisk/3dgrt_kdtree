@@ -108,6 +108,9 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
 #if USE_STACK > SHORT_STACK
 	, cu_traceState* d_global_stack, int* d_global_stack_pointers
 #endif
+#if LEAF_NODE_DEBUG
+	, const CompositeObject& object
+#endif
 );
 
 void cleanupCudaResources();
