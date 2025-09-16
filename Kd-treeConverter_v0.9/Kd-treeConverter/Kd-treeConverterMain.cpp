@@ -32,6 +32,8 @@
 #include <iomanip>
 #include <cuda_gl_interop.h>
 #include <vector>
+#include <numeric>
+#include <algorithm>
 #include "test.h"
 #include "cudaRenderer.h"
 //#include "SGRTx2Lib/cuda_math.h"
@@ -53,6 +55,9 @@ bool g_camera_dirty = true;           // 카메라가 변경되었는지 확인�
 std::vector<Gaussian> g_gaussians;	  // 전역 변수로 가우시안 데이터를 저장할 벡터
 
 float g_fps = 0.0f; // FPS를 저장할 전역 변수
+float total_fps = 0.0f;
+int frame_count = 0;
+bool measure_fps_interval = false;
 
 GLuint pbo;
 struct cudaGraphicsResource* pbo_cuda_resource;
@@ -62,14 +67,13 @@ GLuint quad_vao;          // 화면 전체 사각형 VAO
 
 #if USE_STACK > SHORT_STACK
 cu_traceState* g_d_global_stack = nullptr;
-int* g_d_global_stack_pointers = nullptr;
 #endif
 
 int visualize_kdtree_mode = 6;
 float3* h_debug_buffer1_main = nullptr;
 float3* h_debug_buffer2_main = nullptr;
 int max_debug_values[6] = { 0, };
-
+#if LEAF_NODE_DEBUG
 ExtendedVertex* original_vertices = nullptr;
 int num_original_vertices = 0;
 std::vector<LeafNodeInfo> leaf_nodes; // 모든 리프 노드 정보
@@ -77,7 +81,7 @@ int selected_leaf_index = -1;       // 현재 선택된 리프 노드 인덱스 
 ExtendedVertex* leaf_display_vertices = nullptr; // 리프 시각화용 임시 정점 버퍼
 BoundingBox original_model_AABB;
 int largest_leaf_index = -1; // 가장 큰 리프 노드의 인덱스를 저장
-
+#endif
 void setup_interop_resources() {
 	// PBO 생성 (기존 코드와 유사)
 	glGenBuffers(1, &pbo);
@@ -375,6 +379,12 @@ void keyboard(unsigned char key, int x, int y) {
 		case 't':
 			timerRunning = !timerRunning;
 			break;
+		case 'f':
+			measure_fps_interval = !measure_fps_interval;
+			timerRunning = true;
+			total_fps = 0.0f;
+			frame_count = 0;
+			break;
 #if LEAF_NODE_DEBUG
 		case 'm':
 			if (largest_leaf_index == -1) {
@@ -645,6 +655,10 @@ void clean_up_system(void) {
 		leaf_display_vertices = nullptr;
 	}
 #endif
+#if USE_STACK > SHORT_STACK
+	if (g_d_global_stack) cudaFree(g_d_global_stack);
+	g_d_global_stack = nullptr;
+#endif
 }
 
 
@@ -661,6 +675,7 @@ typedef enum _SL_KDT_CONFIG_command_ID {
 } SL_KDT_CONFIG_command_ID;
 
 //shyun
+#if LEAF_NODE_DEBUG
 void set_kd_tree_leaf_node() {
 	if (selected_leaf_index >= (int)leaf_nodes.size()) {
 		selected_leaf_index = -1; // -1은 전체 보기로 돌아감을 의미
@@ -669,7 +684,7 @@ void set_kd_tree_leaf_node() {
 		selected_leaf_index = (int)leaf_nodes.size() - 1;
 	}
 
-	//  이전에 사용한 임시 버퍼가 있다면 메모리를 해제합니다.
+	//  이전에 사용한 임시 버퍼가 있다면 메모리를 해제
 	if (leaf_display_vertices != nullptr) {
 		delete[] leaf_display_vertices;
 		leaf_display_vertices = nullptr;
@@ -703,23 +718,23 @@ void set_kd_tree_leaf_node() {
 		uip.poly_model.AABB[ZMAX] = selected_leaf.aabb.max[2];
 
 		if (!indices.empty()) {
-			// 선택된 리프의 삼각형들을 담을 임시 버퍼를 새로 할당합니다.
+			// 선택된 리프의 삼각형들을 담을 임시 버퍼를 새로 할당
 			int num_leaf_vertices = indices.size() * 3;
 			leaf_display_vertices = new ExtendedVertex[num_leaf_vertices];
 
-			// 원본 정점 데이터에서 해당 삼각형들만 임시 버퍼로 복사합니다.
+			// 원본 정점 데이터에서 해당 삼각형들만 임시 버퍼로 복사
 			for (size_t i = 0; i < indices.size(); ++i) {
 				unsigned int tri_idx = indices[i];
 				// tri_idx번째 삼각형(정점 3개)을 통째로 복사
 				memcpy(&leaf_display_vertices[i * 3], &original_vertices[tri_idx * 3], sizeof(ExtendedVertex) * 3);
 			}
 
-			// display() 함수가 임시 버퍼를 그리도록 포인터를 교체합니다.
+			// display() 함수가 임시 버퍼를 그리도록 포인터를 교체
 			uip.poly_model.extended_vertices = leaf_display_vertices;
 			uip.poly_model.n_triangles = indices.size();
 		}
 		else {
-			// 빈 리프 노드일 경우, 그릴 삼각형이 없음을 명시합니다.
+			// 빈 리프 노드일 경우, 그릴 삼각형이 없음을 명시
 			uip.poly_model.n_triangles = 0;
 		}
 	}
@@ -729,34 +744,79 @@ void set_kd_tree_leaf_node() {
 		uip.poly_model.AABB[YMIN], uip.poly_model.AABB[YMAX],
 		uip.poly_model.AABB[ZMIN], uip.poly_model.AABB[ZMAX]);
 }
+#endif
 
 void printKdTreeLeafNodeInfo() {
-	if (uip.poly_model.kd_tree) {
-		printf("\n--- Analyzing triangles per leaf node ---\n");
-
-		// 1. 통계 변수 초기화
-		unsigned int leaf_count = 0;
-		unsigned int total_triangles = 0;
-		unsigned int max_triangles = 0;
-		// 최솟값을 매우 큰 수로 초기화해야 정확한 비교 가능
-		unsigned int min_triangles = UINT_MAX;
-
-		// 2. 통계 수집 함수 호출 (루트 노드 0부터 시작)
-		collectLeafNodeStats_recursive(uip.poly_model.kd_tree, 0, leaf_count, total_triangles, max_triangles, min_triangles);
-
-		// 3. 최종 결과 계산 및 출력
-		if (leaf_count > 0) {
-			float avg_triangles = (float)total_triangles / leaf_count;
-			printf(" -> Total Leaf Nodes Found: %u\n", leaf_count);
-			printf(" -> Max triangles in a leaf: %u\n", max_triangles);
-			printf(" -> Min triangles in a leaf: %u\n", min_triangles);
-			printf(" -> Avg triangles per leaf: %.2f\n", avg_triangles);
-		}
-		else {
-			printf(" -> No leaf nodes found in the tree.\n");
-		}
-		printf("-------------------------------------------\n\n");
+	if (!uip.poly_model.kd_tree) {
+		printf("Kd-tree is not available.\n");
+		return;
 	}
+
+	printf("\n--- Analyzing triangles per leaf node ---\n");
+
+	// 모든 리프 노드의 삼각형 개수 수집
+	std::vector<unsigned int> triangle_counts;
+	collectTriangleCounts_recursive(uip.poly_model.kd_tree, 0, triangle_counts);
+
+	if (triangle_counts.empty()) {
+		printf(" -> No leaf nodes found in the tree.\n");
+		printf("-------------------------------------------\n\n");
+		return;
+	}
+
+	// 기본 통계 계산
+	const unsigned int leaf_count = triangle_counts.size();
+	const unsigned long long total_triangles = std::accumulate(triangle_counts.begin(), triangle_counts.end(), 0ULL);
+	const auto minmax = std::minmax_element(triangle_counts.begin(), triangle_counts.end());
+	const unsigned int min_val = *minmax.first;
+	const unsigned int max_val = *minmax.second;
+	const float avg_triangles = (float)total_triangles / leaf_count;
+
+	printf(" -> Total Leaf Nodes Found: %u\n", leaf_count);
+	printf(" -> Max triangles in a leaf: %u\n", max_val);
+	printf(" -> Min triangles in a leaf: %u\n", min_val);
+	printf(" -> Avg triangles per leaf: %.2f\n", avg_triangles);
+	printf("\n--- Histogram of Triangles per Leaf ---\n");
+
+	// 히스토그램 생성
+	const int num_bins = 20; // 히스토그램 막대 개수 (조정 가능)
+	std::vector<unsigned int> bins(num_bins, 0);
+
+	// 최소값과 최대값이 같을 경우 bin_size가 0이 되는 것을 방지
+	const float range = static_cast<float>(max_val - min_val);
+	const float bin_size = (range > 0) ? (range / num_bins) : 1.0f;
+
+	for (unsigned int count : triangle_counts) {
+		int bin_index = (range > 0) ? static_cast<int>((count - min_val) / bin_size) : 0;
+		// 마지막 bin에 최대값을 포함시키기 위한 처리
+		if (bin_index >= num_bins) bin_index = num_bins - 1;
+		bins[bin_index]++;
+	}
+
+	// 히스토그램 출력
+	const unsigned int max_bin_count = *std::max_element(bins.begin(), bins.end());
+	const int max_bar_width = 50; // 히스토그램 막대의 최대 너비 (조정 가능)
+
+	for (int i = 0; i < num_bins; ++i) {
+		// 각 bin의 값 범위를 계산
+		unsigned int bin_start = min_val + static_cast<unsigned int>(i * bin_size);
+		unsigned int bin_end = min_val + static_cast<unsigned int>((i + 1) * bin_size) - 1;
+		if (i == num_bins - 1) bin_end = max_val;
+
+
+		printf(" [%5u - %5u] | %-7u | ", bin_start, bin_end, bins[i]);
+
+		int bar_width = 0;
+		if (max_bin_count > 0) {
+			bar_width = static_cast<int>(((float)bins[i] / max_bin_count) * max_bar_width);
+		}
+
+		for (int j = 0; j < bar_width; ++j) {
+			printf("*");
+		}
+		printf("\n");
+	}
+	printf("-------------------------------------------\n\n");
 }
 
 inline void fMyVecNormalize4D(float v[4]) {
@@ -911,7 +971,6 @@ bool loadGaussiansFromPly(const char* filename, std::vector<Gaussian>& gaussians
 }
 
 float kernelScale_final(float density, float minResponse, float kernel_degree) {
-	// 여기서는 생략하고 직접 min_response를 사용합니다.
 	const float responseModulation = (1 & (1 << 0)) != 0 ? density : 1.0f;
 	const float min_response = fminf(minResponse / responseModulation, 0.97f);
 
@@ -979,7 +1038,6 @@ void create_composite_object_from_gaussians(
 
 	// 모든 가우시안에 대해 20면체 생성
 	for (long i = 0; i < num_gaussians; ++i) {
-		//for (long i = 0; i < 1; ++i) {
 		const Gaussian& g = gaussians[i];
 
 		//sigma(density) 계산
@@ -1424,7 +1482,7 @@ bool save_composite_object_to_obj(const CompositeObject& object, const char* fil
 	outFile << "\n"; // 데이터 섹션 구분을 위한 공백 라인
 
 	// 면(face) 데이터 작성
-	// OBJ 파일의 인덱스는 1부터 시작하므로, C++ 배열 인덱스에 1을 더해줘야 합니다.
+	// OBJ 파일의 인덱스는 1부터 시작하므로, C++ 배열 인덱스에 1을 더해줘야 
 	for (int i = 0; i < object.n_triangles; ++i) {
 		// 현재 삼각형을 구성하는 세 정점의 시작 인덱스
 		const int v1_idx = 3 * i + 1;
@@ -1432,7 +1490,7 @@ bool save_composite_object_to_obj(const CompositeObject& object, const char* fil
 		const int v3_idx = 3 * i + 3;
 
 		// 면 정보 (f v1//vn1 v2//vn2 v3//vn3)
-		// 각 정점과 법선이 1:1로 매칭되므로, 정점 인덱스와 법선 인덱스는 같습니다.
+		// 각 정점과 법선이 1:1로 매칭되므로, 정점 인덱스와 법선 인덱스는 동일
 		//outFile << "f " << v1_idx << "//" << v1_idx << " "
 		//	<< v2_idx << "//" << v2_idx << " "
 		//	<< v3_idx << "//" << v3_idx << "\n";
@@ -1854,8 +1912,10 @@ void main_menu_action(int selection) {
 			//printf("tri_accel_list size: %d\n", sizeof(uip.poly_model.kd_tree->tri_accel_list) / sizeof(*(uip.poly_model.kd_tree->tri_accel_list)));
 		}
 		print_current_time("kdtree build end");
-		leaf_nodes = extract_all_leaf_data(&uip.poly_model, largest_leaf_index);
 		printKdTreeLeafNodeInfo();
+#if LEAF_NODE_DEBUG
+		leaf_nodes = extract_all_leaf_data(&uip.poly_model, largest_leaf_index);
+#endif
 		break;
 	case 400: // dump kd-tree
 		strcpy(full_kd_tree_file_name, uip.kd_tree_dump_dir);
@@ -1893,9 +1953,9 @@ void main_menu_action(int selection) {
 		read_kd_tree_from_file(&uip.poly_model, full_kd_tree_file_name, uip.kd_tree_dump_format);
 
 		printKdTreeLeafNodeInfo();
-
+#if LEAF_NODE_DEBUG
 		leaf_nodes = extract_all_leaf_data(&uip.poly_model, largest_leaf_index);
-
+#endif
 		glutPostRedisplay();
 		break;
 	case 600:
@@ -1909,10 +1969,7 @@ void main_menu_action(int selection) {
 			renderGaussianWithCudaSetup(uip.poly_model, g_gaussians);
 #if USE_STACK > SHORT_STACK
 			if (g_d_global_stack) cudaFree(g_d_global_stack);
-			if (g_d_global_stack_pointers) cudaFree(g_d_global_stack_pointers);
 			cudaMalloc((void**)&g_d_global_stack, (size_t)g_render_width * g_render_height * MAX_GLOBAL_STACK_DEPTH * sizeof(cu_traceState));
-			cudaMalloc((void**)&g_d_global_stack_pointers, (size_t)g_render_width * g_render_height * sizeof(int));
-			cudaMemset(g_d_global_stack_pointers, 0, (size_t)g_render_width * g_render_height * sizeof(int));
 #endif
 			g_camera_dirty = true; // 모드를 켜는 즉시 한 번 렌더링하도록 설정
 			printf("CUDA Interactive Mode: ON\n");
@@ -1920,9 +1977,7 @@ void main_menu_action(int selection) {
 		else {
 #if USE_STACK > SHORT_STACK
 			if (g_d_global_stack) cudaFree(g_d_global_stack);
-			if (g_d_global_stack_pointers) cudaFree(g_d_global_stack_pointers);
 			g_d_global_stack = nullptr;
-			g_d_global_stack_pointers = nullptr;
 #endif
 
 			printf("CUDA Interactive Mode: OFF\n");
@@ -1957,8 +2012,8 @@ void main_menu_action(int selection) {
 		print_current_time("all_build_end\n");
 		break;
 	case 999:
-		exit(0);
 		clean_up_system();
+		exit(0);
 		break;
 	}
 }
@@ -2095,12 +2150,24 @@ void idle() {
 			, h_debug_buffer1_main, h_debug_buffer2_main
 #endif
 #if USE_STACK > SHORT_STACK
-			, g_d_global_stack, g_d_global_stack_pointers
+			, g_d_global_stack
 #endif
 #if LEAF_NODE_DEBUG
 			, uip.poly_model
 #endif
 		);
+
+		if (measure_fps_interval) {
+			if(++frame_count > MEASURE_START_FRAME) total_fps += g_fps;
+			if (frame_count >= MEASURE_END_FRAME) {
+				printf("avg FPS for %d-%d frame : %f\n", MEASURE_START_FRAME, MEASURE_END_FRAME, (float)(total_fps / (MEASURE_END_FRAME - MEASURE_START_FRAME)));
+				frame_count = 0;
+				total_fps = 0.0f;
+				measure_fps_interval = false;
+				timerRunning = false;
+			}
+		}
+
 		// CUDA → OpenGL 동기화 해제
 		cudaGraphicsUnmapResources(1, &pbo_cuda_resource, 0);
 

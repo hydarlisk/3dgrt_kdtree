@@ -258,39 +258,6 @@ void clip_triangle(const int triangleSize, const SplitCost &bestCost, TriangleLi
 	}
 }
 
-//void push_triangles_to_child(const int triangleSize, const TriangleList* pTriangleInfos,
-//	TriangleList* pLeftTriangles, TriangleList* pRightTriangles,
-//	const SplitCost& bestCost)
-//{
-//	int currLeftIndex = 0;
-//	int currRightIndex = 0;
-//	int axis = bestCost.axis;
-//	float splitPos = bestCost.splitPos;
-//
-//	// 부모 노드의 모든 삼각형을 순회합니다.
-//	for (int i = 0; i < triangleSize; i++) {
-//		const BoundingBox& box = pTriangleInfos[i].AABB;
-//		const float min_val = box.min[axis];
-//		const float max_val = box.max[axis];
-//
-//		// 1. 삼각형이 분할 평면의 왼쪽에 걸치거나 왼쪽에 있다면 왼쪽 자식에 추가합니다.
-//		if (min_val <= splitPos) {
-//			// 안전장치: 할당된 배열 크기를 절대 넘어가지 않도록 방지합니다.
-//			if (currLeftIndex < bestCost.n_left) {
-//				pLeftTriangles[currLeftIndex++] = pTriangleInfos[i];
-//			}
-//		}
-//
-//		// 2. 삼각형이 분할 평면의 오른쪽에 걸치거나 오른쪽에 있다면 오른쪽 자식에 추가합니다.
-//		if (max_val >= splitPos) {
-//			// 안전장치: 할당된 배열 크기를 절대 넘어가지 않도록 방지합니다.
-//			if (currRightIndex < bestCost.n_right) {
-//				pRightTriangles[currRightIndex++] = pTriangleInfos[i];
-//			}
-//		}
-//	}
-//}
-
 void push_triangles_to_child(const unsigned n_bEdge, const BoundEdge *bEdge, 
                              TriangleList *pLeftTriangles, TriangleList *pRightTriangles,
                              const SplitCost &bestCost )
@@ -1006,7 +973,7 @@ std::vector<LeafNodeInfo> extract_all_leaf_data(CompositeObject* c_object, int& 
 	std::vector<LeafNodeInfo> all_leaf_info;
 
 	unsigned int max_triangles_found = 0;
-	int largest_leaf_idx = -1;
+	largest_leaf_index = -1;
 
 	while (!kd_stack.empty()) {
 		KdStack data = kd_stack.top();
@@ -1021,28 +988,21 @@ std::vector<LeafNodeInfo> extract_all_leaf_data(CompositeObject* c_object, int& 
 			unsigned int offset = OBJECTLIST_OFFSET(*current_node);
 			unsigned int num_triangles = OBJECT_SIZE(*current_node);
 
-			// 개수만큼 메모리를 예약
-			if (num_triangles > 0) {
-				leaf.triangle_indices.reserve(num_triangles);
-			}
-
-			// 루프를 돌며 인덱스 추가
 			for (unsigned int i = 0; i < num_triangles; ++i) {
 				leaf.triangle_indices.push_back(tri_offset_list[offset + i]);
 			}
-			// --------------------
 
 			all_leaf_info.push_back(leaf);
+			// --------------------
 			if (num_triangles > max_triangles_found) {
 				max_triangles_found = num_triangles;
-				largest_leaf_idx = all_leaf_info.size() - 1;
+				largest_leaf_index = all_leaf_info.size() - 1;
 			}
 		}
 		else {
 			const float node_split = SPLIT_POS(*current_node);
 			const uint32_t dim = SPLIT_AXIS(*current_node);
 
-			// 전역 g_pKdTree_Node_Array 대신 c_object의 tree 포인터 사용
 			BoundingBox right_box = current_box;
 			right_box.min[dim] = node_split;
 			kd_stack.push({ &c_object->kd_tree->tree[SECOND_CHILD_OFFSET(*current_node)], right_box });
@@ -1052,7 +1012,6 @@ std::vector<LeafNodeInfo> extract_all_leaf_data(CompositeObject* c_object, int& 
 			kd_stack.push({ &c_object->kd_tree->tree[FIRST_CHILD_OFFSET(*current_node)], left_box });
 		}
 	}
-	largest_leaf_index = largest_leaf_idx;
 	if (largest_leaf_index != -1) {
 		printf("[INFO] Largest leaf found at index %d with %u triangles.\n",
 			largest_leaf_index, max_triangles_found);

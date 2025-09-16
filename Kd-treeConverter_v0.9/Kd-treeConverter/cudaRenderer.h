@@ -106,7 +106,7 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
 	, float3*& h_debug_buffer1, float3*& h_debug_buffer2
 #endif
 #if USE_STACK > SHORT_STACK
-	, cu_traceState* d_global_stack, int* d_global_stack_pointers
+	, cu_traceState* d_global_stack
 #endif
 #if LEAF_NODE_DEBUG
 	, const CompositeObject& object

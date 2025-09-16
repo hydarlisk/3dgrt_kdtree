@@ -10,26 +10,24 @@
 //shyun
 #define TRAVL_COST 1.0
 #define ISCET_COST 20.0
-#define MAX_LEVEL 100
-#define MIN_TRI 32
+#define MAX_LEVEL 500
+#define MIN_TRI 20
 #define EMTPY_BONUS 0.9
 
-#define FORCE_SPLIT_THRESHOLD 64				// kd-tree 강제분할
+#define FORCE_SPLIT_THRESHOLD 32				// kd-tree 강제분할
 
 #define ALPHA_MIN 0.01f
 #define KERNEL_DEGREE 2.0f
 
-#define OPACITY_THRESHOLD 0.97f					// 충족할때까지 kd-tree 탐색
+#define ROTATION true							// R(45degree,1,1,1)
 
-#define SUPER_SAMPLING false
+#define OPACITY_THRESHOLD 0.95f					// 충족할때까지 kd-tree 탐색
 
-#define SIGMA_THRESHOLD 0.01f					// sigma(density) 작은 가우시안 제거
-#define ROTATION false							// R(45degree,1,1,1)
-
-#define MAX_HITS 128
+#define SIGMA_THRESHOLD 0   					// sigma(density) 작은 가우시안 제거
+#define MAX_HITS 32								// leaf node에서 blending을 위한 최대 sort 크기
 
 #define DIM_X 16
-#define DIM_Y 8
+#define DIM_Y 16
 
 #define SHORT_STACK 0
 #define HYBRID_STACK 1
@@ -40,7 +38,7 @@
 #if USE_STACK > HYBRID_STACK
 #define SHORT_STACK_DEPTH 0
 #else
-#define SHORT_STACK_DEPTH 10					// for kernel sh.mem
+#define SHORT_STACK_DEPTH 7 					// for kernel sh.mem
 #endif
 
 #define MAX_GLOBAL_STACK_DEPTH 64
@@ -50,16 +48,23 @@
 #define USE_KERNEL_SCALE false					// 기존의 OptiX 방식 kernelScale 사용
 
 //Debug Flags=====================================================================================
-#define DEBUG_SIGMA_HISTOGRAM 100				// gaussian의 sigma들의 histogram 출력
-#define WARP_OCCUPANCY false						// warp occupancy 출력
-#define HIT_AND_NODE_COUNT_DEBUG true			// Ray 마다 hitcount, node count, ... 확인
+#define DEBUG_SIGMA_HISTOGRAM 0 				// gaussian의 sigma들의 histogram 출력
+#define WARP_OCCUPANCY true   					// warp occupancy 출력
+#define HIT_AND_NODE_COUNT_DEBUG false			// Ray 마다 hitcount, node count, ... 확인
 												// kd-tree hitmap 확인 가능
 #define LEAF_NODE_DEBUG false					// kd-tree leaf node 렌더링
+
+#define MEASURE_START_FRAME 50
+#define MEASURE_END_FRAME 150
 
 #define TID_X (blockDim.x * blockIdx.x + threadIdx.x)
 #define TID_Y (blockDim.y * blockIdx.y + threadIdx.y)
 //================================================================================================
 
+#define SUPER_SAMPLING false
+
+//#define MAIN_WINDOW_WIDTH 960
+//#define MAIN_WINDOW_HEIGHT 640
 #define MAIN_WINDOW_WIDTH 1920
 #define MAIN_WINDOW_HEIGHT 1080
 
@@ -232,19 +237,16 @@ typedef struct _Ray {
 int build_kd_tree_for_composite_object(CompositeObject *);
 //shyun
 int build_kd_tree_for_composite_object2(CompositeObject* c_object, const char* filename);
+void collectTriangleCounts_recursive(
+	const KdTree* kd_tree,
+	int nodeIndex,
+	std::vector<unsigned int>& counts
+);
 //shyun end
 void dump_kd_tree_for_composite_object(CompositeObject *, const char *, int, const char *);
 int read_kd_tree_from_file(CompositeObject *, const char *, int);
 int find_ray_object_intersection(KdTree *, Ray *, float *, float *);
 
-void collectLeafNodeStats_recursive(
-	const KdTree* kd_tree,
-	int nodeIndex,
-	unsigned int& leaf_count,
-	unsigned int& total_triangles,
-	unsigned int& max_triangles,
-	unsigned int& min_triangles
-);
 
 #if 0
 // -----------------------------------------------------------
