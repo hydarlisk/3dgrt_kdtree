@@ -23,11 +23,10 @@
 
 #define OPACITY_THRESHOLD 0.95f					// 충족할때까지 kd-tree 탐색
 
-#define SIGMA_THRESHOLD 0   					// sigma(density) 작은 가우시안 제거
 #define MAX_HITS 32								// leaf node에서 blending을 위한 최대 sort 크기
 
 #define DIM_X 16
-#define DIM_Y 16
+#define DIM_Y 8
 
 #define SHORT_STACK 0
 #define HYBRID_STACK 1
@@ -45,6 +44,8 @@
 
 #define SPH_EVAL_DEGREE 3
 #define QUATERNION true
+#define WALD_METHOD true
+#define SIGMA_THRESHOLD 0   					// sigma(density) 작은 가우시안 제거
 #define USE_KERNEL_SCALE false					// 기존의 OptiX 방식 kernelScale 사용
 
 //Debug Flags=====================================================================================
@@ -245,7 +246,6 @@ void collectTriangleCounts_recursive(
 //shyun end
 void dump_kd_tree_for_composite_object(CompositeObject *, const char *, int, const char *);
 int read_kd_tree_from_file(CompositeObject *, const char *, int);
-int find_ray_object_intersection(KdTree *, Ray *, float *, float *);
 
 
 #if 0

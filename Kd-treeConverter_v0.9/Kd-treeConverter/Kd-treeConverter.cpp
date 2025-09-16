@@ -338,32 +338,6 @@ int read_kd_tree_from_file(CompositeObject *c_object, const char *filename, int 
 	return 1;
 }
 
-int find_ray_object_intersection(KdTree *kd_tree, Ray *ray, float *point, float *normal) {
-	// Find the first hit between "kd-tree" and "ray"
-	// Input: "kd_tree" & "ray"
-	// Output: "point" & "normal" & 
-	//          returns "material_ID" value of Extended Vertex if an intersection was found
-	//		              -1                                   if no intersection was found
-
-	Hit is;
-
-	ray->Depth = 0;
-	InitRay(0, ray);
-	TraceRay(0, kd_tree, &is);
-
-	if (is.tacc == 0) {
-		return -1;
-	} else {
-		point[0] = is.pf[0];
-		point[1] = is.pf[1];
-		point[2] = is.pf[2];
-		normal[0] = is.nf[0];
-		normal[1] = is.nf[1];
-		normal[2] = is.nf[2];
-		return is.material_ID;
-	}
-}
-
 void collectTriangleCounts_recursive(
 	const KdTree* kd_tree,
 	int nodeIndex,

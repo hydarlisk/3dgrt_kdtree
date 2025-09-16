@@ -194,7 +194,9 @@
     <ClCompile Include="Kd-treeConverterMain.cpp" />
     <ClCompile Include="MyMathUtility.cpp" />
     <ClCompile Include="OpenGLStuffs.cpp" />
-    <ClCompile Include="RayTraversal.cpp" />
+    <ClCompile Include="RayTraversal.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="SGRTx2Lib\GBaseThread.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
@@ -431,15 +433,13 @@
     <ClInclude Include="Kd-treeConverterMain.h" />
     <ClInclude Include="MyMathUtility.h" />
     <ClInclude Include="OpenGLStuffs.h" />
-    <ClInclude Include="RayTraversal.h" />
+    <ClInclude Include="RayTraversal.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
     <ClInclude Include="test.h" />
     <CudaCompile Include="cudaRenderer.cu">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </ExcludedFromBuild>
-    </CudaCompile>
-    <CudaCompile Include="cudaRenderer_legacy.cu">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </CudaCompile>
     <CudaCompile Include="SGRTx2Lib\cudaPhotonMapping.cuh">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>

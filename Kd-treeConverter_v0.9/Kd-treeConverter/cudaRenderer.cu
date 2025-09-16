@@ -3,6 +3,7 @@
 #include <curand_kernel.h>
 #include "OpenGLStuffs.h"
 #include "CudaRenderer.h"
+#include "MyMathUtility.h"
 //#include "SGRTx2Lib/cudaRenderPipeline.h"
 #include "SGRTx2Lib/cuda_math.h"
 
@@ -246,28 +247,15 @@ struct ShortStackCache {
 // =================================================================================
 // 텍스춰 및 상수 메모리 선언
 // =================================================================================
-//texture<uint2, 1, cudaReadModeElementType> inKdTreeNodeTex;
-//texture<uint, 1, cudaReadModeElementType> inObjectOffsetListTex;
-//texture<float4, 1, cudaReadModeElementType> inTriAccelTex;
-
-//texture<float4, 1, cudaReadModeElementType> inGaussianTex;
-//texture<float4, 1, cudaReadModeElementType> inVertexTex;
 
 __constant__ cudaTextureObject_t inKdTreeNodeTex;
 __constant__ cudaTextureObject_t inObjectOffsetListTex;
 __constant__ cudaTextureObject_t inTriAccelTex;
 //__constant__ cudaTextureObject_t inGaussianTex;
 
-cudaTextureObject_t h_inKdTreeNodeTex = 0;
-cudaTextureObject_t h_inObjectOffsetListTex = 0;
-cudaTextureObject_t h_inTriAccelTex = 0;
 //cudaTextureObject_t h_inGaussianTex = 0;
 
 struct SceneInfo { int resX, resY; };
-//struct SceneInfo {
-//    int resX, resY;
-//    int num_gaussians; // 전체 가우시안 개수를 저장할 변수 추가
-//};
 struct CameraInfo { float3 eye, u, v, startPoint; float stepX, stepY; };
 
 __constant__ SceneInfo g_SceneInfo;
@@ -763,28 +751,9 @@ __device__ __forceinline__ float evaluateGaussianResponse_using_vars(const cuRay
     return g_opacity * rho;
 }
 
-//// Gaussian 데이터를 텍스처에서 읽어오는 헬퍼 함수
-//__device__ Gaussian fetch_gaussian(int gaussianID) {
-//    Gaussian g;
-//    const int num_float4s = sizeof(Gaussian) / sizeof(float4);
-//    int base_idx = gaussianID * num_float4s;
-//
-//    // 텍스처에서 float4 단위로 데이터를 가져옴
-//    float4 data[num_float4s];
-//#pragma unroll
-//    for (int i = 0; i < num_float4s; ++i) {
-//        //data[i] = tex1Dfetch(inGaussianTex, base_idx + i);
-//        data[i] = tex1Dfetch<float4>(inGaussianTex, base_idx + i);
-//    }
-//
-//    // 가져온 데이터를 Gaussian 구조체로 복사
-//    memcpy(&g, data, sizeof(Gaussian));
-//    return g;
-//}
-
 __device__ Gaussian fetch_gaussian(int gaussianID, cudaTextureObject_t inGaussianTex) {
     Gaussian g;
-    // Gaussian g의 메모리 주소를 float4 포인터로 재해석합니다.
+    // Gaussian g의 메모리 주소를 float4 포인터로 재해석
     float4* g_as_float4 = reinterpret_cast<float4*>(&g);
 
     const int num_float4s = sizeof(Gaussian) / sizeof(float4);
@@ -792,7 +761,7 @@ __device__ Gaussian fetch_gaussian(int gaussianID, cudaTextureObject_t inGaussia
 
 #pragma unroll
     for (int i = 0; i < num_float4s; ++i) {
-        // 중간 배열 없이 g의 메모리에 직접 tex1Dfetch 결과를 씁니다.
+        // 중간 배열 없이 g의 메모리에 직접 tex1Dfetch 결과를 씀
         g_as_float4[i] = tex1Dfetch<float4>(inGaussianTex, base_idx + i);
     }
 
@@ -858,7 +827,6 @@ __device__ void singlePassIntersectRoutineGaussian_sortNode(const cuRay& ray, in
 }
 
 __device__ inline void singlePassIntersectRoutine(const cuRay& ray, const int id,
-    cuIntersectionCheck* hit,
     const float t_near, const float t_far
     , HitRecord* local_hits, int& local_hit_count) {
     cuWaldTriangleInfo tri;
@@ -868,7 +836,7 @@ __device__ inline void singlePassIntersectRoutine(const cuRay& ray, const int id
     cuWaldTriangleInfo::perm_t p = tri.get_perm(ray);
     p.pos.x = (tri.n_d() - p.pos.x - tri.n_u() * p.pos.y - tri.n_v() * p.pos.z);
     const float denum = (p.dir.x + tri.n_u() * p.dir.y + tri.n_v() * p.dir.z);
-    if (denum > 0.0f) return; //뒷면 확인
+    //if (denum > 0.0f) return; //뒷면 확인
     const float t = __fdividef(p.pos.x, denum);
     if (isnan(t)) return;
     if ((t < t_near - EPSILON4) | (t > t_far + EPSILON4)) return;
@@ -1081,7 +1049,6 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
 
                 if (t_near < t_split && t_split < t_far) {
                     cache.push(childOffset + (sign ^ 1), t_far);
-                    //cache.push({ childOffset + (sign ^ 1), t_far });
                     t_far = t_split;
                 }
 #if HIT_AND_NODE_COUNT_DEBUG
@@ -1106,7 +1073,12 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
                 int tmp = local_hit_count;
 #endif
                 const unsigned tri_idx = tex1Dfetch<unsigned int>(inObjectOffsetListTex, baseOffset);
+#if WALD_METHOD
+                singlePassIntersectRoutine(currRay, tri_idx, t_near, t_far, local_hits, local_hit_count);
+#else
                 singlePassIntersectRoutineGaussian_sortNode(currRay, tri_idx, t_near, t_far, local_hits, local_hit_count);
+#endif
+
 #if HIT_AND_NODE_COUNT_DEBUG
                 if (tmp != local_hit_count) hits_found++;
 #endif
@@ -1123,8 +1095,13 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
 #if HIT_AND_NODE_COUNT_DEBUG
                     blend_ops++;
 #endif
+#if WALD_METHOD
+                    float4 internal2 = tex1Dfetch<float4>(inTriAccelTex, 3 * local_hits[i].triIndex + 2);
+                    int gaussianID = __float_as_int(internal2.w) & 0X00FFFFFF;
+#else
                     float4 d2 = tex1Dfetch<float4>(inTriAccelTex, local_hits[i].triIndex * 4 + 2);
                     int gaussianID = __float_as_int(d2.w);
+#endif
                     //Gaussian g = fetch_gaussian(gaussianID);
                     Gaussian g = g_d_gaussians[gaussianID];
                     //Gaussian& g = g_d_gaussians[gaussianID];
@@ -1355,9 +1332,9 @@ __global__ void renderKernelGaussian_sortNode(float* pFrameBuffer
         );
 
     // 최종 색상 계산
-    float3 background_color = make_float3(0.0f, 0.0f, 0.0f);
-    float3 final_color = accumulated_color + background_color * (1.0f - accumulated_opacity);
-    //float3 final_color = accumulated_color / accumulated_opacity;
+    //float3 background_color = make_float3(0.0f, 0.0f, 0.0f);
+    //float3 final_color = accumulated_color + background_color * (1.0f - accumulated_opacity);
+    float3 final_color = accumulated_color / accumulated_opacity;
 
     int idx = 3 * ((g_SceneInfo.resY - y - 1) * g_SceneInfo.resX + x);
     pFrameBuffer[idx + 0] = final_color.x;
@@ -1561,6 +1538,81 @@ bool initCuda() {
     return true;
 }
 
+void build_waldInfoList_from_model(const CompositeObject* poly_model, cuWaldTriangleInfo*& pWaldInfo) {
+    int iTriangleSize = poly_model->n_triangles;
+    printf("Building final cuWaldTriangleInfo list for %d triangles...\n", iTriangleSize);
+
+    // 메모리 할당
+    if (!pWaldInfo) {
+        pWaldInfo = (cuWaldTriangleInfo*)_aligned_malloc(sizeof(cuWaldTriangleInfo) * iTriangleSize, 16);
+        if (!pWaldInfo) {
+            fprintf(stderr, "ERROR: Failed to allocate memory for cuWaldTriangleInfo list!\n");
+            throw std::bad_alloc();
+        }
+    }
+
+    float A[3], B[3], C[3];
+    float b[3], c[3];
+    float N[3];
+
+    for (unsigned int i = 0; i < iTriangleSize; i++) {
+        const ExtendedVertex* pVerts = &poly_model->extended_vertices[3 * i];
+        A[0] = pVerts[0].vertex[0]; A[1] = pVerts[0].vertex[1]; A[2] = pVerts[0].vertex[2];
+        B[0] = pVerts[1].vertex[0]; B[1] = pVerts[1].vertex[1]; B[2] = pVerts[1].vertex[2];
+        C[0] = pVerts[2].vertex[0]; C[1] = pVerts[2].vertex[1]; C[2] = pVerts[2].vertex[2];
+
+        // 에지 및 법선 계산 (원본 함수와 동일한 순서)
+        b[0] = C[0] - A[0]; b[1] = C[1] - A[1]; b[2] = C[2] - A[2]; // Edge AC
+        c[0] = B[0] - A[0]; c[1] = B[1] - A[1]; c[2] = B[2] - A[2]; // Edge AB
+        fMyVecCrossProduct(b, c, N); // N = (C-A) x (B-A)
+        fMyVecNormalize(N);
+
+        // 주축 및 기타 축 계산 (원본 함수와 동일)
+        unsigned k = 0;
+        k = fabsf(N[1]) > fabsf(N[k]) ? 1 : k;
+        k = fabsf(N[2]) > fabsf(N[k]) ? 2 : k;
+
+        const unsigned u = (k + 1) % 3;
+        const unsigned v = (k + 2) % 3;
+
+        cuWaldTriangleInfo& wald = pWaldInfo[i];
+
+        // 평면 방정식 계수 계산 (원본 함수와 동일)
+        const float krec = N[k];
+        const float nu = N[u] / krec;
+        const float nv = N[v] / krec;
+        const float nd = fMyVecDotProduct(A, N) / krec;
+
+        // 무게중심 좌표 계수 계산
+        const float denom = b[u] * c[v] - b[v] * c[u];
+        const float bnu = b[u] / denom;
+        const float bnv = -b[v] / denom;
+        const float cnu = c[v] / denom;
+        const float cnv = -c[u] / denom;
+
+        // 5. cuWaldTriangleInfo 구조체에 모든 값 패킹
+        wald.internal0.x = uint_as_float_H(k);
+        wald.internal0.y = nu;
+        wald.internal0.z = nv;
+        wald.internal0.w = nd;
+
+        wald.internal1.x = A[u];
+        wald.internal1.y = A[v];
+        wald.internal1.z = bnu;
+        wald.internal1.w = bnv;
+
+        wald.internal2.x = cnu;
+        wald.internal2.y = cnv;
+
+        // 투명도 및 기타 플래그 (원본과 동일하게 단순화)
+        wald.internal2.z = int_as_float_H(0); // 투명도 정보 등
+
+        // material_ID 패킹 (getObjectIndex()가 하위 24비트만 사용)
+        unsigned int object_id = pVerts[0].material_ID & 0x00FFFFFF;
+        wald.internal2.w = uint_as_float_H(object_id);
+    }
+}
+
 void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vector<Gaussian>& gaussians) {
     printf("Setting up static data for CUDA rendering...\n");
 
@@ -1581,6 +1633,12 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
         printf("[FATAL] kdTree == nullptr\n");
         return;
     }
+
+    // 데이터 패킹 (Host)
+#if WALD_METHOD
+    cuWaldTriangleInfo* h_waldInfo = nullptr;
+    build_waldInfoList_from_model(&object, h_waldInfo);
+#else
     if (kdTree->tri_accel_list == nullptr) {
         printf("[FATAL] tri_accel_list == nullptr\n");
         return;
@@ -1589,8 +1647,6 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
         printf("[FATAL] tri_accel_list too small or corrupt pointer\n");
         return;
     }
-
-    // 데이터 패킹 (Host)
     // TriAccel -> float4[4] (n_u, n_v, n_d, k | b_nu, b_nv, b_d, idx | c_nu, c_nv, c_d, matID | N.x, N.y, N.z, pad)
     std::vector<float4> h_triangles(object.n_triangles * 4);
     for (int i = 0; i < object.n_triangles; ++i) {
@@ -1600,36 +1656,41 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
         h_triangles[i * 4 + 2] = make_float4(src.c_nu, src.c_nv, src.c_d, int_as_float_H(src.material_ID));
         h_triangles[i * 4 + 3] = make_float4(src.N[0], src.N[1], src.N[2], 0.0f);
     }
+#endif
     //printf("1. Data packing done\n");
 
     // GPU 메모리 할당 및 데이터 전송
     cudaError_t err;
 
-    if (g_d_kdtree_nodes) cudaFree(g_d_kdtree_nodes);
-    if (g_d_tri_offsets) cudaFree(g_d_tri_offsets);
-    if (g_d_tri_accel) cudaFree(g_d_tri_accel);
-    if (g_d_gaussians_persistent) cudaFree(g_d_gaussians_persistent);
+    if (g_d_gaussians) cudaFree(g_d_gaussians);
 
+    //kdtreeNode* g_d_kdtree_nodes = nullptr;
     size_t node_size = kdTree->tree_node_count * sizeof(kdtreeNode);
     CUDA_CHECK(cudaMalloc(&g_d_kdtree_nodes, node_size));
     CUDA_CHECK(cudaMemcpy(g_d_kdtree_nodes, kdTree->tree, node_size, cudaMemcpyHostToDevice));
 
+    //unsigned int* g_d_tri_offsets = nullptr;
     size_t offset_size = kdTree->tri_offset_count * sizeof(unsigned int);
     CUDA_CHECK(cudaMalloc(&g_d_tri_offsets, offset_size));
     CUDA_CHECK(cudaMemcpy(g_d_tri_offsets, kdTree->tri_offset_list, offset_size, cudaMemcpyHostToDevice));
 
+#if WALD_METHOD
+    cuWaldTriangleInfo* d_waldInfo = nullptr; // Device-side pointer
+    size_t wald_info_size = sizeof(cuWaldTriangleInfo) * object.n_triangles;
+    CUDA_CHECK(cudaMalloc(&d_waldInfo, wald_info_size));
+    CUDA_CHECK(cudaMemcpy(d_waldInfo, h_waldInfo, wald_info_size, cudaMemcpyHostToDevice));
+#else
+    //TriAccel* g_d_tri_accel = nullptr;
     size_t accel_size = h_triangles.size() * sizeof(float4);
     CUDA_CHECK(cudaMalloc(&g_d_tri_accel, accel_size));
     CUDA_CHECK(cudaMemcpy(g_d_tri_accel, h_triangles.data(), accel_size, cudaMemcpyHostToDevice));
-
+#endif
     //new
+    //Gaussian* g_d_gaussians_persistent = nullptr;
     size_t gaussians_bytes = gaussians.size() * sizeof(Gaussian);
     CUDA_CHECK(cudaMalloc(&g_d_gaussians_persistent, gaussians_bytes));
     CUDA_CHECK(cudaMemcpy(g_d_gaussians_persistent, gaussians.data(), gaussians_bytes, cudaMemcpyHostToDevice));
 
-    //CUDA_CHECK(cudaMemcpyToSymbol(g_d_kdtree, &g_d_kdtree_nodes, sizeof(kdtreeNode*)));
-    //CUDA_CHECK(cudaMemcpyToSymbol(g_d_offsets, &g_d_tri_offsets, sizeof(unsigned int*)));
-    //CUDA_CHECK(cudaMemcpyToSymbol(g_d_accel, &g_d_tri_accel, sizeof(float4*)));
     CUDA_CHECK(cudaMemcpyToSymbol(g_d_gaussians, &g_d_gaussians_persistent, sizeof(Gaussian*)));
     //new end
 
@@ -1641,15 +1702,6 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
 
     // 텍스처 바인딩
 
-    //cudaChannelFormatDesc node_desc = cudaCreateChannelDesc<uint2>();
-    //cudaChannelFormatDesc offset_desc = cudaCreateChannelDesc<unsigned int>();
-    //cudaChannelFormatDesc tri_desc = cudaCreateChannelDesc<float4>();
-    //CUDA_CHECK(cudaBindTexture(0, &inKdTreeNodeTex, g_d_kdtree_nodes, &node_desc, node_size));
-    //CUDA_CHECK(cudaBindTexture(0, &inObjectOffsetListTex, g_d_tri_offsets, &offset_desc, offset_size));
-    //CUDA_CHECK(cudaBindTexture(0, &inTriAccelTex, g_d_tri_accel, &tri_desc, accel_size));
-    //cudaChannelFormatDesc gaussian_desc = cudaCreateChannelDesc<float4>();
-    //CUDA_CHECK(cudaBindTexture(0, &inGaussianTex, g_d_gaussians_persistent, &gaussian_desc, gaussians_bytes));
-    //--
     // 리소스 디스크립터(Resource Descriptor) 설정
     cudaResourceDesc resDesc;
     memset(&resDesc, 0, sizeof(resDesc));
@@ -1670,6 +1722,7 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
     resDesc.res.linear.sizeInBytes = node_size;
 
     // 지역 변수(texNode) 대신 호스트 전역 변수(h_inKdTreeNodeTex)에 핸들을 저장
+    cudaTextureObject_t h_inKdTreeNodeTex = 0;
     CUDA_CHECK(cudaCreateTextureObject(&h_inKdTreeNodeTex, &resDesc, &texDesc, NULL));
     CUDA_CHECK(cudaMemcpyToSymbol(inKdTreeNodeTex, &h_inKdTreeNodeTex, sizeof(cudaTextureObject_t)));
 
@@ -1679,15 +1732,23 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
     resDesc.res.linear.sizeInBytes = offset_size;
 
     // 호스트 전역 변수에 핸들을 저장
+    cudaTextureObject_t h_inObjectOffsetListTex = 0;
     CUDA_CHECK(cudaCreateTextureObject(&h_inObjectOffsetListTex, &resDesc, &texDesc, NULL));
     CUDA_CHECK(cudaMemcpyToSymbol(inObjectOffsetListTex, &h_inObjectOffsetListTex, sizeof(cudaTextureObject_t)));
 
     // 삼각형 가속 구조체 텍스처 객체 생성
+#if WALD_METHOD
+    resDesc.res.linear.devPtr = d_waldInfo;
+    resDesc.res.linear.desc = cudaCreateChannelDesc<float4>(); // WaldInfo는 float4 3개로 구성
+    resDesc.res.linear.sizeInBytes = wald_info_size;
+#else
     resDesc.res.linear.devPtr = g_d_tri_accel;
     resDesc.res.linear.desc = cudaCreateChannelDesc<float4>();
     resDesc.res.linear.sizeInBytes = accel_size;
+#endif
 
     // 호스트 전역 변수에 핸들을 저장
+    cudaTextureObject_t h_inTriAccelTex = 0;
     CUDA_CHECK(cudaCreateTextureObject(&h_inTriAccelTex, &resDesc, &texDesc, NULL));
     CUDA_CHECK(cudaMemcpyToSymbol(inTriAccelTex, &h_inTriAccelTex, sizeof(cudaTextureObject_t)));
 
@@ -1745,11 +1806,21 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
     );
 #endif
     //cudaFuncSetCacheConfig(renderKernelGaussian_sortNode, cudaFuncCachePreferShared);
-    //cudaFuncSetCacheConfig(renderKernelGaussian_sortNode, cudaFuncCachePreferL1);
+#if USE_STACK == GLOBAL_STACK
+    cudaFuncSetCacheConfig(renderKernelGaussian_sortNode, cudaFuncCachePreferL1);
+#endif
     //cudaFuncSetCacheConfig(renderKernelGaussian_sortNode, cudaFuncCachePreferEqual);
 
     CUDA_CHECK(cudaEventCreate(&start_ev));
     CUDA_CHECK(cudaEventCreate(&stop_ev));
+
+#if WALD_METHOD
+    _aligned_free(h_waldInfo);
+#endif
+
+    if (h_inKdTreeNodeTex)       cudaDestroyTextureObject(h_inKdTreeNodeTex);
+    if (h_inObjectOffsetListTex) cudaDestroyTextureObject(h_inObjectOffsetListTex);
+    if (h_inTriAccelTex)         cudaDestroyTextureObject(h_inTriAccelTex);
 }
 
 float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, float* d_framebuffer
@@ -1990,9 +2061,6 @@ void cleanupCudaResources() {
     if (g_d_tri_accel) cudaFree(g_d_tri_accel);
     if (g_d_gaussians_persistent) cudaFree(g_d_gaussians_persistent);
 
-    //if (g_d_kdtree) cudaFree(g_d_kdtree);
-    //if (g_d_offsets) cudaFree(g_d_offsets);
-    //if (g_d_accel) cudaFree(g_d_accel);
     if (g_d_gaussians) cudaFree(g_d_gaussians);
 
     //cudaUnbindTexture(inKdTreeNodeTex);
@@ -2000,15 +2068,10 @@ void cleanupCudaResources() {
     //cudaUnbindTexture(inTriAccelTex);
     //cudaUnbindTexture(inGaussianTex);
 
-    //if (inKdTreeNodeTex)       cudaDestroyTextureObject(inKdTreeNodeTex);
-    //if (inObjectOffsetListTex) cudaDestroyTextureObject(inObjectOffsetListTex);
-    //if (inTriAccelTex)         cudaDestroyTextureObject(inTriAccelTex);
+    if (inKdTreeNodeTex)       cudaDestroyTextureObject(inKdTreeNodeTex);
+    if (inObjectOffsetListTex) cudaDestroyTextureObject(inObjectOffsetListTex);
+    if (inTriAccelTex)         cudaDestroyTextureObject(inTriAccelTex);
     //if (inGaussianTex)         cudaDestroyTextureObject(inGaussianTex);
-
-    if (h_inKdTreeNodeTex)       cudaDestroyTextureObject(h_inKdTreeNodeTex);
-    if (h_inObjectOffsetListTex) cudaDestroyTextureObject(h_inObjectOffsetListTex);
-    if (h_inTriAccelTex)         cudaDestroyTextureObject(h_inTriAccelTex);
-    //if (h_inGaussianTex)         cudaDestroyTextureObject(h_inGaussianTex);
 
     cudaEventDestroy(start_ev);
     cudaEventDestroy(stop_ev);
