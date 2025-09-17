@@ -448,7 +448,7 @@ void try_to_split(const int axis, BoundingBox &inBBox, const TriangleList *pTria
 			// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 			// Cost function 의 최소값에 따라
 			// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-			} else {
+			} else { // MINCOST_SIDE
 
 							// 배열[0] 은 planar 가 왼쪽에 들어갔을 경우
 							// 배열[1] 은 planar 가 오른쪽에 들어갔을 경우
@@ -688,24 +688,6 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pTriangleInfo
 		leftnBounds = bbox;  leftnBounds.max[bestCost.axis] = bestCost.splitPos;
 		rightnBounds = bbox;  rightnBounds.min[bestCost.axis] = bestCost.splitPos;
 
-/*//shyun
-		// SAH가 예측한 bestCost.n_left/n_right는 실제 필요한 양보다 적을 수 있어 충돌을 유발.
-		// 따라서 메모리를 할당하기 직전에, 실제 필요한 크기를 다시 정확하게 계산.
-		int n_left_actual = 0;
-		int n_right_actual = 0;
-		for (unsigned int i = 0; i < triangleSize; i++) {
-			if (pTriangleInfos[i].AABB.min[bestCost.axis] <= bestCost.splitPos) {
-				n_left_actual++;
-			}
-			if (pTriangleInfos[i].AABB.max[bestCost.axis] >= bestCost.splitPos) {
-				n_right_actual++;
-			}
-		}
-		// bestCost의 예측값을 실제 필요한 값으로
-		bestCost.n_left = n_left_actual;
-		bestCost.n_right = n_right_actual;
-//shyun end*/
-
 		TriangleList* pLeftTriangles = new TriangleList[bestCost.n_left];
 		TriangleList* pRightTriangles = new TriangleList[bestCost.n_right];
 		//	TriangleList *pLeftTriangles = (TriangleList *) malloc(sizeof(TriangleList)*bestCost.n_left);
@@ -944,6 +926,7 @@ std::vector<BoundingBox> extract_leaves_from_kd_tree()
 //	return all_leaf_info;
 //}
 
+#include <algorithm>
 std::vector<LeafNodeInfo> extract_all_leaf_data(CompositeObject* c_object, int& largest_leaf_index) {
 	// Kd-tree가 없으면 빈 벡터 반환
 	if (c_object == nullptr || c_object->kd_tree == nullptr || c_object->kd_tree->tree == nullptr) {
@@ -1016,6 +999,7 @@ std::vector<LeafNodeInfo> extract_all_leaf_data(CompositeObject* c_object, int& 
 		printf("[INFO] Largest leaf found at index %d with %u triangles.\n",
 			largest_leaf_index, max_triangles_found);
 	}
-
+	largest_leaf_index = all_leaf_info.size() - 1;
+	std::sort(all_leaf_info.begin(), all_leaf_info.end());
 	return all_leaf_info;
 }

@@ -532,7 +532,7 @@ __device__ __forceinline__ float evaluateGaussianResponse(const cuRay& ray, cons
  * @param grayDist 제곱된 마할라노비스 거리
  * @return 밀도 응답 값 (0.0 ~ 1.0)
  */
-template <int GeneralizedGaussianDegree = 2>
+template <int GeneralizedGaussianDegree = 4>
 static inline __device__ float particleResponse(float grayDist) {
     switch (GeneralizedGaussianDegree) {
     case 8: // Zenzizenzizenzic
@@ -868,9 +868,6 @@ __device__ void singlePassIntersectGaussian_sortNode_hybridStack(
     cuRay& currRay,
     float3& accumulated_color,      // 수정: 누적 색상을 직접 업데이트
     float& accumulated_opacity    // 수정: 누적 알파를 직접 업데이트
-    //, cudaTextureObject_t inKdTreeNodeTex
-    //, cudaTextureObject_t inObjectOffsetListTex
-    //, cudaTextureObject_t inTriAccelTex
     , cu_traceState* global_stack
 ) {
     int global_stack_ptr = 0;

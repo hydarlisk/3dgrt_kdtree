@@ -112,6 +112,10 @@ void build_TriAccList(CompositeObject *poly_model, TriAccel*& pTriAcc);
 struct LeafNodeInfo {
 	BoundingBox aabb;
 	std::vector<unsigned int> triangle_indices;
+	
+	bool operator<(const LeafNodeInfo& other) const {
+		return triangle_indices.size() < other.triangle_indices.size();
+	}
 };
 std::vector<BoundingBox> extract_leaves_from_kd_tree();
 std::vector<LeafNodeInfo> extract_all_leaf_data(CompositeObject* c_object, int& largest_leaf_index);

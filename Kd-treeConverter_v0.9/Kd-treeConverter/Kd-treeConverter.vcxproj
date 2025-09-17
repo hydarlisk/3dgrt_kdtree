@@ -127,6 +127,7 @@
       <AdditionalLibraryDirectories>$(CUDA_PATH)\lib\$(Platform)</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
+      <StackReserveSize>134217728</StackReserveSize>
     </Link>
     <CudaCompile />
     <CudaCompile />
@@ -180,6 +181,7 @@
 /LARGEADDRESSAWARE %(AdditionalOptions)</AdditionalOptions>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
+      <StackReserveSize>134217728</StackReserveSize>
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>

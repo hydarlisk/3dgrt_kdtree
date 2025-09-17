@@ -10,20 +10,20 @@
 //shyun
 #define TRAVL_COST 1.0
 #define ISCET_COST 20.0
-#define MAX_LEVEL 500
-#define MIN_TRI 20
+#define MAX_LEVEL 100
+#define MIN_TRI 32
 #define EMTPY_BONUS 0.9
 
-#define FORCE_SPLIT_THRESHOLD 32				// kd-tree 강제분할
+#define FORCE_SPLIT_THRESHOLD 64				// kd-tree 강제분할
 
-#define ALPHA_MIN 0.01f
-#define KERNEL_DEGREE 2.0f
+#define ALPHA_MIN 0.0113f
+#define KERNEL_DEGREE 4.0f
 
 #define ROTATION true							// R(45degree,1,1,1)
 
 #define OPACITY_THRESHOLD 0.95f					// 충족할때까지 kd-tree 탐색
 
-#define MAX_HITS 32								// leaf node에서 blending을 위한 최대 sort 크기
+#define MAX_HITS 64								// leaf node에서 blending을 위한 최대 sort 크기
 
 #define DIM_X 16
 #define DIM_Y 8
@@ -45,7 +45,7 @@
 #define SPH_EVAL_DEGREE 3
 #define QUATERNION true
 #define WALD_METHOD true
-#define SIGMA_THRESHOLD 0   					// sigma(density) 작은 가우시안 제거
+#define SIGMA_THRESHOLD 0//.01   					// sigma(density) 작은 가우시안 제거
 #define USE_KERNEL_SCALE false					// 기존의 OptiX 방식 kernelScale 사용
 
 //Debug Flags=====================================================================================
@@ -53,7 +53,7 @@
 #define WARP_OCCUPANCY true   					// warp occupancy 출력
 #define HIT_AND_NODE_COUNT_DEBUG false			// Ray 마다 hitcount, node count, ... 확인
 												// kd-tree hitmap 확인 가능
-#define LEAF_NODE_DEBUG false					// kd-tree leaf node 렌더링
+#define LEAF_NODE_DEBUG true					// kd-tree leaf node 렌더링
 
 #define MEASURE_START_FRAME 50
 #define MEASURE_END_FRAME 150
@@ -62,10 +62,8 @@
 #define TID_Y (blockDim.y * blockIdx.y + threadIdx.y)
 //================================================================================================
 
-#define SUPER_SAMPLING false
-
-//#define MAIN_WINDOW_WIDTH 960
-//#define MAIN_WINDOW_HEIGHT 640
+//#define MAIN_WINDOW_WIDTH 800
+//#define MAIN_WINDOW_HEIGHT 800
 #define MAIN_WINDOW_WIDTH 1920
 #define MAIN_WINDOW_HEIGHT 1080
 

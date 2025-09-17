@@ -94,8 +94,8 @@ void setup_interop_resources() {
 	// 렌더링 결과를 담을 텍스처 생성
 	glGenTextures(1, &result_texture_id);
 	glBindTexture(GL_TEXTURE_2D, result_texture_id);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, g_render_width, g_render_height, 0, GL_RGB, GL_FLOAT, NULL);
 	glBindTexture(GL_TEXTURE_2D, 0);
 
@@ -1173,27 +1173,6 @@ void create_composite_object_from_gaussians(
 	uip.composite_object_read = 1;
 	//printf("\nSuccessfully created CompositeObject with %d triangles from %ld Gaussians.\n\n", uip.poly_model.n_triangles, num_gaussians);
 	printf("\nSuccessfully created CompositeObject with %d triangles from %ld Gaussians.\n\n", uip.poly_model.n_triangles, num_gaussians - (cnt_sigma + cnt_scale));
-
-#if LEAF_NODE_DEBUG
-	if (original_vertices != nullptr) {
-		delete[] original_vertices;
-		original_vertices = nullptr;
-	}
-	num_original_vertices = uip.poly_model.n_triangles * 3;
-	if (num_original_vertices > 0) {
-		original_vertices = new ExtendedVertex[num_original_vertices];
-
-		size_t total_bytes = num_original_vertices * sizeof(ExtendedVertex);
-		memcpy(original_vertices, uip.poly_model.extended_vertices, total_bytes);
-
-		original_model_AABB.min[0] = uip.poly_model.AABB[XMIN];
-		original_model_AABB.min[1] = uip.poly_model.AABB[YMIN];
-		original_model_AABB.min[2] = uip.poly_model.AABB[ZMIN];
-		original_model_AABB.max[0] = uip.poly_model.AABB[XMAX];
-		original_model_AABB.max[1] = uip.poly_model.AABB[YMAX];
-		original_model_AABB.max[2] = uip.poly_model.AABB[ZMAX];
-	}
-#endif
 }
 
 // 축-각도 표현을 쿼터니언으로 변환
@@ -1840,7 +1819,26 @@ void subMenuHandler(int value) {
 	rotate_composite_object(g_gaussians, 45.0f, 1.0f, 1.0f, 1.0f);
 #endif
 	uip.composite_object_read = 1;
+#if LEAF_NODE_DEBUG
+	if (original_vertices != nullptr) {
+		delete[] original_vertices;
+		original_vertices = nullptr;
+	}
+	num_original_vertices = uip.poly_model.n_triangles * 3;
+	if (num_original_vertices > 0) {
+		original_vertices = new ExtendedVertex[num_original_vertices];
 
+		size_t total_bytes = num_original_vertices * sizeof(ExtendedVertex);
+		memcpy(original_vertices, uip.poly_model.extended_vertices, total_bytes);
+
+		original_model_AABB.min[0] = uip.poly_model.AABB[XMIN];
+		original_model_AABB.min[1] = uip.poly_model.AABB[YMIN];
+		original_model_AABB.min[2] = uip.poly_model.AABB[ZMIN];
+		original_model_AABB.max[0] = uip.poly_model.AABB[XMAX];
+		original_model_AABB.max[1] = uip.poly_model.AABB[YMAX];
+		original_model_AABB.max[2] = uip.poly_model.AABB[ZMAX];
+	}
+#endif
 	load_poly_model_into_OpenGL();
 	g_cuda_rendering_done = false;
 	glutPostRedisplay();
