@@ -37,6 +37,8 @@ inline void gpuAssert(cudaError_t code, const char* file, int line) {
 #define EPSILON4 1e-4f
 #define EPSILON5 1e-5f
 #define EPSILON7 1e-7f
+#define EPSILON8 1e-8f
+#define EPSILON9 1e-9f
 
 // --- Device-side Data Structures ---
 struct cuRay {
@@ -263,7 +265,7 @@ __constant__ CameraInfo g_CameraInfo;
 __constant__ float3 g_SceneBBoxMin;
 __constant__ float3 g_SceneBBoxMax;
 
-__constant__ Gaussian* g_d_gaussians;
+__device__ Gaussian* g_d_gaussians;
 
 kdtreeNode* g_d_kdtree_nodes = nullptr;
 unsigned int* g_d_tri_offsets = nullptr;
@@ -1081,7 +1083,8 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
 #endif
             }
 #if HIT_AND_NODE_COUNT_DEBUG
-            max_sort_size = max_sort_size > local_hit_count ? max_sort_size : local_hit_count;
+            //max_sort_size = max_sort_size > local_hit_count ? max_sort_size : local_hit_count;
+            max_sort_size = MyMAX(max_sort_size, local_hit_count);
 #endif
 
             if (local_hit_count > 0) {
@@ -1832,12 +1835,12 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
 #endif
 ) {
 
-#if LEAF_NODE_DEBUG
-    float3 h_bbox_min = make_float3(object.AABB[XMIN], object.AABB[YMIN], object.AABB[ZMIN]);
-    float3 h_bbox_max = make_float3(object.AABB[XMAX], object.AABB[YMAX], object.AABB[ZMAX]);
-    CUDA_CHECK(cudaMemcpyToSymbol(g_SceneBBoxMin, &h_bbox_min, sizeof(float3)));
-    CUDA_CHECK(cudaMemcpyToSymbol(g_SceneBBoxMax, &h_bbox_max, sizeof(float3)));
-#endif
+//#if LEAF_NODE_DEBUG
+//    float3 h_bbox_min = make_float3(object.AABB[XMIN], object.AABB[YMIN], object.AABB[ZMIN]);
+//    float3 h_bbox_max = make_float3(object.AABB[XMAX], object.AABB[YMAX], object.AABB[ZMAX]);
+//    CUDA_CHECK(cudaMemcpyToSymbol(g_SceneBBoxMin, &h_bbox_min, sizeof(float3)));
+//    CUDA_CHECK(cudaMemcpyToSymbol(g_SceneBBoxMax, &h_bbox_max, sizeof(float3)));
+//#endif
 
     SceneInfo h_scene_info = { width, height };
     CUDA_CHECK(cudaMemcpyToSymbol(g_SceneInfo, &h_scene_info, sizeof(SceneInfo)));
@@ -1960,7 +1963,7 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
     printf("avg_intersection_tests\t: %f\n", avg_intersection_tests / intersection_tests);
     printf("avg_hits_found\t\t: %f\n", avg_hits_found / hits_found);
     printf("avg_blend_ops\t\t: %f\n", avg_blend_ops / blend_ops);
-    printf("avg_avg_sort_size\t: %f\n", avg_max_sort_size / max_sort_size);
+    printf("avg_max_sort_size\t: %f\n", avg_max_sort_size / max_sort_size);
     printf("===========================================\n");
 
     //delete[] h_debug_buffer1;
@@ -2032,8 +2035,7 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
     float milliseconds = 0;
     CUDA_CHECK(cudaEventElapsedTime(&milliseconds, start_ev, stop_ev));
     float k_fps = 1000.0f / milliseconds; // 전역 변수에 FPS 저장
-    //total_frame += k_fps;
-    if(k_fps < 100.0f)
+    //if(k_fps < 100.0f)
     printf("FPS : %f-------------------------------------------------------------\n", k_fps);
     //if (++frame_count >= 100) {
     //    printf("avg FPS for 100 frame : %f\n", (float)(total_frame / frame_count));

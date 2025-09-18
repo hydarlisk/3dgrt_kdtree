@@ -1280,7 +1280,6 @@ void rotate_composite_object(std::vector<Gaussian>& gaussians, float angle_degre
 #if QUATERNION
 		rotate_vector_by_quaternion(v, v, rot_quat);
 #else
-		float* v = uip.poly_model.extended_vertices[i].vertex;
 		float ox = v[0], oy = v[1], oz = v[2]; // 원본 좌표
 
 		v[0] = ox * R[0][0] + oy * R[0][1] + oz * R[0][2];
@@ -2173,17 +2172,18 @@ void idle() {
 
 #if HIT_AND_NODE_COUNT_DEBUG
 		// 최댓값을 계산하여 전역 변수에 저장
+		// TODO: MyMAX로 변환
 		memset(max_debug_values, 0, sizeof(max_debug_values));
 		if (h_debug_buffer1_main != nullptr) {
 			for (int i = 0; i < g_render_width * g_render_height; i++) {
-				max_debug_values[0] = (max_debug_values[0] > (int)h_debug_buffer1_main[i].x) ? max_debug_values[0] : (int)h_debug_buffer1_main[i].x;
-				max_debug_values[1] = (max_debug_values[1] > (int)h_debug_buffer1_main[i].y) ? max_debug_values[1] : (int)h_debug_buffer1_main[i].y;
-				max_debug_values[2] = (max_debug_values[2] > (int)h_debug_buffer1_main[i].z) ? max_debug_values[2] : (int)h_debug_buffer1_main[i].z;
+				max_debug_values[0] = MyMAX(max_debug_values[0], (int)h_debug_buffer1_main[i].x);
+				max_debug_values[1] = MyMAX(max_debug_values[1], (int)h_debug_buffer1_main[i].y);
+				max_debug_values[2] = MyMAX(max_debug_values[2], (int)h_debug_buffer1_main[i].z);
 			}
 			for (int i = 0; i < g_render_width * g_render_height; i++) {
-				max_debug_values[3] = (max_debug_values[3] > (int)h_debug_buffer2_main[i].x) ? max_debug_values[3] : (int)h_debug_buffer2_main[i].x;
-				max_debug_values[4] = (max_debug_values[4] > (int)h_debug_buffer2_main[i].y) ? max_debug_values[4] : (int)h_debug_buffer2_main[i].y;
-				max_debug_values[5] = (max_debug_values[5] > (int)h_debug_buffer2_main[i].z) ? max_debug_values[5] : (int)h_debug_buffer2_main[i].z;
+				max_debug_values[3] = MyMAX(max_debug_values[3], (int)h_debug_buffer2_main[i].x);
+				max_debug_values[4] = MyMAX(max_debug_values[4], (int)h_debug_buffer2_main[i].y);
+				max_debug_values[5] = MyMAX(max_debug_values[5], (int)h_debug_buffer2_main[i].z);
 			}
 		}
 #endif
