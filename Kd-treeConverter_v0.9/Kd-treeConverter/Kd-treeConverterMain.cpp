@@ -61,7 +61,7 @@ bool measure_fps_interval = false;
 
 GLuint pbo;
 struct cudaGraphicsResource* pbo_cuda_resource;
-GLuint result_texture_id; // 렌더링 결과를 담을 텍스춰 ID
+GLuint result_texture_id; // 렌더링 결과를 담을 텍스처 ID
 GLuint quad_vao;          // 화면 전체 사각형 VAO
 //GLuint quad_vbo, quad_ebo;
 
@@ -91,7 +91,7 @@ void setup_interop_resources() {
 
 	cudaGraphicsGLRegisterBuffer(&pbo_cuda_resource, pbo, cudaGraphicsRegisterFlagsWriteDiscard);
 
-	// 렌더링 결과를 담을 텍스춰 생성
+	// 렌더링 결과를 담을 텍스처 생성
 	glGenTextures(1, &result_texture_id);
 	glBindTexture(GL_TEXTURE_2D, result_texture_id);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -2140,6 +2140,8 @@ void idle() {
 #if SCENE_NUM < 1
 		renderObjWithCuda(uip.poly_model, camera, g_render_width, g_render_height, d_pbo_ptr, g_cuda_rendering_done);
 #else
+		//renderGaussianWithCuda(uip.poly_model, g_gaussians, camera, g_render_width, g_render_height, d_pbo_ptr, g_cuda_rendering_done);
+
 		g_fps = renderGaussianWithCudaFrame(camera, g_render_width, g_render_height, d_pbo_ptr
 #if HIT_AND_NODE_COUNT_DEBUG
 			, h_debug_buffer1_main, h_debug_buffer2_main
@@ -2187,10 +2189,10 @@ void idle() {
 #endif
 #endif
 
-		// PBO의 내용을 텍스춰로 복사
+		// PBO의 내용을 텍스처로 복사
 		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo);
 		glBindTexture(GL_TEXTURE_2D, result_texture_id);
-		// PBO 버퍼의 데이터를 현재 바인딩된 2D 텍스춰로 전송
+		// PBO 버퍼의 데이터를 현재 바인딩된 2D 텍스처로 전송
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, g_render_width, g_render_height, GL_RGB, GL_FLOAT, 0);
 		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 
