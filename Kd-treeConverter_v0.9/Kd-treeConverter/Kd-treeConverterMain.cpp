@@ -2140,6 +2140,8 @@ void idle() {
 #if SCENE_NUM < 1
 		renderObjWithCuda(uip.poly_model, camera, g_render_width, g_render_height, d_pbo_ptr, g_cuda_rendering_done);
 #else
+		//renderGaussianWithCuda(uip.poly_model, g_gaussians, camera, g_render_width, g_render_height, d_pbo_ptr, g_cuda_rendering_done);
+
 		g_fps = renderGaussianWithCudaFrame(camera, g_render_width, g_render_height, d_pbo_ptr
 #if HIT_AND_NODE_COUNT_DEBUG
 			, h_debug_buffer1_main, h_debug_buffer2_main
