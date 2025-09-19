@@ -1700,14 +1700,14 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
     }
     //printf("2. gpu memcpy done\n");
 
-    // 텍스처 바인딩
+    // 텍스춰 바인딩
 
     // 리소스 디스크립터(Resource Descriptor) 설정
     cudaResourceDesc resDesc;
     memset(&resDesc, 0, sizeof(resDesc));
     resDesc.resType = cudaResourceTypeLinear; // 1D 배열이므로 Linear 타입
 
-    // 텍스처 디스크립터(Texture Descriptor) 설정
+    // 텍스춰 디스크립터(Texture Descriptor) 설정
     cudaTextureDesc texDesc;
     memset(&texDesc, 0, sizeof(texDesc));
     texDesc.addressMode[0] = cudaAddressModeClamp; // 주소 지정 모드
@@ -1715,8 +1715,8 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
     texDesc.readMode = cudaReadModeElementType;    // 원본 타입 그대로 읽기
     texDesc.normalizedCoords = 1;                  // 정규화되지 않은 좌표 사용
 
-    // 각 버퍼에 대해 텍스처 객체 생성 및 전역 변수에 복사
-    // k-d 트리 노드 텍스처 객체 생성
+    // 각 버퍼에 대해 텍스춰 객체 생성 및 전역 변수에 복사
+    // k-d 트리 노드 텍스춰 객체 생성
     resDesc.res.linear.devPtr = g_d_kdtree_nodes;
     resDesc.res.linear.desc = cudaCreateChannelDesc<uint2>();
     resDesc.res.linear.sizeInBytes = node_size;
@@ -1726,7 +1726,7 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
     CUDA_CHECK(cudaCreateTextureObject(&h_inKdTreeNodeTex, &resDesc, &texDesc, NULL));
     CUDA_CHECK(cudaMemcpyToSymbol(inKdTreeNodeTex, &h_inKdTreeNodeTex, sizeof(cudaTextureObject_t)));
 
-    // 삼각형 오프셋 텍스처 객체 생성
+    // 삼각형 오프셋 텍스춰 객체 생성
     resDesc.res.linear.devPtr = g_d_tri_offsets;
     resDesc.res.linear.desc = cudaCreateChannelDesc<unsigned int>();
     resDesc.res.linear.sizeInBytes = offset_size;
@@ -1736,7 +1736,7 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
     CUDA_CHECK(cudaCreateTextureObject(&h_inObjectOffsetListTex, &resDesc, &texDesc, NULL));
     CUDA_CHECK(cudaMemcpyToSymbol(inObjectOffsetListTex, &h_inObjectOffsetListTex, sizeof(cudaTextureObject_t)));
 
-    // 삼각형 가속 구조체 텍스처 객체 생성
+    // 삼각형 가속 구조체 텍스춰 객체 생성
 #if WALD_METHOD
     resDesc.res.linear.devPtr = d_waldInfo;
     resDesc.res.linear.desc = cudaCreateChannelDesc<float4>(); // WaldInfo는 float4 3개로 구성
@@ -1752,7 +1752,7 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
     CUDA_CHECK(cudaCreateTextureObject(&h_inTriAccelTex, &resDesc, &texDesc, NULL));
     CUDA_CHECK(cudaMemcpyToSymbol(inTriAccelTex, &h_inTriAccelTex, sizeof(cudaTextureObject_t)));
 
-    //// 가우시안 데이터 텍스처 객체 생성
+    //// 가우시안 데이터 텍스춰 객체 생성
     //resDesc.res.linear.devPtr = g_d_gaussians_persistent;
     //resDesc.res.linear.desc = cudaCreateChannelDesc<float4>();
     //resDesc.res.linear.sizeInBytes = gaussians_bytes;
