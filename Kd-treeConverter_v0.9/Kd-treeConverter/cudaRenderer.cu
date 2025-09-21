@@ -287,8 +287,11 @@ __constant__ float3 g_SceneBBoxMax;
 #if GLOBAL_DEVICE_VAR
 kdtreeNode* g_d_kdtree_nodes = nullptr;
 unsigned int* g_d_tri_offsets = nullptr;
+#if WALD_METHOD
 cuWaldTriangleInfo* g_d_waldInfo = nullptr;
+#else
 TriAccel* g_d_tri_accel = nullptr;
+#endif
 Gaussian* g_d_gaussians_persistent = nullptr;
 #endif
 
@@ -1908,8 +1911,11 @@ void cleanupCudaResources() {
 #if GLOBAL_DEVICE_VAR
     if (g_d_kdtree_nodes) cudaFree(g_d_kdtree_nodes);
     if (g_d_tri_offsets) cudaFree(g_d_tri_offsets);
+#if WALD_METHOD
     if (g_d_waldInfo) cudaFree(g_d_waldInfo);
+#else
     if (g_d_tri_accel) cudaFree(g_d_tri_accel);
+#endif
     if (g_d_gaussians_persistent) cudaFree(g_d_gaussians_persistent);
 #endif
 

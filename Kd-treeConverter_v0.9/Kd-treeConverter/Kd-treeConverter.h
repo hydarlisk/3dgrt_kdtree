@@ -7,7 +7,7 @@
 #pragma once
 #include <vector>
 
-//shyun
+//shyun added begin
 #define TRAVL_COST 1.0
 #define ISCET_COST 20.0
 #define MAX_LEVEL 100
@@ -113,7 +113,7 @@
 struct float3x3 {
 	float m[3][3];
 };
-//shyun end
+//shyun added end
 
 #define X 0
 #define Y 1
@@ -196,7 +196,7 @@ typedef struct _CompositeObject {
 	KdTree *kd_tree;
 } CompositeObject;
 
-//shyun
+//shyun added begin
 struct Gaussian {
 	float pos[3];       // 3D 위치 (x, y, z)
 	float scale[3];     // 3축 스케일 (sx, sy, sz)
@@ -215,7 +215,7 @@ struct Gaussian {
 // pad    : 236 + 4 (240 = 16 * 15)
 // pad[5] : 236 + 20 (256)
 // rot_mat: 256
-//shyun end
+//shyun added end
 
 typedef struct _Ray {
 	//float origin[3];
@@ -237,14 +237,14 @@ typedef struct _Ray {
 } Ray;
 
 int build_kd_tree_for_composite_object(CompositeObject *);
-//shyun
+//shyun added begin
 int build_kd_tree_for_composite_object2(CompositeObject* c_object, const char* filename);
 void collectTriangleCounts_recursive(
 	const KdTree* kd_tree,
 	int nodeIndex,
 	std::vector<unsigned int>& counts
 );
-//shyun end
+//shyun added end
 void dump_kd_tree_for_composite_object(CompositeObject *, const char *, int, const char *);
 int read_kd_tree_from_file(CompositeObject *, const char *, int);
 

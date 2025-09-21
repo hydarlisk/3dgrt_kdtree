@@ -24,7 +24,7 @@
 #include "OpenGLStuffs.h"
 #include "MyMathUtility.h"
 
-//shyun
+//shyun added begin
 #include <map>
 #include <iostream>
 #include <chrono>
@@ -157,7 +157,7 @@ void timer_callback(int value) {
 
 	glutTimerFunc(1000 / 60, timer_callback, 0);
 }
-//shyun end
+//shyun added end
 
 UIParameters uip;
 Camera camera;
@@ -516,7 +516,7 @@ void mousemove(int x, int y) {
 	float R[16], tmpx, tmpy, tmpz;
  
 	if (uip.left_button_pressed) {
-		g_camera_dirty = true; //shyun
+		g_camera_dirty = true; //shyun added
 		delx = x - uip.prevx, dely = uip.prevy - y;
 		uip.prevx = x, uip.prevy = y;
 
@@ -674,7 +674,7 @@ typedef enum _SL_KDT_CONFIG_command_ID {
 	CMD_KD_TREE_MAX_LEVEL, CMD_KD_TREE_MIN_TRIANGLE, CMD_KD_TREE_EMTPY_BONUS, CMD_COMMENT, CMD_NULL
 } SL_KDT_CONFIG_command_ID;
 
-//shyun
+//shyun added begin
 #if LEAF_NODE_DEBUG
 void set_kd_tree_leaf_node() {
 	if (selected_leaf_index >= (int)leaf_nodes.size()) {
@@ -1481,7 +1481,7 @@ bool save_composite_object_to_obj(const CompositeObject& object, const char* fil
 
 	return true;
 }
-//shyun end
+//shyun added end
 
 SL_KDT_CONFIG_command_ID query_SL_KDT_CONFIG_command_ID(const char *command) {
 	int i;
@@ -2209,7 +2209,7 @@ void main(int argc, char **argv) {
 	glutInitContextProfile(GLUT_COMPATIBILITY_PROFILE);
 	uip.main_window_ID = glutCreateWindow("Ply-to-Kd-Tree Converter-Tracer SW: Verion 1.0_glut");
 	initialize_glew();
-//shyun
+//shyun added begin
 	cudaGLSetGLDevice(0);
 	if (!initCuda()) {
 		fprintf(stderr, "Failed to initialize CUDA. Exiting.\n");
@@ -2218,7 +2218,7 @@ void main(int argc, char **argv) {
 	}
 
 	setup_interop_resources();
-//shyun end
+//shyun added end
 
 	register_callbacks_and_create_menu();
 	glutIdleFunc(idle);
