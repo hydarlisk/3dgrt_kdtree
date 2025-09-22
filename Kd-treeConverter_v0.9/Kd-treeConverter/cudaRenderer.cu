@@ -250,11 +250,11 @@ struct ShortStackCache {
 // 텍스춰 및 상수 메모리 선언
 // =================================================================================
 
-__constant__ cudaTextureObject_t inKdTreeNodeTex;
-__constant__ cudaTextureObject_t inObjectOffsetListTex;
-__constant__ cudaTextureObject_t inTriAccelTex;
+__device__ cudaTextureObject_t inKdTreeNodeTex;
+__device__ cudaTextureObject_t inObjectOffsetListTex;
+__device__ cudaTextureObject_t inTriAccelTex;
 #if GAUSSIAN_TEXTURE
-__constant__ cudaTextureObject_t inGaussianTex;
+__device__ cudaTextureObject_t inGaussianTex;
 
 __device__ Gaussian fetch_gaussian(int gaussianID) {
     Gaussian g;
@@ -892,13 +892,13 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
     // 광선의 유효 범위 설정
     float t_scene_near = RAY_START_EPSILON, t_scene_far = FLT_MAX;
     if (BoundsRayIntersect(g_SceneBBoxMin, g_SceneBBoxMax, &currRay, &t_scene_near, &t_scene_far)) {
+        kdtreeNode node = tex1Dfetch<kdtreeNode>(inKdTreeNodeTex, 0);
         float t_near = t_scene_near, t_far = t_scene_far;
         // Kd-tree 순회를 위한 스택 초기화
         shortStack cache;
         //ShortStackCache cache;
         cache.init(threadIdx.y * blockDim.x + threadIdx.x);
 
-        kdtreeNode node = tex1Dfetch<kdtreeNode>(inKdTreeNodeTex, 0);
         // 메인 순회 루프
         while (accumulated_opacity < OPACITY_THRESHOLD) { //while (true) {
             while (!IS_LEAF(node)) {
@@ -948,7 +948,6 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
 #endif
             }
 #if HIT_AND_NODE_COUNT_DEBUG
-            //max_sort_size = max_sort_size > local_hit_count ? max_sort_size : local_hit_count;
             max_sort_size = MyMAX(max_sort_size, local_hit_count);
 #endif
 
@@ -1784,7 +1783,7 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
         max_blend_ops = max(max_blend_ops, (int)h_debug_buffer2[i].y);
         max_max_sort_size = max(max_max_sort_size, (int)h_debug_buffer2[i].z);
 
-        if (h_debug_buffer2[i].y != 0.0f) {
+        if (h_debug_buffer2[i].y != 0.0f) { // blending 일어난 픽셀만 계산
             avg_node_visits += h_debug_buffer1[i].x;
             avg_leaf_visits += h_debug_buffer1[i].y;
             avg_intersection_tests += h_debug_buffer1[i].z;

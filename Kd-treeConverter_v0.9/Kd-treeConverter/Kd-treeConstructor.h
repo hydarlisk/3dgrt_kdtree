@@ -39,6 +39,9 @@ typedef struct _TriangleList {
 	//GTriangleWrapper *pTriangleWrapper;
 	ExtendedVertex point[3];
 	int side;
+#if SAH_OPACITY
+	float opacity; //shyun added
+#endif
 } TriangleList;
 
 typedef struct _BoundEdge {
@@ -108,7 +111,7 @@ void build_kd_tree_recursive(BoundEdge *bEdge, const TriangleList *pTriangleInfo
 
 void build_TriAccList(CompositeObject *poly_model, TriAccel*& pTriAcc);
 
-//shyun
+//shyun added begin
 struct LeafNodeInfo {
 	BoundingBox aabb;
 	std::vector<unsigned int> triangle_indices;
@@ -119,3 +122,4 @@ struct LeafNodeInfo {
 };
 std::vector<BoundingBox> extract_leaves_from_kd_tree();
 std::vector<LeafNodeInfo> extract_all_leaf_data(CompositeObject* c_object, int& largest_leaf_index);
+//shyun added end

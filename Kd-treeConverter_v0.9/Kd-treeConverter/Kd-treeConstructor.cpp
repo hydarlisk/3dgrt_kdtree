@@ -12,6 +12,7 @@
 #include <limits.h>
 
 #include <stack>
+#include <vector>
 
 #include "Kd-treeConverter.h"
 #include "Kd-treeConstructor.h"
@@ -43,6 +44,8 @@ KdTreeNode   *g_pKdTree_Node_Array = NULL;
 unsigned int  g_iKdTree_EmptyNode_Count;
 unsigned int  g_iKdTree_LeafNode_Count;
 unsigned int  g_iKdTree_MaxTriInLeafNode_Count;
+
+extern std::vector<Gaussian> g_gaussians;
 
 void _reAllocTriangleOffsetList(unsigned int _newAllocSize, unsigned int &_oldAllocSize, unsigned int** _ppTriOffsetArray)
 {
@@ -315,8 +318,13 @@ void push_triangles_to_child(const unsigned n_bEdge, const BoundEdge *bEdge,
 	}
 }
 
-void try_to_split(const int axis, BoundingBox &inBBox, const TriangleList *pTriangles, const int triangleSize,
-                        BoundEdge *bEdge,  SplitCost &bestCost)
+void try_to_split(const int axis, BoundingBox &inBBox, const TriangleList *pTriangles, const int triangleSize, BoundEdge *bEdge,  SplitCost &bestCost
+//shyun added begin
+#if SAH_OPACITY
+	, const double total_opacity_in_node
+#endif
+//shyun added end
+)
 {
 	const int axis1 = modulo[axis + 1], axis2 = modulo[axis + 2];
 	float fCell_extent[3];
@@ -336,6 +344,12 @@ void try_to_split(const int axis, BoundingBox &inBBox, const TriangleList *pTria
 	// ===========================================================
 	// 모든 split candidate 에 대해 cost 계산
 	// ===========================================================
+//shyun added begin
+#if SAH_OPACITY
+	double opacity_open = 0.0, opacity_close = 0.0, opacity_planar_local = 0.0;
+	double opacity_local_open = 0.0, opacity_local_close = 0.0;
+#endif
+//shyun added end
 			/**
 			 * open			: triangle box 기준으로 min 에 해당하는 개수
 			 * close		: triangle box 기준으로 max 에 해당하는 개수
@@ -353,53 +367,74 @@ void try_to_split(const int axis, BoundingBox &inBBox, const TriangleList *pTria
 	set_bound_edge( axis, pTriangles, n_bEdge, bEdge );
 
 
-	for ( unsigned int i = 0; i < n_bEdge; i++ ) {
+	for (unsigned int i = 0; i < n_bEdge; i++) {
 		// 현재 bEdge[i] 가 자르고자 하는 plane candidate
-				BoundEdge curr_bEdge = bEdge[i];
+		BoundEdge curr_bEdge = bEdge[i];
 
 		//planar는 open과 close에 둘 다 포함됨
 		// (원래는 2개(min/max)가 planar 한개로 계산 됐으므로 min->open, max->close 로 각각 들어감.)
-				open  += local_open  + num_planars;
-				close += local_close + num_planars;
-				local_open = 0;  local_close = 0; num_planars = 0; // num_planars 도 local 계산임
-				num_normalPositive = 0;
+		open += local_open + num_planars;
+		close += local_close + num_planars;
+#if SAH_OPACITY
+		opacity_open += opacity_local_open + opacity_planar_local;
+		opacity_close += opacity_local_close + opacity_planar_local;
+
+		opacity_planar_local = 0.0; opacity_local_open = 0.0; opacity_local_close = 0.0;
+#endif
+		local_open = 0;  local_close = 0; num_planars = 0; // num_planars 도 local 계산임
+		num_normalPositive = 0;
 
 		//현재 axis와 side에 대해 포지션구함
-				const float cur_position = curr_bEdge.t;
+		const float cur_position = curr_bEdge.t;
 
-				// ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ --
-				// Split plane candidate 와 같은 위치의 edge 들에 대한 처리
-				// ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ --
-				{
-					//똑같은게 여러개 있을 때는 제일 오른쪽에서만 SAH 계산을 한다.
-					for ( unsigned int j = i; j < n_bEdge; j++ ) {
-						BoundEdge tmp_bEdge = bEdge[j];
-						if ( tmp_bEdge.t != cur_position) break;
+		// ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ --
+		// Split plane candidate 와 같은 위치의 edge 들에 대한 처리
+		// ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ --
+		{
+			//똑같은게 여러개 있을 때는 제일 오른쪽에서만 SAH 계산을 한다.
+			for (unsigned int j = i; j < n_bEdge; j++) {
+				BoundEdge tmp_bEdge = bEdge[j];
+				if (tmp_bEdge.t != cur_position) break;
 
-						const bool
-							is_left		= (tmp_bEdge.type == BoundEdge::START),
-							is_planar	= tmp_bEdge.isPlanar,
-							is_normalPositive = tmp_bEdge.isNormalPositive;
-
-						//카운팅
-						if (!is_planar) {
-							local_open	+= is_left ? 1 : 0; //!< box 의 왼쪽은 local_open 을 증가
-							local_close	+= is_left ? 0 : 1; //!< box 의 오른쪽은 local_close 를 증가
-						}
-						else {
-							//플라나하다면 따로 카운팅
-							num_planars += is_left ? 1 : 0;	// only count it once
-							num_normalPositive += is_normalPositive ? 1 : 0;
-						}
-
-						curr_bEdge = tmp_bEdge;
-						i=j;
-					}
+				const bool
+					is_left = (tmp_bEdge.type == BoundEdge::START),
+					is_planar = tmp_bEdge.isPlanar,
+					is_normalPositive = tmp_bEdge.isNormalPositive;
+//shyun added begin
+#if SAH_OPACITY
+				const float tri_opacity = tmp_bEdge.triangleInfo->opacity;
+#endif
+//shyun added end
+										//카운팅
+				if (!is_planar) {
+					local_open += is_left ? 1 : 0; //!< box 의 왼쪽은 local_open 을 증가
+					local_close += is_left ? 0 : 1; //!< box 의 오른쪽은 local_close 를 증가
+//shyun added begin
+#if SAH_OPACITY
+					opacity_local_open += is_left ? tri_opacity : 0.0;
+					opacity_local_close += is_left ? 0.0 : tri_opacity;
+#endif
+//shyun added end
+				}
+				else {
+					//플라나하다면 따로 카운팅
+					num_planars += is_left ? 1 : 0;	// only count it once
+					num_normalPositive += is_normalPositive ? 1 : 0;
+//shyun added begin
+#if SAH_OPACITY
+					opacity_planar_local += is_left ? tri_opacity : 0.0;
+#endif
+//shyun added end
 				}
 
-				// Numerical error 
-				if (cur_position <= cell_min + KD_TREE_EPSILON) continue;
-				if (cur_position >= cell_max - KD_TREE_EPSILON) break;
+				curr_bEdge = tmp_bEdge;
+				i = j;
+			}
+		}
+
+		// Numerical error 
+		if (cur_position <= cell_min + KD_TREE_EPSILON) continue;
+		if (cur_position >= cell_max - KD_TREE_EPSILON) break;
 
 
 		// ==================================================
@@ -410,17 +445,17 @@ void try_to_split(const int axis, BoundingBox &inBBox, const TriangleList *pTria
 				extent_l = double(cur_position) - cell_min,
 				extent_r = cell_max - double(cur_position);
 			const double
-				prob_l = (extent_l*area_mul + area_add)*cell_area_rcp,
-				prob_r = (extent_r*area_mul + area_add)*cell_area_rcp;
+				prob_l = (extent_l * area_mul + area_add) * cell_area_rcp,
+				prob_r = (extent_r * area_mul + area_add) * cell_area_rcp;
 
 			const int
-				n_leftOnly		= close + local_close,  // close 가 된다면 그 삼각형은 오른쪽에 있지도 않게 됨 (겹치지도 않음)
-				n_cross			= open  - n_leftOnly,   // open = n_leftOnly + n_cross (현재 local_open 은 포함하지 않음)
-				n_rightOnly		= triangleSize - (n_leftOnly + n_cross + num_planars);
+				n_leftOnly = close + local_close,  // close 가 된다면 그 삼각형은 오른쪽에 있지도 않게 됨 (겹치지도 않음)
+				n_cross = open - n_leftOnly,   // open = n_leftOnly + n_cross (현재 local_open 은 포함하지 않음)
+				n_rightOnly = triangleSize - (n_leftOnly + n_cross + num_planars);
 
-					// planar  는 local_open 에 해당하는 것만 카운팅함.
-					// n_cross 는 local_open 은 고려하지 않음. 즉, planar 도 고려하지 않음.
-					// 전체 triangle_size = n_leftOnly + n_rightOnly + n_cross + num_planars
+			// planar  는 local_open 에 해당하는 것만 카운팅함.
+			// n_cross 는 local_open 은 고려하지 않음. 즉, planar 도 고려하지 않음.
+			// 전체 triangle_size = n_leftOnly + n_rightOnly + n_cross + num_planars
 
 			double ExpectedCost;
 			int nTri_left, nTri_right;
@@ -432,70 +467,95 @@ void try_to_split(const int axis, BoundingBox &inBBox, const TriangleList *pTria
 			//  Based on RTGPU code
 			// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 			if (KD_TREE_PLANAR_TRIANGLE_ADD_MODE == BOTH_SIDE) {
-							const int tri_num_left  = n_leftOnly +n_cross+num_planars;
-							const int tri_num_right = n_rightOnly+n_cross+num_planars;
-							const float	emptyBonus  
-								= (tri_num_left == 0 || tri_num_right == 0) ? v_KD_TREE_EMTPY_BONUS : 1.0f;
-				
-				ExpectedCost = v_KD_TREE_TRAVL_COST + v_KD_TREE_ISECT_COST*( 
-					double( tri_num_left )		* prob_l +
-					double( tri_num_right )	* prob_r ) * emptyBonus;
+				const int tri_num_left = n_leftOnly + n_cross + num_planars;
+				const int tri_num_right = n_rightOnly + n_cross + num_planars;
+				const float	emptyBonus
+					= (tri_num_left == 0 || tri_num_right == 0) ? v_KD_TREE_EMTPY_BONUS : 1.0f;
+
+				ExpectedCost = v_KD_TREE_TRAVL_COST + v_KD_TREE_ISECT_COST * (
+					double(tri_num_left) * prob_l +
+					double(tri_num_right) * prob_r) * emptyBonus;
 
 				planar_side = 2;
-				nTri_left  = tri_num_left;
+				nTri_left = tri_num_left;
 				nTri_right = tri_num_right;
 
-			// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-			// Cost function 의 최소값에 따라
-			// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-			} else { // MINCOST_SIDE
+				// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+				// Cost function 의 최소값에 따라
+				// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+			}
+			else { // MINCOST_SIDE
+//shyun added begin
+#if SAH_OPACITY
+				// 불투명도 합계를 기반으로 각 영역(왼쪽만, 오른쪽만, 교차)을 계산
+				//double total_opacity_in_node = /* TODO: 이전 단계에서 계산된 값 */;
 
-							// 배열[0] 은 planar 가 왼쪽에 들어갔을 경우
-							// 배열[1] 은 planar 가 오른쪽에 들어갔을 경우
-					
-							//최종적인 양쪽 갯수.
-							const int tri_num_left[2]	= { n_leftOnly+n_cross+num_planars, n_leftOnly+n_cross };
-							const int tri_num_right[2]	= { n_rightOnly+n_cross, n_rightOnly+n_cross+num_planars };
+				const double op_leftOnly = opacity_close + opacity_local_close;
+				const double op_cross = opacity_open - op_leftOnly;
+				const double op_rightOnly = total_opacity_in_node - (op_leftOnly + op_cross + opacity_planar_local);
 
-							const float	emptyBonus[2] = { 
-								(tri_num_left[0] == 0 || tri_num_right[0] == 0) ? v_KD_TREE_EMTPY_BONUS : 1.0f, 
-								(tri_num_left[1] == 0 || tri_num_right[1] == 0) ? v_KD_TREE_EMTPY_BONUS : 1.0f };
+				// 두 가지 시나리오에 대한 불투명도 합계를 계산
+				// - 시나리오 [0]: 평면 삼각형(Planar)을 왼쪽에 포함
+				// - 시나리오 [1]: 평면 삼각형(Planar)을 오른쪽에 포함
+				const double total_op_left[2] = { op_leftOnly + op_cross + opacity_planar_local, op_leftOnly + op_cross };
+				const double total_op_right[2] = { op_rightOnly + op_cross, op_rightOnly + op_cross + opacity_planar_local };
 
-							double SAH[2];
-							for( int i = 0; i < 2; i++ ) {
-								SAH[i] = v_KD_TREE_TRAVL_COST + v_KD_TREE_ISECT_COST*( 
-									double( tri_num_left[i] )	* prob_l +
-									//double( tri_num_left[i] * tri_num_left[i] )	* prob_l +
-									double( tri_num_right[i] )	* prob_r ) * emptyBonus[i];
-									//double( tri_num_right[i] * tri_num_right[i])* prob_r ) * emptyBonus[i];
-							}
+#endif
+//shyun added end
+				
+				// 배열[0] 은 planar 가 왼쪽에 들어갔을 경우
+				// 배열[1] 은 planar 가 오른쪽에 들어갔을 경우
 
-				if( SAH[0] <= SAH[1] ) { // planar 를 왼쪽에 넣는 것이 낫다면,
-					ExpectedCost	= SAH[0];
-					planar_side		= BoundEdge::START;
-					nTri_left		= tri_num_left[0];
-					nTri_right		= tri_num_right[0];
-				} else {
-					ExpectedCost	= SAH[1];
-					planar_side		= BoundEdge::END;
-					nTri_left		= tri_num_left[1];
-					nTri_right		= tri_num_right[1];
+				//최종적인 양쪽 갯수.
+				const int tri_num_left[2] = { n_leftOnly + n_cross + num_planars, n_leftOnly + n_cross };
+				const int tri_num_right[2] = { n_rightOnly + n_cross, n_rightOnly + n_cross + num_planars };
+
+				const float	emptyBonus[2] = {
+					(tri_num_left[0] == 0 || tri_num_right[0] == 0) ? v_KD_TREE_EMTPY_BONUS : 1.0f,
+					(tri_num_left[1] == 0 || tri_num_right[1] == 0) ? v_KD_TREE_EMTPY_BONUS : 1.0f };
+
+				double SAH[2];
+				for (int i = 0; i < 2; i++) {
+					SAH[i] = v_KD_TREE_TRAVL_COST + v_KD_TREE_ISECT_COST * (
+//shyun added begin
+#if SAH_OPACITY
+						// 개수 대신 불투명도 합계 사용
+						total_op_left[i] * prob_l + 
+						total_op_right[i] * prob_r ) * emptyBonus[i];
+//shyun added end
+#else
+						double(tri_num_left[i])* prob_l +
+						double(tri_num_right[i]) * prob_r )* emptyBonus[i];
+#endif
+				}
+
+				if (SAH[0] <= SAH[1]) { // planar 를 왼쪽에 넣는 것이 낫다면,
+					ExpectedCost = SAH[0];
+					planar_side = BoundEdge::START;
+					nTri_left = tri_num_left[0];
+					nTri_right = tri_num_right[0];
+				}
+				else {
+					ExpectedCost = SAH[1];
+					planar_side = BoundEdge::END;
+					nTri_left = tri_num_left[1];
+					nTri_right = tri_num_right[1];
 				}
 			}
 
-			if( ExpectedCost < bestCost.cost ) {
-				bestCost.cost			= ExpectedCost;
-				bestCost.splitPos		= cur_position;
-				bestCost.axis			= axis;
+			if (ExpectedCost < bestCost.cost) {
+				bestCost.cost = ExpectedCost;
+				bestCost.splitPos = cur_position;
+				bestCost.axis = axis;
 
-				bestCost.n_onlyLeft		= n_leftOnly;
-				bestCost.n_onlyRight	= n_rightOnly;
-				bestCost.n_cross		= n_cross;
-				bestCost.n_planar		= num_planars;
-				bestCost.n_left			= nTri_left;
-				bestCost.n_right		= nTri_right;
+				bestCost.n_onlyLeft = n_leftOnly;
+				bestCost.n_onlyRight = n_rightOnly;
+				bestCost.n_cross = n_cross;
+				bestCost.n_planar = num_planars;
+				bestCost.n_left = nTri_left;
+				bestCost.n_right = nTri_right;
 
-				bestCost.planar_side	= planar_side;
+				bestCost.planar_side = planar_side;
 			}
 
 		} // scoring
@@ -539,6 +599,20 @@ bool initialize_kd_tree(CompositeObject *poly_model) {
 				g_pTriangleInfos[i].point[0] = pVertexList[3*i];
 				g_pTriangleInfos[i].point[1] = pVertexList[3*i+1];
 				g_pTriangleInfos[i].point[2] = pVertexList[3*i+2];
+//shyun added begin
+#if SAH_OPACITY
+				int gaussian_idx = g_pTriangleInfos[i].point[0].material_ID;
+
+				// 인덱스가 유효한지 확인하고 Opacity 값 가져오기
+				if (gaussian_idx >= 0 && gaussian_idx < g_gaussians.size()) {
+					g_pTriangleInfos[i].opacity = g_gaussians[gaussian_idx].opacity;
+				}
+				else {
+					// 가우시안이 아닌 일반 지오메트리를 위한 기본값
+					g_pTriangleInfos[i].opacity = 1.0f;
+				}
+#endif
+//shyun added end
 				g_pTriangleInfos[i].AABB.min[0] = MyMIN (MyMIN (g_pTriangleInfos[i].point[0].vertex[0], g_pTriangleInfos[i].point[1].vertex[0]), g_pTriangleInfos[i].point[2].vertex[0]);
 				g_pTriangleInfos[i].AABB.min[1] = MyMIN (MyMIN (g_pTriangleInfos[i].point[0].vertex[1], g_pTriangleInfos[i].point[1].vertex[1]), g_pTriangleInfos[i].point[2].vertex[1]);
 				g_pTriangleInfos[i].AABB.min[2] = MyMIN (MyMIN (g_pTriangleInfos[i].point[0].vertex[2], g_pTriangleInfos[i].point[1].vertex[2]), g_pTriangleInfos[i].point[2].vertex[2]);
@@ -612,16 +686,32 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pTriangleInfo
 	}
 
 	// Calculate cost function (in case of no partition)
+//shyun added begin
+#if SAH_OPACITY
+	double total_opacity_in_node = 0.0;
+	for (unsigned int i = 0; i < triangleSize; ++i) {
+		total_opacity_in_node += pTriangleInfos[i].opacity;
+}
+	bestCost.cost = total_opacity_in_node * v_KD_TREE_ISECT_COST;
+#else
 	bestCost.cost = double(triangleSize) * v_KD_TREE_ISECT_COST;
-#if FORCE_SPLIT_THRESHOLD
-	if (triangleSize > FORCE_SPLIT_THRESHOLD) bestCost.cost = DBL_MAX;
 #endif
+#if FORCE_SPLIT_THRESHOLD
+	if (triangleSize > FORCE_SPLIT_THRESHOLD) bestCost.cost = DBL_MAX; //shyun added
+#endif
+//shyun added end
 
 	// Calculate cost function (in case of trying to partition)
 	if (inNodeLevel < v_KD_TREE_MAX_LEVEL && triangleSize > v_KD_TREE_MIN_TRIANGLE) {
 		// (모든 축에 대해 수행)
 		for (int axis = 0; axis < 3; axis++) {
-			try_to_split(axis, bbox, pTriangleInfos, triangleSize, bEdge, bestCost);
+			try_to_split(axis, bbox, pTriangleInfos, triangleSize, bEdge, bestCost
+//shyun added begin
+#if SAH_OPACITY
+			, total_opacity_in_node
+#endif
+//shyun added end
+				);
 		}
 	}
 	
@@ -799,7 +889,7 @@ void build_TriAccList(CompositeObject *poly_model, TriAccel*& pTriAcc)
 		N[1] *= fRcp_N_k;
 		N[2] *= fRcp_N_k;
 
-		pTriAcc[i].paccked_flags = 0; // shyun: 먼저 모든 비트를 0으로 초기화
+		pTriAcc[i].paccked_flags = 0; // shyun added: 먼저 모든 비트를 0으로 초기화
 		pTriAcc[i].k   = k;
 		pTriAcc[i].n_u = N[u];						// N'u
 		pTriAcc[i].n_v = N[v];						// N'v

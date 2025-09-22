@@ -131,6 +131,9 @@
     </Link>
     <CudaCompile />
     <CudaCompile />
+    <CudaCompile>
+      <CodeGeneration>compute_89,sm_89</CodeGeneration>
+    </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -187,7 +190,6 @@
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <CodeGeneration>compute_89,sm_89</CodeGeneration>
       <GPUDebugInfo>false</GPUDebugInfo>
-      <AdditionalOptions>-maxrregcount=0 %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>

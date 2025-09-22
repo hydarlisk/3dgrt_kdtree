@@ -44,7 +44,8 @@ char* ply_to_obj;
 
 //cudaEvent_t start_ev, stop_ev;
 char* kdtree_build_path;
-int submenu[5] = { 101,1012,102,104,105 };
+//int submenu[5] = { 101,1012,102,104,105 };
+int submenu[5] = { 101,102,104,105 };
 
 bool render_gaussian = false;
 int g_render_width = RENDERING_WIDTH;
@@ -380,10 +381,15 @@ void keyboard(unsigned char key, int x, int y) {
 			timerRunning = !timerRunning;
 			break;
 		case 'f':
-			measure_fps_interval = !measure_fps_interval;
-			timerRunning = true;
-			total_fps = 0.0f;
-			frame_count = 0;
+			if (g_cuda_rendering_done) {
+				measure_fps_interval = !measure_fps_interval;
+				timerRunning = true;
+				total_fps = 0.0f;
+				frame_count = 0;
+			}
+			else {
+				printf("need to CUDA rendering first\n");
+			}
 			break;
 #if LEAF_NODE_DEBUG
 		case 'm':
@@ -1722,20 +1728,20 @@ void subMenuHandler(int value) {
 	g_gaussians.clear();
 	switch (value) {
 	case 101: printf("Hotdog selected\n");
-		ply_file_path = "../../Data/ply/hotdog/hotdog_3dgrt.ply";
-#if !ROTATION
-		ply_kdtree_path = "../../Data/ply/hotdog/hotdog_tree.kdt";
-		ply_igeom_path = "../../Data/ply/hotdog/hotdog_igeom.bin";
-		ply_to_obj = "../../Data/ply/hotdog/hotdog_3dgrt_new.obj";
-		kdtree_build_path = "../../Data/ply/hotdog/hotdog_3dgrt_kdt.txt";
-#else
-		ply_kdtree_path = "../../Data/ply/hotdog/hotdog_tree_rot.kdt";
-		ply_igeom_path = "../../Data/ply/hotdog/hotdog_igeom_rot.bin";
-		ply_to_obj = "../../Data/ply/hotdog/hotdog_3dgrt_new_rot.obj";
-		kdtree_build_path = "../../Data/ply/hotdog/hotdog_3dgrt_kdt_rot.txt";
-#endif
-		break;
-	case 1012: printf("Hotdog2 selected\n");
+//		ply_file_path = "../../Data/ply/hotdog/hotdog_3dgrt.ply";
+//#if !ROTATION
+//		ply_kdtree_path = "../../Data/ply/hotdog/hotdog_tree.kdt";
+//		ply_igeom_path = "../../Data/ply/hotdog/hotdog_igeom.bin";
+//		ply_to_obj = "../../Data/ply/hotdog/hotdog_3dgrt_new.obj";
+//		kdtree_build_path = "../../Data/ply/hotdog/hotdog_3dgrt_kdt.txt";
+//#else
+//		ply_kdtree_path = "../../Data/ply/hotdog/hotdog_tree_rot.kdt";
+//		ply_igeom_path = "../../Data/ply/hotdog/hotdog_igeom_rot.bin";
+//		ply_to_obj = "../../Data/ply/hotdog/hotdog_3dgrt_new_rot.obj";
+//		kdtree_build_path = "../../Data/ply/hotdog/hotdog_3dgrt_kdt_rot.txt";
+//#endif
+//		break;
+//	case 1012: printf("Hotdog2 selected\n");
 		ply_file_path = "../../Data/ply/hotdog2/hotdog_3dgrt2.ply";
 #if !ROTATION
 		ply_kdtree_path = "../../Data/ply/hotdog2/hotdog2_tree.kdt";
@@ -2024,7 +2030,7 @@ void register_callbacks_and_create_menu(void) {
 
 	int submenu = glutCreateMenu(subMenuHandler);
 	glutAddMenuEntry("hotdog", 101);
-	glutAddMenuEntry("hotdog2", 1012);
+	//glutAddMenuEntry("hotdog2", 1012);
 	glutAddMenuEntry("lego", 102);
 	glutAddMenuEntry("bonsai", 103);
 	glutAddMenuEntry("chair", 104);

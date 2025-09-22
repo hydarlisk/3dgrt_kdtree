@@ -12,7 +12,6 @@
 #include <vector>
 
 #include "Kd-treeConverter.h"
-#include "ParallelKdTreeBuilder.h"
 #include "Kd-treeConstructor.h"
 #include "RayTraversal.h"
 #include "MyMathUtility.h"
@@ -28,10 +27,14 @@ int build_kd_tree_for_composite_object(CompositeObject *c_object) {
 		c_object->AABB[2], c_object->AABB[3], c_object->AABB[4], c_object->AABB[5]); 
 	fprintf(stdout, "\n  * Empty Bonus: %7.3f\n  * Travel Cost: %7.3f\n  * Intersection Cost: %7.3f\n  * Max Tree Level: %d\n  * Min # of Triangles per Leaf: %d\n",
 			v_KD_TREE_EMTPY_BONUS, v_KD_TREE_TRAVL_COST, v_KD_TREE_ISECT_COST, v_KD_TREE_MAX_LEVEL, v_KD_TREE_MIN_TRIANGLE );
-
-	//shyun
+//shyun added begin
+#if FORCE_SPLIT_THRESHOLD
 	fprintf(stdout, "  * Max # of Triangles per Leaf: %d\n", FORCE_SPLIT_THRESHOLD);
-
+#endif
+#if SAH_OPACITY
+	fprintf(stdout, "  * SAH_OPACITY Mode: %d\n", SAH_OPACITY);
+#endif
+//shyun added end
 	// allocate memory and initialize data
 	if (initialize_kd_tree(c_object) == 0) {
 		fprintf(stderr, "Kd-tree construction error.\n");

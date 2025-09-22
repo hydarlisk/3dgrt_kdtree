@@ -9,12 +9,13 @@
 
 //shyun added begin
 #define TRAVL_COST 1.0
-#define ISCET_COST 20.0
+#define ISCET_COST 5.0
 #define MAX_LEVEL 100
 #define MIN_TRI 32
 #define EMTPY_BONUS 0.9
 
-#define FORCE_SPLIT_THRESHOLD 128				// kd-tree 강제분할
+#define FORCE_SPLIT_THRESHOLD 64				// kd-tree 강제분할
+#define SAH_OPACITY true
 
 #define ALPHA_MIN 0.0113f
 #define KERNEL_DEGREE 4.0f
@@ -58,8 +59,8 @@
 												// kd-tree hitmap 확인 가능
 #define LEAF_NODE_DEBUG true					// kd-tree leaf node 렌더링
 
-#define MEASURE_START_FRAME 50
-#define MEASURE_END_FRAME 150
+#define MEASURE_START_FRAME 100
+#define MEASURE_END_FRAME 600
 
 #define TID_X (blockDim.x * blockIdx.x + threadIdx.x)
 #define TID_Y (blockDim.y * blockIdx.y + threadIdx.y)
