@@ -48,15 +48,17 @@ char* kdtree_build_path;
 int submenu[5] = { 101,102,104,105 };
 
 bool render_gaussian = false;
-int g_render_width = RENDERING_WIDTH;
-int g_render_height = RENDERING_HEIGHT;
+int g_render_width = MAIN_WINDOW_WIDTH;
+int g_render_height = MAIN_WINDOW_HEIGHT;
 bool g_cuda_rendering_done = false;
 bool g_cuda_interactive_mode = false; // CUDA 인터랙티브 모드 활성화 플래그
 bool g_camera_dirty = true;           // 카메라가 변경되었는지 확인하는 플래그
 std::vector<Gaussian> g_gaussians;	  // 전역 변수로 가우시안 데이터를 저장할 벡터
 
-float g_fps = 0.0f; // FPS를 저장할 전역 변수
+float g_fps = 0.0f;
+float r_fps = 0.0f;
 float total_fps = 0.0f;
+float total_real_fps = 0.0f;
 int frame_count = 0;
 bool measure_fps_interval = false;
 
@@ -65,15 +67,19 @@ struct cudaGraphicsResource* pbo_cuda_resource;
 GLuint result_texture_id; // 렌더링 결과를 담을 텍스처 ID
 GLuint quad_vao;          // 화면 전체 사각형 VAO
 //GLuint quad_vbo, quad_ebo;
+cudaEvent_t start_real, stop_real;
 
 #if USE_STACK > SHORT_STACK
 cu_traceState* g_d_global_stack = nullptr;
 #endif
 
+#if HIT_AND_NODE_COUNT_DEBUG
 int visualize_kdtree_mode = 6;
 float3* h_debug_buffer1_main = nullptr;
 float3* h_debug_buffer2_main = nullptr;
 int max_debug_values[6] = { 0, };
+#endif
+
 #if LEAF_NODE_DEBUG
 ExtendedVertex* original_vertices = nullptr;
 int num_original_vertices = 0;
@@ -83,6 +89,7 @@ ExtendedVertex* leaf_display_vertices = nullptr; // 리프 시각화용 임시 �
 BoundingBox original_model_AABB;
 int largest_leaf_index = -1; // 가장 큰 리프 노드의 인덱스를 저장
 #endif
+
 void setup_interop_resources() {
 	// PBO 생성 (기존 코드와 유사)
 	glGenBuffers(1, &pbo);
@@ -156,7 +163,8 @@ void timer_callback(int value) {
 		glutPostRedisplay();
 	}
 
-	glutTimerFunc(1000 / 60, timer_callback, 0);
+	//glutTimerFunc(1000 / 60, timer_callback, 0);
+	glutTimerFunc(0, timer_callback, 0);
 }
 //shyun added end
 
@@ -182,6 +190,7 @@ void load_poly_model_into_OpenGL(void) {
 }
  
 void display(void) {
+#if HIT_AND_NODE_COUNT_DEBUG
 	// kd-tree debug 인자에 따른 hitmap
 	if (visualize_kdtree_mode < 6 && h_debug_buffer1_main != nullptr && h_debug_buffer2_main != nullptr) {
 		//printf("[DEBUG] Visualizing heatmap. Max node visits value: %d\n", max_debug_values[0]);
@@ -250,6 +259,15 @@ void display(void) {
 	}
 	// CUDA 렌더링 완료 => 프레임버퍼를 화면에 그림
 	else if (g_cuda_interactive_mode || g_cuda_rendering_done) {
+#else
+	if (g_cuda_interactive_mode || g_cuda_rendering_done) {
+#endif
+		// PBO의 내용을 텍스처로 복사
+		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo);
+		glBindTexture(GL_TEXTURE_2D, result_texture_id);
+		// PBO 버퍼의 데이터를 현재 바인딩된 2D 텍스처로 전송
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, g_render_width, g_render_height, GL_RGB, GL_FLOAT, 0);
+		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 		//glClear(GL_COLOR_BUFFER_BIT);
 		glDisable(GL_LIGHTING);
 		glDisable(GL_DEPTH_TEST);
@@ -261,14 +279,7 @@ void display(void) {
 
 		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 
-		/*/ glDrawPixels는 좌하단이 기준이므로 y좌표를 뒤집을 필요가 없음
-		glRasterPos2f(-1.0f, -1.0f);
-		//glDrawPixels(g_render_width, g_render_height, GL_RGB, GL_FLOAT, g_render_framebuffer);
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo);
-		glDrawPixels(g_render_width, g_render_height, GL_RGB, GL_FLOAT, (GLvoid*)0);
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
-
-		glEnable(GL_DEPTH_TEST);*/
+		//glEnable(GL_DEPTH_TEST);
 		glEnable(GL_TEXTURE_2D);
 		glBindTexture(GL_TEXTURE_2D, result_texture_id);
 
@@ -385,6 +396,7 @@ void keyboard(unsigned char key, int x, int y) {
 				measure_fps_interval = !measure_fps_interval;
 				timerRunning = true;
 				total_fps = 0.0f;
+				total_real_fps = 0.0f;
 				frame_count = 0;
 			}
 			else {
@@ -639,8 +651,6 @@ void init_OpenGL_RC(void) {
 
 void clean_up_system(void) {
 	// free memory and etc
-	cleanupCudaResources();
-	glutDestroyWindow(uip.main_window_ID);
 #if HIT_AND_NODE_COUNT_DEBUG
 	if (h_debug_buffer1_main != nullptr) {
 		delete[] h_debug_buffer1_main;
@@ -665,6 +675,10 @@ void clean_up_system(void) {
 	if (g_d_global_stack) cudaFree(g_d_global_stack);
 	g_d_global_stack = nullptr;
 #endif
+	cudaEventDestroy(start_real);
+	cudaEventDestroy(stop_real);
+	cleanupCudaResources();
+	glutDestroyWindow(uip.main_window_ID);
 }
 
 
@@ -1964,11 +1978,8 @@ void main_menu_action(int selection) {
 	case 600:
 		g_cuda_interactive_mode = !g_cuda_interactive_mode; // 인터랙티브 모드 토글
 		if (g_cuda_interactive_mode) {
-			//if (g_d_render_framebuffer) {
-			//	cudaFree(g_d_render_framebuffer);
-			//}
-			//cudaMalloc((void**)&g_d_render_framebuffer, (size_t)g_render_width * g_render_height * 3 * sizeof(float));
-
+			cudaEventCreate(&start_real);
+			cudaEventCreate(&stop_real);
 			renderGaussianWithCudaSetup(uip.poly_model, g_gaussians);
 #if USE_STACK > SHORT_STACK
 			if (g_d_global_stack) cudaFree(g_d_global_stack);
@@ -1985,8 +1996,8 @@ void main_menu_action(int selection) {
 
 			printf("CUDA Interactive Mode: OFF\n");
 			// 인터랙티브 모드를 끄면 다시 OpenGL 뷰로 돌아가도록 화면 갱신
-			glutPostRedisplay();
 		}
+		glutPostRedisplay();
 		break;
 	case 700:
 		fprintf(stdout, "dump .obj file\n");
@@ -2135,9 +2146,10 @@ void idle() {
 	// 인터랙티브 모드가 켜져 있고, 카메라가 변경되었을 때만 다시 렌더링
 	if (g_cuda_interactive_mode && g_camera_dirty) {
 		g_camera_dirty = false; // 플래그 리셋
+		cudaEventRecord(start_real); // 시작 기록
 
 		// PBO를 CUDA에서 사용할 수 있도록 매핑
-		float* d_pbo_ptr;
+		float* d_pbo_ptr, *dummy;
 		cudaGraphicsMapResources(1, &pbo_cuda_resource, 0);
 		size_t num_bytes;// = (size_t)g_render_width * g_render_height * 3 * sizeof(float);
 		cudaGraphicsResourceGetMappedPointer((void**)&d_pbo_ptr, &num_bytes, pbo_cuda_resource);
@@ -2147,7 +2159,10 @@ void idle() {
 		renderObjWithCuda(uip.poly_model, camera, g_render_width, g_render_height, d_pbo_ptr, g_cuda_rendering_done);
 #else
 		//renderGaussianWithCuda(uip.poly_model, g_gaussians, camera, g_render_width, g_render_height, d_pbo_ptr, g_cuda_rendering_done);
-
+#if DUMMY_RUN
+		warmUp(d_pbo_ptr);
+#endif
+		cudaEventRecord(start_real); // 시작 기록
 		g_fps = renderGaussianWithCudaFrame(camera, g_render_width, g_render_height, d_pbo_ptr
 #if HIT_AND_NODE_COUNT_DEBUG
 			, h_debug_buffer1_main, h_debug_buffer2_main
@@ -2155,17 +2170,26 @@ void idle() {
 #if USE_STACK > SHORT_STACK
 			, g_d_global_stack
 #endif
-#if LEAF_NODE_DEBUG
-			, uip.poly_model
-#endif
 		);
+		cudaEventRecord(stop_real); // 종료 기록
+		cudaEventSynchronize(stop_real); // GPU 작업 완료까지 대기
 
+		float milliseconds = 0;
+		cudaEventElapsedTime(&milliseconds, start_real, stop_real);
+		float k_fps = 1000.0f / milliseconds;
+		printf("FPS : %f-------------------------------------------------------------\n", g_fps);
+		printf("real : %f\n", k_fps);
 		if (measure_fps_interval) {
-			if(++frame_count > MEASURE_START_FRAME) total_fps += g_fps;
+			if (++frame_count > MEASURE_START_FRAME) {
+				total_fps += g_fps;
+				total_real_fps += k_fps;
+			}
 			if (frame_count >= MEASURE_END_FRAME) {
 				printf("avg FPS for %d-%d frame : %f\n", MEASURE_START_FRAME, MEASURE_END_FRAME, (float)(total_fps / (MEASURE_END_FRAME - MEASURE_START_FRAME)));
+				printf("avg real FPS for %d-%d frame : %f\n", MEASURE_START_FRAME, MEASURE_END_FRAME, (float)(total_real_fps / (MEASURE_END_FRAME - MEASURE_START_FRAME)));
 				frame_count = 0;
 				total_fps = 0.0f;
+				total_real_fps = 0.0f;
 				measure_fps_interval = false;
 				timerRunning = false;
 			}
@@ -2195,12 +2219,12 @@ void idle() {
 #endif
 #endif
 
-		// PBO의 내용을 텍스처로 복사
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo);
-		glBindTexture(GL_TEXTURE_2D, result_texture_id);
-		// PBO 버퍼의 데이터를 현재 바인딩된 2D 텍스처로 전송
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, g_render_width, g_render_height, GL_RGB, GL_FLOAT, 0);
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+		//// PBO의 내용을 텍스처로 복사
+		//glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo);
+		//glBindTexture(GL_TEXTURE_2D, result_texture_id);
+		//// PBO 버퍼의 데이터를 현재 바인딩된 2D 텍스처로 전송
+		//glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, g_render_width, g_render_height, GL_RGB, GL_FLOAT, 0);
+		//glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 
 		glutPostRedisplay(); // 화면 갱신 요청
 	}
@@ -2233,7 +2257,8 @@ void main(int argc, char **argv) {
 	print_OpenGL_GLSL_GLEW_version();
 	show_greetings();
 
-	glutTimerFunc(16, timer_callback, 0);
+	//glutTimerFunc(16, timer_callback, 0);
+	glutTimerFunc(0, timer_callback, 0);
 
 	glutMainLoop ();
 }

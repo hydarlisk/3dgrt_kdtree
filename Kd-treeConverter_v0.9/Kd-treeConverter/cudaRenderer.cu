@@ -1272,8 +1272,7 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyGlobalStack(
 
 __global__ void renderKernelGaussian_sortNode(float* pFrameBuffer
 #if HIT_AND_NODE_COUNT_DEBUG
-    , float3* d_debug_buffer1
-    , float3* d_debug_buffer2
+    , float3* d_debug_buffer1, float3* d_debug_buffer2
 #endif
 #if USE_STACK > SHORT_STACK
     , cu_traceState* d_global_stack
@@ -1281,6 +1280,16 @@ __global__ void renderKernelGaussian_sortNode(float* pFrameBuffer
 ) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
+    //if (x == 0 && y == 0) {
+    //    printf("SceneInfo: %d %d\n", g_SceneInfo.resX, g_SceneInfo.resY);
+    //    //float3 eye, u, v, startPoint; float stepX, stepY;
+    //    printf("Cam Info:\n");
+    //    printf("eye: %f %f %f\n", g_CameraInfo.eye.x, g_CameraInfo.eye.y, g_CameraInfo.eye.z);
+    //    printf("u: %f %f %f\n", g_CameraInfo.u.x, g_CameraInfo.u.y, g_CameraInfo.u.z);
+    //    printf("v: %f %f %f\n", g_CameraInfo.v.x, g_CameraInfo.v.y, g_CameraInfo.v.z);
+    //    printf("startPoint: %f %f %f\n", g_CameraInfo.startPoint.x, g_CameraInfo.startPoint.y, g_CameraInfo.startPoint.z);
+    //    printf("step: %f %f\n", g_CameraInfo.stepX, g_CameraInfo.stepY);
+    //}
     if (x >= g_SceneInfo.resX || y >= g_SceneInfo.resY) return;
 
     // 광선 생성
@@ -1340,6 +1349,7 @@ __global__ void renderKernelGaussian_sortNode(float* pFrameBuffer
     pFrameBuffer[idx + 2] = final_color.z;
 
 #if HIT_AND_NODE_COUNT_DEBUG
+    if (d_debug_buffer1 == nullptr || d_debug_buffer2 == nullptr) return; // for dummy run
     int id = y * g_SceneInfo.resX + x;
     //printf("id(%d, %d) %d\n",x,y,id);
     d_debug_buffer1[id] = make_float3(
@@ -1450,6 +1460,30 @@ void build_waldInfoList_from_model(const CompositeObject* poly_model, cuWaldTria
     }
 }
 
+void warmUp(float* d_framebuffer) {
+    dim3 threads(DIM_X, DIM_Y);
+    dim3 blocks((MAIN_WINDOW_WIDTH + threads.x - 1) / threads.x, (MAIN_WINDOW_HEIGHT + threads.y - 1) / threads.y);
+    size_t shared_mem_size = threads.x * threads.y * SHORT_STACK_DEPTH * sizeof(cu_traceState);
+    //printf("Warming up GPU...\n");
+    CUDA_CHECK(cudaEventRecord(start_ev)); // 시작 기록
+    renderKernelGaussian_sortNode << < blocks, threads, shared_mem_size >> > (d_framebuffer
+#if HIT_AND_NODE_COUNT_DEBUG
+        , nullptr, nullptr
+#endif
+#if USE_STACK > SHORT_STACK
+        , d_global_stack
+#endif
+        );
+    //CUDA_CHECK(cudaGetLastError());        // DEBUG: launch 실패 확인
+    //CUDA_CHECK(cudaDeviceSynchronize());   // DEBUG: 실행 중 오류 확인
+    CUDA_CHECK(cudaEventRecord(stop_ev)); // 종료 기록
+    CUDA_CHECK(cudaEventSynchronize(stop_ev)); // GPU 작업 완료까지 대기
+    float milliseconds = 0;
+    CUDA_CHECK(cudaEventElapsedTime(&milliseconds, start_ev, stop_ev));
+    printf("WarmUp: %f\n", 1000.0f / milliseconds); // 전역 변수에 FPS 저장
+    //printf("Warm-up complete.\n");
+}
+
 void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vector<Gaussian>& gaussians) {
     printf("Setting up static data for CUDA rendering...\n");
 
@@ -1556,12 +1590,13 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
     texDesc.addressMode[0] = cudaAddressModeClamp; // 주소 지정 모드
     texDesc.filterMode = cudaFilterModePoint;      // 필터링 없음 (tex1Dfetch와 동일)
     texDesc.readMode = cudaReadModeElementType;    // 원본 타입 그대로 읽기
-    texDesc.normalizedCoords = 1;                  // 정규화되지 않은 좌표 사용
+    texDesc.normalizedCoords = 0;                  // 정규화되지 않은 좌표 사용
 
     // 각 버퍼에 대해 텍스처 객체 생성 및 전역 변수에 복사
     // k-d 트리 노드 텍스처 객체 생성
     resDesc.res.linear.devPtr = g_d_kdtree_nodes;
     resDesc.res.linear.desc = cudaCreateChannelDesc<uint2>();
+    //resDesc.res.linear.desc = cudaCreateChannelDesc(32, 32, 0, 0, cudaChannelFormatKindUnsigned);
     resDesc.res.linear.sizeInBytes = node_size;
 
     // 지역 변수(texNode) 대신 호스트 전역 변수(h_inKdTreeNodeTex)에 핸들을 저장
@@ -1682,9 +1717,6 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
 #if USE_STACK > SHORT_STACK
     , cu_traceState* d_global_stack
 #endif
-#if LEAF_NODE_DEBUG
-    , const CompositeObject& object
-#endif
 ) {
 
 //#if LEAF_NODE_DEBUG
@@ -1695,7 +1727,7 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
 //#endif
 
     SceneInfo h_scene_info = { width, height };
-    CUDA_CHECK(cudaMemcpyToSymbol(g_SceneInfo, &h_scene_info, sizeof(SceneInfo)));
+    CUDA_CHECK(cudaMemcpyToSymbol(g_SceneInfo, &h_scene_info, sizeof(SceneInfo), 0, cudaMemcpyHostToDevice));
 
     CameraInfo h_camera_info;
     h_camera_info.eye = make_float3(camera.pos[0], camera.pos[1], camera.pos[2]);
@@ -1711,7 +1743,7 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
     h_camera_info.startPoint = h_camera_info.eye - n_axis * camera.near_c
         - h_camera_info.u * (plane_width * 0.5f)
         + h_camera_info.v * (plane_height * 0.5f);
-    CUDA_CHECK(cudaMemcpyToSymbol(g_CameraInfo, &h_camera_info, sizeof(CameraInfo)));
+    CUDA_CHECK(cudaMemcpyToSymbol(g_CameraInfo, &h_camera_info, sizeof(CameraInfo), 0, cudaMemcpyHostToDevice));
 
     // 커널 실행
     dim3 threads(DIM_X, DIM_Y);
@@ -1719,7 +1751,6 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
     size_t shared_mem_size = threads.x * threads.y * SHORT_STACK_DEPTH * sizeof(cu_traceState);
 
 #if HIT_AND_NODE_COUNT_DEBUG
-    
     float3* d_debug_buffer1;
     float3* d_debug_buffer2;
     CUDA_CHECK(cudaMalloc(&d_debug_buffer1, width * height * sizeof(float3)));
@@ -1801,7 +1832,6 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
         }
     }
 
-    // 수정된 변수들로 결과를 출력
     printf("\n===========================================\n");
     printf("max_node_visits\t\t: %d\n", max_node_visits);
     printf("max_leaf_visits\t\t: %d\n", max_leaf_visits);
@@ -1820,17 +1850,24 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
 
     //delete[] h_debug_buffer1;
     //delete[] h_debug_buffer2;
-    if (h_debug_buffer1 == nullptr) printf("이게 아닌데\n");
 #else
+    //cudaFree(d_debug_buffer1);
+    //cudaFree(d_debug_buffer2);
+    //cudaFree(0);
+//    renderKernelGaussian_sortNode << < blocks, threads, shared_mem_size >> > (d_framebuffer
+//#if USE_STACK > SHORT_STACK
+//        , d_global_stack
+//#endif
+//        );
+//    CUDA_CHECK(cudaGetLastError());        // DEBUG: launch 실패 확인
+//    CUDA_CHECK(cudaDeviceSynchronize());   // DEBUG: 실행 중 오류 확인
+
     CUDA_CHECK(cudaEventRecord(start_ev)); // 시작 기록
-    //renderKernelGaussian_sortNode_inline << < blocks, threads, shared_mem_size >> > (d_framebuffer
     renderKernelGaussian_sortNode << < blocks, threads, shared_mem_size >> > (d_framebuffer
 #if USE_STACK > SHORT_STACK
         , d_global_stack
 #endif
         );
-    //CUDA_CHECK(cudaGetLastError());        // DEBUG: launch 실패 확인
-    //CUDA_CHECK(cudaDeviceSynchronize());   // DEBUG: 실행 중 오류 확인
     CUDA_CHECK(cudaEventRecord(stop_ev)); // 종료 기록
     CUDA_CHECK(cudaEventSynchronize(stop_ev)); // GPU 작업 완료까지 대기
 #endif
@@ -1886,22 +1923,15 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
 
     float milliseconds = 0;
     CUDA_CHECK(cudaEventElapsedTime(&milliseconds, start_ev, stop_ev));
-    float k_fps = 1000.0f / milliseconds; // 전역 변수에 FPS 저장
+    float k_fps = 1000.0f / milliseconds;
     //if(k_fps < 100.0f)
-    printf("FPS : %f-------------------------------------------------------------\n", k_fps);
+    //printf("FPS : %f-------------------------------------------------------------\n", k_fps);
     //if (++frame_count >= 100) {
     //    printf("avg FPS for 100 frame : %f\n", (float)(total_frame / frame_count));
     //    frame_count = 0;
     //    total_frame = 0.0f;
     //}
 
-    // 결과 복사 및 메모리 해제
-    //if (out_framebuffer) delete[] out_framebuffer;
-    //out_framebuffer = new float[width * height * 3];
-    //CUDA_CHECK(cudaMemcpy(out_framebuffer, d_framebuffer, framebuffer_size, cudaMemcpyDeviceToHost));
-    //is_done = true;
-
-    //CUDA_CHECK(cudaFree(d_framebuffer));
     return k_fps;
 }
 

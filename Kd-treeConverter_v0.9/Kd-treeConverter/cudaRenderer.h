@@ -99,6 +99,8 @@ void renderObjWithCuda(
 //	float*& out_framebuffer,
 //	bool& is_done
 //);
+void warmUp(float* d_framebuffer);
+
 void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vector<Gaussian>& gaussians);
 
 float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, float* d_framebuffer
@@ -107,9 +109,6 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
 #endif
 #if USE_STACK > SHORT_STACK
 	, cu_traceState* d_global_stack
-#endif
-#if LEAF_NODE_DEBUG
-	, const CompositeObject& object
 #endif
 );
 
