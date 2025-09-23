@@ -1460,13 +1460,13 @@ void build_waldInfoList_from_model(const CompositeObject* poly_model, cuWaldTria
     }
 }
 
-void warmUp(float* d_framebuffer) {
+void warmUp(float* d_framebuffer, cudaStream_t stream) {
     dim3 threads(DIM_X, DIM_Y);
     dim3 blocks((MAIN_WINDOW_WIDTH + threads.x - 1) / threads.x, (MAIN_WINDOW_HEIGHT + threads.y - 1) / threads.y);
     size_t shared_mem_size = threads.x * threads.y * SHORT_STACK_DEPTH * sizeof(cu_traceState);
     //printf("Warming up GPU...\n");
-    CUDA_CHECK(cudaEventRecord(start_ev)); // 시작 기록
-    renderKernelGaussian_sortNode << < blocks, threads, shared_mem_size >> > (d_framebuffer
+    CUDA_CHECK(cudaEventRecord(start_ev, stream)); // 시작 기록
+    renderKernelGaussian_sortNode << < blocks, threads, shared_mem_size, stream >> > (d_framebuffer
 #if HIT_AND_NODE_COUNT_DEBUG
         , nullptr, nullptr
 #endif
@@ -1476,7 +1476,7 @@ void warmUp(float* d_framebuffer) {
         );
     //CUDA_CHECK(cudaGetLastError());        // DEBUG: launch 실패 확인
     //CUDA_CHECK(cudaDeviceSynchronize());   // DEBUG: 실행 중 오류 확인
-    CUDA_CHECK(cudaEventRecord(stop_ev)); // 종료 기록
+    CUDA_CHECK(cudaEventRecord(stop_ev, stream)); // 종료 기록
     CUDA_CHECK(cudaEventSynchronize(stop_ev)); // GPU 작업 완료까지 대기
     float milliseconds = 0;
     CUDA_CHECK(cudaEventElapsedTime(&milliseconds, start_ev, stop_ev));
@@ -1710,7 +1710,7 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
 #endif
 }
 
-float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, float* d_framebuffer
+float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, float* d_framebuffer, cudaStream_t stream
 #if HIT_AND_NODE_COUNT_DEBUG
     , float3*& h_debug_buffer1, float3*& h_debug_buffer2
 #endif
@@ -1727,7 +1727,8 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
 //#endif
 
     SceneInfo h_scene_info = { width, height };
-    CUDA_CHECK(cudaMemcpyToSymbol(g_SceneInfo, &h_scene_info, sizeof(SceneInfo), 0, cudaMemcpyHostToDevice));
+    //CUDA_CHECK(cudaMemcpyToSymbol(g_SceneInfo, &h_scene_info, sizeof(SceneInfo), 0, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpyToSymbolAsync(g_SceneInfo, &h_scene_info, sizeof(SceneInfo), 0, cudaMemcpyHostToDevice, stream));
 
     CameraInfo h_camera_info;
     h_camera_info.eye = make_float3(camera.pos[0], camera.pos[1], camera.pos[2]);
@@ -1743,7 +1744,8 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
     h_camera_info.startPoint = h_camera_info.eye - n_axis * camera.near_c
         - h_camera_info.u * (plane_width * 0.5f)
         + h_camera_info.v * (plane_height * 0.5f);
-    CUDA_CHECK(cudaMemcpyToSymbol(g_CameraInfo, &h_camera_info, sizeof(CameraInfo), 0, cudaMemcpyHostToDevice));
+    //CUDA_CHECK(cudaMemcpyToSymbol(g_CameraInfo, &h_camera_info, sizeof(CameraInfo), 0, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpyToSymbolAsync(g_CameraInfo, &h_camera_info, sizeof(CameraInfo), 0, cudaMemcpyHostToDevice, stream));
 
     // 커널 실행
     dim3 threads(DIM_X, DIM_Y);
@@ -1757,7 +1759,7 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
     CUDA_CHECK(cudaMalloc(&d_debug_buffer2, width * height * sizeof(float3)));
 
     CUDA_CHECK(cudaEventRecord(start_ev));
-    renderKernelGaussian_sortNode << < blocks, threads, shared_mem_size >> > (d_framebuffer
+    renderKernelGaussian_sortNode << < blocks, threads, shared_mem_size, stream >> > (d_framebuffer
         , d_debug_buffer1, d_debug_buffer2
 #if USE_STACK > SHORT_STACK
         , d_global_stack
@@ -1854,7 +1856,7 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
     //cudaFree(d_debug_buffer1);
     //cudaFree(d_debug_buffer2);
     //cudaFree(0);
-//    renderKernelGaussian_sortNode << < blocks, threads, shared_mem_size >> > (d_framebuffer
+//    renderKernelGaussian_sortNode << < blocks, threads, shared_mem_size, stream >> > (d_framebuffer
 //#if USE_STACK > SHORT_STACK
 //        , d_global_stack
 //#endif
@@ -1862,13 +1864,13 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
 //    CUDA_CHECK(cudaGetLastError());        // DEBUG: launch 실패 확인
 //    CUDA_CHECK(cudaDeviceSynchronize());   // DEBUG: 실행 중 오류 확인
 
-    CUDA_CHECK(cudaEventRecord(start_ev)); // 시작 기록
-    renderKernelGaussian_sortNode << < blocks, threads, shared_mem_size >> > (d_framebuffer
+    CUDA_CHECK(cudaEventRecord(start_ev, stream)); // 시작 기록
+    renderKernelGaussian_sortNode << < blocks, threads, shared_mem_size, stream >> > (d_framebuffer
 #if USE_STACK > SHORT_STACK
         , d_global_stack
 #endif
         );
-    CUDA_CHECK(cudaEventRecord(stop_ev)); // 종료 기록
+    CUDA_CHECK(cudaEventRecord(stop_ev, stream)); // 종료 기록
     CUDA_CHECK(cudaEventSynchronize(stop_ev)); // GPU 작업 완료까지 대기
 #endif
 

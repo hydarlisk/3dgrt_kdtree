@@ -11,10 +11,10 @@
 #define TRAVL_COST 1.0
 #define ISCET_COST 5.0
 #define MAX_LEVEL 100
-#define MIN_TRI 4
+#define MIN_TRI 32
 #define EMTPY_BONUS 0.9
 
-#define FORCE_SPLIT_THRESHOLD 256				// kd-tree 강제분할
+#define FORCE_SPLIT_THRESHOLD 64				// kd-tree 강제분할
 #define SAH_OPACITY false
 
 #define ALPHA_MIN 0.0113f
@@ -51,9 +51,10 @@
 
 #define GLOBAL_DEVICE_VAR true
 #define GAUSSIAN_TEXTURE true
+
 #define DUMMY_RUN true
 //Debug Flags=====================================================================================
-#define DEBUG_SIGMA_HISTOGRAM 0 				// gaussian의 sigma들의 histogram 출력
+#define DEBUG_SIGMA_HISTOGRAM 100 				// gaussian의 sigma들의 histogram 출력
 #define WARP_OCCUPANCY false   					// warp occupancy 출력
 #define HIT_AND_NODE_COUNT_DEBUG false			// Ray 마다 hitcount, node count, ... 확인
 												// kd-tree hitmap 확인 가능

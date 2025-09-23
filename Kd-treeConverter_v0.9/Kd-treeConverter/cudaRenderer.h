@@ -99,11 +99,11 @@ void renderObjWithCuda(
 //	float*& out_framebuffer,
 //	bool& is_done
 //);
-void warmUp(float* d_framebuffer);
+void warmUp(float* d_framebuffer, cudaStream_t stream);
 
 void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vector<Gaussian>& gaussians);
 
-float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, float* d_framebuffer
+float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, float* d_framebuffer, cudaStream_t stream
 #if HIT_AND_NODE_COUNT_DEBUG
 	, float3*& h_debug_buffer1, float3*& h_debug_buffer2
 #endif

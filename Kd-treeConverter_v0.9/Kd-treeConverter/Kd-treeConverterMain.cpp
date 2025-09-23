@@ -62,8 +62,10 @@ float total_real_fps = 0.0f;
 int frame_count = 0;
 bool measure_fps_interval = false;
 
-GLuint pbo;
-struct cudaGraphicsResource* pbo_cuda_resource;
+GLuint pbo[2];
+struct cudaGraphicsResource* pbo_cuda_resource[2];
+cudaStream_t streams[2]; // 스트림 2개 선언
+int current_pbo_index = 0; // 0번 PBO부터 시작
 GLuint result_texture_id; // 렌더링 결과를 담을 텍스처 ID
 GLuint quad_vao;          // 화면 전체 사각형 VAO
 //GLuint quad_vbo, quad_ebo;
@@ -92,12 +94,14 @@ int largest_leaf_index = -1; // 가장 큰 리프 노드의 인덱스를 저장
 
 void setup_interop_resources() {
 	// PBO 생성 (기존 코드와 유사)
-	glGenBuffers(1, &pbo);
-	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo);
-	glBufferData(GL_PIXEL_UNPACK_BUFFER, g_render_width * g_render_height * 3 * sizeof(float), NULL, GL_DYNAMIC_DRAW);
+	glGenBuffers(2, pbo);
+	for (int i = 0; i < 2; ++i) {
+		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo[i]);
+		glBufferData(GL_PIXEL_UNPACK_BUFFER, g_render_width * g_render_height * 3 * sizeof(float), NULL, GL_DYNAMIC_DRAW);
+		cudaGraphicsGLRegisterBuffer(&pbo_cuda_resource[i], pbo[i], cudaGraphicsRegisterFlagsWriteDiscard);
+		cudaStreamCreate(&streams[i]);
+	}
 	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
-
-	cudaGraphicsGLRegisterBuffer(&pbo_cuda_resource, pbo, cudaGraphicsRegisterFlagsWriteDiscard);
 
 	// 렌더링 결과를 담을 텍스처 생성
 	glGenTextures(1, &result_texture_id);
@@ -262,12 +266,12 @@ void display(void) {
 #else
 	if (g_cuda_interactive_mode || g_cuda_rendering_done) {
 #endif
-		// PBO의 내용을 텍스처로 복사
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo);
-		glBindTexture(GL_TEXTURE_2D, result_texture_id);
-		// PBO 버퍼의 데이터를 현재 바인딩된 2D 텍스처로 전송
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, g_render_width, g_render_height, GL_RGB, GL_FLOAT, 0);
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+		//// PBO의 내용을 텍스처로 복사
+		//glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo);
+		//glBindTexture(GL_TEXTURE_2D, result_texture_id);
+		//// PBO 버퍼의 데이터를 현재 바인딩된 2D 텍스처로 전송
+		//glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, g_render_width, g_render_height, GL_RGB, GL_FLOAT, 0);
+		//glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 		//glClear(GL_COLOR_BUFFER_BIT);
 		glDisable(GL_LIGHTING);
 		glDisable(GL_DEPTH_TEST);
@@ -675,6 +679,14 @@ void clean_up_system(void) {
 	if (g_d_global_stack) cudaFree(g_d_global_stack);
 	g_d_global_stack = nullptr;
 #endif
+	for (int i = 0; i < 2; ++i) {
+		if (pbo_cuda_resource[i]) {
+			cudaGraphicsUnregisterResource(pbo_cuda_resource[i]);
+		}
+		cudaStreamDestroy(streams[i]);
+	}
+	glDeleteBuffers(2, pbo);
+
 	cudaEventDestroy(start_real);
 	cudaEventDestroy(stop_real);
 	cleanupCudaResources();
@@ -2146,13 +2158,17 @@ void idle() {
 	// 인터랙티브 모드가 켜져 있고, 카메라가 변경되었을 때만 다시 렌더링
 	if (g_cuda_interactive_mode && g_camera_dirty) {
 		g_camera_dirty = false; // 플래그 리셋
-		cudaEventRecord(start_real); // 시작 기록
+
+		// 인덱스 결정
+		int write_index = current_pbo_index;
+		int read_index = (current_pbo_index + 1) % 2;
+		cudaStream_t current_stream = streams[write_index];
 
 		// PBO를 CUDA에서 사용할 수 있도록 매핑
-		float* d_pbo_ptr, *dummy;
-		cudaGraphicsMapResources(1, &pbo_cuda_resource, 0);
+		float* d_pbo_ptr;
 		size_t num_bytes;// = (size_t)g_render_width * g_render_height * 3 * sizeof(float);
-		cudaGraphicsResourceGetMappedPointer((void**)&d_pbo_ptr, &num_bytes, pbo_cuda_resource);
+		cudaGraphicsMapResources(1, &pbo_cuda_resource[write_index], current_stream);
+		cudaGraphicsResourceGetMappedPointer((void**)&d_pbo_ptr, &num_bytes, pbo_cuda_resource[write_index]);
 
 		// CUDA 렌더링 실행 (기존 렌더링 함수 재사용)
 #if SCENE_NUM < 1
@@ -2160,10 +2176,10 @@ void idle() {
 #else
 		//renderGaussianWithCuda(uip.poly_model, g_gaussians, camera, g_render_width, g_render_height, d_pbo_ptr, g_cuda_rendering_done);
 #if DUMMY_RUN
-		warmUp(d_pbo_ptr);
+		warmUp(d_pbo_ptr, current_stream);
 #endif
-		cudaEventRecord(start_real); // 시작 기록
-		g_fps = renderGaussianWithCudaFrame(camera, g_render_width, g_render_height, d_pbo_ptr
+		//cudaEventRecord(start_real, current_stream); // 시작 기록
+		g_fps = renderGaussianWithCudaFrame(camera, g_render_width, g_render_height, d_pbo_ptr, current_stream
 #if HIT_AND_NODE_COUNT_DEBUG
 			, h_debug_buffer1_main, h_debug_buffer2_main
 #endif
@@ -2171,34 +2187,32 @@ void idle() {
 			, g_d_global_stack
 #endif
 		);
-		cudaEventRecord(stop_real); // 종료 기록
-		cudaEventSynchronize(stop_real); // GPU 작업 완료까지 대기
+		//cudaEventRecord(stop_real, current_stream); // 종료 기록
+		//cudaEventSynchronize(stop_real); // GPU 작업 완료까지 대기
 
-		float milliseconds = 0;
-		cudaEventElapsedTime(&milliseconds, start_real, stop_real);
-		float k_fps = 1000.0f / milliseconds;
+		//float milliseconds = 0;
+		//cudaEventElapsedTime(&milliseconds, start_real, stop_real);
+		//float k_fps = 1000.0f / milliseconds;
 		printf("FPS : %f-------------------------------------------------------------\n", g_fps);
-		printf("real : %f\n", k_fps);
+		//printf("real : %f\n", k_fps);
 		if (measure_fps_interval) {
 			if (++frame_count > MEASURE_START_FRAME) {
 				total_fps += g_fps;
-				total_real_fps += k_fps;
+				//total_real_fps += k_fps;
 			}
 			if (frame_count >= MEASURE_END_FRAME) {
 				printf("avg FPS for %d-%d frame : %f\n", MEASURE_START_FRAME, MEASURE_END_FRAME, (float)(total_fps / (MEASURE_END_FRAME - MEASURE_START_FRAME)));
-				printf("avg real FPS for %d-%d frame : %f\n", MEASURE_START_FRAME, MEASURE_END_FRAME, (float)(total_real_fps / (MEASURE_END_FRAME - MEASURE_START_FRAME)));
+				//printf("avg real FPS for %d-%d frame : %f\n", MEASURE_START_FRAME, MEASURE_END_FRAME, (float)(total_real_fps / (MEASURE_END_FRAME - MEASURE_START_FRAME)));
 				frame_count = 0;
 				total_fps = 0.0f;
-				total_real_fps = 0.0f;
+				//total_real_fps = 0.0f;
 				measure_fps_interval = false;
 				timerRunning = false;
 			}
 		}
 
 		// CUDA → OpenGL 동기화 해제
-		cudaGraphicsUnmapResources(1, &pbo_cuda_resource, 0);
-
-		g_cuda_rendering_done = true;
+		cudaGraphicsUnmapResources(1, &pbo_cuda_resource[write_index], current_stream);
 
 #if HIT_AND_NODE_COUNT_DEBUG
 		// 최댓값을 계산하여 전역 변수에 저장
@@ -2219,13 +2233,16 @@ void idle() {
 #endif
 #endif
 
-		//// PBO의 내용을 텍스처로 복사
-		//glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo);
-		//glBindTexture(GL_TEXTURE_2D, result_texture_id);
-		//// PBO 버퍼의 데이터를 현재 바인딩된 2D 텍스처로 전송
-		//glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, g_render_width, g_render_height, GL_RGB, GL_FLOAT, 0);
-		//glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+		// PBO의 내용을 텍스처로 복사
+		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo[read_index]);
+		glBindTexture(GL_TEXTURE_2D, result_texture_id);
+		// PBO 버퍼의 데이터를 현재 바인딩된 2D 텍스처로 전송
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, g_render_width, g_render_height, GL_RGB, GL_FLOAT, 0);
+		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 
+		current_pbo_index = read_index;
+
+		g_cuda_rendering_done = true;
 		glutPostRedisplay(); // 화면 갱신 요청
 	}
 }
