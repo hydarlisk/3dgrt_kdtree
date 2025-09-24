@@ -1853,17 +1853,6 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
     //delete[] h_debug_buffer1;
     //delete[] h_debug_buffer2;
 #else
-    //cudaFree(d_debug_buffer1);
-    //cudaFree(d_debug_buffer2);
-    //cudaFree(0);
-//    renderKernelGaussian_sortNode << < blocks, threads, shared_mem_size, stream >> > (d_framebuffer
-//#if USE_STACK > SHORT_STACK
-//        , d_global_stack
-//#endif
-//        );
-//    CUDA_CHECK(cudaGetLastError());        // DEBUG: launch 실패 확인
-//    CUDA_CHECK(cudaDeviceSynchronize());   // DEBUG: 실행 중 오류 확인
-
     CUDA_CHECK(cudaEventRecord(start_ev, stream)); // 시작 기록
     renderKernelGaussian_sortNode << < blocks, threads, shared_mem_size, stream >> > (d_framebuffer
 #if USE_STACK > SHORT_STACK

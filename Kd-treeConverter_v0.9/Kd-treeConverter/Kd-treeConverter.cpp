@@ -31,9 +31,7 @@ int build_kd_tree_for_composite_object(CompositeObject *c_object) {
 #if FORCE_SPLIT_THRESHOLD
 	fprintf(stdout, "  * Max # of Triangles per Leaf: %d\n", FORCE_SPLIT_THRESHOLD);
 #endif
-#if SAH_OPACITY
 	fprintf(stdout, "  * SAH_OPACITY Mode: %d\n", SAH_OPACITY);
-#endif
 //shyun added end
 	// allocate memory and initialize data
 	if (initialize_kd_tree(c_object) == 0) {

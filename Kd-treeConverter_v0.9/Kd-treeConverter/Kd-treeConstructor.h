@@ -39,9 +39,15 @@ typedef struct _TriangleList {
 	//GTriangleWrapper *pTriangleWrapper;
 	ExtendedVertex point[3];
 	int side;
+//shyun added begin
 #if SAH_OPACITY
-	float opacity; //shyun added
+	float opacity;
 #endif
+#if SAH_OPACITY == 2
+	// SAH_OPACITY == 2 모드를 위해 Opacity * Area 값을 저장할 멤버
+	float contribution;
+#endif
+//shyun added end
 } TriangleList;
 
 typedef struct _BoundEdge {
