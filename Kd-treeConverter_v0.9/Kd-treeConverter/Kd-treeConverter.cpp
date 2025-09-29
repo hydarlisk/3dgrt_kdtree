@@ -9,7 +9,7 @@
 #include <float.h>
 #include <math.h>
 #include <string.h>
-#include <vector>
+//#include <vector>
 
 #include "Kd-treeConverter.h"
 #include "Kd-treeConstructor.h"
@@ -30,8 +30,41 @@ int build_kd_tree_for_composite_object(CompositeObject *c_object) {
 //shyun added begin
 #if FORCE_SPLIT_THRESHOLD
 	fprintf(stdout, "  * Max # of Triangles per Leaf: %d\n", FORCE_SPLIT_THRESHOLD);
+#else
+	fprintf(stdout, "  * Max # of Triangles per Leaf: none\n");
 #endif
-	fprintf(stdout, "  * SAH_OPACITY Mode: %d\n", SAH_OPACITY);
+	
+	fprintf(stdout, "  * SAH_OPACITY Mode: [%d] ", SAH_OPACITY);
+	//0 - P * N
+	//1 - P * SUM(sigma)
+	//2 - P * SUM(sigma(i) * area(i))
+	//3 - P * SUM(sigma(i) * area(i) / MAX(area(V_s))
+	//4 - P * SUM(sigma(i) * area(i) / MAX(area(V))
+	//5 - SUM(sigma(i) * area(i) / MAX(area(V))
+	//6 - P_s * SUM(sigma(i) * area(i_real))
+	switch (SAH_OPACITY) {
+	case 0:
+		printf("P_s * N_s\n");
+		break;
+	case 1:
+		printf("P_s * SUM(sigma)\n");
+		break;
+	case 2:
+		printf("P_s * SUM(sigma(i) * area(i))\n");
+		break;
+	case 3:
+		printf("P_s * SUM(sigma(i) * area(i) / MAX(area(V_s))\n");
+		break;
+	case 4:
+		printf("P_s * SUM(sigma(i) * area(i) / MAX(area(V))\n");
+		break;
+	case 5:
+		printf("SUM(sigma(i) * area(i) / MAX(area(V))\n");
+		break;
+	case 6:
+		printf("P_s * SUM(sigma(i) * area(i_real))\n");
+		break;
+	}
 //shyun added end
 	// allocate memory and initialize data
 	if (initialize_kd_tree(c_object) == 0) {

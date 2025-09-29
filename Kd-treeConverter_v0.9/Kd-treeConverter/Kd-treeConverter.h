@@ -11,16 +11,22 @@
 #define TRAVL_COST 1.0
 #define ISCET_COST 5.0
 #define MAX_LEVEL 100
-#define MIN_TRI 32
+#define MIN_TRI 4
 #define EMTPY_BONUS 0.9
 
 #define FORCE_SPLIT_THRESHOLD 64				// kd-tree 강제분할
-#define SAH_OPACITY false
+#define SAH_OPACITY 0
+//0 - P_s * N_s
+//1 - P_s * SUM(sigma)
+//2 - P_s * SUM(sigma(i) * area(i))
+//3 - P_s * SUM(sigma(i) * area(i) / MAX(area(V_s)) : TODO
+//4 - P_s * SUM(sigma(i) * area(i) / MAX(area(V))
+//5 - SUM(sigma(i) * area(i) / MAX(area(V))
 
 #define ALPHA_MIN 0.0113f
 #define KERNEL_DEGREE 4.0f
 
-#define ROTATION false							// R(45degree,1,1,1)
+#define ROTATION true							// R(45degree,1,1,1)
 
 #define OPACITY_THRESHOLD 0.93f					// 충족할때까지 kd-tree 탐색
 
@@ -69,8 +75,8 @@
 
 //#define MAIN_WINDOW_WIDTH 800
 //#define MAIN_WINDOW_HEIGHT 800
-#define MAIN_WINDOW_WIDTH 1920
-#define MAIN_WINDOW_HEIGHT 1080
+#define MAIN_WINDOW_WIDTH 2560
+#define MAIN_WINDOW_HEIGHT 1440
 
 //#define RENDERING_WIDTH MAIN_WINDOW_WIDTH
 //#define RENDERING_HEIGHT MAIN_WINDOW_HEIGHT

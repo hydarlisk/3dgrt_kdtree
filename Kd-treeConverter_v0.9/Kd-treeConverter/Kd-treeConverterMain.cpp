@@ -12,7 +12,7 @@
 
 #include <fstream>
 #include <sstream>
-#include <vector>
+//#include <vector>
 
 #include <GL/glew.h>
 #include <GL/freeglut.h>
@@ -31,7 +31,6 @@
 #include <ctime>
 #include <iomanip>
 #include <cuda_gl_interop.h>
-#include <vector>
 #include <numeric>
 #include <algorithm>
 #include "cudaRenderer.h"
@@ -2223,7 +2222,6 @@ void idle() {
 
 #if HIT_AND_NODE_COUNT_DEBUG
 		// 최댓값을 계산하여 전역 변수에 저장
-		// TODO: MyMAX로 변환
 		memset(max_debug_values, 0, sizeof(max_debug_values));
 		if (h_debug_buffer1_main != nullptr) {
 			for (int i = 0; i < g_render_width * g_render_height; i++) {

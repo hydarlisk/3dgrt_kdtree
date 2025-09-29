@@ -7,7 +7,7 @@
 //#include "SGRTx2Lib/cudaRenderPipeline.h"
 #include "SGRTx2Lib/cuda_math.h"
 
-#include <vector>
+//#include <vector>
 #include <iostream>
 #include <cuda_runtime.h>
 //#include <cuda_texture_types.h>

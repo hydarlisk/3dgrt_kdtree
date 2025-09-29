@@ -43,9 +43,8 @@ typedef struct _TriangleList {
 #if SAH_OPACITY
 	float opacity;
 #endif
-#if SAH_OPACITY == 2
-	// SAH_OPACITY == 2 모드를 위해 Opacity * Area 값을 저장할 멤버
-	float contribution;
+#if SAH_OPACITY >= 2
+	float area;
 #endif
 //shyun added end
 } TriangleList;
