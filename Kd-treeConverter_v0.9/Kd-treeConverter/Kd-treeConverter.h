@@ -11,22 +11,24 @@
 #define TRAVL_COST 1.0
 #define ISCET_COST 5.0
 #define MAX_LEVEL 100
-#define MIN_TRI 4
+#define MIN_TRI 32
 #define EMTPY_BONUS 0.9
 
 #define FORCE_SPLIT_THRESHOLD 64				// kd-tree 강제분할
-#define SAH_OPACITY 0
+#define SAH_OPACITY 6
+#define SAH_MAXIMIZE true
 //0 - P_s * N_s
 //1 - P_s * SUM(sigma)
 //2 - P_s * SUM(sigma(i) * area(i))
 //3 - P_s * SUM(sigma(i) * area(i) / MAX(area(V_s)) : TODO
 //4 - P_s * SUM(sigma(i) * area(i) / MAX(area(V))
 //5 - SUM(sigma(i) * area(i) / MAX(area(V))
+//6 - P_s * SUM(sigma(i) * area(i_real))
 
 #define ALPHA_MIN 0.0113f
 #define KERNEL_DEGREE 4.0f
 
-#define ROTATION true							// R(45degree,1,1,1)
+#define ROTATION false							// R(45degree,1,1,1)
 
 #define OPACITY_THRESHOLD 0.93f					// 충족할때까지 kd-tree 탐색
 
@@ -52,7 +54,7 @@
 #define SPH_EVAL_DEGREE 3
 #define QUATERNION true
 #define WALD_METHOD true
-#define SIGMA_THRESHOLD 0   					// sigma(density) 작은 가우시안 제거
+#define SIGMA_THRESHOLD 0//.03   					// sigma(density) 작은 가우시안 제거
 #define USE_KERNEL_SCALE false					// 기존의 OptiX 방식 kernelScale 사용
 
 #define GLOBAL_DEVICE_VAR true
@@ -60,7 +62,7 @@
 
 #define DUMMY_RUN false
 //Debug Flags=====================================================================================
-#define DEBUG_SIGMA_HISTOGRAM 0 				// gaussian의 sigma들의 histogram 출력
+#define DEBUG_SIGMA_HISTOGRAM 100 				// gaussian의 sigma들의 histogram 출력
 #define WARP_OCCUPANCY false   					// warp occupancy 출력
 #define HIT_AND_NODE_COUNT_DEBUG false			// Ray 마다 hitcount, node count, ... 확인
 												// kd-tree hitmap 확인 가능
@@ -75,21 +77,31 @@
 
 //#define MAIN_WINDOW_WIDTH 800
 //#define MAIN_WINDOW_HEIGHT 800
+#define RESOLUTION 0
+#if RESOLUTION == 0		// FHD
+#define MAIN_WINDOW_WIDTH 1920
+#define MAIN_WINDOW_HEIGHT 1080
+#elif RESOLUTION == 1	// QHD
 #define MAIN_WINDOW_WIDTH 2560
 #define MAIN_WINDOW_HEIGHT 1440
-
-//#define RENDERING_WIDTH MAIN_WINDOW_WIDTH
-//#define RENDERING_HEIGHT MAIN_WINDOW_HEIGHT
+#elif RESOLUTION == 2	// 4K
+#define MAIN_WINDOW_WIDTH 3840
+#define MAIN_WINDOW_HEIGHT 2160
+#elif RESOLUTION == 3	// 8K
+#define MAIN_WINDOW_WIDTH 7680
+#define MAIN_WINDOW_HEIGHT 4320
+#endif
  /*
  * List of resolutions
  *
  *		  width		*		height
+ * 8K	: 7680		*		4320
  * 4K	: 3840		*		2160
- * S24	: 3200		*		1440
  * QHD	: 2560		*		1440
  * FHD	: 1920		*		1080
  */
 
+#define PLY_MODEL_COUNT 6
 #define SCENE_NUM 1								// obj 로드할때만 0으로 변경
 
 #if SCENE_NUM == 0

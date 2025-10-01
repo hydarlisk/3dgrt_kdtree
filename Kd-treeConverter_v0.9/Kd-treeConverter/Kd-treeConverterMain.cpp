@@ -43,7 +43,7 @@ char* ply_to_obj;
 //cudaEvent_t start_ev, stop_ev;
 char* kdtree_build_path;
 //int submenu[5] = { 101,1012,102,104,105 };
-int submenu[5] = { 101,102,104,105 };
+int submenu[PLY_MODEL_COUNT] = { 101,102,103,104,105,106 };
 
 bool render_gaussian = false;
 int g_render_width = MAIN_WINDOW_WIDTH;
@@ -1758,20 +1758,6 @@ void subMenuHandler(int value) {
 	g_gaussians.clear();
 	switch (value) {
 	case 101: printf("Hotdog selected\n");
-//		ply_file_path = "../../Data/ply/hotdog/hotdog_3dgrt.ply";
-//#if !ROTATION
-//		ply_kdtree_path = "../../Data/ply/hotdog/hotdog_tree.kdt";
-//		ply_igeom_path = "../../Data/ply/hotdog/hotdog_igeom.bin";
-//		ply_to_obj = "../../Data/ply/hotdog/hotdog_3dgrt_new.obj";
-//		kdtree_build_path = "../../Data/ply/hotdog/hotdog_3dgrt_kdt.txt";
-//#else
-//		ply_kdtree_path = "../../Data/ply/hotdog/hotdog_tree_rot.kdt";
-//		ply_igeom_path = "../../Data/ply/hotdog/hotdog_igeom_rot.bin";
-//		ply_to_obj = "../../Data/ply/hotdog/hotdog_3dgrt_new_rot.obj";
-//		kdtree_build_path = "../../Data/ply/hotdog/hotdog_3dgrt_kdt_rot.txt";
-//#endif
-//		break;
-//	case 1012: printf("Hotdog2 selected\n");
 		ply_file_path = "../../Data/ply/hotdog2/hotdog_3dgrt2.ply";
 #if !ROTATION
 		ply_kdtree_path = "../../Data/ply/hotdog2/hotdog2_tree.kdt";
@@ -1804,8 +1790,8 @@ void subMenuHandler(int value) {
 #if !ROTATION
 		ply_kdtree_path = "../../Data/ply/bonsai/bonsai_tree.kdt";
 		ply_igeom_path = "../../Data/ply/bonsai/bonsai_igeom.bin";
-		ply_to_obj = "../../Data/ply/bonsai/bonsai_3dgrt_new.obj";
-		kdtree_build_path = "../../Data/ply/bonsai/bonsai_3dgrt_kdt.txt";
+		ply_to_obj = "../../Data/ply/bonsai/bonsai_new.obj";
+		kdtree_build_path = "../../Data/ply/bonsai/bonsai_kdt.txt";
 #else
 		ply_kdtree_path = "../../Data/ply/bonsai/bonsai_tree_rot.kdt";
 		ply_igeom_path = "../../Data/ply/bonsai/bonsai_igeom_rot.bin";
@@ -1832,17 +1818,56 @@ void subMenuHandler(int value) {
 #if !ROTATION
 		ply_kdtree_path = "../../Data/ply/flowers/flowers_tree.kdt";
 		ply_igeom_path = "../../Data/ply/flowers/flowers_igeom.bin";
-		ply_to_obj = "../../Data/ply/flowers/flowers_3dgrt_new.obj";
-		kdtree_build_path = "../../Data/ply/flowers/flowers_3dgrt_kdt.txt";
+		ply_to_obj = "../../Data/ply/flowers/flowers_new.obj";
+		kdtree_build_path = "../../Data/ply/flowers/flowers_kdt.txt";
 #else
 		ply_kdtree_path = "../../Data/ply/flowers/flowers_tree_rot.kdt";
 		ply_igeom_path = "../../Data/ply/flowers/flowers_igeom_rot.bin";
-		ply_to_obj = "../../Data/ply/flowers/flowers_3dgrt_new_rot.obj";
-		kdtree_build_path = "../../Data/ply/flowers/flowers_3dgrt_kdt_rot.txt";
+		ply_to_obj = "../../Data/ply/flowers/flowers_new_rot.obj";
+		kdtree_build_path = "../../Data/ply/flowers/flowers_kdt_rot.txt";
+#endif
+		break;
+	case 106: printf("bicycle selected\n");
+		ply_file_path = "../../Data/ply/bicycle/bicycle.ply";
+#if !ROTATION
+		ply_kdtree_path = "../../Data/ply/bicycle/bicycle_tree.kdt";
+		ply_igeom_path = "../../Data/ply/bicycle/bicycle_igeom.bin";
+		ply_to_obj = "../../Data/ply/bicycle/bicycle_new.obj";
+		kdtree_build_path = "../../Data/ply/bicycle/bicycle_kdt.txt";
+#else
+		ply_kdtree_path = "../../Data/ply/bicycle/bicycle_tree_rot.kdt";
+		ply_igeom_path = "../../Data/ply/bicycle/bicycle_igeom_rot.bin";
+		ply_to_obj = "../../Data/ply/bicycle/bicycle_new_rot.obj";
+		kdtree_build_path = "../../Data/ply/bicycle/bicycle_kdt_rot.txt";
 #endif
 		break;
 	}
-	//printf("%s\n", ply_file_path);
+
+	// TODO: 자동 파일명 쓰기&읽기
+//#if ROTATION
+//	size_t kdtree_len = strlen(ply_kdtree_path) + strlen("_rot.kdt") + 1; // + NULL
+//	size_t igeom_len = strlen(ply_igeom_path) + strlen("_rot.kdt") + 1; // + NULL
+//	size_t obj_len = strlen(ply_to_obj) + strlen("_rot.kdt") + 1; // + NULL
+//	size_t build_len = strlen(kdtree_build_path) + strlen("_rot.kdt") + 1; // + NULL
+//
+//	char* kdtree_result = (char*)malloc(kdtree_len);
+//	char* igeom_result = (char*)malloc(igeom_len);
+//	char* obj_result = (char*)malloc(obj_len);
+//	char* build_result = (char*)malloc(build_len);
+//
+//	strcpy(result, a);
+//	strcat(result, " ");
+//#endif
+	//const char* method = SAH_OPACITY > 0 ? "_opacity %d",SAH_OPACITY : "_normal";
+	//const char* minTri = itoa(MIN_TRI);
+	//const char* maxTri = itoa(FORCE_SPLIT_THRESHOLD);
+	//const char* maximize = SAH_MAXIMIZE ? "maximize" : "minimize";
+
+	//realloc(ply_kdtree_path, strlen(ply_kdtree_path) + strlen(method) + strlen(minTri) + strlen(maxTri) + strlen(maximize) + strlen(".kdt") + 1);
+	//realloc(ply_igeom_path, strlen(ply_igeom_path) + strlen(method) + strlen(minTri) + strlen(maxTri) + strlen(maximize) + strlen(".bin") + 1);
+
+	////...
+
 	// 3DGS 학습 결과물을 로드
 	if (!loadGaussiansFromPly(ply_file_path, g_gaussians)) {
 		fprintf(stderr, "Failed to load ply file\n");
@@ -2027,7 +2052,7 @@ void main_menu_action(int selection) {
 		break;
 	case 800:
 		print_current_time("all_build_start\n");
-		for (int i = 0; i < 5; i++) {
+		for (int i = 0; i < PLY_MODEL_COUNT; i++) {
 			subMenuHandler(submenu[i]);
 
 			build_kd_tree_for_composite_object2(&uip.poly_model, kdtree_build_path);
@@ -2062,6 +2087,7 @@ void register_callbacks_and_create_menu(void) {
 	glutAddMenuEntry("bonsai", 103);
 	glutAddMenuEntry("chair", 104);
 	glutAddMenuEntry("flowers", 105);
+	glutAddMenuEntry("bicycle", 106);
 
 	uip.main_menu_ID = glutCreateMenu(main_menu_action);
 	glutAddMenuEntry("ChangeMode", 0);

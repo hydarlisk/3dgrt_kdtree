@@ -437,47 +437,82 @@ __device__ __forceinline__ float3 eval_sh_final(
     return min(max(rad, make_float3(0.f)), make_float3(1.f));
 }
 
-
-__device__ __forceinline__ float3 eval_sh_final_refactored(
+__device__ __forceinline__ float3 eval_sh_final2(
     const int degree,
     const float3& view_dir,
-    const Gaussian& g
+    const Gaussian g
 ) {
-    float3 rad = SH_C0 * make_float3(g.f_dc[0], g.f_dc[1], g.f_dc[2]);
 
-    if (degree > 0) {
-        const float x = view_dir.x;
-        const float y = view_dir.y;
-        const float z = view_dir.z;
-
-        // Degree 1
-        rad -= SH_C1 * y * make_float3(g.f_rest[0], g.f_rest[15], g.f_rest[30]); // Coeff 1
-        rad += SH_C1 * z * make_float3(g.f_rest[1], g.f_rest[16], g.f_rest[31]); // Coeff 2
-        rad -= SH_C1 * x * make_float3(g.f_rest[2], g.f_rest[17], g.f_rest[32]); // Coeff 3
-
-        if (degree > 1) {
-            const float xx = x * x, yy = y * y, zz = z * z;
-            const float xy = x * y, yz = y * z, xz = x * z;
-
-            // Degree 2
-            rad += SH_C2_0 * xy * make_float3(g.f_rest[3], g.f_rest[18], g.f_rest[33]); // Coeff 4
-            rad += SH_C2_1 * yz * make_float3(g.f_rest[4], g.f_rest[19], g.f_rest[34]); // Coeff 5
-            rad += SH_C2_2 * (2.0f * zz - xx - yy) * make_float3(g.f_rest[5], g.f_rest[20], g.f_rest[35]); // Coeff 6
-            rad += SH_C2_3 * xz * make_float3(g.f_rest[6], g.f_rest[21], g.f_rest[36]); // Coeff 7
-            rad += SH_C2_4 * (xx - yy) * make_float3(g.f_rest[7], g.f_rest[22], g.f_rest[37]);  // Coeff 8
-
-            if (degree > 2) {
-                // Degree 3
-                rad += SH_C3_0 * y * (3.0f * xx - yy) * make_float3(g.f_rest[8], g.f_rest[23], g.f_rest[38]);   // Coeff 9
-                rad += SH_C3_1 * xy * z * make_float3(g.f_rest[9], g.f_rest[24], g.f_rest[39]);   // Coeff 10
-                rad += SH_C3_2 * y * (4.0f * zz - xx - yy) * make_float3(g.f_rest[10], g.f_rest[25], g.f_rest[40]); // Coeff 11
-                rad += SH_C3_3 * z * (2.0f * zz - 3.0f * xx - 3.0f * yy) * make_float3(g.f_rest[11], g.f_rest[26], g.f_rest[41]); // Coeff 12
-                rad += SH_C3_4 * x * (4.0f * zz - xx - yy) * make_float3(g.f_rest[12], g.f_rest[27], g.f_rest[42]); // Coeff 13
-                rad += SH_C3_5 * z * (xx - yy) * make_float3(g.f_rest[13], g.f_rest[28], g.f_rest[43]); // Coeff 14
-                rad += SH_C3_6 * x * (xx - 3.0f * yy) * make_float3(g.f_rest[14], g.f_rest[29], g.f_rest[44]); // Coeff 15
-            }
-        }
+    // 계산을 용이하게 하기 위해 g.f_dc와 g.f_rest를 하나의 배열로
+    float3 sphCoefficients[16];
+    sphCoefficients[0] = make_float3(g.f_dc[0], g.f_dc[1], g.f_dc[2]);
+#pragma unroll
+    for (int i = 0; i < 15; ++i) {
+        sphCoefficients[i + 1] = make_float3(g.f_rest[i], g.f_rest[15 + i], g.f_rest[30 + i]);
     }
+
+    const float x = view_dir.x;
+    const float y = view_dir.y;
+    const float z = view_dir.z;
+
+    // --- 1. SH 기저 함수 계산 (SHEval4 로직을 스칼라 코드로 변환) ---
+    // 이 부분은 논문의 코드 생성기가 만드는 출력과 동일한 계산을 수행합니다[cite: 76].
+    float basis[16]; // 16개의 SH 기저 함수 값을 저장할 배열
+
+    float z2 = z * z;
+
+    // m=0 항들 계산
+    basis[0] = 0.2820947917738781f;
+    basis[2] = 0.4886025119029199f * z;
+    basis[6] = 0.9461746957575601f * z2 - 0.31539156525252f;
+    basis[12] = z * (1.865881662950577f * z2 - 1.119528997770346f);
+
+    // m=1, m=-1 항들 계산
+    float c0 = x;
+    float s0 = y;
+
+    float tmpA = -0.48860251190292f;
+    basis[3] = tmpA * c0; // m=1
+    basis[1] = tmpA * s0; // m=-1
+
+    float tmpB = -1.092548430592079f * z;
+    basis[7] = tmpB * c0; // m=1
+    basis[5] = tmpB * s0; // m=-1
+
+    float tmpC = 0.4570457994644658f - 2.285228997322329f * z2;
+    basis[13] = tmpC * c0; // m=1
+    basis[11] = tmpC * s0; // m=-1
+
+    // m=2, m=-2 항들 계산
+    // 삼각함수 덧셈 정리를 이용한 효율적인 계산 [cite: 71]
+    float c1 = x * c0 - y * s0; // cos(2*phi) 관련 항
+    float s1 = x * s0 + y * c0; // sin(2*phi) 관련 항
+
+    tmpA = 0.5462742152960395f;
+    basis[8] = tmpA * c1; // m=2
+    basis[4] = tmpA * s1; // m=-2
+
+    tmpB = 1.445305721320277f * z;
+    basis[14] = tmpB * c1; // m=2
+    basis[10] = tmpB * s1; // m=-2
+
+    // m=3, m=-3 항들 계산
+    float c2 = x * c1 - y * s1; // cos(3*phi) 관련 항
+    float s2 = x * s1 + y * c1; // sin(3*phi) 관련 항
+
+    tmpC = -0.5900435899266435f;
+    basis[15] = tmpC * c2; // m=3
+    basis[9] = tmpC * s2; // m=-3
+
+    // --- 2. 기저 함수와 계수를 곱하여 최종 색상 계산 ---
+    float3 rad = make_float3(0.0f, 0.0f, 0.0f);
+    int numBands = (degree + 1) * (degree + 1);
+
+#pragma unroll
+    for (int i = 0; i < numBands; ++i) {
+        rad += basis[i] * sphCoefficients[i];
+    }
+
 
     rad += make_float3(0.5f);
     return min(max(rad, make_float3(0.f)), make_float3(1.f));
@@ -979,7 +1014,8 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
 #endif
 
                     float3 view_dir = normalize(make_float3(g.pos[0], g.pos[1], g.pos[2]) - currRay.pos);
-                    float3 sample_color = eval_sh_final(SPH_EVAL_DEGREE, view_dir, g);
+                    //float3 sample_color = eval_sh_final(SPH_EVAL_DEGREE, view_dir, g);
+                    float3 sample_color = eval_sh_final2(SPH_EVAL_DEGREE, view_dir, g);
 
                     accumulated_color += sample_color * sample_opacity * (1.0f - accumulated_opacity);
                     accumulated_opacity += sample_opacity * (1.0f - accumulated_opacity);

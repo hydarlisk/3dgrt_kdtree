@@ -634,8 +634,11 @@ void try_to_split(const int axis, BoundingBox &inBBox, const TriangleList *pTria
 #endif
 						)* emptyBonus[side_idx];
 				}
-
+#if SAH_MAXIMIZE
+				if (SAH[0] >= SAH[1]) { // planar 를 왼쪽에 넣는 것이 낫다면,
+#else
 				if (SAH[0] <= SAH[1]) { // planar 를 왼쪽에 넣는 것이 낫다면,
+#endif
 					ExpectedCost = SAH[0];
 					planar_side = BoundEdge::START;
 					nTri_left = tri_num_left[0];

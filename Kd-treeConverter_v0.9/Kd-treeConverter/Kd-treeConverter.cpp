@@ -44,25 +44,25 @@ int build_kd_tree_for_composite_object(CompositeObject *c_object) {
 	//6 - P_s * SUM(sigma(i) * area(i_real))
 	switch (SAH_OPACITY) {
 	case 0:
-		printf("P_s * N_s\n");
+		fprintf(stdout, "P_s * N_s\n");
 		break;
 	case 1:
-		printf("P_s * SUM(sigma)\n");
+		fprintf(stdout, "P_s * SUM(sigma)\n");
 		break;
 	case 2:
-		printf("P_s * SUM(sigma(i) * area(i))\n");
+		fprintf(stdout, "P_s * SUM(sigma(i) * area(i))\n");
 		break;
 	case 3:
-		printf("P_s * SUM(sigma(i) * area(i) / MAX(area(V_s))\n");
+		fprintf(stdout, "P_s * SUM(sigma(i) * area(i) / MAX(area(V_s))\n");
 		break;
 	case 4:
-		printf("P_s * SUM(sigma(i) * area(i) / MAX(area(V))\n");
+		fprintf(stdout, "P_s * SUM(sigma(i) * area(i) / MAX(area(V))\n");
 		break;
 	case 5:
-		printf("SUM(sigma(i) * area(i) / MAX(area(V))\n");
+		fprintf(stdout, "SUM(sigma(i) * area(i) / MAX(area(V))\n");
 		break;
 	case 6:
-		printf("P_s * SUM(sigma(i) * area(i_real))\n");
+		fprintf(stdout, "P_s * SUM(sigma(i) * area(i_real))\n");
 		break;
 	}
 //shyun added end
@@ -143,9 +143,50 @@ int build_kd_tree_for_composite_object2(CompositeObject* c_object, const char* f
 	fprintf(fp, "\n  * Empty Bonus: %7.3f\n  * Travel Cost: %7.3f\n  * Intersection Cost: %7.3f\n  * Max Tree Level: %d\n  * Min # of Triangles per Leaf: %d\n",
 		v_KD_TREE_EMTPY_BONUS, v_KD_TREE_TRAVL_COST, v_KD_TREE_ISECT_COST, v_KD_TREE_MAX_LEVEL, v_KD_TREE_MIN_TRIANGLE);
 
+
+//shyun added begin
+#if FORCE_SPLIT_THRESHOLD
+	fprintf(fp, "  * Max # of Triangles per Leaf: %d\n", FORCE_SPLIT_THRESHOLD);
+#else
+	fprintf(fp, "  * Max # of Triangles per Leaf: none\n");
+#endif
+
+	fprintf(fp, "  * SAH_OPACITY Mode: [%d] ", SAH_OPACITY);
+	//0 - P * N
+	//1 - P * SUM(sigma)
+	//2 - P * SUM(sigma(i) * area(i))
+	//3 - P * SUM(sigma(i) * area(i) / MAX(area(V_s))
+	//4 - P * SUM(sigma(i) * area(i) / MAX(area(V))
+	//5 - SUM(sigma(i) * area(i) / MAX(area(V))
+	//6 - P_s * SUM(sigma(i) * area(i_real))
+	switch (SAH_OPACITY) {
+	case 0:
+		fprintf(fp, "P_s * N_s\n");
+		break;
+	case 1:
+		fprintf(fp, "P_s * SUM(sigma)\n");
+		break;
+	case 2:
+		fprintf(fp, "P_s * SUM(sigma(i) * area(i))\n");
+		break;
+	case 3:
+		fprintf(fp, "P_s * SUM(sigma(i) * area(i) / MAX(area(V_s))\n");
+		break;
+	case 4:
+		fprintf(fp, "P_s * SUM(sigma(i) * area(i) / MAX(area(V))\n");
+		break;
+	case 5:
+		fprintf(fp, "SUM(sigma(i) * area(i) / MAX(area(V))\n");
+		break;
+	case 6:
+		fprintf(fp, "P_s * SUM(sigma(i) * area(i_real))\n");
+		break;
+	}
+//shyun added end
+
 	// allocate memory and initialize data
 	if (initialize_kd_tree(c_object) == 0) {
-		fprintf(stderr, "Kd-tree construction error.\n");
+		fprintf(fp, "Kd-tree construction error.\n");
 		return 0;
 	}
 
@@ -364,8 +405,8 @@ int read_kd_tree_from_file(CompositeObject *c_object, const char *filename, int 
 	c_object->kd_tree->tri_offset_list = g_pKdTree_TriOffset_Array;
 	c_object->kd_tree->tri_offset_count = g_iKdTree_TriOffset_Count;
 	c_object->kd_tree->tri_accel_list = pTriAcc;
-	printf("->n_triangles: %d\n", c_object->n_triangles);
-	if (pTriAcc == NULL) printf("triaccNULL\n");
+	fprintf(stdout, "->n_triangles: %d\n", c_object->n_triangles);
+	if (pTriAcc == NULL) fprintf(stdout, "triaccNULL\n");
 
 	fprintf(stdout, "Reading Kd-tree is completed.\n");
 
