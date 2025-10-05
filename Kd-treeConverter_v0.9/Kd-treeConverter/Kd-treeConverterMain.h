@@ -3,6 +3,7 @@
   Version: 1.0
   Date: November 1, 2014
  **************************************************************/
+#pragma once
 
 #define SMALL_OFFSET 1.0
 #define ZOOM_SENSITIVITY 0.25

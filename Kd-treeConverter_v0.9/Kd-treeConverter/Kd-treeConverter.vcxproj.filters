@@ -48,6 +48,9 @@
     <ClCompile Include="AABB_Triangle_Clip\BVHBuilder.cpp">
       <Filter>AABB_Triangle_Clip</Filter>
     </ClCompile>
+    <ClCompile Include="AABB_Triangle_Clip\AABB_Triangle_Clip.cpp">
+      <Filter>AABB_Triangle_Clip</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Kd-treeConverter.h">
@@ -83,8 +86,11 @@
     <ClInclude Include="AABB_Triangle_Clip\BVHBuilder.hpp">
       <Filter>AABB_Triangle_Clip</Filter>
     </ClInclude>
-    <ClInclude Include="AABB_Triangle_Clip\AABB_Clipping_KdTree.h">
+    <ClInclude Include="AABB_Triangle_Clip\AABB_Triangle_Clip.h">
       <Filter>AABB_Triangle_Clip</Filter>
+    </ClInclude>
+    <ClInclude Include="Kd-treeCudaKernels.h">
+      <Filter>CUDA</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -96,6 +102,9 @@
     </CudaCompile>
     <CudaCompile Include="SGRTx2Lib\cuda_math.h">
       <Filter>SGRTx2Lib</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Kd-treeCudaKernels.cu">
+      <Filter>CUDA</Filter>
     </CudaCompile>
   </ItemGroup>
 </Project>

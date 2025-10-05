@@ -1,4 +1,4 @@
-#include "../Kd-treeConverter.h"
+//#include "../Kd-treeConverter.h"
 #include "AABB_Triangle_Clip.h"
 #include "../MyMathUtility.h" // dMyVecCrossProduct, dMyVecLength 등을 위함
 #include <cmath>

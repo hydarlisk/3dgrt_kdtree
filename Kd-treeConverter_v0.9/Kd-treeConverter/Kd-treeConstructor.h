@@ -3,10 +3,9 @@
   Version: 1.0
   Date: November 19, 2014
  **************************************************************/
-
+#pragma once
 #include <stdio.h>
 #include "Kd-treeConverter.h"
-//using namespace KDTConverter;
 
 #define KD_TREE_EPSILON        0.00001f
 
@@ -46,6 +45,7 @@ typedef struct _TriangleList {
 #if SAH_OPACITY >= 2
 	float area;
 #endif
+	float real_area;
 //shyun added end
 } TriangleList;
 
@@ -106,7 +106,19 @@ inline void setLeafNode(KdTreeNode* pNode, unsigned int _objectSize, unsigned in
 void set_bound_edge(const int axis, const TriangleList *pTriangleInfo, const unsigned int n_bEdge, BoundEdge *bEdge);
 
 void try_to_split(const int axis, BoundingBox &inBBox, const TriangleList *pTriangles, const int triangleSize, 
-                        BoundEdge *bEdge,  SplitCost &bestCost);
+                        BoundEdge *bEdge,  SplitCost &bestCost
+//shyun added begin
+#if SAH_OPACITY == 1
+	, const double total_opacity_in_node
+#endif
+#if SAH_OPACITY >= 2// & SAH_OPACITY < 6
+	, const double total_contribution_in_node
+#endif
+#if SAH_OPACITY >= 4 & SAH_OPACITY < 6
+	, const float max_area_in_node
+#endif
+//shyun added end
+);
 
 bool initialize_kd_tree(CompositeObject *poly_model);
 void uninitialize_kd_tree(void);

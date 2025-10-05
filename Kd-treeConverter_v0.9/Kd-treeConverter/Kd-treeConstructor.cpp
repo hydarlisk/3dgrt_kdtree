@@ -17,8 +17,10 @@
 #include "Kd-treeConverter.h"
 #include "Kd-treeConstructor.h"
 #include "MyMathUtility.h"
-//using namespace KDTConverter;
-//using namespace KDTConstructor;
+
+#include "AABB_Triangle_Clip/AABB_Triangle_Clip.h" 
+#include "Kd-treeCudaKernels.h"
+#include <algorithm> // for std::remove_if
 
 static const unsigned int modulo[] = { 0,1,2,0,1 };
 
@@ -323,10 +325,10 @@ void try_to_split(const int axis, BoundingBox &inBBox, const TriangleList *pTria
 #if SAH_OPACITY == 1
 	, const double total_opacity_in_node
 #endif
-#if SAH_OPACITY >= 2
+#if SAH_OPACITY >= 2// & SAH_OPACITY < 6
 	, const double total_contribution_in_node
 #endif
-#if SAH_OPACITY >= 4
+#if SAH_OPACITY >= 4 & SAH_OPACITY < 6
 	, const float max_area_in_node
 #endif
 //shyun added end
@@ -354,7 +356,7 @@ void try_to_split(const int axis, BoundingBox &inBBox, const TriangleList *pTria
 #if SAH_OPACITY == 1
 	double opacity_open = 0.0, opacity_close = 0.0, opacity_planar_local = 0.0;
 	double opacity_local_open = 0.0, opacity_local_close = 0.0;
-#elif SAH_OPACITY >= 2
+#elif SAH_OPACITY >= 2// & SAH_OPACITY < 6
 	double contrib_open = 0.0, contrib_close = 0.0, contrib_planar_local = 0.0;
 	double contrib_local_open = 0.0, contrib_local_close = 0.0;
 #endif
@@ -374,6 +376,11 @@ void try_to_split(const int axis, BoundingBox &inBBox, const TriangleList *pTria
 	// nlogn 방식처럼 정렬하지 않음, edge 의 type 은 고려하지 않고 순수히 위치로만 정렬함
 	const unsigned n_bEdge = triangleSize * 2;
 	set_bound_edge( axis, pTriangles, n_bEdge, bEdge );
+
+#if SAH_OPACITY == 6 // 분할 평면을 가로지르는 활성 삼각형 목록
+	std::vector<const TriangleList*> active_triangles;
+	active_triangles.reserve(triangleSize);
+#endif
 
 #if SAH_OPACITY == 3
 	std::vector<float> from_left_max_area(n_bEdge, 0.0f);
@@ -415,7 +422,7 @@ void try_to_split(const int axis, BoundingBox &inBBox, const TriangleList *pTria
 		opacity_close += opacity_local_close + opacity_planar_local;
 
 		opacity_planar_local = 0.0; opacity_local_open = 0.0; opacity_local_close = 0.0;
-#elif SAH_OPACITY >= 2
+#elif SAH_OPACITY >= 2// & SAH_OPACITY < 6
 		contrib_open += contrib_local_open + contrib_planar_local;
 		contrib_close += contrib_local_close + contrib_planar_local;
 
@@ -444,9 +451,24 @@ void try_to_split(const int axis, BoundingBox &inBBox, const TriangleList *pTria
 //shyun added begin
 #if SAH_OPACITY == 1
 				const float tri_opacity = tmp_bEdge.triangleInfo->opacity;
-#elif SAH_OPACITY >= 2
+#elif SAH_OPACITY >= 2// & SAH_OPACITY < 6
 				const float tri_contrib = tmp_bEdge.triangleInfo->opacity
 										* tmp_bEdge.triangleInfo->area;
+#endif
+#if SAH_OPACITY == 6
+				// 활성 삼각형 목록 관리: 시작 엣지면 추가, 끝 엣지면 제거
+				if (!tmp_bEdge.isPlanar) {
+					if (tmp_bEdge.type == BoundEdge::START) {
+						active_triangles.push_back(tmp_bEdge.triangleInfo);
+					}
+					else { // END
+						const TriangleList* to_remove = tmp_bEdge.triangleInfo;
+						active_triangles.erase(
+							std::remove_if(active_triangles.begin(), active_triangles.end(),
+								[&](const TriangleList* t) { return t->offset == to_remove->offset; }),
+							active_triangles.end());
+					}
+				}
 #endif
 //shyun added end
 				//카운팅
@@ -471,7 +493,7 @@ void try_to_split(const int axis, BoundingBox &inBBox, const TriangleList *pTria
 				else {
 					opacity_planar_local += is_left ? tri_opacity : 0.0;
 				}
-#elif SAH_OPACITY >= 2
+#elif SAH_OPACITY >= 2// & SAH_OPACITY < 6
 				if (!is_planar) {
 					contrib_local_open += is_left ? tri_contrib : 0.0;
 					contrib_local_close += is_left ? 0.0 : tri_contrib;
@@ -552,7 +574,7 @@ void try_to_split(const int axis, BoundingBox &inBBox, const TriangleList *pTria
 				// - 시나리오 [1]: 평면 삼각형(Planar)을 오른쪽에 포함
 				const double total_op_left[2] = { op_leftOnly + op_cross + opacity_planar_local, op_leftOnly + op_cross };
 				const double total_op_right[2] = { op_rightOnly + op_cross, op_rightOnly + op_cross + opacity_planar_local };
-#elif SAH_OPACITY >= 2
+#elif SAH_OPACITY >= 2 & SAH_OPACITY < 6
 				const double contr_leftOnly = contrib_close + contrib_local_close;
 				const double contr_cross = contrib_open - contr_leftOnly;
 				const double contr_rightOnly = total_contribution_in_node - (contr_leftOnly + contr_cross + contrib_planar_local);
@@ -627,6 +649,55 @@ void try_to_split(const int axis, BoundingBox &inBBox, const TriangleList *pTria
 						: // max_area_in_node가 0일 경우의 예외 처리
 						total_contr_left[side_idx] +
 						total_contr_right[side_idx]
+#elif SAH_OPACITY == 6
+						[&]{
+							// 1. Sweep-line으로 확정된 비용을 계산합니다. (효율성 담당)
+							const double contr_leftOnly_base = contrib_close + contrib_local_close;
+							const double contr_cross_base = contrib_open - contr_leftOnly_base;
+							const double contr_rightOnly_base = total_contribution_in_node - (contr_leftOnly_base + contr_cross_base + contrib_planar_local);
+
+							// 각 자식 노드의 최종 기여도를 확정된 값으로 초기화합니다.
+							double total_contrib_L = contr_leftOnly_base;
+							double total_contrib_R = contr_rightOnly_base;
+
+							// 분할로 인해 생성될 좌/우 자식 노드의 AABB를 정의합니다.
+							BoundingBox left_bbox = inBBox; left_bbox.max[axis] = cur_position;
+							BoundingBox right_bbox = inBBox; right_bbox.min[axis] = cur_position;
+
+							// 2. 분할 평면을 가로지르는 '활성 삼각형'들의 비용을 CUDA로 계산합니다. (정확성 + 속도 담당)
+							if (!active_triangles.empty()) {
+								// CUDA 커널을 호출하여 '활성 삼각형'들의 클리핑 및 면적 계산을 GPU에서 병렬로 수행
+								CudaClipResult clip_result = calculate_clipped_contributions_cuda(
+									active_triangles, left_bbox, right_bbox
+								);
+
+								// GPU로부터 받은 결과를 CPU의 총 기여도에 합산
+								total_contrib_L += clip_result.total_contrib_L;
+								total_contrib_R += clip_result.total_contrib_R;
+							}
+
+							// 3. '평면 삼각형'을 처리합니다. (개수가 적으므로 CPU에서 처리)
+							if (num_planars > 0) {
+								// side_idx 값에 따라 평면 삼각형을 왼쪽 또는 오른쪽에 포함시켜 비용을 계산합니다.
+								BoundingBox& target_bbox = (side_idx == 0) ? left_bbox : right_bbox;
+								double& target_contrib = (side_idx == 0) ? total_contrib_L : total_contrib_R;
+
+								// 현재 위치(cur_position)에 있는 평면 삼각형들을 찾아서 클리핑합니다.
+								for (unsigned int p_idx = i - local_open - local_close - num_planars + 1; p_idx <= i; ++p_idx) {
+									 if (bEdge[p_idx].isPlanar && bEdge[p_idx].type == BoundEdge::START) {
+										const TriangleList& tri_info = *bEdge[p_idx].triangleInfo;
+										std::vector<ExtendedVertex> poly_planar;
+										KdTreeClipper::clip_triangle_against_AABB(tri_info.point, target_bbox, poly_planar);
+										if (poly_planar.size() >= 3) {
+											target_contrib += tri_info.opacity * KdTreeClipper::calculate_polygon_area(poly_planar);
+										}
+									 }
+								}
+							}
+
+							// 4. 최종 SAH 비용을 반환합니다.
+							return (total_contrib_L * prob_l + total_contrib_R * prob_r);
+						}()
 //shyun added end
 #else
 						double(tri_num_left[side_idx])* prob_l +
@@ -827,14 +898,14 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pTriangleInfo
 }
 	bestCost.cost = total_opacity_in_node * v_KD_TREE_ISECT_COST;
 #endif
-#if SAH_OPACITY >= 2
+#if SAH_OPACITY >= 2// & SAH_OPACITY < 6
 	double total_contribution_in_node = 0.0;
 	for (unsigned int i = 0; i < triangleSize; ++i) {
 		total_contribution_in_node += pTriangleInfos[i].area * pTriangleInfos[i].opacity;
 	}
 	bestCost.cost = total_contribution_in_node * v_KD_TREE_ISECT_COST;
 #endif
-#if SAH_OPACITY >= 4
+#if SAH_OPACITY >= 4 & SAH_OPACITY < 6
 	float max_area_in_node = 0.0f;
 	for (unsigned int i = 0; i < triangleSize; ++i) {
 		max_area_in_node = MyMAX(max_area_in_node, pTriangleInfos[i].area);
@@ -857,21 +928,33 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pTriangleInfo
 
 	// Calculate cost function (in case of trying to partition)
 	if (inNodeLevel < v_KD_TREE_MAX_LEVEL && triangleSize > v_KD_TREE_MIN_TRIANGLE) {
+		SplitCost axisCosts[3]; // 각 축의 결과를 저장할 배열
+		#pragma omp parallel for
 		// (모든 축에 대해 수행)
 		for (int axis = 0; axis < 3; axis++) {
-			try_to_split(axis, bbox, pTriangleInfos, triangleSize, bEdge, bestCost
+			BoundEdge* local_bEdge = new BoundEdge[triangleSize * 2];
+			//try_to_split(axis, bbox, pTriangleInfos, triangleSize, bEdge, bestCost
+			try_to_split(axis, bbox, pTriangleInfos, triangleSize, local_bEdge, axisCosts[axis]
 //shyun added begin
 #if SAH_OPACITY == 1
 			,total_opacity_in_node
 #endif
-#if SAH_OPACITY >= 2
+#if SAH_OPACITY >= 2// & SAH_OPACITY < 6
 			, total_contribution_in_node
 #endif
-#if SAH_OPACITY >= 4
+#if SAH_OPACITY >= 4 & SAH_OPACITY < 6
 			, max_area_in_node
 #endif
 //shyun added end
 				);
+			delete[] local_bEdge;
+		}
+
+		// 병렬 계산이 끝난 후, 3개 축의 결과 중 가장 좋은 것을 선택
+		for (int axis = 0; axis < 3; axis++) {
+			if (axisCosts[axis].cost < bestCost.cost) {
+				bestCost = axisCosts[axis];
+			}
 		}
 	}
 	
@@ -1176,7 +1259,7 @@ std::vector<BoundingBox> extract_leaves_from_kd_tree()
 //	return all_leaf_info;
 //}
 
-#include <algorithm>
+//#include <algorithm>
 std::vector<LeafNodeInfo> extract_all_leaf_data(CompositeObject* c_object, int& largest_leaf_index) {
 	// Kd-tree가 없으면 빈 벡터 반환
 	if (c_object == nullptr || c_object->kd_tree == nullptr || c_object->kd_tree->tree == nullptr) {

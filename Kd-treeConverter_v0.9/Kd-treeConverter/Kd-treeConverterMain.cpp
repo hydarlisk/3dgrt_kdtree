@@ -1858,10 +1858,11 @@ void subMenuHandler(int value) {
 //	strcpy(result, a);
 //	strcat(result, " ");
 //#endif
-	//const char* method = SAH_OPACITY > 0 ? "_opacity %d",SAH_OPACITY : "_normal";
-	//const char* minTri = itoa(MIN_TRI);
-	//const char* maxTri = itoa(FORCE_SPLIT_THRESHOLD);
-	//const char* maximize = SAH_MAXIMIZE ? "maximize" : "minimize";
+	//const char* method = (SAH_OPACITY > 0) ? ("_opacity%d",SAH_OPACITY) : "_normal";
+	//char* minTri, *maxTri;
+	//itoa(MIN_TRI, minTri, 10);
+	//itoa(FORCE_SPLIT_THRESHOLD, maxTri, 10);
+	//const char* maximize = SAH_MAXIMIZE ? "_maximize" : "_minimize";
 
 	//realloc(ply_kdtree_path, strlen(ply_kdtree_path) + strlen(method) + strlen(minTri) + strlen(maxTri) + strlen(maximize) + strlen(".kdt") + 1);
 	//realloc(ply_igeom_path, strlen(ply_igeom_path) + strlen(method) + strlen(minTri) + strlen(maxTri) + strlen(maximize) + strlen(".bin") + 1);
