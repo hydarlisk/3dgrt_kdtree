@@ -33,7 +33,9 @@ int build_kd_tree_for_composite_object(CompositeObject *c_object) {
 #else
 	fprintf(stdout, "  * Max # of Triangles per Leaf: none\n");
 #endif
-	
+
+	fprintf(stdout, "  * SAH_MAXIMIZE Mode: %s\n", SAH_MAXIMIZE ? "maximize" : "minimize");
+	fprintf(stdout, "  * CLIP_AREA %s\n", CLIP_AREA ? "clip" : "none");
 	fprintf(stdout, "  * SAH_OPACITY Mode: [%d] ", SAH_OPACITY);
 	//0 - P * N
 	//1 - P * SUM(sigma)
@@ -416,18 +418,23 @@ int read_kd_tree_from_file(CompositeObject *c_object, const char *filename, int 
 void collectTriangleCounts_recursive(
 	const KdTree* kd_tree,
 	int nodeIndex,
-	std::vector<unsigned int>& counts
+	std::vector<unsigned int>& counts,
+	unsigned int current_level,
+	unsigned int& max_level
 ) {
 	const KdTreeNode& node = kd_tree->tree[nodeIndex];
 
 	if (IS_LEAF(node)) {
 		counts.push_back(OBJECT_SIZE(node));
+		if (current_level > max_level) {
+			max_level = current_level;
+		}
 		return;
 	}
 
 	unsigned int leftChildIndex = FIRST_CHILD_OFFSET(node);
 	unsigned int rightChildIndex = leftChildIndex + 1;
 
-	collectTriangleCounts_recursive(kd_tree, leftChildIndex, counts);
-	collectTriangleCounts_recursive(kd_tree, rightChildIndex, counts);
+	collectTriangleCounts_recursive(kd_tree, leftChildIndex, counts, current_level + 1, max_level);
+	collectTriangleCounts_recursive(kd_tree, rightChildIndex, counts, current_level + 1, max_level);
 }

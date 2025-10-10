@@ -45,7 +45,12 @@ typedef struct _TriangleList {
 #if SAH_OPACITY >= 2
 	float area;
 #endif
-	float real_area;
+#if SAH_OPACITY == 8 || SAH_OPACITY == 9
+	float AABBarea;
+#endif
+#if SAH_OPACITY == 9
+	float AABBareaOrigin;
+#endif
 //shyun added end
 } TriangleList;
 
@@ -139,4 +144,6 @@ struct LeafNodeInfo {
 };
 std::vector<BoundingBox> extract_leaves_from_kd_tree();
 std::vector<LeafNodeInfo> extract_all_leaf_data(CompositeObject* c_object, int& largest_leaf_index);
+
+inline double get_surface_area(const BoundingBox& box);
 //shyun added end

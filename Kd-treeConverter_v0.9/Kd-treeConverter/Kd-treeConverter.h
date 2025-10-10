@@ -10,20 +10,40 @@
 //shyun added begin
 #define TRAVL_COST 1.0
 #define ISCET_COST 5.0
-#define MAX_LEVEL 100
+#define MAX_LEVEL 1024
 #define MIN_TRI 16
 #define EMTPY_BONUS 0.9
 
 #define FORCE_SPLIT_THRESHOLD 64				// kd-tree 강제분할
-#define SAH_OPACITY 6
-#define SAH_MAXIMIZE true//false
-//0 - P_s * N_s
-//1 - P_s * SUM(sigma)
-//2 - P_s * SUM(sigma(i) * area(i))
-//3 - P_s * SUM(sigma(i) * area(i) / MAX(area(V_s)) : TODO
-//4 - P_s * SUM(sigma(i) * area(i) / MAX(area(V))
-//5 - SUM(sigma(i) * area(i) / MAX(area(V))
-//6 - P_s * SUM(sigma(i) * area(i_real))
+#define SAH_OPACITY 2
+#define CLIP_AREA true							// 부모 노드의 AABB로 삼각형 면적 clip
+#define SAH_MAXIMIZE true
+//0 - P_s * N_s																									//235
+//1 - P_s * SUM(sigma)																							//227
+//2 - P_s * SUM(sigma(i) * area(i))																				//187
+//2 - P_s * SUM(sigma(i) * area_clip_parent(i))																	//154
+//21 - P_s * SUM(sigma(i) * area(i) * OPACITY_PENALTY)															//182
+//21 - P_s * SUM(sigma(i) * area_clip_parent(i) * OPACITY_PENALTY)												//71
+//22 - P_s * ( SUM(sigma(i) * area(i)) + HYBRID_BETA * N_s)														//196
+//22 - P_s * ( SUM(sigma(i) * area_clip_parent(i)) + HYBRID_BETA * N_s)											//
+//23 - P_s * ( (1-HYBRID_BETA) * SUM(sigma(i) * area(i))_normalize + HYBRID_BETA * N_s_normalize)				//194
+//23 - P_s * ( (1-HYBRID_BETA) * SUM(sigma(i) * area_clip_parent(i))_normalize + HYBRID_BETA * N_s_normalize)	//
+//3 - P_s * SUM(sigma(i) * area(i) / MAX(area(V_s))																//4
+//3 - P_s * SUM(sigma(i) * area_clip_parent(i) / MAX(area(V_s))													//
+//4 - P_s * SUM(sigma(i) * area(i) / MAX(area(V))																//208
+//4 - P_s * SUM(sigma(i) * area_clip_parent(i) / MAX(area(V))													//
+//5 - SUM(sigma(i) * area(i) / MAX(area(V))																		//
+//5 - SUM(sigma(i) * area_clip_parent(i) / MAX(area_clip_parent_in_V))											//
+//6 - P_s * SUM(sigma(i) * area(i_real)): (실패)
+//7 - P_s * SUM(sigma(i) * (A_tri_leaf_AABB/A_leaf_AABB)): (실패)
+//8 - P_s * SUM(sigma(i) * (A_tri_clip_parent_AABB/A_parent_AABB))												//
+//81 - P_s * SUM(sigma(i) * area(i) * (A_tri_clip_parent_AABB/A_parent_AABB)): TODO								//
+//81 - P_s * SUM(sigma(i) * area_clip_parent(i) * (A_tri_clip_parent_AABB/A_parent_AABB)): TODO					//
+//9 - P_s * SUM(sigma(i) * (A_tri_clip_parent_AABB/A_tri_origin_AABB)): TODO
+//91 - P_s * SUM(sigma(i) * area(i) * (A_tri_clip_parent_AABB/A_tri_origin_AABB)): TODO
+//91 - P_s * SUM(sigma(i) * area_clip_parent(i) * (A_tri_clip_parent_AABB/A_tri_origin_AABB)): TODO
+#define OPACITY_PENALTY 10.0f
+#define HYBRID_BETA 0.3f
 
 #define ALPHA_MIN 0.0113f
 #define KERNEL_DEGREE 4.0f
@@ -262,7 +282,9 @@ int build_kd_tree_for_composite_object2(CompositeObject* c_object, const char* f
 void collectTriangleCounts_recursive(
 	const KdTree* kd_tree,
 	int nodeIndex,
-	std::vector<unsigned int>& counts
+	std::vector<unsigned int>& counts,
+	unsigned int current_level,
+	unsigned int& max_level
 );
 //shyun added end
 void dump_kd_tree_for_composite_object(CompositeObject *, const char *, int, const char *);
