@@ -113,14 +113,16 @@ void set_bound_edge(const int axis, const TriangleList *pTriangleInfo, const uns
 void try_to_split(const int axis, BoundingBox &inBBox, const TriangleList *pTriangles, const int triangleSize, 
                         BoundEdge *bEdge,  SplitCost &bestCost
 //shyun added begin
-#if SAH_OPACITY == 1
+#if SAH_OPACITY == 1 || SAH_OPACITY == 10 || SAH_OPACITY == 101 || SAH_OPACITY == 1000 || SAH_OPACITY == 1001
 	, const double total_opacity_in_node
-#endif
-#if SAH_OPACITY >= 2// & SAH_OPACITY < 6
+#elif SAH_OPACITY >= 2// & SAH_OPACITY < 6
 	, const double total_contribution_in_node
 #endif
 #if SAH_OPACITY >= 4 & SAH_OPACITY < 6
 	, const float max_area_in_node
+#endif
+#if SAH_OPACITY == 1000
+	, unsigned int inNodeLevel
 #endif
 //shyun added end
 );
@@ -146,4 +148,5 @@ std::vector<BoundingBox> extract_leaves_from_kd_tree();
 std::vector<LeafNodeInfo> extract_all_leaf_data(CompositeObject* c_object, int& largest_leaf_index);
 
 inline double get_surface_area(const BoundingBox& box);
+inline double get_surface_volume(const BoundingBox& box);
 //shyun added end

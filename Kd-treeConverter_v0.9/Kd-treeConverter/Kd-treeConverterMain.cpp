@@ -43,7 +43,7 @@ char* ply_to_obj;
 //cudaEvent_t start_ev, stop_ev;
 char* kdtree_build_path;
 //int submenu[5] = { 101,1012,102,104,105 };
-int submenu[PLY_MODEL_COUNT] = { 101,102,103,104,105,106 };
+int submenu[PLY_MODEL_COUNT] = { 102,103,104,105,106 };
 
 bool render_gaussian = false;
 int g_render_width = MAIN_WINDOW_WIDTH;
@@ -1768,10 +1768,26 @@ void subMenuHandler(int value) {
 	char suffix[256];
 	const char* sah_mode_str = SAH_MAXIMIZE ? "maximize" : "minimize";
 	const char* clip_mode_str = CLIP_AREA ? "_clip" : "";
+	const char* scale_mode_str = USE_KERNEL_SCALE ? "_kernelScale" : "";
 
-#if SAH_OPACITY > 0
 	// SAH_OPACITY 값에 따라 "_opacity<N>..." 형식으로 생성
-	snprintf(suffix, sizeof(suffix), "_%.0f_opacity%d_%d_%d%s_%s",
+#if SAH_OPACITY >= 1000
+	snprintf(suffix, sizeof(suffix), "%s_%.0f_opacity%d(%d)_%d_%d%s_%s",
+		scale_mode_str,
+		ISCET_COST,
+		SAH_OPACITY,
+#if SAH_OPACITY == 1000
+		HYBRID_SAH_DEPTH_THRESHOLD,
+#elif SAH_OPACITY == 1001
+		HYBRID_SAH_TRIANGLE_THRESHOLD,
+#endif
+		MIN_TRI,
+		FORCE_SPLIT_THRESHOLD,
+		clip_mode_str,
+		sah_mode_str);
+#elif SAH_OPACITY > 0
+	snprintf(suffix, sizeof(suffix), "%s_%.0f_opacity%d_%d_%d%s_%s",
+		scale_mode_str,
 		ISCET_COST,
 		SAH_OPACITY,
 		MIN_TRI,
@@ -1780,7 +1796,8 @@ void subMenuHandler(int value) {
 		sah_mode_str);
 #else
 	// SAH_OPACITY가 0이면 "_normal..." 형식으로 생성
-	snprintf(suffix, sizeof(suffix), "_%.0f_normal_%d_%d%s_%s",
+	snprintf(suffix, sizeof(suffix), "%s_%.0f_normal_%d_%d%s_%s",
+		scale_mode_str,
 		ISCET_COST,
 		MIN_TRI,
 		FORCE_SPLIT_THRESHOLD,

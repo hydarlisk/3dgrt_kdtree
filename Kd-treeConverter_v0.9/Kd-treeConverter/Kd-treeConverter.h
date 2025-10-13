@@ -10,22 +10,24 @@
 //shyun added begin
 #define TRAVL_COST 1.0
 #define ISCET_COST 5.0
-#define MAX_LEVEL 1024
+#define MAX_LEVEL 256
 #define MIN_TRI 16
 #define EMTPY_BONUS 0.9
 
-#define FORCE_SPLIT_THRESHOLD 64				// kd-tree 강제분할
-#define SAH_OPACITY 2
-#define CLIP_AREA true							// 부모 노드의 AABB로 삼각형 면적 clip
-#define SAH_MAXIMIZE true
+#define FORCE_SPLIT_THRESHOLD 200				// kd-tree 강제분할
+#define SAH_OPACITY 0
+#define CLIP_AREA false							// 부모 노드의 AABB로 삼각형 면적 clip
+#define SAH_MAXIMIZE false
 //0 - P_s * N_s																									//235
 //1 - P_s * SUM(sigma)																							//227
 //2 - P_s * SUM(sigma(i) * area(i))																				//187
 //2 - P_s * SUM(sigma(i) * area_clip_parent(i))																	//154
 //21 - P_s * SUM(sigma(i) * area(i) * OPACITY_PENALTY)															//182
 //21 - P_s * SUM(sigma(i) * area_clip_parent(i) * OPACITY_PENALTY)												//71
+#define OPACITY_PENALTY 10.0f					//for SAH 21
 //22 - P_s * ( SUM(sigma(i) * area(i)) + HYBRID_BETA * N_s)														//196
 //22 - P_s * ( SUM(sigma(i) * area_clip_parent(i)) + HYBRID_BETA * N_s)											//
+#define HYBRID_BETA 0.3f						//for SAH 22, 23
 //23 - P_s * ( (1-HYBRID_BETA) * SUM(sigma(i) * area(i))_normalize + HYBRID_BETA * N_s_normalize)				//194
 //23 - P_s * ( (1-HYBRID_BETA) * SUM(sigma(i) * area_clip_parent(i))_normalize + HYBRID_BETA * N_s_normalize)	//
 //3 - P_s * SUM(sigma(i) * area(i) / MAX(area(V_s))																//4
@@ -42,15 +44,19 @@
 //9 - P_s * SUM(sigma(i) * (A_tri_clip_parent_AABB/A_tri_origin_AABB)): TODO
 //91 - P_s * SUM(sigma(i) * area(i) * (A_tri_clip_parent_AABB/A_tri_origin_AABB)): TODO
 //91 - P_s * SUM(sigma(i) * area_clip_parent(i) * (A_tri_clip_parent_AABB/A_tri_origin_AABB)): TODO
-#define OPACITY_PENALTY 10.0f
-#define HYBRID_BETA 0.3f
+//10 - P_s * ( SUM(sigma(i)) / Volume(leaf_AABB) ): (실패)
+//101 - ( SUM(sigma(i)) / Volume(leaf_AABB) ): (실패)
+//1000 - 일정 레벨까지 1, 이후 0
+#define HYBRID_SAH_DEPTH_THRESHOLD 10			//for SAH 1000
+//1001 - 일정 갯수까지 1, 이후 0
+#define HYBRID_SAH_TRIANGLE_THRESHOLD 100000		//for SAH 1001
 
 #define ALPHA_MIN 0.0113f
 #define KERNEL_DEGREE 4.0f
 
 #define ROTATION false							// R(45degree,1,1,1)
 
-#define OPACITY_THRESHOLD 0.93f					// 충족할때까지 kd-tree 탐색
+#define OPACITY_THRESHOLD 0.95f					// 충족할때까지 kd-tree 탐색
 
 #define MAX_HITS 256								// leaf node에서 blending을 위한 최대 sort 크기
 
@@ -88,8 +94,8 @@
 												// kd-tree hitmap 확인 가능
 #define LEAF_NODE_DEBUG true					// kd-tree leaf node 렌더링
 
-#define MEASURE_START_FRAME 100
-#define MEASURE_END_FRAME 600
+#define MEASURE_START_FRAME 500
+#define MEASURE_END_FRAME 1000
 
 #define TID_X (blockDim.x * blockIdx.x + threadIdx.x)
 #define TID_Y (blockDim.y * blockIdx.y + threadIdx.y)

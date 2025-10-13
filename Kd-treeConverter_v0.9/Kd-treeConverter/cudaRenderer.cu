@@ -1008,7 +1008,8 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
 #endif
 
 #if USE_KERNEL_SCALE
-                    float sample_opacity = evaluateGaussianResponse_3dgrt(currRay, g);
+                    //float sample_opacity = evaluateGaussianResponse_3dgrt(currRay, g);
+                    float sample_opacity = evaluateGaussianResponse(currRay, g);
 #else
                     float sample_opacity = evaluateGaussianResponse(currRay, g);
 #endif
