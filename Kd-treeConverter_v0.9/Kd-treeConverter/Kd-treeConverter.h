@@ -127,7 +127,18 @@
  * FHD	: 1920		*		1080
  */
 
-#define PLY_MODEL_COUNT 6
+/* Camera */
+//#define RENDERING_WIDTH 800
+//#define RENDERING_HEIGHT 800
+//#define RENDERING_WIDTH 960
+//#define RENDERING_HEIGHT 640
+#define RENDERING_WIDTH 1920
+#define RENDERING_HEIGHT 1080
+
+#define FOV_Y 19.6f
+#define NEAR_PLANE 0.005f
+#define FAR_PLANE 20.00f
+
 #define SCENE_NUM 1								// obj 로드할때만 0으로 변경
 
 #if SCENE_NUM == 0

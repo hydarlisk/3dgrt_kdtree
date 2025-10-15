@@ -9,6 +9,10 @@
 #include <GL/glut.h>
 
 #include "OpenGLStuffs.h"
+#include "Kd-treeConverter.h"
+
+extern int g_render_width;
+extern int g_render_height;
 
 void set_rotate_mat(Camera *cam) {
 	#define M(row,col)  cam->mat[col*4+row] // C/C++ way
@@ -42,6 +46,7 @@ void initialize_camera(Camera *cam) {
 
 	cam->move = 0;
 	cam->fovy = 20.0, cam->aspect = 1.0; cam->near_c = 1.0; cam->far_c = 10000.0;
+	//cam->fovy = FOV_Y, cam->aspect = g_render_width / g_render_height; cam->near_c = NEAR_PLANE; cam->far_c = FAR_PLANE;
 } 
 
  void draw_axes(GLfloat scale) {
