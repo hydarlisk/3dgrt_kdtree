@@ -43,7 +43,8 @@ char* ply_to_obj;
 //cudaEvent_t start_ev, stop_ev;
 char* kdtree_build_path;
 //int submenu[5] = { 101,1012,102,104,105 };
-int submenu[PLY_MODEL_COUNT] = { 102,103,104,105,106 };
+#define PLY_MODEL_COUNT 7
+int submenu[PLY_MODEL_COUNT] = { 105,106,107,108,109,110,111 };
 
 bool render_gaussian = false;
 int g_render_width = MAIN_WINDOW_WIDTH;
@@ -793,7 +794,8 @@ void printKdTreeLeafNodeInfo() {
 	// 모든 리프 노드의 삼각형 개수 수집
 	std::vector<unsigned int> triangle_counts;
 	unsigned int max_level = 0;
-	collectTriangleCounts_recursive(uip.poly_model.kd_tree, 0, triangle_counts, 0, max_level);
+	unsigned int total_level = 0;
+	collectTriangleCounts_recursive(uip.poly_model.kd_tree, 0, triangle_counts, 0, max_level, total_level);
 
 	if (triangle_counts.empty()) {
 		printf(" -> No leaf nodes found in the tree.\n");
@@ -808,9 +810,11 @@ void printKdTreeLeafNodeInfo() {
 	const unsigned int min_val = *minmax.first;
 	const unsigned int max_val = *minmax.second;
 	const float avg_triangles = (float)total_triangles / leaf_count;
+	const float avg_level = (float)total_level / leaf_count;
 
 	printf(" -> Total Leaf Nodes Found: %u\n", leaf_count);
 	printf(" -> Max tree level (depth): %u\n", max_level);
+	printf(" -> Avg tree level (depth): %.2f\n", avg_level);
 	printf(" -> Max triangles in a leaf: %u\n", max_val);
 	printf(" -> Min triangles in a leaf: %u\n", min_val);
 	printf(" -> Avg triangles per leaf: %.2f\n", avg_triangles);
@@ -1768,19 +1772,45 @@ void subMenuHandler(int value) {
 	char suffix[256];
 	const char* sah_mode_str = SAH_MAXIMIZE ? "maximize" : "minimize";
 	const char* clip_mode_str = CLIP_AREA ? "_clip" : "";
+#if ROTATION
+	const char* scale_mode_str = USE_KERNEL_SCALE ? "_rot_kernelScale" : "_rot";
+#else
 	const char* scale_mode_str = USE_KERNEL_SCALE ? "_kernelScale" : "";
-
+#endif
 	// SAH_OPACITY 값에 따라 "_opacity<N>..." 형식으로 생성
-#if SAH_OPACITY >= 1000
-	snprintf(suffix, sizeof(suffix), "%s_%.0f_opacity%d(%d)_%d_%d%s_%s",
+#if SAH_OPACITY >= 1000 && TRANSPARENCY
+	snprintf(suffix, sizeof(suffix), "%s_%.0f_transparency%d(%d)_%d_%d%s_%s",
 		scale_mode_str,
 		ISCET_COST,
 		SAH_OPACITY,
-#if SAH_OPACITY == 1000
+#if SAH_OPACITY == 1000 || SAH_OPACITY == 2000 || SAH_OPACITY == 2010
 		HYBRID_SAH_DEPTH_THRESHOLD,
 #elif SAH_OPACITY == 1001
 		HYBRID_SAH_TRIANGLE_THRESHOLD,
 #endif
+		MIN_TRI,
+		FORCE_SPLIT_THRESHOLD,
+		clip_mode_str,
+		sah_mode_str);
+#elif SAH_OPACITY >= 1000
+	snprintf(suffix, sizeof(suffix), "%s_%.0f_opacity%d(%d)_%d_%d%s_%s",
+		scale_mode_str,
+		ISCET_COST,
+		SAH_OPACITY,
+#if SAH_OPACITY == 1000 || SAH_OPACITY == 2000 || SAH_OPACITY == 2010
+		HYBRID_SAH_DEPTH_THRESHOLD,
+#elif SAH_OPACITY == 1001
+		HYBRID_SAH_TRIANGLE_THRESHOLD,
+#endif
+		MIN_TRI,
+		FORCE_SPLIT_THRESHOLD,
+		clip_mode_str,
+		sah_mode_str);
+#elif SAH_OPACITY > 0 && TRANSPARENCY
+	snprintf(suffix, sizeof(suffix), "%s_%.0f_transparency%d_%d_%d%s_%s",
+		scale_mode_str,
+		ISCET_COST,
+		SAH_OPACITY,
 		MIN_TRI,
 		FORCE_SPLIT_THRESHOLD,
 		clip_mode_str,
@@ -1828,105 +1858,83 @@ void subMenuHandler(int value) {
 	switch (value) {
 	case 101: printf("Hotdog selected\n");
 		ply_file_path = "../../Data/ply/hotdog2/hotdog_3dgrt2.ply";
-#if !ROTATION
 		base_kdtree_str = "../../Data/ply/hotdog2/hotdog2_tree.kdt";
 		base_igeom_str = "../../Data/ply/hotdog2/hotdog2_igeom.bin";
 		base_obj_str = "../../Data/ply/hotdog2/hotdog_3dgrt2_new.obj";
 		base_build_str = "../../Data/ply/hotdog2/hotdog2_3dgrt_kdt.txt";
-#else
-		base_kdtree_str = "../../Data/ply/hotdog2/hotdog2_tree_rot.kdt";
-		base_igeom_str = "../../Data/ply/hotdog2/hotdog2_igeom_rot.bin";
-		base_obj_str = "../../Data/ply/hotdog2/hotdog_3dgrt2_new_rot.obj";
-		base_build_str = "../../Data/ply/hotdog2/hotdog2_3dgrt_kdt_rot.txt";
-#endif
 		break;
 	case 102: printf("Lego selected\n");
 		ply_file_path = "../../Data/ply/lego/lego_3dgrt.ply";
-#if !ROTATION
 		base_kdtree_str = "../../Data/ply/lego/lego_tree.kdt";
 		base_igeom_str = "../../Data/ply/lego/lego_igeom.bin";
 		base_obj_str = "../../Data/ply/lego/lego_3dgrt_new.obj";
 		base_build_str = "../../Data/ply/lego/lego_3dgrt_kdt.txt";
-#else
-		base_kdtree_str = "../../Data/ply/lego/lego_tree_rot.kdt";
-		base_igeom_str = "../../Data/ply/lego/lego_igeom_rot.bin";
-		base_obj_str = "../../Data/ply/lego/lego_3dgrt_new_rot.obj";
-		base_build_str = "../../Data/ply/lego/lego_3dgrt_kdt_rot.txt";
-#endif
 		break;
-	case 103: printf("Bonsai selected\n");
-		ply_file_path = "../../Data/ply/bonsai/bonsai.ply";
-#if !ROTATION
-		base_kdtree_str = "../../Data/ply/bonsai/bonsai_tree.kdt";
-		base_igeom_str = "../../Data/ply/bonsai/bonsai_igeom.bin";
-		base_obj_str = "../../Data/ply/bonsai/bonsai_new.obj";
-		base_build_str = "../../Data/ply/bonsai/bonsai_kdt.txt";
-#else
-		base_kdtree_str = "../../Data/ply/bonsai/bonsai_tree_rot.kdt";
-		base_igeom_str = "../../Data/ply/bonsai/bonsai_igeom_rot.bin";
-		base_obj_str = "../../Data/ply/bonsai/bonsai_3dgrt_new_rot.obj";
-		base_build_str = "../../Data/ply/bonsai/bonsai_3dgrt_kdt_rot.txt";
-#endif
-		break;
-	case 104: printf("Chair selected\n");
+	case 103: printf("Chair selected\n");
 		ply_file_path = "../../Data/ply/chair/chair_3dgrt.ply";
-#if !ROTATION
 		base_kdtree_str = "../../Data/ply/chair/chair_tree.kdt";
 		base_igeom_str = "../../Data/ply/chair/chair_igeom.bin";
 		base_obj_str = "../../Data/ply/chair/chair_3dgrt_new.obj";
 		base_build_str = "../../Data/ply/chair/chair_3dgrt_kdt.txt";
-#else
-		base_kdtree_str = "../../Data/ply/chair/chair_tree_rot.kdt";
-		base_igeom_str = "../../Data/ply/chair/chair_igeom_rot.bin";
-		base_obj_str = "../../Data/ply/chair/chair_3dgrt_new_rot.obj";
-		base_build_str = "../../Data/ply/chair/chair_3dgrt_kdt_rot.txt";
-#endif
 		break;
-	case 105: printf("Flowers selected\n");
+	case 104: printf("Flowers selected\n");
 		ply_file_path = "../../Data/ply/flowers/flowers.ply";
-#if !ROTATION
 		base_kdtree_str = "../../Data/ply/flowers/flowers_tree.kdt";
 		base_igeom_str = "../../Data/ply/flowers/flowers_igeom.bin";
 		base_obj_str = "../../Data/ply/flowers/flowers_new.obj";
 		base_build_str = "../../Data/ply/flowers/flowers_kdt.txt";
-#else
-		base_kdtree_str = "../../Data/ply/flowers/flowers_tree_rot.kdt";
-		base_igeom_str = "../../Data/ply/flowers/flowers_igeom_rot.bin";
-		base_obj_str = "../../Data/ply/flowers/flowers_new_rot.obj";
-		base_build_str = "../../Data/ply/flowers/flowers_kdt_rot.txt";
-#endif
+		break;
+	case 105: printf("Bonsai selected\n");
+		ply_file_path = "../../Data/ply/bonsai/bonsai.ply";
+		base_kdtree_str = "../../Data/ply/bonsai/bonsai_tree.kdt";
+		base_igeom_str = "../../Data/ply/bonsai/bonsai_igeom.bin";
+		base_obj_str = "../../Data/ply/bonsai/bonsai_new.obj";
+		base_build_str = "../../Data/ply/bonsai/bonsai_kdt.txt";
 		break;
 	case 106: printf("bicycle selected\n");
 		ply_file_path = "../../Data/ply/bicycle/bicycle.ply";
-#if !ROTATION
 		base_kdtree_str = "../../Data/ply/bicycle/bicycle_tree.kdt";
 		base_igeom_str = "../../Data/ply/bicycle/bicycle_igeom.bin";
 		base_obj_str = "../../Data/ply/bicycle/bicycle_new.obj";
 		base_build_str = "../../Data/ply/bicycle/bicycle_kdt.txt";
-#else
-		base_kdtree_str = "../../Data/ply/bicycle/bicycle_tree_rot.kdt";
-		base_igeom_str = "../../Data/ply/bicycle/bicycle_igeom_rot.bin";
-		base_obj_str = "../../Data/ply/bicycle/bicycle_new_rot.obj";
-		base_build_str = "../../Data/ply/bicycle/bicycle_kdt_rot.txt";
-#endif
+		break;
+	case 107: printf("kitchen selected\n");
+		ply_file_path = "../../Data/ply/kitchen/kitchen_3dgrt.ply";
+		base_kdtree_str = "../../Data/ply/kitchen/kitchen_tree.kdt";
+		base_igeom_str = "../../Data/ply/kitchen/kitchen_igeom.bin";
+		base_obj_str = "../../Data/ply/kitchen/kitchen_new.obj";
+		base_build_str = "../../Data/ply/kitchen/kitchen_kdt.txt";
+		break;
+	case 108: printf("garden selected\n");
+		ply_file_path = "../../Data/ply/garden/garden_3dgrt.ply";
+		base_kdtree_str = "../../Data/ply/garden/garden_tree.kdt";
+		base_igeom_str = "../../Data/ply/garden/garden_igeom.bin";
+		base_obj_str = "../../Data/ply/garden/garden_new.obj";
+		base_build_str = "../../Data/ply/garden/garden_kdt.txt";
+		break;
+	case 109: printf("counter selected\n");
+		ply_file_path = "../../Data/ply/counter/counter_3dgrt.ply";
+		base_kdtree_str = "../../Data/ply/counter/counter_tree.kdt";
+		base_igeom_str = "../../Data/ply/counter/counter_igeom.bin";
+		base_obj_str = "../../Data/ply/counter/counter_new.obj";
+		base_build_str = "../../Data/ply/counter/counter_kdt.txt";
+		break;
+	case 110: printf("room selected\n");
+		ply_file_path = "../../Data/ply/room/room_3dgrt.ply";
+		base_kdtree_str = "../../Data/ply/room/room_tree.kdt";
+		base_igeom_str = "../../Data/ply/room/room_igeom.bin";
+		base_obj_str = "../../Data/ply/room/room_new.obj";
+		base_build_str = "../../Data/ply/room/room_kdt.txt";
+		break;
+	case 111: printf("truck selected\n");
+		ply_file_path = "../../Data/ply/truck/truck_3dgrt.ply";
+		base_kdtree_str = "../../Data/ply/truck/truck_tree.kdt";
+		base_igeom_str = "../../Data/ply/truck/truck_igeom.bin";
+		base_obj_str = "../../Data/ply/truck/truck_new.obj";
+		base_build_str = "../../Data/ply/truck/truck_kdt.txt";
 		break;
 	}
 
-	// TODO: 자동 파일명 쓰기&읽기
-//#if ROTATION
-//	size_t kdtree_len = strlen(ply_kdtree_path) + strlen("_rot.kdt") + 1; // + NULL
-//	size_t igeom_len = strlen(ply_igeom_path) + strlen("_rot.kdt") + 1; // + NULL
-//	size_t obj_len = strlen(ply_to_obj) + strlen("_rot.kdt") + 1; // + NULL
-//	size_t build_len = strlen(kdtree_build_path) + strlen("_rot.kdt") + 1; // + NULL
-//
-//	char* kdtree_result = (char*)malloc(kdtree_len);
-//	char* igeom_result = (char*)malloc(igeom_len);
-//	char* obj_result = (char*)malloc(obj_len);
-//	char* build_result = (char*)malloc(build_len);
-//
-//	strcpy(result, a);
-//	strcat(result, " ");
-//#endif
 	// 선택된 모델의 기본 경로와 동적 접미사를 조합하여 최종 경로 생성
 	if (base_kdtree_str) {
 		construct_path(final_kdtree_path, sizeof(final_kdtree_path), base_kdtree_str);
@@ -2163,10 +2171,15 @@ void register_callbacks_and_create_menu(void) {
 	glutAddMenuEntry("hotdog", 101);
 	//glutAddMenuEntry("hotdog2", 1012);
 	glutAddMenuEntry("lego", 102);
-	glutAddMenuEntry("bonsai", 103);
-	glutAddMenuEntry("chair", 104);
-	glutAddMenuEntry("flowers", 105);
+	glutAddMenuEntry("chair", 103);
+	glutAddMenuEntry("flowers", 104);
+	glutAddMenuEntry("bonsai", 105);
 	glutAddMenuEntry("bicycle", 106);
+	glutAddMenuEntry("kitchen", 107);
+	glutAddMenuEntry("garden", 108);
+	glutAddMenuEntry("counter", 109);
+	glutAddMenuEntry("room", 110);
+	glutAddMenuEntry("truck", 111);
 
 	uip.main_menu_ID = glutCreateMenu(main_menu_action);
 	glutAddMenuEntry("ChangeMode", 0);

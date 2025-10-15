@@ -10,16 +10,17 @@
 //shyun added begin
 #define TRAVL_COST 1.0
 #define ISCET_COST 5.0
-#define MAX_LEVEL 256
+#define MAX_LEVEL 128
 #define MIN_TRI 16
 #define EMTPY_BONUS 0.9
 
-#define FORCE_SPLIT_THRESHOLD 200				// kd-tree 강제분할
+#define FORCE_SPLIT_THRESHOLD 0				// kd-tree 강제분할
 #define SAH_OPACITY 0
 #define CLIP_AREA false							// 부모 노드의 AABB로 삼각형 면적 clip
 #define SAH_MAXIMIZE false
 //0 - P_s * N_s																									//235
 //1 - P_s * SUM(sigma)																							//227
+#define TRANSPARENCY false
 //2 - P_s * SUM(sigma(i) * area(i))																				//187
 //2 - P_s * SUM(sigma(i) * area_clip_parent(i))																	//154
 //21 - P_s * SUM(sigma(i) * area(i) * OPACITY_PENALTY)															//182
@@ -47,9 +48,17 @@
 //10 - P_s * ( SUM(sigma(i)) / Volume(leaf_AABB) ): (실패)
 //101 - ( SUM(sigma(i)) / Volume(leaf_AABB) ): (실패)
 //1000 - 일정 레벨까지 1, 이후 0
-#define HYBRID_SAH_DEPTH_THRESHOLD 10			//for SAH 1000
+#define HYBRID_SAH_DEPTH_THRESHOLD 5			//for SAH 1000, 2000
 //1001 - 일정 갯수까지 1, 이후 0
-#define HYBRID_SAH_TRIANGLE_THRESHOLD 100000		//for SAH 1001
+#define HYBRID_SAH_TRIANGLE_THRESHOLD 10000		//for SAH 1001, 2001
+//20 - 4V_s/S_s * N_s
+//201 - 4V_s/S_s * ( SUM(sigma(i)) )
+//in 20, 201 P_s * ()
+#define MUL_PROP false
+//2000 - 일정 레벨까지 20, 이후 0
+//2001 - 일정 갯수까지 20, 이후 0
+//2010 - 일정 레벨까지 201, 이후 0
+//2011 - 일정 갯수까지 201, 이후 0
 
 #define ALPHA_MIN 0.0113f
 #define KERNEL_DEGREE 4.0f
@@ -72,12 +81,13 @@
 #if USE_STACK > HYBRID_STACK
 #define SHORT_STACK_DEPTH 0
 #else
-#define SHORT_STACK_DEPTH 7 					// for kernel sh.mem
+#define SHORT_STACK_DEPTH 12 					// for kernel sh.mem
 #endif
 
 #define MAX_GLOBAL_STACK_DEPTH 64
 
 #define SPH_EVAL_DEGREE 3
+#define GAUSSIAN_DEGREE 4
 #define QUATERNION true
 #define WALD_METHOD true
 #define SIGMA_THRESHOLD 0//.03   					// sigma(density) 작은 가우시안 제거
@@ -85,6 +95,7 @@
 
 #define GLOBAL_DEVICE_VAR true
 #define GAUSSIAN_TEXTURE true
+#define OFFSET_TEXTURE true
 
 #define DUMMY_RUN false
 //Debug Flags=====================================================================================
@@ -301,7 +312,8 @@ void collectTriangleCounts_recursive(
 	int nodeIndex,
 	std::vector<unsigned int>& counts,
 	unsigned int current_level,
-	unsigned int& max_level
+	unsigned int& max_level,
+	unsigned int& total_level
 );
 //shyun added end
 void dump_kd_tree_for_composite_object(CompositeObject *, const char *, int, const char *);

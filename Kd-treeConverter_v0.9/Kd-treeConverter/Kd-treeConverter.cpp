@@ -220,7 +220,7 @@ int build_kd_tree_for_composite_object2(CompositeObject* c_object, const char* f
 	c_object->kd_tree->tri_offset_count = g_iKdTree_TriOffset_Count;
 	c_object->kd_tree->tri_accel_list = pTriAcc;
 	//fprintf(fp, "\n> Done!\n\n");
-	print_current_time_for_file("\nkdtree build start\n", fp);
+	print_current_time_for_file("\nkdtree build end\n", fp);
 	fclose(fp);
 	return 1;
 }
@@ -420,7 +420,8 @@ void collectTriangleCounts_recursive(
 	int nodeIndex,
 	std::vector<unsigned int>& counts,
 	unsigned int current_level,
-	unsigned int& max_level
+	unsigned int& max_level,
+	unsigned int& total_level
 ) {
 	const KdTreeNode& node = kd_tree->tree[nodeIndex];
 
@@ -429,12 +430,13 @@ void collectTriangleCounts_recursive(
 		if (current_level > max_level) {
 			max_level = current_level;
 		}
+		total_level += current_level;
 		return;
 	}
 
 	unsigned int leftChildIndex = FIRST_CHILD_OFFSET(node);
 	unsigned int rightChildIndex = leftChildIndex + 1;
 
-	collectTriangleCounts_recursive(kd_tree, leftChildIndex, counts, current_level + 1, max_level);
-	collectTriangleCounts_recursive(kd_tree, rightChildIndex, counts, current_level + 1, max_level);
+	collectTriangleCounts_recursive(kd_tree, leftChildIndex, counts, current_level + 1, max_level, total_level);
+	collectTriangleCounts_recursive(kd_tree, rightChildIndex, counts, current_level + 1, max_level, total_level);
 }

@@ -45,7 +45,7 @@ typedef struct _TriangleList {
 #if SAH_OPACITY >= 2
 	float area;
 #endif
-#if SAH_OPACITY == 8 || SAH_OPACITY == 9
+#if SAH_OPACITY == 8 | SAH_OPACITY == 9
 	float AABBarea;
 #endif
 #if SAH_OPACITY == 9
@@ -113,15 +113,15 @@ void set_bound_edge(const int axis, const TriangleList *pTriangleInfo, const uns
 void try_to_split(const int axis, BoundingBox &inBBox, const TriangleList *pTriangles, const int triangleSize, 
                         BoundEdge *bEdge,  SplitCost &bestCost
 //shyun added begin
-#if SAH_OPACITY == 1 || SAH_OPACITY == 10 || SAH_OPACITY == 101 || SAH_OPACITY == 1000 || SAH_OPACITY == 1001
+#if SAH_OPACITY == 1 | SAH_OPACITY == 10 | SAH_OPACITY == 101 | SAH_OPACITY == 1000 | SAH_OPACITY == 1001 | SAH_OPACITY == 201 | SAH_OPACITY == 2010
 	, const double total_opacity_in_node
-#elif SAH_OPACITY >= 2// & SAH_OPACITY < 6
+#elif SAH_OPACITY >= 2 & SAH_OPACITY != 20 & SAH_OPACITY != 2000
 	, const double total_contribution_in_node
 #endif
 #if SAH_OPACITY >= 4 & SAH_OPACITY < 6
 	, const float max_area_in_node
 #endif
-#if SAH_OPACITY == 1000
+#if SAH_OPACITY == 1000 | SAH_OPACITY == 2000 | SAH_OPACITY == 2010
 	, unsigned int inNodeLevel
 #endif
 //shyun added end

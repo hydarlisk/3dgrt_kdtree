@@ -534,6 +534,54 @@ __device__ __forceinline__ float3 quat_rotate(const float3& v, const float4& q) 
 }
 
 /**
+ * @brief grayDist 값을 기반으로 밀도 감쇠(density falloff)를 계산
+ * 표준 2차(Quadratic) 가우시안 분포를 사용
+ * @param grayDist 제곱된 마할라노비스 거리
+ * @return 밀도 응답 값 (0.0 ~ 1.0)
+ */
+template <int GeneralizedGaussianDegree = 4>
+static inline __device__ float particleResponse(float grayDist) {
+    switch (GeneralizedGaussianDegree) {
+    case 8: // Zenzizenzizenzic
+    {
+        constexpr float s = -0.000685871056241f;
+        const float grayDistSq = grayDist * grayDist;
+        return expf(s * grayDistSq * grayDistSq);
+    }
+    case 5: // Quintic
+    {
+        constexpr float s = -0.0185185185185f;
+        return expf(s * grayDist * grayDist * sqrtf(grayDist));
+    }
+    case 4: // Tesseractic
+    {
+        constexpr float s = -0.0555555555556f;
+        return expf(s * grayDist * grayDist);
+    }
+    case 3: // Cubic
+    {
+        constexpr float s = -0.166666666667f;
+        return expf(s * grayDist * sqrtf(grayDist));
+    }
+    case 1: // Laplacian
+    {
+        constexpr float s = -1.5f;
+        return expf(s * sqrtf(grayDist));
+    }
+    case 0: // Linear
+    {
+        constexpr/* static const */ float s = -0.329630334487f;
+        return fmaxf(1.f + s * sqrtf(grayDist), 0.f);
+    }
+    default: // Quadratic
+    {
+        constexpr float s = -0.5f;
+        return expf(s * grayDist);
+    }
+    }
+}
+
+/**
  * @brief 광선과 3D 가우시안의 상호작용을 평가하여 샘플의 투명도를 계산
  * @param ray 현재 추적 중인 광선.
  * @param g 평가할 가우시안 데이터.
@@ -579,59 +627,14 @@ __device__ __forceinline__ float evaluateGaussianResponse(const cuRay& ray, cons
     // τ_max 위치의 가우시안 밀도: ρ = exp(-0.5 * ||o_g + τ_max d_g||^2)
     //float3 p_g = ray.pos + tau * ray.dir;
     float3 p_g = o_g + tau * d_g;
-    float  expo = -0.5f * dot(p_g, p_g);
 
-    float  rho = expf(expo);
+    //float  expo = -0.5f * dot(p_g, p_g);
+    //float  rho = expf(expo);
+
+    float  expo = dot(p_g, p_g);
+    const float rho = particleResponse<GAUSSIAN_DEGREE>(expo);
 
     return g.opacity * rho;
-}
-
-/**
- * @brief grayDist 값을 기반으로 밀도 감쇠(density falloff)를 계산
- * 표준 2차(Quadratic) 가우시안 분포를 사용
- * @param grayDist 제곱된 마할라노비스 거리
- * @return 밀도 응답 값 (0.0 ~ 1.0)
- */
-template <int GeneralizedGaussianDegree = 4>
-static inline __device__ float particleResponse(float grayDist) {
-    switch (GeneralizedGaussianDegree) {
-    case 8: // Zenzizenzizenzic
-    {
-        constexpr float s = -0.000685871056241f;
-        const float grayDistSq = grayDist * grayDist;
-        return expf(s * grayDistSq * grayDistSq);
-    }
-    case 5: // Quintic
-    {
-        constexpr float s = -0.0185185185185f;
-        return expf(s * grayDist * grayDist * sqrtf(grayDist));
-    }
-    case 4: // Tesseractic
-    {
-        constexpr float s = -0.0555555555556f;
-        return expf(s * grayDist * grayDist);
-    }
-    case 3: // Cubic
-    {
-        constexpr float s = -0.166666666667f;
-        return expf(s * grayDist * sqrtf(grayDist));
-    }
-    case 1: // Laplacian
-    {
-        constexpr float s = -1.5f;
-        return expf(s * sqrtf(grayDist));
-    }
-    case 0: // Linear
-    {
-        /* static const */ float s = -0.329630334487f;
-        return fmaxf(1.f + s * sqrtf(grayDist), 0.f);
-    }
-    default: // Quadratic
-    {
-        constexpr float s = -0.5f;
-        return expf(s * grayDist);
-    }
-    }
 }
 
 /**
@@ -665,9 +668,9 @@ __device__ __forceinline__ float evaluateGaussianResponse_3dgrt(const cuRay& ray
     rayDirR.z = g.rot_matrix.m[2][0] * ray.dir.x + g.rot_matrix.m[2][1] * ray.dir.y + g.rot_matrix.m[2][2] * ray.dir.z;
 #endif
 
-    const float3 gro = gposcr / g_scale;
+    const float3 gro = gposcr / g_scale; //o_g
 
-    const float3 grdu = rayDirR / g_scale;
+    const float3 grdu = rayDirR / g_scale; //d_g
     const float3 grd = normalize(grdu);
 
     // cross product를 이용해 grayDist(제곱된 마할라노비스 거리) 계산
@@ -675,7 +678,7 @@ __device__ __forceinline__ float evaluateGaussianResponse_3dgrt(const cuRay& ray
     const float grayDist = dot(gcrod, gcrod);
 
     // particleResponse 함수를 통해 밀도 계산
-    const float density = particleResponse<4>(grayDist);
+    const float density = particleResponse<GAUSSIAN_DEGREE>(grayDist);
 
     // 기본 불투명도와 밀도를 곱하여 최종 결과 반환
     return g.opacity * density;
@@ -1007,12 +1010,8 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
                     Gaussian g = g_d_gaussians[gaussianID];
 #endif
 
-#if USE_KERNEL_SCALE
-                    //float sample_opacity = evaluateGaussianResponse_3dgrt(currRay, g);
-                    float sample_opacity = evaluateGaussianResponse(currRay, g);
-#else
-                    float sample_opacity = evaluateGaussianResponse(currRay, g);
-#endif
+                    float sample_opacity = evaluateGaussianResponse_3dgrt(currRay, g);
+                    //float sample_opacity = evaluateGaussianResponse(currRay, g);
 
                     float3 view_dir = normalize(make_float3(g.pos[0], g.pos[1], g.pos[2]) - currRay.pos);
                     //float3 sample_color = eval_sh_final(SPH_EVAL_DEGREE, view_dir, g);
@@ -1135,11 +1134,8 @@ __device__ void singlePassIntersectGaussian_sortNode_hybridStack(
                         Gaussian g = g_d_gaussians[gaussianID];
 
                         //sample_opacity = g.opacity;
-#if USE_KERNEL_SCALE
-                        float sample_opacity = evaluateGaussianResponse_3dgrt(currRay, g);
-#else
+                        //float sample_opacity = evaluateGaussianResponse_3dgrt(currRay, g);
                         float sample_opacity = evaluateGaussianResponse(currRay, g);
-#endif
 
                         float3 view_dir = normalize(make_float3(g.pos[0], g.pos[1], g.pos[2]) - currRay.pos);
                         float3 sample_color = eval_sh_final(SPH_EVAL_DEGREE, view_dir, g);
@@ -1270,12 +1266,10 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyGlobalStack(
                     //const Gaussian* g = &g_d_gaussians[gaussianID]; // 포인터로 접근
 
                     //sample_opacity = g.opacity;
-#if USE_KERNEL_SCALE
-                    float sample_opacity = evaluateGaussianResponse_3dgrt(currRay, g);
-#else
+                    
+                    //float sample_opacity = evaluateGaussianResponse_3dgrt(currRay, g);
                     float sample_opacity = evaluateGaussianResponse(currRay, g);
                     //float sample_opacity = evaluateGaussianResponse_ptr(currRay, g);
-#endif
 
                     float3 view_dir = normalize(make_float3(g.pos[0], g.pos[1], g.pos[2]) - currRay.pos);
                     //float3 view_dir = normalize(make_float3(g->pos[0], g->pos[1], g->pos[2]) - currRay.pos);
@@ -1376,9 +1370,9 @@ __global__ void renderKernelGaussian_sortNode(float* pFrameBuffer
         );
 
     // 최종 색상 계산
-    //float3 background_color = make_float3(0.0f, 0.0f, 0.0f);
-    //float3 final_color = accumulated_color + background_color * (1.0f - accumulated_opacity);
-    float3 final_color = accumulated_color / accumulated_opacity;
+    float3 background_color = make_float3(0.0f, 0.0f, 0.0f);
+    float3 final_color = accumulated_color + background_color * (1.0f - accumulated_opacity);
+    //float3 final_color = accumulated_color / accumulated_opacity;
 
     int idx = 3 * ((g_SceneInfo.resY - y - 1) * g_SceneInfo.resX + x);
     pFrameBuffer[idx + 0] = final_color.x;
@@ -1541,6 +1535,7 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
         printf("[FATAL] kdTree == nullptr\n");
         return;
     }
+    printf("[DEBUG] kdTree->tri_offset_count = %zu\n", kdTree->tri_offset_count);
 
     // 데이터 패킹 (Host)
 #if WALD_METHOD
@@ -1645,6 +1640,7 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
     resDesc.res.linear.devPtr = g_d_tri_offsets;
     resDesc.res.linear.desc = cudaCreateChannelDesc<unsigned int>();
     resDesc.res.linear.sizeInBytes = offset_size;
+    printf("%u", offset_size);
 
     // 호스트 전역 변수에 핸들을 저장
     cudaTextureObject_t h_inObjectOffsetListTex = 0;
