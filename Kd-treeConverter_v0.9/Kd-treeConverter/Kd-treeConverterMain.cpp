@@ -39,12 +39,21 @@ char* ply_file_path;
 char* ply_kdtree_path;
 char* ply_igeom_path;
 char* ply_to_obj;
+char* ply_to_obj_mtl;
 
 //cudaEvent_t start_ev, stop_ev;
 char* kdtree_build_path;
 //int submenu[5] = { 101,1012,102,104,105 };
-#define PLY_MODEL_COUNT 7
-int submenu[PLY_MODEL_COUNT] = { 105,106,107,108,109,110,111 };
+#if FORCE_SPLIT_THRESHOLD == 64
+#define P_MODEL_COUNT 5
+int submenu[P_MODEL_COUNT] = { 101,102,103,104,105 };
+#elif FORCE_SPLIT_THRESHOLD == 256
+#define P_MODEL_COUNT 7
+int submenu[P_MODEL_COUNT] = { 106,107,108,109,110,111,112 };
+#else
+#define P_MODEL_COUNT 12
+int submenu[P_MODEL_COUNT] = { 101,102,103,104,105,106,107,108,109,110,111,112 };
+#endif
 
 bool render_gaussian = false;
 int g_render_width = MAIN_WINDOW_WIDTH;
@@ -1013,7 +1022,7 @@ bool loadGaussiansFromPly(const char* filename, std::vector<Gaussian>& gaussians
 }
 
 float kernelScale_final(float density, float minResponse, float kernel_degree) {
-	const float responseModulation = (1 & (1 << 0)) != 0 ? density : 1.0f;
+	const float responseModulation = (0 & (1 << 0)) ? density : 1.0f;
 	const float min_response = fminf(minResponse / responseModulation, 0.97f);
 
 	// kernelDegree < 0 (Bump Kernel)
@@ -1472,13 +1481,42 @@ int read_OBJ_file(const char* obj_filename)
 	return 1;
 }
 
-bool save_composite_object_to_obj(const CompositeObject& object, const char* filename) {
+bool save_gaussian_materials_to_mtl(const std::vector<Gaussian>& gaussians, const char* filename) {
+	std::ofstream mtlFile(filename);
+	if (!mtlFile.is_open()) {
+		fprintf(stderr, "Error: Cannot open MTL file for writing: %s\n", filename);
+		return false;
+	}
+
+	for (size_t i = 0; i < gaussians.size(); ++i) {
+		const Gaussian& g = gaussians[i];
+
+		// 재질의 이름 자체가 데이터의 '키(key)' 또는 '인덱스'가 됩니다.
+		mtlFile << "newmtl Gaussian_" << i << "\n";
+
+		// (선택 사항) 표준 뷰어에서 미리보기를 위해 기본 색상과 투명도만 저장
+		mtlFile << "Kd " << g.f_dc[0] << " " << g.f_dc[1] << " " << g.f_dc[2] << "\n";
+		mtlFile << "d " << g.opacity << "\n";
+		mtlFile << "illum 2\n\n";
+	}
+
+	mtlFile.close();
+	printf("Successfully saved %zu Gaussian material references to %s\n", gaussians.size(), filename);
+	return true;
+}
+
+bool save_composite_object_to_obj(const std::vector<Gaussian>& gaussians, const CompositeObject& object, const char* filename) {
 	// 파일 스트림 열기
 	std::ofstream outFile(filename);
 	if (!outFile.is_open()) {
 		fprintf(stderr, "Error: Cannot open file for writing: %s\n", filename);
 		return false;
 	}
+
+	// MTL 파일 생성 및 참조 추가
+	std::string mtl_filename = std::string(filename) + ".mtl";
+	save_gaussian_materials_to_mtl(gaussians, mtl_filename.c_str());
+	outFile << "mtllib " << ply_to_obj_mtl << "\n\n";
 
 	// 파일 헤더 주석 작성
 	outFile << "# OBJ file generated from a CompositeObject structure\n";
@@ -1494,14 +1532,21 @@ bool save_composite_object_to_obj(const CompositeObject& object, const char* fil
 		outFile << "v " << v.vertex[0] << " " << v.vertex[1] << " " << v.vertex[2] << "\n";
 
 		// 정점 법선 (vn x y z)
-		//outFile << "vn " << v.normal[0] << " " << v.normal[1] << " " << v.normal[2] << "\n";
+		outFile << "vn " << v.normal[0] << " " << v.normal[1] << " " << v.normal[2] << "\n";
 	}
 
 	outFile << "\n"; // 데이터 섹션 구분을 위한 공백 라인
 
 	// 면(face) 데이터 작성
 	// OBJ 파일의 인덱스는 1부터 시작하므로, C++ 배열 인덱스에 1을 더해줘야 
+	int last_material_id = -1;
 	for (int i = 0; i < object.n_triangles; ++i) {
+		const int current_material_id = object.extended_vertices[i * 3].material_ID;
+		if (current_material_id != last_material_id) {
+			outFile << "usemtl Gaussian_" << current_material_id << "\n";
+			last_material_id = current_material_id;
+		}
+
 		// 현재 삼각형을 구성하는 세 정점의 시작 인덱스
 		const int v1_idx = 3 * i + 1;
 		const int v2_idx = 3 * i + 2;
@@ -1509,10 +1554,10 @@ bool save_composite_object_to_obj(const CompositeObject& object, const char* fil
 
 		// 면 정보 (f v1//vn1 v2//vn2 v3//vn3)
 		// 각 정점과 법선이 1:1로 매칭되므로, 정점 인덱스와 법선 인덱스는 동일
-		//outFile << "f " << v1_idx << "//" << v1_idx << " "
-		//	<< v2_idx << "//" << v2_idx << " "
-		//	<< v3_idx << "//" << v3_idx << "\n";
-		outFile << "f " << v1_idx << " " << v2_idx << " " << v3_idx << "\n";
+		outFile << "f " << v1_idx << "//" << v1_idx << " "
+			<< v2_idx << "//" << v2_idx << " "
+			<< v3_idx << "//" << v3_idx << "\n";
+		//outFile << "f " << v1_idx << " " << v2_idx << " " << v3_idx << "\n";
 	}
 
 	// 파일 닫기 및 완료 메시지
@@ -1862,6 +1907,7 @@ void subMenuHandler(int value) {
 		base_igeom_str = "../../Data/ply/hotdog2/hotdog2_igeom.bin";
 		base_obj_str = "../../Data/ply/hotdog2/hotdog_3dgrt2_new.obj";
 		base_build_str = "../../Data/ply/hotdog2/hotdog2_3dgrt_kdt.txt";
+		ply_to_obj_mtl = "hotdog_3dgrt2.mtl";
 		break;
 	case 102: printf("Lego selected\n");
 		ply_file_path = "../../Data/ply/lego/lego_3dgrt.ply";
@@ -1869,6 +1915,7 @@ void subMenuHandler(int value) {
 		base_igeom_str = "../../Data/ply/lego/lego_igeom.bin";
 		base_obj_str = "../../Data/ply/lego/lego_3dgrt_new.obj";
 		base_build_str = "../../Data/ply/lego/lego_3dgrt_kdt.txt";
+		ply_to_obj_mtl = "lego_3dgrt.mtl";
 		break;
 	case 103: printf("Chair selected\n");
 		ply_file_path = "../../Data/ply/chair/chair_3dgrt.ply";
@@ -1876,6 +1923,7 @@ void subMenuHandler(int value) {
 		base_igeom_str = "../../Data/ply/chair/chair_igeom.bin";
 		base_obj_str = "../../Data/ply/chair/chair_3dgrt_new.obj";
 		base_build_str = "../../Data/ply/chair/chair_3dgrt_kdt.txt";
+		ply_to_obj_mtl = "chair_3dgrt.mtl";
 		break;
 	case 104: printf("Flowers selected\n");
 		ply_file_path = "../../Data/ply/flowers/flowers.ply";
@@ -1883,6 +1931,7 @@ void subMenuHandler(int value) {
 		base_igeom_str = "../../Data/ply/flowers/flowers_igeom.bin";
 		base_obj_str = "../../Data/ply/flowers/flowers_new.obj";
 		base_build_str = "../../Data/ply/flowers/flowers_kdt.txt";
+		ply_to_obj_mtl = "flowers_3dgrt.mtl";
 		break;
 	case 105: printf("Bonsai selected\n");
 		ply_file_path = "../../Data/ply/bonsai/bonsai.ply";
@@ -1890,6 +1939,7 @@ void subMenuHandler(int value) {
 		base_igeom_str = "../../Data/ply/bonsai/bonsai_igeom.bin";
 		base_obj_str = "../../Data/ply/bonsai/bonsai_new.obj";
 		base_build_str = "../../Data/ply/bonsai/bonsai_kdt.txt";
+		ply_to_obj_mtl = "bonsai_3dgrt.mtl";
 		break;
 	case 106: printf("bicycle selected\n");
 		ply_file_path = "../../Data/ply/bicycle/bicycle.ply";
@@ -1897,6 +1947,7 @@ void subMenuHandler(int value) {
 		base_igeom_str = "../../Data/ply/bicycle/bicycle_igeom.bin";
 		base_obj_str = "../../Data/ply/bicycle/bicycle_new.obj";
 		base_build_str = "../../Data/ply/bicycle/bicycle_kdt.txt";
+		ply_to_obj_mtl = "bicycle_3dgrt.mtl";
 		break;
 	case 107: printf("kitchen selected\n");
 		ply_file_path = "../../Data/ply/kitchen/kitchen_3dgrt.ply";
@@ -1904,6 +1955,7 @@ void subMenuHandler(int value) {
 		base_igeom_str = "../../Data/ply/kitchen/kitchen_igeom.bin";
 		base_obj_str = "../../Data/ply/kitchen/kitchen_new.obj";
 		base_build_str = "../../Data/ply/kitchen/kitchen_kdt.txt";
+		ply_to_obj_mtl = "kitchen_3dgrt.mtl";
 		break;
 	case 108: printf("garden selected\n");
 		ply_file_path = "../../Data/ply/garden/garden_3dgrt.ply";
@@ -1911,6 +1963,7 @@ void subMenuHandler(int value) {
 		base_igeom_str = "../../Data/ply/garden/garden_igeom.bin";
 		base_obj_str = "../../Data/ply/garden/garden_new.obj";
 		base_build_str = "../../Data/ply/garden/garden_kdt.txt";
+		ply_to_obj_mtl = "gardem_3dgrt.mtl";
 		break;
 	case 109: printf("counter selected\n");
 		ply_file_path = "../../Data/ply/counter/counter_3dgrt.ply";
@@ -1918,6 +1971,7 @@ void subMenuHandler(int value) {
 		base_igeom_str = "../../Data/ply/counter/counter_igeom.bin";
 		base_obj_str = "../../Data/ply/counter/counter_new.obj";
 		base_build_str = "../../Data/ply/counter/counter_kdt.txt";
+		ply_to_obj_mtl = "counter_3dgrt.mtl";
 		break;
 	case 110: printf("room selected\n");
 		ply_file_path = "../../Data/ply/room/room_3dgrt.ply";
@@ -1925,6 +1979,7 @@ void subMenuHandler(int value) {
 		base_igeom_str = "../../Data/ply/room/room_igeom.bin";
 		base_obj_str = "../../Data/ply/room/room_new.obj";
 		base_build_str = "../../Data/ply/room/room_kdt.txt";
+		ply_to_obj_mtl = "room_3dgrt.mtl";
 		break;
 	case 111: printf("truck selected\n");
 		ply_file_path = "../../Data/ply/truck/truck_3dgrt.ply";
@@ -1932,6 +1987,15 @@ void subMenuHandler(int value) {
 		base_igeom_str = "../../Data/ply/truck/truck_igeom.bin";
 		base_obj_str = "../../Data/ply/truck/truck_new.obj";
 		base_build_str = "../../Data/ply/truck/truck_kdt.txt";
+		ply_to_obj_mtl = "truck_3dgrt.mtl";
+		break;
+	case 112: printf("stump selected\n");
+		ply_file_path = "../../Data/ply/stump/stump_3dgrt.ply";
+		base_kdtree_str = "../../Data/ply/stump/stump_tree.kdt";
+		base_igeom_str = "../../Data/ply/stump/stump_igeom.bin";
+		base_obj_str = "../../Data/ply/stump/stump_new.obj";
+		base_build_str = "../../Data/ply/stump/stump_kdt.txt";
+		ply_to_obj_mtl = "stump_3dgrt.mtl";
 		break;
 	}
 
@@ -2078,6 +2142,8 @@ void main_menu_action(int selection) {
 				KD_TREE_DUMP_IN_BINARY,    // 저장 포맷
 				ply_igeom_path         // 저장할 geometry
 			);
+
+			save_composite_object_to_obj(g_gaussians, uip.poly_model, ply_to_obj);
 		}
 		else {
 			dump_kd_tree_for_composite_object(&uip.poly_model, full_kd_tree_file_name,
@@ -2130,7 +2196,7 @@ void main_menu_action(int selection) {
 	case 700:
 		fprintf(stdout, "dump .obj file\n");
 		if (uip.composite_object_read) {
-			save_composite_object_to_obj(uip.poly_model, ply_to_obj);
+			save_composite_object_to_obj(g_gaussians, uip.poly_model, ply_to_obj);
 			fprintf(stdout, "Done!\n");
 		}
 		else {
@@ -2139,7 +2205,7 @@ void main_menu_action(int selection) {
 		break;
 	case 800:
 		print_current_time("all_build_start\n");
-		for (int i = 0; i < PLY_MODEL_COUNT; i++) {
+		for (int i = 0; i < P_MODEL_COUNT; i++) {
 			subMenuHandler(submenu[i]);
 
 			build_kd_tree_for_composite_object2(&uip.poly_model, kdtree_build_path);
@@ -2150,6 +2216,8 @@ void main_menu_action(int selection) {
 				KD_TREE_DUMP_IN_BINARY,    // 저장 포맷
 				ply_igeom_path         // 저장할 geometry
 			);
+
+			save_composite_object_to_obj(g_gaussians, uip.poly_model, ply_to_obj);
 		}
 		print_current_time("all_build_end\n");
 		break;
@@ -2180,6 +2248,7 @@ void register_callbacks_and_create_menu(void) {
 	glutAddMenuEntry("counter", 109);
 	glutAddMenuEntry("room", 110);
 	glutAddMenuEntry("truck", 111);
+	glutAddMenuEntry("stump", 112);
 
 	uip.main_menu_ID = glutCreateMenu(main_menu_action);
 	glutAddMenuEntry("ChangeMode", 0);

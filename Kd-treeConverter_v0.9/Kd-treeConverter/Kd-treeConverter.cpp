@@ -13,7 +13,7 @@
 
 #include "Kd-treeConverter.h"
 #include "Kd-treeConstructor.h"
-#include "RayTraversal.h"
+//#include "RayTraversal.h"
 #include "MyMathUtility.h"
 
 int build_kd_tree_for_composite_object(CompositeObject *c_object) {
@@ -302,6 +302,7 @@ void dump_kd_tree_for_composite_object(CompositeObject *c_object, const char *fi
 	fwrite(&(c_object->n_triangles), sizeof(int), 1, fp);
 	fwrite(c_object->AABB, sizeof(float), 6, fp);
 	fwrite(c_object->extended_vertices, sizeof(ExtendedVertex), 3 * c_object->n_triangles, fp);
+	//fwrite(, sizeof(Gaussian), , fp);//TODO gaussian read
 	fclose(fp);
 
 	fprintf(stdout, "\n> Done!\n\n");

@@ -14,7 +14,7 @@
 #define MIN_TRI 16
 #define EMTPY_BONUS 0.9
 
-#define FORCE_SPLIT_THRESHOLD 0				// kd-tree 강제분할
+#define FORCE_SPLIT_THRESHOLD 64				// kd-tree 강제분할
 #define SAH_OPACITY 0
 #define CLIP_AREA false							// 부모 노드의 AABB로 삼각형 면적 clip
 #define SAH_MAXIMIZE false
@@ -66,6 +66,7 @@
 #define ROTATION false							// R(45degree,1,1,1)
 
 #define OPACITY_THRESHOLD 0.95f					// 충족할때까지 kd-tree 탐색
+//#define OPACITY_THRESHOLD 0.9961f					// 충족할때까지 kd-tree 탐색
 
 #define MAX_HITS 256								// leaf node에서 blending을 위한 최대 sort 크기
 
@@ -91,6 +92,7 @@
 #define QUATERNION true
 #define WALD_METHOD true
 #define SIGMA_THRESHOLD 0//.03   					// sigma(density) 작은 가우시안 제거
+
 #define USE_KERNEL_SCALE false					// 기존의 OptiX 방식 kernelScale 사용
 
 #define GLOBAL_DEVICE_VAR true
@@ -99,7 +101,8 @@
 
 #define DUMMY_RUN false
 //Debug Flags=====================================================================================
-#define DEBUG_SIGMA_HISTOGRAM 0 				// gaussian의 sigma들의 histogram 출력
+#define DEBUG_SIGMA_HISTOGRAM 100 				// gaussian의 sigma들의 histogram 출력
+#define DEBUG_SCALE_HISTOGRAM 100 				// gaussian의 sigma들의 histogram 출력
 #define WARP_OCCUPANCY false   					// warp occupancy 출력
 #define HIT_AND_NODE_COUNT_DEBUG false			// Ray 마다 hitcount, node count, ... 확인
 												// kd-tree hitmap 확인 가능
@@ -252,9 +255,9 @@ typedef struct _KdTree {
 
 typedef struct _ExtendedVertex {
 	float vertex[3];
-	//float normal[3]; //
+	float normal[3]; //
 	int material_ID; // Need to be modified
-	//char pad[4]; // For 32 byte-alignement
+	char pad[4]; // For 32 byte-alignement
 } ExtendedVertex;
 
 typedef struct _CompositeObject {

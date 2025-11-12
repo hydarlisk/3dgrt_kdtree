@@ -87,16 +87,6 @@ struct cuIntersectionPoint {
     __device__ void init() { colorWeight = make_float3(1.0f, 1.0f, 1.0f); }
 };
 
-struct cuObjectMaterial {
-    float3 ambient_emission;
-    float3 diffuse;
-    float3 specular;
-    float reflection;
-    float transparency;
-    float roughness;
-    float refractionIndex;
-};
-
 // Kd-tree 노드 (GKDTreeNode.h에서 추출)
 typedef uint2 kdtreeNode;
 
@@ -1009,7 +999,7 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
 #else
                     Gaussian g = g_d_gaussians[gaussianID];
 #endif
-
+                    /*
                     float sample_opacity = evaluateGaussianResponse_3dgrt(currRay, g);
                     //float sample_opacity = evaluateGaussianResponse(currRay, g);
 
@@ -1019,7 +1009,28 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
 
                     accumulated_color += sample_color * sample_opacity * (1.0f - accumulated_opacity);
                     accumulated_opacity += sample_opacity * (1.0f - accumulated_opacity);
+                    /*/
+                    float density = evaluateGaussianResponse_3dgrt(currRay, g);
 
+                    // 2. Beer-Lambert 법칙을 사용해 밀도를 알파(alpha)로 변환합니다.
+                    const float alpha = 1.0f - expf(-density);
+
+                    if (alpha < ALPHA_MIN) { // OptixHeader.h의 ALPHA_MIN (0.0113f) 사용 가능
+                        continue;
+                    }
+
+                    float3 view_dir = normalize(make_float3(g.pos[0], g.pos[1], g.pos[2]) - currRay.pos);
+
+                    // (중요) 2단계에서 수정할 SH 평가 함수 호출
+                    float3 sample_color = eval_sh_final(SPH_EVAL_DEGREE, view_dir, g);
+
+                    // 3. 체적 렌더링 공식 적용 (Transmittance = 1.0 - accumulated_opacity)
+                    float transmittance = 1.0f - accumulated_opacity;
+                    accumulated_color += sample_color * transmittance * alpha;
+
+                    // 4. 불투명도 누적 (수학적으로 OptiX의 transmittance *= (1.0 - alpha)와 동일)
+                    accumulated_opacity += transmittance * alpha;
+                    //*/
                     // 블렌딩 중에도 조기 종료 조건을 계속 확인
                     if (accumulated_opacity > OPACITY_THRESHOLD) {
                         break;
@@ -1400,6 +1411,30 @@ __global__ void renderKernelGaussian_sortNode(float* pFrameBuffer
 // Host-Side Public Render Function
 // =================================================================================
 
+void printTextureLimits() {
+    int deviceId;
+    cudaError_t err = cudaGetDevice(&deviceId);
+    if (err != cudaSuccess) {
+        std::cerr << "Failed to get CUDA device: " << cudaGetErrorString(err) << std::endl;
+        return;
+    }
+
+    std::cout << "Device Name: " << deviceProp.name << std::endl;
+
+    // 1. maxTexture1D (CUDA Array 기반, 작은 값)
+    std::cout << "props.maxTexture1D: " << deviceProp.maxTexture1D << " elements" << std::endl;
+
+    // 2. maxTexture1DLinear (선형 메모리 기반, 우리가 찾는 값)
+    int linearWidth = 0;
+    err = cudaDeviceGetAttribute(&linearWidth, cudaDevAttrMaxTexture1DLinearWidth, deviceId);
+    if (err == cudaSuccess) {
+        std::cout << "cudaDevAttrMaxTexture1DLinearWidth: " << linearWidth << " elements" << std::endl;
+    }
+    else {
+        std::cerr << "Failed to get MaxTexture1DLinearWidth attribute: " << cudaGetErrorString(err) << std::endl;
+    }
+}
+
 bool initCuda() {
     int deviceCount = 0;
     cudaError_t err = cudaGetDeviceCount(&deviceCount);
@@ -1535,7 +1570,19 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
         printf("[FATAL] kdTree == nullptr\n");
         return;
     }
+
+    //get device prop
+    int deviceID;
+    cudaGetDevice(&deviceID);
+
+    int deviceId;
+    CUDA_CHECK(cudaGetDevice(&deviceId));
+
+    CUDA_CHECK(cudaGetDeviceProperties(&deviceProp, deviceId));
+    printTextureLimits();
+
     printf("[DEBUG] kdTree->tri_offset_count = %zu\n", kdTree->tri_offset_count);
+    printf("[DEBUG] maxTexture1D: %d\n", deviceProp.maxTexture1D);
 
     // 데이터 패킹 (Host)
 #if WALD_METHOD
@@ -1640,7 +1687,7 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
     resDesc.res.linear.devPtr = g_d_tri_offsets;
     resDesc.res.linear.desc = cudaCreateChannelDesc<unsigned int>();
     resDesc.res.linear.sizeInBytes = offset_size;
-    printf("%u", offset_size);
+    printf("g_d_tri_offsets: %u\n", offset_size);
 
     // 호스트 전역 변수에 핸들을 저장
     cudaTextureObject_t h_inObjectOffsetListTex = 0;
@@ -1695,14 +1742,6 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
         std::cerr << "[CUDA Error] const memory set failed: " << cudaGetErrorString(err) << std::endl;
     }
     //printf("4. const memory set done\n");
-
-    int deviceID;
-    cudaGetDevice(&deviceID);
-
-    int deviceId;
-    CUDA_CHECK(cudaGetDevice(&deviceId));
-
-    CUDA_CHECK(cudaGetDeviceProperties(&deviceProp, deviceId));
 
     int maxSharedMemPerBlock;
     // 현재 GPU의 "블록 당 최대 공유 메모리" 속성
