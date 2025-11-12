@@ -1045,6 +1045,138 @@ float kernelScale_final(float density, float minResponse, float kernel_degree) {
 	return std::pow(std::log(min_response) / a, 1.0f / b);
 }
 
+/**
+ * @brief 간단한 .obj 파일 로더
+ * @param filename 읽어올 .obj 파일 경로
+ * @param out_vertices 정점 데이터가 저장될 벡터
+ * @param out_faces 면 인덱스 데이터가 저장될 벡터
+ * @return 성공 시 true, 실패 시 false
+ */
+bool load_obj_mesh(const std::string& filename,
+	std::vector<Vertex>& out_vertices,
+	std::vector<Face>& out_faces)
+{
+	std::ifstream file(filename);
+	if (!file.is_open()) {
+		std::cerr << "Error: Cannot open OBJ file: " << filename << std::endl;
+		return false;
+	}
+
+	out_vertices.clear();
+	out_faces.clear();
+
+	std::string line;
+	while (std::getline(file, line)) {
+		std::stringstream ss(line);
+		std::string prefix;
+		ss >> prefix;
+
+		if (prefix == "v") {
+			// 정점 (v x y z)
+			Vertex v;
+			ss >> v[0] >> v[1] >> v[2];
+			out_vertices.push_back(v);
+		}
+		else if (prefix == "f") {
+			// 면 (f v1//... v2//... v3//...)
+			Face f;
+			std::string s_v1, s_v2, s_v3;
+			ss >> s_v1 >> s_v2 >> s_v3;
+
+			try {
+				// "v/vt/vn" 또는 "v//vn" 또는 "v" 형식에서 첫 번째 숫자인 'v'만 추출
+				// .obj는 1-based index이므로 1을 빼서 0-based로 만듭니다.
+				f[0] = std::stoi(s_v1.substr(0, s_v1.find('/'))) - 1;
+				f[1] = std::stoi(s_v2.substr(0, s_v2.find('/'))) - 1;
+				f[2] = std::stoi(s_v3.substr(0, s_v3.find('/'))) - 1;
+				out_faces.push_back(f);
+			}
+			catch (const std::exception& e) {
+				std::cerr << "Error parsing face: " << line << " (" << e.what() << ")" << std::endl;
+			}
+		}
+	}
+
+	file.close();
+	std::cout << "Successfully loaded " << filename << " ("
+		<< out_vertices.size() << " vertices, "
+		<< out_faces.size() << " faces)" << std::endl;
+	return true;
+}
+
+// --- main 함수 내부 또는 별도 init 함수 ---
+void init_mesh_data() {
+	// 2.obj, 3.obj, 4.obj 파일이 실행 파일과 같은 경로에 있거나
+	// 올바른 경로를 지정해야 합니다.
+	load_obj_mesh("2.obj", g_L2_Vertices, g_L2_Faces);
+	load_obj_mesh("3.obj", g_L3_Vertices, g_L3_Faces);
+	load_obj_mesh("4.obj", g_L4_Vertices, g_L4_Faces);
+}
+
+inline void generate_gaussian_mesh(
+	int gaussianID,
+	ExtendedVertex*& current_vertex_ptr, // 포인터 자체를 수정하기 위해 참조(&)로 받음
+	float aabb[6],
+	const Gaussian& g,
+	const float final_scale[3],
+	const int num_tris,
+	const std::vector<Vertex>& vertices,
+	const std::vector<Face>& faces
+) {
+	for (int j = 0; j < num_tris; ++j) {
+		const int* face_indices = faces[j].data();
+
+		// 3개의 정점을 변환하여 저장
+		for (int l = 0; l < 3; ++l) {
+			// 원본 단위 정점
+			const float* v_cano = vertices[face_indices[l]].data();
+
+			// 스케일, 회전, 이동 변환 적용
+			float v_scaled[3], v_rotated[3], v_final[3];
+
+			// 스케일 적용
+			v_scaled[0] = v_cano[0] * final_scale[0];
+			v_scaled[1] = v_cano[1] * final_scale[1];
+			v_scaled[2] = v_cano[2] * final_scale[2];
+
+			// 회전 적용
+#if QUATERNION
+			rotate_vector_by_quaternion(v_rotated, v_scaled, g.rot);
+#else
+			transform_vector_by_matrix_transpose(v_scaled, g.rot_matrix, v_rotated);
+#endif
+
+			// 위치(Translate) 적용
+			v_final[0] = v_rotated[0] + g.pos[0];
+			v_final[1] = v_rotated[1] + g.pos[1];
+			v_final[2] = v_rotated[2] + g.pos[2];
+
+			// ExtendedVertex 데이터 채우기
+			memcpy(current_vertex_ptr->vertex, v_final, sizeof(float) * 3);
+			current_vertex_ptr->material_ID = gaussianID; // (Gaussian 구조체에 material_ID가 있다고 가정)
+			// 혹은 (int)i; 를 사용
+
+// 노멀 계산 (중심 -> 정점 방향)
+			float normal[3];
+			normal[0] = v_final[0] - g.pos[0];
+			normal[1] = v_final[1] - g.pos[1];
+			normal[2] = v_final[2] - g.pos[2];
+			fMyVecNormalize(normal); // 정규화
+			memcpy(current_vertex_ptr->normal, normal, sizeof(float) * 3);
+
+			// AABB 업데이트
+			aabb[XMIN] = fminf(aabb[XMIN], v_final[0]);
+			aabb[XMAX] = fmaxf(aabb[XMAX], v_final[0]);
+			aabb[YMIN] = fminf(aabb[YMIN], v_final[1]);
+			aabb[YMAX] = fmaxf(aabb[YMAX], v_final[1]);
+			aabb[ZMIN] = fminf(aabb[ZMIN], v_final[2]);
+			aabb[ZMAX] = fmaxf(aabb[ZMAX], v_final[2]);
+
+			current_vertex_ptr++;
+		}
+	}
+}
+
 void create_composite_object_from_gaussians(
 	const std::vector<Gaussian>& gaussians,
 	float alpha_min = ALPHA_MIN,
@@ -1062,6 +1194,9 @@ void create_composite_object_from_gaussians(
 
 #if DEBUG_SIGMA_HISTOGRAM
 	int sigma_histogram[DEBUG_SIGMA_HISTOGRAM] = { 0 };
+#endif
+#if DEBUG_SCALE_HISTOGRAM
+	std::vector<float> all_max_scales;
 #endif
 
 	// 메모리 할당
@@ -1085,6 +1220,9 @@ void create_composite_object_from_gaussians(
 	//const float ICOSA_VRT_SCALE = 0.5f * icosaEdge;
 	int cnt_sigma = 0;
 	float k_iso_max = 0;
+
+	// (디버깅용 카운터)
+	int cnt_octa = 0, cnt_ico = 0, cnt_ico_l1 = 0, cnt_ico_l2 = 0, cnt_ico_l3 = 0;
 
 	// 모든 가우시안에 대해 20면체 생성
 	for (long i = 0; i < num_gaussians; ++i) {
@@ -1129,62 +1267,76 @@ void create_composite_object_from_gaussians(
 			g.scale[2] * k_iso * unitspherefactor
 		};
 #endif
-		k_iso_max = fmaxf(k_iso_max, k_iso);
 
-		//if (final_scale[0] < 1e-6f && final_scale[1] < 1e-6f && final_scale[2] < 1e-6f) { cnt_scale++; continue; }
-
-		num_total_triangles += icosaHedronNumTri;
-		// 아이코사헤드론의 20개 면(삼각형)을 생성
-		for (int j = 0; j < icosaHedronNumTri; ++j) {
-			const int* face_indices = ICO_FACES[j];
-
-			// 3개의 정점을 변환하여 저장
-			for (int l = 0; l < 3; ++l) {
-				// 원본 단위 아이코사헤드론 정점
-				const float* v_cano = ICO_VERTICES[face_indices[l]];
-
-				// 스케일, 회전, 이동 변환 적용
-				float v_scaled[3], v_rotated[3], v_final[3];
-
-				// 스케일 적용 (비등방성 S * 등방성 k)
-				v_scaled[0] = v_cano[0] * final_scale[0];
-				v_scaled[1] = v_cano[1] * final_scale[1];
-				v_scaled[2] = v_cano[2] * final_scale[2];
-				//printf("%f, %f, %f\n", expf(g.scale[0]), expf(g.scale[1]), expf(g.scale[2]));
-
-				// 회전 적용
-#if QUATERNION
-				rotate_vector_by_quaternion(v_rotated, v_scaled, g.rot);
-#else
-				transform_vector_by_matrix_transpose(v_scaled, g.rot_matrix, v_rotated);
+		float max_scale = fmaxf(fmaxf(final_scale[0], final_scale[1]), final_scale[2]);
+#if DEBUG_SCALE_HISTOGRAM
+		all_max_scales.push_back(max_scale);
 #endif
 
-				// 위치(Translate) 적용
-				v_final[0] = v_rotated[0] + g.pos[0];
-				v_final[1] = v_rotated[1] + g.pos[1];
-				v_final[2] = v_rotated[2] + g.pos[2];
-				//printf("%f, %f, %f\n", g.pos[0], g.pos[1], g.pos[2]);
+		k_iso_max = fmaxf(k_iso_max, k_iso);
 
-				// ExtendedVertex 데이터 채우기
-				memcpy(current_vertex_ptr->vertex, v_final, sizeof(float) * 3);
-				current_vertex_ptr->material_ID = i; // 가우시안 인덱스를 저장
-				// 노멀은 일단 0으로 초기화 (필요 시 계산 가능)
-				//memset(current_vertex_ptr->normal, 0, sizeof(float) * 3);
+		int triangles_added = 0;
 
-				// AABB 업데이트
-				uip.poly_model.AABB[XMIN] = fminf(uip.poly_model.AABB[XMIN], v_final[0]);
-				uip.poly_model.AABB[XMAX] = fmaxf(uip.poly_model.AABB[XMAX], v_final[0]);
-				uip.poly_model.AABB[YMIN] = fminf(uip.poly_model.AABB[YMIN], v_final[1]);
-				uip.poly_model.AABB[YMAX] = fmaxf(uip.poly_model.AABB[YMAX], v_final[1]);
-				uip.poly_model.AABB[ZMIN] = fminf(uip.poly_model.AABB[ZMIN], v_final[2]);
-				uip.poly_model.AABB[ZMAX] = fmaxf(uip.poly_model.AABB[ZMAX], v_final[2]);
-
-				current_vertex_ptr++;
-			}
+		// 💡 [핵심] 스케일 임계값에 따라 분기
+		if (max_scale < MESH_THRESHOLD_8) {
+			// Level 0: 8면체
+			generate_gaussian_mesh(i,current_vertex_ptr, uip.poly_model.AABB, g, final_scale,
+				OCTA_NUM_TRI, OCTA_VERTICES, OCTA_FACES);
+			triangles_added = OCTA_NUM_TRI;
+			cnt_octa++;
 		}
+		else if (max_scale < MESH_THRESHOLD_20) {
+			// Level 1: 20면체
+			generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale,
+				icosaHedronNumTri, ICO_VERTICES, ICO_FACES);
+			triangles_added = icosaHedronNumTri;
+			cnt_ico++;
+		}
+		else if (max_scale < MESH_THRESHOLD_80) {
+			// Level 2: 80면체 (데이터 필요)
+			generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale,
+			                        L1_ICO_NUM_TRI, L1_ICO_VERTICES, L1_ICO_FACES);
+			triangles_added = L1_ICO_NUM_TRI;
+			cnt_ico_l1++;
+
+			//// [임시] 80면체 데이터가 없다면, 일단 20면체로 대체
+			//generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale,
+			//	icosaHedronNumTri, ICO_VERTICES, ICO_FACES);
+			//triangles_added = icosaHedronNumTri;
+			//cnt_ico++;
+		}
+		else if (max_scale < MESH_THRESHOLD_320) {
+			// Level 3: 320면체 (데이터 필요)
+			generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale,
+			                        L2_ICO_NUM_TRI, L2_ICO_VERTICES, L2_ICO_FACES);
+			triangles_added = L2_ICO_NUM_TRI;
+			cnt_ico_l2++;
+
+			//// [임시] 320면체 데이터가 없다면, 일단 20면체로 대체
+			//generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale,
+			//	icosaHedronNumTri, ICO_VERTICES, ICO_FACES);
+			//triangles_added = icosaHedronNumTri;
+			//cnt_ico++;
+		}
+		else {
+			// Level 4: 1280면체 (데이터 필요)
+			generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale,
+			                        L3_ICO_NUM_TRI, L3_ICO_VERTICES, L3_ICO_FACES);
+			triangles_added = L3_ICO_NUM_TRI;
+			cnt_ico_l3++;
+
+			//// [임시] 1280면체 데이터가 없다면, 일단 20면체로 대체
+			//generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale,
+			//	icosaHedronNumTri, ICO_VERTICES, ICO_FACES);
+			//triangles_added = icosaHedronNumTri;
+			//cnt_ico++;
+		}
+
+		num_total_triangles += triangles_added;
 	}
 	long num_final_vertices = num_total_triangles * 3;
 
+	const int MAX_BAR_WIDTH = 50; // 막대그래프의 최대 너비
 #if DEBUG_SIGMA_HISTOGRAM
 	printf("\n--- Sigma (Opacity) Histogram ---\n");
 	int max_count = 0;
@@ -1194,7 +1346,6 @@ void create_composite_object_from_gaussians(
 		}
 	}
 
-	const int MAX_BAR_WIDTH = 50; // 막대그래프의 최대 너비
 	for (int i = 0; i < DEBUG_SIGMA_HISTOGRAM; ++i) {
 		float min_range = (float)i / DEBUG_SIGMA_HISTOGRAM;
 		float max_range = (float)(i + 1) / DEBUG_SIGMA_HISTOGRAM;
@@ -1210,15 +1361,75 @@ void create_composite_object_from_gaussians(
 	}
 	printf("---------------------------------\n\n");
 #endif
+#if DEBUG_SCALE_HISTOGRAM
+	printf("\n--- Scale (max axis scale) Histogram ---\n");
+
+	if (all_max_scales.empty()) {
+		printf("No scales to report (all gaussians were filtered out).\n");
+	}
+	else {
+		// 1. 실제 스케일 값의 최솟값/최댓값 찾기
+		auto minmax = std::minmax_element(all_max_scales.begin(), all_max_scales.end());
+		const float min_val = *minmax.first;
+		const float max_val = *minmax.second;
+
+		// 2. 구간(bin) 속성 정의
+		const int num_bins = DEBUG_SCALE_HISTOGRAM;
+		int scale_histogram_counts[num_bins] = { 0 };
+		const float range = max_val - min_val;
+		// (모든 스케일이 동일할 경우 0으로 나누기 방지)
+		const float bin_size = (range > 0.0f) ? (range / num_bins) : 1.0f;
+
+		// 3. 히스토그램 구간(bin) 채우기
+		for (float scale : all_max_scales) {
+			int bin_index = (range > 0.0f) ? static_cast<int>((scale - min_val) / bin_size) : 0;
+			// 최댓값(max_val)이 마지막 bin에 포함되도록 처리
+			if (bin_index >= num_bins) {
+				bin_index = num_bins - 1;
+			}
+			scale_histogram_counts[bin_index]++;
+		}
+
+		// 4. 막대 그래프 너비를 위한 최댓값 찾기
+		int scale_max_count = 0;
+		for (int i = 0; i < num_bins; ++i) {
+			if (scale_histogram_counts[i] > scale_max_count) {
+				scale_max_count = scale_histogram_counts[i];
+			}
+		}
+
+		printf("Scale Range: [%.5f] to [%.5f]\n", min_val, max_val);
+
+		// 5. 히스토그램 출력 (올바른 범위 사용)
+		for (int i = 0; i < num_bins; ++i) {
+			// 현재 bin의 실제 min/max 범위 계산
+			const float min_range = min_val + (i * bin_size);
+			const float max_range = min_val + ((i + 1) * bin_size);
+
+			int bar_width = 0;
+			if (scale_max_count > 0) {
+				bar_width = static_cast<int>((float)scale_histogram_counts[i] / scale_max_count * MAX_BAR_WIDTH);
+			}
+
+			// 스케일 값에 맞게 소수점 정밀도 조정 (예: %.5f)
+			printf("Bin %3d [%8.5f-%8.5f): %-7d |", i, min_range, max_range, scale_histogram_counts[i]);
+			for (int j = 0; j < bar_width; ++j) {
+				printf("#");
+			}
+			printf("\n");
+		}
+	}
+	printf("---------------------------------\n\n");
+#endif
 
 	printf("k_iso_max: %f\n", k_iso_max);
 	printf("delete by SIGMA cnt: %d\n", cnt_sigma);
 	printf("\n");
-	printf("vtx_cnt_temp: %d\n", num_total_vertices);
-	printf("vtx_cnt_real: %d\n", num_final_vertices);
+	printf("vtx_cnt_theory: %d\n", num_total_vertices);
+	printf("vtx_cnt_final: %d\n", num_final_vertices);
 	uip.poly_model.extended_vertices = (ExtendedVertex*)realloc(uip.poly_model.extended_vertices, num_final_vertices * sizeof(ExtendedVertex));
 
-	uip.poly_model.n_triangles = num_total_triangles;
+	uip.poly_model.n_triangles = num_final_vertices;
 	uip.composite_object_read = 1;
 	//printf("\nSuccessfully created CompositeObject with %d triangles from %ld Gaussians.\n\n", uip.poly_model.n_triangles, num_gaussians);
 	printf("\nSuccessfully created CompositeObject with %d triangles from %ld Gaussians.\n\n", uip.poly_model.n_triangles, num_gaussians - (cnt_sigma));
@@ -1958,7 +2169,8 @@ void subMenuHandler(int value) {
 		ply_to_obj_mtl = "kitchen_3dgrt.mtl";
 		break;
 	case 108: printf("garden selected\n");
-		ply_file_path = "../../Data/ply/garden/garden_3dgrt.ply";
+		//ply_file_path = "../../Data/ply/garden/garden_3dgrt.ply";
+		ply_file_path = "../../Data/ply/garden/garden_exported.ply";
 		base_kdtree_str = "../../Data/ply/garden/garden_tree.kdt";
 		base_igeom_str = "../../Data/ply/garden/garden_igeom.bin";
 		base_obj_str = "../../Data/ply/garden/garden_new.obj";
@@ -2439,6 +2651,7 @@ void idle() {
 
 void main(int argc, char **argv) {
 	init_KDT_system();
+	init_mesh_data();//shyun
 	glutInit (&argc, argv); 
 	glutInitDisplayMode(GLUT_RGB | GLUT_DEPTH | GLUT_DOUBLE);   
 	glutInitWindowSize(MAIN_WINDOW_WIDTH, MAIN_WINDOW_HEIGHT);
