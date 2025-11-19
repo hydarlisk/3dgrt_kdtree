@@ -418,8 +418,8 @@ int read_kd_tree_from_file(CompositeObject *c_object, const char *filename, int 
 
 void collectTriangleCounts_recursive(
 	const KdTree* kd_tree,
-	int nodeIndex,
-	std::vector<unsigned int>& counts,
+	unsigned long long nodeIndex,
+	std::vector<unsigned long long>& counts,
 	unsigned int current_level,
 	unsigned int& max_level,
 	unsigned int& total_level

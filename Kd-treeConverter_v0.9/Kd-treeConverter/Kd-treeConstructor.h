@@ -94,8 +94,10 @@ extern TriangleList *g_pTriangleInfos;
 extern unsigned int  g_iTriangleSize;
 
 extern unsigned int  g_iKdTree_Level;
-extern unsigned int  g_iKdTree_TriOffset_Count;
-extern unsigned int  g_iKdTree_TriOffset_CountAlloc;
+//extern unsigned int  g_iKdTree_TriOffset_Count;
+//extern unsigned int  g_iKdTree_TriOffset_CountAlloc;
+extern unsigned long long  g_iKdTree_TriOffset_Count;
+extern unsigned long long  g_iKdTree_TriOffset_CountAlloc;
 extern unsigned int *g_pKdTree_TriOffset_Array;
 extern unsigned int  g_iKdTree_Node_Count;
 extern unsigned int  g_iKdTree_Node_CountAlloc;

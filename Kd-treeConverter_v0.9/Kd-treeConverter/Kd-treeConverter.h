@@ -14,7 +14,15 @@
 #define MIN_TRI 16
 #define EMTPY_BONUS 0.9
 
-#define FORCE_SPLIT_THRESHOLD 64				// kd-tree 강제분할
+#define FORCE_SPLIT_THRESHOLD 128				// kd-tree 강제분할
+//#define SOFT_SPLIT_THRESHOLD 128				// kd-tree 강제분할(완화)
+#define SOFT_SPLIT_THRESHOLD2 256				// kd-tree 강제분할(완화)
+
+#define BLEND_SELECT false
+#define ADAPTIVE_MESH true
+
+#define USE_KERNEL_SCALE false					// 기존의 OptiX 방식 kernelScale 사용
+
 #define SAH_OPACITY 0
 #define CLIP_AREA false							// 부모 노드의 AABB로 삼각형 면적 clip
 #define SAH_MAXIMIZE false
@@ -93,20 +101,20 @@
 #define WALD_METHOD true
 #define SIGMA_THRESHOLD 0//.03   					// sigma(density) 작은 가우시안 제거
 
-#define USE_KERNEL_SCALE false					// 기존의 OptiX 방식 kernelScale 사용
-
 #define GLOBAL_DEVICE_VAR true
 #define GAUSSIAN_TEXTURE true
-#define OFFSET_TEXTURE true
+
+#define OFFSET_TEXTURE false
 
 #define DUMMY_RUN false
 //Debug Flags=====================================================================================
 #define DEBUG_SIGMA_HISTOGRAM 100 				// gaussian의 sigma들의 histogram 출력
 #define DEBUG_SCALE_HISTOGRAM 100 				// gaussian의 sigma들의 histogram 출력
+#define DEBUG_TRILEN_HISTOGRAM 100 				// gaussian의 sigma들의 histogram 출력
 #define WARP_OCCUPANCY false   					// warp occupancy 출력
 #define HIT_AND_NODE_COUNT_DEBUG false			// Ray 마다 hitcount, node count, ... 확인
 												// kd-tree hitmap 확인 가능
-#define LEAF_NODE_DEBUG true					// kd-tree leaf node 렌더링
+#define LEAF_NODE_DEBUG false					// kd-tree leaf node 렌더링
 
 #define MEASURE_START_FRAME 500
 #define MEASURE_END_FRAME 1000
@@ -312,8 +320,8 @@ int build_kd_tree_for_composite_object(CompositeObject *);
 int build_kd_tree_for_composite_object2(CompositeObject* c_object, const char* filename);
 void collectTriangleCounts_recursive(
 	const KdTree* kd_tree,
-	int nodeIndex,
-	std::vector<unsigned int>& counts,
+	unsigned long long nodeIndex,
+	std::vector<unsigned long long>& counts,
 	unsigned int current_level,
 	unsigned int& max_level,
 	unsigned int& total_level

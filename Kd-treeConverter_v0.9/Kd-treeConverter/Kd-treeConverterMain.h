@@ -57,14 +57,44 @@ void set_kd_tree_leaf_node();
 // --- Gaussian Scale에 따른 구조 정의. ---
 // C++17의 std::array를 사용합니다. (float[3] 대신)
 using Vertex = std::array<float, 3>;
-// .obj는 1-based, C++은 0-based이므로 int를 사용합니다.
+// .obj는 1-based, C++은 0-based이므로 int를 사용.
 using Face = std::array<int, 3>;
 
-const float MESH_THRESHOLD_8 = 0.12f;  // 8면체 (Octahedron)
-const float MESH_THRESHOLD_20 = 0.35f; // 20면체 (Icosahedron)
-const float MESH_THRESHOLD_80 = 1.0f;  // 80면체 (L1 Subdivision)
-const float MESH_THRESHOLD_320 = 3.0f; // 320면체 (L2 Subdivision)
-// 3.0 이상은 1280면체 (L3 Subdivision)
+//#define MIN_OPACITY_FOR_20GON 0.7f
+//const float MIN_OPACITY_FOR_20GON = 0.7f;
+#if USE_KERNEL_SCALE
+const float T_8 = 0.20f;  // ~ Bin 0 (0.18): 대부분의 가우시안
+const float T_20 = 0.40f;  // ~ Bin 2 (0.37): 약간 큰 것들
+const float T_80 = 0.75f;  // ~ Bin 3 (0.74)
+const float T_162 = 1.15f;  // ~ Bin 5 (1.12)
+const float T_264 = 1.50f;  // ~ Bin 7 (1.49)
+const float T_320 = 2.00f;  // ~ Bin 9 (1.86)
+const float T_420 = 3.00f;  // ~ Bin 15
+const float T_544 = 4.00f;  // ~ Bin 21
+const float T_684 = 5.00f;  // ~ Bin 26
+const float T_760 = 7.00f;  // ~ Bin 36
+const float T_840 = 9.00f;  // ~ Bin 48
+const float T_924 = 11.00f; // ~ Bin 58
+const float T_1012 = 13.00f; // ~ Bin 69
+const float T_1104 = 15.00f; // ~ Bin 80
+// 15.0 이상은 1280면체 (Bin 81 ~ 99)
+#else
+const float T_8 = 0.12f;  // (Bin 0) 8면체
+const float T_20 = 0.24f;  // (Bin 1) 20면체
+const float T_80 = 0.35f;  // (Bin 2) 80면체
+const float T_162 = 0.47f;  // (Bin 3) 162면체
+const float T_264 = 0.59f;  // (Bin 4) 264면체
+const float T_320 = 0.70f;  // (Bin 5) 320면체
+const float T_420 = 0.82f;  // (Bin 6) 420면체
+const float T_544 = 0.94f;  // (Bin 7) 544면체
+const float T_684 = 1.05f;  // (Bin 8) 684면체
+const float T_760 = 1.29f;  // (Bin 9-10) 760면체
+const float T_840 = 1.52f;  // (Bin 11-12) 840면체
+const float T_924 = 1.87f;  // (Bin 13-15) 924면체
+const float T_1012 = 2.34f;  // (Bin 16-19) 1012면체
+const float T_1104 = 3.05f;  // (Bin 20-25) 1104면체
+// 3.05f 이상은 1280면체
+#endif
 
 // --- (추가) 8면체 (Octahedron) ---
 #define OCTA_NUM_VRT 6
@@ -102,10 +132,30 @@ std::vector<Face> g_IcoFaces = {
 	{9, 3, 2}, {9, 2, 10}, {9, 10, 11},
 	{5, 4, 7}, {1, 10, 2} };
 
-// 80면체 이상 (Icosahedron Level 1 Subdivision)
-std::vector<Vertex> g_L1_Vertices; // 80-gon (2.obj)
-std::vector<Face>   g_L1_Faces;
-std::vector<Vertex> g_L2_Vertices; // 320-gon (3.obj)
-std::vector<Face>   g_L2_Faces;
-std::vector<Vertex> g_L3_Vertices; // 1280-gon (4.obj)
-std::vector<Face>   g_L3_Faces;
+// 80면체 이상
+std::vector<Vertex> g_LOD_80_Vertices; // 80.obj
+std::vector<Face>   g_LOD_80_Faces;
+std::vector<Vertex> g_LOD_162_Vertices; // 162.obj
+std::vector<Face>   g_LOD_162_Faces;
+std::vector<Vertex> g_LOD_264_Vertices; // 264.obj
+std::vector<Face>   g_LOD_264_Faces;
+std::vector<Vertex> g_LOD_320_Vertices; // 320.obj
+std::vector<Face>   g_LOD_320_Faces;
+std::vector<Vertex> g_LOD_420_Vertices; // 420.obj
+std::vector<Face>   g_LOD_420_Faces;
+std::vector<Vertex> g_LOD_544_Vertices; // 544.obj
+std::vector<Face>   g_LOD_544_Faces;
+std::vector<Vertex> g_LOD_684_Vertices; // 684.obj
+std::vector<Face>   g_LOD_684_Faces;
+std::vector<Vertex> g_LOD_760_Vertices; // 760.obj
+std::vector<Face>   g_LOD_760_Faces;
+std::vector<Vertex> g_LOD_840_Vertices; // 840.obj
+std::vector<Face>   g_LOD_840_Faces;
+std::vector<Vertex> g_LOD_924_Vertices; // 924.obj
+std::vector<Face>   g_LOD_924_Faces;
+std::vector<Vertex> g_LOD_1012_Vertices; // 1012.obj
+std::vector<Face>   g_LOD_1012_Faces;
+std::vector<Vertex> g_LOD_1104_Vertices; // 1104.obj
+std::vector<Face>   g_LOD_1104_Faces;
+std::vector<Vertex> g_LOD_1280_Vertices; // 1280.obj
+std::vector<Face>   g_LOD_1280_Faces;

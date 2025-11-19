@@ -45,8 +45,8 @@ void initialize_camera(Camera *cam) {
 	set_rotate_mat(cam);
 
 	cam->move = 0;
-	cam->fovy = 20.0, cam->aspect = 1.0; cam->near_c = 1.0; cam->far_c = 10000.0;
-	//cam->fovy = FOV_Y, cam->aspect = g_render_width / g_render_height; cam->near_c = NEAR_PLANE; cam->far_c = FAR_PLANE;
+	//cam->fovy = 20.0, cam->aspect = 1.0; cam->near_c = 1.0; cam->far_c = 10000.0;
+	cam->fovy = FOV_Y, cam->aspect = g_render_width / g_render_height; cam->near_c = NEAR_PLANE; cam->far_c = FAR_PLANE;
 } 
 
  void draw_axes(GLfloat scale) {

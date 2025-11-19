@@ -55,6 +55,15 @@ int submenu[P_MODEL_COUNT] = { 106,107,108,109,110,111,112 };
 int submenu[P_MODEL_COUNT] = { 101,102,103,104,105,106,107,108,109,110,111,112 };
 #endif
 
+bool is_w_pressed = false;
+bool is_a_pressed = false;
+bool is_s_pressed = false;
+bool is_d_pressed = false;
+bool is_q_pressed = false;
+bool is_e_pressed = false;
+const float CAMERA_MOVE_SPEED = 0.5f; // 이동 속도 (조정 가능)
+const float CAMERA_ROT_SPEED = 0.2f;  // 마우스 회전 감도
+
 bool render_gaussian = false;
 int g_render_width = MAIN_WINDOW_WIDTH;
 int g_render_height = MAIN_WINDOW_HEIGHT;
@@ -62,6 +71,8 @@ bool g_cuda_rendering_done = false;
 bool g_cuda_interactive_mode = false; // CUDA 인터랙티브 모드 활성화 플래그
 bool g_camera_dirty = true;           // 카메라가 변경되었는지 확인하는 플래그
 std::vector<Gaussian> g_gaussians;	  // 전역 변수로 가우시안 데이터를 저장할 벡터
+
+bool adaptive_mesh = false;
 
 float g_fps = 0.0f;
 float r_fps = 0.0f;
@@ -368,9 +379,51 @@ void display(void) {
 	glutSwapBuffers(); 
 }
 
+void keyboardUp(unsigned char key, int x, int y) {
+	switch (key) {
+	case 'w':
+		is_w_pressed = false;
+		break;
+	case 'a':
+		is_a_pressed = false;
+		break;
+	case 's':
+		is_s_pressed = false;
+		break;
+	case 'd':
+		is_d_pressed = false;
+		break;
+	case 'q':
+		is_q_pressed = false;
+		break;
+	case 'e':
+		is_e_pressed = false;
+		break;
+	}
+}
+
 void keyboard(unsigned char key, int x, int y) {
 	static int bf_culling = 0;
 	switch (key) {
+		case 'w':
+			is_w_pressed = true;
+			break;
+		case 'a':
+			is_a_pressed = true;
+			break;
+		case 's':
+			is_s_pressed = true;
+			break;
+		case 'd':
+			is_d_pressed = true;
+			break;
+		case 'q':
+			is_q_pressed = true;
+			break;
+		case 'e':
+			is_e_pressed = true;
+			break;
+
 		case 'b':
 			uip.bounding_box_display_mode = 1 - uip.bounding_box_display_mode;
 			glutPostRedisplay();
@@ -395,7 +448,7 @@ void keyboard(unsigned char key, int x, int y) {
 			}
 			glutPostRedisplay();
 			break;
-		case 's':
+		case 'S':
 			if (uip.OpenGL_shading_mode == FLAT_SHADING) {
 				glShadeModel(GL_SMOOTH);
 				uip.OpenGL_shading_mode = SMOOTH_SHADING;
@@ -505,7 +558,24 @@ void keyboard(unsigned char key, int x, int y) {
 			glutPostRedisplay();
 			break;
 #endif
-		case 'q':
+		case 'o':
+			printf("=== Camera Check ===\n");
+			printf("Eye (Pos) : %.6f, %.6f, %.6f\n",
+				camera.pos[0], camera.pos[1], camera.pos[2]);
+			printf("LookAt Dir: %.6f, %.6f, %.6f\n",
+				-camera.naxis[0], -camera.naxis[1], -camera.naxis[2]);
+			printf("Up Vector : %.6f, %.6f, %.6f\n",
+				camera.vaxis[0], camera.vaxis[1], camera.vaxis[2]);
+			printf("====================\n");
+			printf("%.6f, %.6f, %.6f,\n",
+				camera.pos[0], camera.pos[1], camera.pos[2]);
+			printf("%.6f, %.6f, %.6f,\n",
+				-camera.naxis[0], -camera.naxis[1], -camera.naxis[2]);
+			printf("%.6f, %.6f, %.6f\n",
+				camera.vaxis[0], camera.vaxis[1], camera.vaxis[2]);
+			printf("====================\n");
+			break;
+		case 'Q':
 			exit(0);
 			break;
 	}
@@ -568,6 +638,7 @@ void mousemove(int x, int y) {
 			gluPerspective(camera.fovy, camera.aspect, camera.near_c, camera.far_c);
 			glutPostRedisplay();
 		}
+		/*
 		else if (uip.camera_global_rotation_mode) {
 			length = sqrt( (double) (delx*delx + dely*dely) );
 			if (length < EPSILON) return;
@@ -612,6 +683,89 @@ void mousemove(int x, int y) {
  			glMultMatrixf(camera.mat);
  			glTranslatef(-camera.pos[X], -camera.pos[Y], -camera.pos[Z]);
 			//fprintf(stdout, "camera.pos: %f %f %f\n", camera.pos[0], camera.pos[1], camera.pos[2]);
+
+			glutPostRedisplay();
+		}*/
+		else if (uip.camera_global_rotation_mode) {
+			g_camera_dirty = true;
+
+			float yaw_angle = delx * CAMERA_ROT_SPEED;   // 좌우 회전 (Yaw)
+			float pitch_angle = dely * CAMERA_ROT_SPEED; // 상하 회전 (Pitch)
+
+			// --- 1. Yaw (좌우 회전) ---
+			// Yaw는 항상 월드 Y축(0, 1, 0)을 기준으로 회전합니다.
+			glMatrixMode(GL_MODELVIEW);
+			glPushMatrix();
+			glLoadIdentity();
+			glRotatef(yaw_angle, 0.0f, 1.0f, 0.0f);
+			glGetFloatv(GL_MODELVIEW_MATRIX, R);
+			glPopMatrix();
+
+			// Yaw 회전을 카메라의 모든 축(u, v, n)에 적용합니다.
+			tmpx = camera.uaxis[0], tmpy = camera.uaxis[1], tmpz = camera.uaxis[2];
+			camera.uaxis[0] = R[0] * tmpx + R[4] * tmpy + R[8] * tmpz;
+			camera.uaxis[1] = R[1] * tmpx + R[5] * tmpy + R[9] * tmpz;
+			camera.uaxis[2] = R[2] * tmpx + R[6] * tmpy + R[10] * tmpz;
+
+			tmpx = camera.vaxis[0], tmpy = camera.vaxis[1], tmpz = camera.vaxis[2];
+			camera.vaxis[0] = R[0] * tmpx + R[4] * tmpy + R[8] * tmpz;
+			camera.vaxis[1] = R[1] * tmpx + R[5] * tmpy + R[9] * tmpz;
+			camera.vaxis[2] = R[2] * tmpx + R[6] * tmpy + R[10] * tmpz;
+
+			tmpx = camera.naxis[0], tmpy = camera.naxis[1], tmpz = camera.naxis[2];
+			camera.naxis[0] = R[0] * tmpx + R[4] * tmpy + R[8] * tmpz;
+			camera.naxis[1] = R[1] * tmpx + R[5] * tmpy + R[9] * tmpz;
+			camera.naxis[2] = R[2] * tmpx + R[6] * tmpy + R[10] * tmpz;
+
+
+			// --- 2. Pitch (상하 회전) ---
+			// Pitch는 카메라의 로컬 X축(uaxis)을 기준으로 회전합니다.
+
+			// Pitch Clamping: 카메라가 거꾸로 뒤집히는 것을 방지
+			// (naxis의 Y 컴포넌트를 확인하여 약 +/- 89도를 넘지 않도록 함)
+			float n_y = camera.naxis[1];
+			if ((pitch_angle > 0.0f && n_y > 0.98f) || (pitch_angle < 0.0f && n_y < -0.98f)) {
+				pitch_angle = 0.0f;
+			}
+
+			if (pitch_angle != 0.0f) {
+				glMatrixMode(GL_MODELVIEW);
+				glPushMatrix();
+				glLoadIdentity();
+				// 로컬 u-axis를 축으로 회전
+				glRotatef(pitch_angle, camera.uaxis[0], camera.uaxis[1], camera.uaxis[2]);
+				glGetFloatv(GL_MODELVIEW_MATRIX, R);
+				glPopMatrix();
+
+				// Pitch 회전은 v축과 n축에만 적용 (u축은 회전 축이므로 불변)
+				tmpx = camera.vaxis[0], tmpy = camera.vaxis[1], tmpz = camera.vaxis[2];
+				camera.vaxis[0] = R[0] * tmpx + R[4] * tmpy + R[8] * tmpz;
+				camera.vaxis[1] = R[1] * tmpx + R[5] * tmpy + R[9] * tmpz;
+				camera.vaxis[2] = R[2] * tmpx + R[6] * tmpy + R[10] * tmpz;
+
+				tmpx = camera.naxis[0], tmpy = camera.naxis[1], tmpz = camera.naxis[2];
+				camera.naxis[0] = R[0] * tmpx + R[4] * tmpy + R[8] * tmpz;
+				camera.naxis[1] = R[1] * tmpx + R[5] * tmpy + R[9] * tmpz;
+				camera.naxis[2] = R[2] * tmpx + R[6] * tmpy + R[10] * tmpz;
+			}
+
+			// --- 3. 축 직교 및 정규화 ---
+			// 회전으로 인해 축이 틀어지는 것을 방지 (Gram-Schmidt)
+			fMyVecNormalize(camera.naxis); // n축 정규화
+			fMyVecCrossProduct(camera.naxis, camera.uaxis, camera.vaxis); // v = n x u
+			fMyVecNormalize(camera.vaxis);
+			fMyVecCrossProduct(camera.vaxis, camera.naxis, camera.uaxis); // u = v x n
+			fMyVecNormalize(camera.uaxis);
+
+			// --- 4. 뷰 매트릭스 업데이트 ---
+			set_rotate_mat(&camera); // camera.mat 업데이트
+
+			glMatrixMode(GL_MODELVIEW);
+			glLoadIdentity();
+			glMultMatrixf(camera.mat);
+			// 중요: FPS 스타일에서는 카메라 위치(pos)는 회전시키지 않고,
+			// 오리엔테이션만 바꾼 후 마지막에 이동(Translate)합니다.
+			glTranslatef(-camera.pos[X], -camera.pos[Y], -camera.pos[Z]);
 
 			glutPostRedisplay();
 		}
@@ -801,7 +955,7 @@ void printKdTreeLeafNodeInfo() {
 	printf("\n--- Analyzing triangles per leaf node ---\n");
 
 	// 모든 리프 노드의 삼각형 개수 수집
-	std::vector<unsigned int> triangle_counts;
+	std::vector<unsigned long long> triangle_counts;
 	unsigned int max_level = 0;
 	unsigned int total_level = 0;
 	collectTriangleCounts_recursive(uip.poly_model.kd_tree, 0, triangle_counts, 0, max_level, total_level);
@@ -1106,11 +1260,28 @@ bool load_obj_mesh(const std::string& filename,
 
 // --- main 함수 내부 또는 별도 init 함수 ---
 void init_mesh_data() {
-	// 2.obj, 3.obj, 4.obj 파일이 실행 파일과 같은 경로에 있거나
-	// 올바른 경로를 지정해야 합니다.
-	load_obj_mesh("2.obj", g_L2_Vertices, g_L2_Faces);
-	load_obj_mesh("3.obj", g_L3_Vertices, g_L3_Faces);
-	load_obj_mesh("4.obj", g_L4_Vertices, g_L4_Faces);
+	load_obj_mesh("../../Data/ico/80.obj", g_LOD_80_Vertices, g_LOD_80_Faces);
+	load_obj_mesh("../../Data/ico/162.obj", g_LOD_162_Vertices, g_LOD_162_Faces);
+	load_obj_mesh("../../Data/ico/264.obj", g_LOD_264_Vertices, g_LOD_264_Faces);
+	load_obj_mesh("../../Data/ico/320.obj", g_LOD_320_Vertices, g_LOD_320_Faces);
+	load_obj_mesh("../../Data/ico/420.obj", g_LOD_420_Vertices, g_LOD_420_Faces);
+	load_obj_mesh("../../Data/ico/544.obj", g_LOD_544_Vertices, g_LOD_544_Faces);
+	load_obj_mesh("../../Data/ico/684.obj", g_LOD_684_Vertices, g_LOD_684_Faces);
+	load_obj_mesh("../../Data/ico/760.obj", g_LOD_760_Vertices, g_LOD_760_Faces);
+	load_obj_mesh("../../Data/ico/840.obj", g_LOD_840_Vertices, g_LOD_840_Faces);
+	load_obj_mesh("../../Data/ico/924.obj", g_LOD_924_Vertices, g_LOD_924_Faces);
+	load_obj_mesh("../../Data/ico/1012.obj", g_LOD_1012_Vertices, g_LOD_1012_Faces);
+	load_obj_mesh("../../Data/ico/1104.obj", g_LOD_1104_Vertices, g_LOD_1104_Faces);
+	load_obj_mesh("../../Data/ico/1280.obj", g_LOD_1280_Vertices, g_LOD_1280_Faces);
+
+	// (이전에 추가했던 검증 코드)
+	if (g_LOD_80_Faces.empty() || g_LOD_320_Faces.empty() || g_LOD_1280_Faces.empty() ||
+		g_LOD_162_Faces.empty() || g_LOD_264_Faces.empty() || g_LOD_420_Faces.empty() ||
+		g_LOD_544_Faces.empty() || g_LOD_684_Faces.empty() || g_LOD_760_Faces.empty() ||
+		g_LOD_840_Faces.empty() || g_LOD_924_Faces.empty() || g_LOD_1012_Faces.empty() ||
+		g_LOD_1104_Faces.empty()) {
+		std::cerr << "FATAL ERROR: One or more LOD meshes failed to load or parse." << std::endl;
+	}
 }
 
 inline void generate_gaussian_mesh(
@@ -1119,10 +1290,10 @@ inline void generate_gaussian_mesh(
 	float aabb[6],
 	const Gaussian& g,
 	const float final_scale[3],
-	const int num_tris,
 	const std::vector<Vertex>& vertices,
 	const std::vector<Face>& faces
 ) {
+	const int num_tris = faces.size();
 	for (int j = 0; j < num_tris; ++j) {
 		const int* face_indices = faces[j].data();
 
@@ -1205,14 +1376,6 @@ void create_composite_object_from_gaussians(
 	long num_total_vertices = num_total_triangles * 3;
 	num_total_triangles = 0;
 
-	uip.poly_model.n_triangles = 0; // 시작은 0
-	uip.poly_model.extended_vertices = (ExtendedVertex*)malloc(num_total_vertices * sizeof(ExtendedVertex));
-	if (uip.poly_model.extended_vertices == NULL) {
-		fprintf(stderr, "Fatal Error: Memory allocation failed for %ld vertices!\n", num_total_vertices);
-		exit(1);
-	}
-	ExtendedVertex* current_vertex_ptr = uip.poly_model.extended_vertices;
-
 	// AABB 초기화
 	uip.poly_model.AABB[XMIN] = uip.poly_model.AABB[YMIN] = uip.poly_model.AABB[ZMIN] = FLT_MAX;
 	uip.poly_model.AABB[XMAX] = uip.poly_model.AABB[YMAX] = uip.poly_model.AABB[ZMAX] = -FLT_MAX;
@@ -1222,9 +1385,10 @@ void create_composite_object_from_gaussians(
 	float k_iso_max = 0;
 
 	// (디버깅용 카운터)
-	int cnt_octa = 0, cnt_ico = 0, cnt_ico_l1 = 0, cnt_ico_l2 = 0, cnt_ico_l3 = 0;
+	int cnt_octa = 0, cnt_ico = 0;// , cnt_ico_l1 = 0, cnt_ico_l2 = 0, cnt_ico_l3 = 0;
+	int lod_counts[13] = { 0 }; // 80, 162, 264, 320, 420, 544, 684, 760, 840, 924, 1012, 1104, 1280
 
-	// 모든 가우시안에 대해 20면체 생성
+	// 초기 데이터 생성 *************************
 	for (long i = 0; i < num_gaussians; ++i) {
 		const Gaussian& g = gaussians[i];
 
@@ -1253,9 +1417,6 @@ void create_composite_object_from_gaussians(
 			g.scale[0] * k_iso * 0.5f * icosaEdge,
 			g.scale[1] * k_iso * 0.5f * icosaEdge,
 			g.scale[2] * k_iso * 0.5f * icosaEdge
-			//g.scale[0] * k_iso * unitspherefactor,
-			//g.scale[1] * k_iso * unitspherefactor,
-			//g.scale[2] * k_iso * unitspherefactor
 		};
 #else
 		if (sigma / alpha_min > 1.0f) {
@@ -1268,73 +1429,187 @@ void create_composite_object_from_gaussians(
 		};
 #endif
 
-		float max_scale = fmaxf(fmaxf(final_scale[0], final_scale[1]), final_scale[2]);
+		float max_final_scale = fmaxf(fmaxf(final_scale[0], final_scale[1]), final_scale[2]);
+		float min_final_scale = fminf(fminf(final_scale[0], final_scale[1]), final_scale[2]);
 #if DEBUG_SCALE_HISTOGRAM
-		all_max_scales.push_back(max_scale);
+		//all_max_scales.push_back(max_final_scale / min_final_scale);
+		all_max_scales.push_back(max_final_scale);
 #endif
-
 		k_iso_max = fmaxf(k_iso_max, k_iso);
 
 		int triangles_added = 0;
-
-		// 💡 [핵심] 스케일 임계값에 따라 분기
-		if (max_scale < MESH_THRESHOLD_8) {
-			// Level 0: 8면체
-			generate_gaussian_mesh(i,current_vertex_ptr, uip.poly_model.AABB, g, final_scale,
-				OCTA_NUM_TRI, OCTA_VERTICES, OCTA_FACES);
-			triangles_added = OCTA_NUM_TRI;
-			cnt_octa++;
-		}
-		else if (max_scale < MESH_THRESHOLD_20) {
-			// Level 1: 20면체
-			generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale,
-				icosaHedronNumTri, ICO_VERTICES, ICO_FACES);
-			triangles_added = icosaHedronNumTri;
-			cnt_ico++;
-		}
-		else if (max_scale < MESH_THRESHOLD_80) {
-			// Level 2: 80면체 (데이터 필요)
-			generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale,
-			                        L1_ICO_NUM_TRI, L1_ICO_VERTICES, L1_ICO_FACES);
-			triangles_added = L1_ICO_NUM_TRI;
-			cnt_ico_l1++;
-
-			//// [임시] 80면체 데이터가 없다면, 일단 20면체로 대체
-			//generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale,
-			//	icosaHedronNumTri, ICO_VERTICES, ICO_FACES);
-			//triangles_added = icosaHedronNumTri;
-			//cnt_ico++;
-		}
-		else if (max_scale < MESH_THRESHOLD_320) {
-			// Level 3: 320면체 (데이터 필요)
-			generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale,
-			                        L2_ICO_NUM_TRI, L2_ICO_VERTICES, L2_ICO_FACES);
-			triangles_added = L2_ICO_NUM_TRI;
-			cnt_ico_l2++;
-
-			//// [임시] 320면체 데이터가 없다면, 일단 20면체로 대체
-			//generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale,
-			//	icosaHedronNumTri, ICO_VERTICES, ICO_FACES);
-			//triangles_added = icosaHedronNumTri;
-			//cnt_ico++;
+		if (adaptive_mesh) {
+#ifdef MIN_OPACITY_FOR_20GON
+			if (sigma >= MIN_OPACITY_FOR_20GON && max_final_scale < T_20) {
+				// Opacity가 높으므로 8면체를 건너뛰고 20면체를 사용
+				triangles_added = g_IcoFaces.size(); cnt_ico++;
+			}
+			// [기존 로직은 else if로 묶임]
+			else
+#endif
+				if (max_final_scale < T_8) {
+					triangles_added = g_OctaFaces.size(); cnt_octa++;
+				}
+				else if (max_final_scale < T_20) {
+					triangles_added = g_IcoFaces.size(); cnt_ico++;
+				}
+				else if (max_final_scale < T_80) {
+					triangles_added = g_LOD_80_Faces.size(); lod_counts[0]++;
+				}
+				else if (max_final_scale < T_162) {
+					triangles_added = g_LOD_162_Faces.size(); lod_counts[1]++;
+				}
+				else if (max_final_scale < T_264) {
+					triangles_added = g_LOD_264_Faces.size(); lod_counts[2]++;
+				}
+				else if (max_final_scale < T_320) {
+					triangles_added = g_LOD_320_Faces.size(); lod_counts[3]++;
+				}
+				else if (max_final_scale < T_420) {
+					triangles_added = g_LOD_420_Faces.size(); lod_counts[4]++;
+				}
+				else if (max_final_scale < T_544) {
+					triangles_added = g_LOD_544_Faces.size(); lod_counts[5]++;
+				}
+				else if (max_final_scale < T_684) {
+					triangles_added = g_LOD_684_Faces.size(); lod_counts[6]++;
+				}
+				else if (max_final_scale < T_760) {
+					triangles_added = g_LOD_760_Faces.size(); lod_counts[7]++;
+				}
+				else if (max_final_scale < T_840) {
+					triangles_added = g_LOD_840_Faces.size(); lod_counts[8]++;
+				}
+				else if (max_final_scale < T_924) {
+					triangles_added = g_LOD_924_Faces.size(); lod_counts[9]++;
+				}
+				else if (max_final_scale < T_1012) {
+					triangles_added = g_LOD_1012_Faces.size(); lod_counts[10]++;
+				}
+				else if (max_final_scale < T_1104) {
+					triangles_added = g_LOD_1104_Faces.size(); lod_counts[11]++;
+				}
+				else {// ( >= T_1104)
+					triangles_added = g_LOD_1280_Faces.size(); lod_counts[12]++;
+				}
 		}
 		else {
-			// Level 4: 1280면체 (데이터 필요)
-			generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale,
-			                        L3_ICO_NUM_TRI, L3_ICO_VERTICES, L3_ICO_FACES);
-			triangles_added = L3_ICO_NUM_TRI;
-			cnt_ico_l3++;
-
-			//// [임시] 1280면체 데이터가 없다면, 일단 20면체로 대체
-			//generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale,
-			//	icosaHedronNumTri, ICO_VERTICES, ICO_FACES);
-			//triangles_added = icosaHedronNumTri;
-			//cnt_ico++;
+			triangles_added = g_IcoFaces.size(); cnt_ico++;
 		}
 
 		num_total_triangles += triangles_added;
 	}
+
 	long num_final_vertices = num_total_triangles * 3;
+
+	uip.poly_model.n_triangles = 0; // 시작은 0
+	uip.poly_model.extended_vertices = (ExtendedVertex*)malloc(num_final_vertices * sizeof(ExtendedVertex));
+	if (uip.poly_model.extended_vertices == NULL) {
+		fprintf(stderr, "Fatal Error: Memory allocation failed for %ld vertices!\n", num_final_vertices);
+		exit(1);
+	}
+	ExtendedVertex* current_vertex_ptr = uip.poly_model.extended_vertices;
+
+	// 모든 가우시안에 대해 20면체 생성 *************************
+	for (long i = 0; i < num_gaussians; ++i) {
+		const Gaussian& g = gaussians[i];
+
+		//sigma(density) 계산
+		const float sigma = g.opacity;
+		//const float sigma = 1.0f / (1.0f + expf(-g.opacity));
+
+		if (sigma < SIGMA_THRESHOLD) { cnt_sigma++; continue; }
+		float k_iso = 0.0f;
+
+#if USE_KERNEL_SCALE
+		//if (sigma / alpha_min > 1.0f)
+		// kernelScale_final 함수를 호출하여 k_iso 계산
+		k_iso = kernelScale_final(sigma, alpha_min, kernel_degree);
+		//printf("%d, k_iso: %f\n", i, k_iso);
+		//k_iso = fminf(k_iso, 3.0f);
+
+		float final_scale[3] = {
+			g.scale[0] * k_iso * 0.5f * icosaEdge,
+			g.scale[1] * k_iso * 0.5f * icosaEdge,
+			g.scale[2] * k_iso * 0.5f * icosaEdge
+	};
+#else
+		if (sigma / alpha_min > 1.0f) {
+			k_iso = sqrtf(2.0f * logf(sigma / alpha_min));
+		}
+		float final_scale[3] = {
+			g.scale[0] * k_iso * unitspherefactor,
+			g.scale[1] * k_iso * unitspherefactor,
+			g.scale[2] * k_iso * unitspherefactor
+		};
+#endif
+
+		float max_final_scale = fmaxf(fmaxf(final_scale[0], final_scale[1]), final_scale[2]);
+
+		k_iso_max = fmaxf(k_iso_max, k_iso);
+
+		if (adaptive_mesh) {
+#ifdef MIN_OPACITY_FOR_20GON
+			if (sigma >= MIN_OPACITY_FOR_20GON && max_final_scale < T_20) {
+				// Opacity가 높으므로 8면체를 건너뛰고 20면체를 사용
+				generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale,
+					g_IcoVertices, g_IcoFaces);
+			}
+			// [기존 로직은 else if로 묶임]
+			else
+#endif
+			if (max_final_scale < T_8) {
+				generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_OctaVertices, g_OctaFaces);
+			}
+			else if (max_final_scale < T_20) {
+				generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_IcoVertices, g_IcoFaces);
+			}
+			else if (max_final_scale < T_80) {
+				generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_80_Vertices, g_LOD_80_Faces);
+			}
+			else if (max_final_scale < T_162) {
+				generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_162_Vertices, g_LOD_162_Faces);
+			}
+			else if (max_final_scale < T_264) {
+				generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_264_Vertices, g_LOD_264_Faces);
+			}
+			else if (max_final_scale < T_320) {
+				generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_320_Vertices, g_LOD_320_Faces);
+			}
+			else if (max_final_scale < T_420) {
+				generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_420_Vertices, g_LOD_420_Faces);
+			}
+			else if (max_final_scale < T_544) {
+				generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_544_Vertices, g_LOD_544_Faces);
+			}
+			else if (max_final_scale < T_684) {
+				generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_684_Vertices, g_LOD_684_Faces);
+			}
+			else if (max_final_scale < T_760) {
+				generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_760_Vertices, g_LOD_760_Faces);
+			}
+			else if (max_final_scale < T_840) {
+				generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_840_Vertices, g_LOD_840_Faces);
+			}
+			else if (max_final_scale < T_924) {
+				generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_924_Vertices, g_LOD_924_Faces);
+			}
+			else if (max_final_scale < T_1012) {
+				generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_1012_Vertices, g_LOD_1012_Faces);
+			}
+			else if (max_final_scale < T_1104) {
+				generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_1104_Vertices, g_LOD_1104_Faces);
+			}
+			else {// ( >= T_1104)
+				generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_1280_Vertices, g_LOD_1280_Faces);
+			}
+		}
+		else {
+			generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_IcoVertices, g_IcoFaces);
+		}
+	}
+
+	uip.poly_model.n_triangles = num_total_triangles;
 
 	const int MAX_BAR_WIDTH = 50; // 막대그래프의 최대 너비
 #if DEBUG_SIGMA_HISTOGRAM
@@ -1421,15 +1696,99 @@ void create_composite_object_from_gaussians(
 	}
 	printf("---------------------------------\n\n");
 #endif
+#if ADAPTIVE_MESH && DEBUG_TRILEN_HISTOGRAM
+	printf("\n--- Final Triangle Edge Length Histogram (Adaptive Mesh) ---\n");
 
+	if (uip.poly_model.n_triangles > 0) {
+		std::vector<float> edge_lengths;
+		edge_lengths.reserve(uip.poly_model.n_triangles * 3);
+
+		ExtendedVertex* v_ptr = uip.poly_model.extended_vertices;
+		for (int i = 0; i < uip.poly_model.n_triangles; ++i) {
+			// 각 삼각형의 3개 정점 가져오기
+			float* v0 = v_ptr[3 * i + 0].vertex;
+			float* v1 = v_ptr[3 * i + 1].vertex;
+			float* v2 = v_ptr[3 * i + 2].vertex;
+
+			// 3개 변의 길이 계산 (Euclidean Distance)
+			float l0 = sqrtf(powf(v0[0] - v1[0], 2) + powf(v0[1] - v1[1], 2) + powf(v0[2] - v1[2], 2));
+			float l1 = sqrtf(powf(v1[0] - v2[0], 2) + powf(v1[1] - v2[1], 2) + powf(v1[2] - v2[2], 2));
+			float l2 = sqrtf(powf(v2[0] - v0[0], 2) + powf(v2[1] - v0[1], 2) + powf(v2[2] - v0[2], 2));
+
+			edge_lengths.push_back(l0);
+			edge_lengths.push_back(l1);
+			edge_lengths.push_back(l2);
+		}
+
+		// 통계 계산 (최소, 최대, 평균)
+		float min_len = *std::min_element(edge_lengths.begin(), edge_lengths.end());
+		float max_len = *std::max_element(edge_lengths.begin(), edge_lengths.end());
+		float sum_len = std::accumulate(edge_lengths.begin(), edge_lengths.end(), 0.0f);
+		float avg_len = sum_len / edge_lengths.size();
+
+		printf("Min Length: %.6f\n", min_len);
+		printf("Max Length: %.6f\n", max_len);
+		printf("Avg Length: %.6f\n", avg_len);
+
+		// 히스토그램 생성 (50개 구간)
+		const int num_bins = 50;
+		std::vector<int> bins(num_bins, 0);
+		float range = max_len - min_len;
+		if (range <= 0) range = 1.0f; // 0으로 나누기 방지
+
+		for (float len : edge_lengths) {
+			int bin_idx = (int)((len - min_len) / range * num_bins);
+			if (bin_idx >= num_bins) bin_idx = num_bins - 1; // 최댓값 처리
+			bins[bin_idx]++;
+		}
+
+		// 히스토그램 출력
+		int max_count = *std::max_element(bins.begin(), bins.end());
+		for (int i = 0; i < num_bins; ++i) {
+			float bin_start = min_len + (range * i / num_bins);
+			float bin_end = min_len + (range * (i + 1) / num_bins);
+
+			// 막대 그래프 길이 계산 (최대 길이 50칸으로 정규화)
+			int bar_len = (max_count > 0) ? (int)((float)bins[i] / max_count * 50.0f) : 0;
+
+			printf("Bin %2d [%.5f - %.5f): %6d |", i, bin_start, bin_end, bins[i]);
+			for (int j = 0; j < bar_len; ++j) printf("#");
+			printf("\n");
+		}
+	}
+	else {
+		printf("No triangles to measure.\n");
+	}
+	printf("----------------------------------------------------------\n");
+#endif
 	printf("k_iso_max: %f\n", k_iso_max);
 	printf("delete by SIGMA cnt: %d\n", cnt_sigma);
+	printf("\n");
+	printf("\n--- Adaptive Geometry Stats ---\n");
+	printf("LOD-8   (%lu-face)   : %d\n", g_OctaFaces.size(), cnt_octa);
+	printf("LOD-20  (20-face)  : %d\n", cnt_ico);
+	printf("LOD-80  (80-face)  : %d\n", lod_counts[0]);
+	printf("LOD-162 (162-face) : %d\n", lod_counts[1]);
+	printf("LOD-264 (264-face) : %d\n", lod_counts[2]);
+	printf("LOD-320 (320-face) : %d\n", lod_counts[3]);
+	printf("LOD-420 (420-face) : %d\n", lod_counts[4]);
+	printf("LOD-544 (544-face) : %d\n", lod_counts[5]);
+	printf("LOD-684 (684-face) : %d\n", lod_counts[6]);
+	printf("LOD-760 (760-face) : %d\n", lod_counts[7]);
+	printf("LOD-840 (840-face) : %d\n", lod_counts[8]);
+	printf("LOD-924 (924-face) : %d\n", lod_counts[9]);
+	printf("LOD-1012 (1012-face): %d\n", lod_counts[10]);
+	printf("LOD-1104 (1104-face): %d\n", lod_counts[11]);
+	printf("LOD-1280 (1280-face): %d\n", lod_counts[12]);
+	printf("-------------------------------\n\n");
+	int cnt_lod = 0;
+	for (int i = 0; i < 13; i++) cnt_lod += lod_counts[i];
+	printf("total: %d / %d", cnt_octa + cnt_ico + cnt_lod, num_gaussians);
 	printf("\n");
 	printf("vtx_cnt_theory: %d\n", num_total_vertices);
 	printf("vtx_cnt_final: %d\n", num_final_vertices);
 	uip.poly_model.extended_vertices = (ExtendedVertex*)realloc(uip.poly_model.extended_vertices, num_final_vertices * sizeof(ExtendedVertex));
 
-	uip.poly_model.n_triangles = num_final_vertices;
 	uip.composite_object_read = 1;
 	//printf("\nSuccessfully created CompositeObject with %d triangles from %ld Gaussians.\n\n", uip.poly_model.n_triangles, num_gaussians);
 	printf("\nSuccessfully created CompositeObject with %d triangles from %ld Gaussians.\n\n", uip.poly_model.n_triangles, num_gaussians - (cnt_sigma));
@@ -1777,6 +2136,52 @@ bool save_composite_object_to_obj(const std::vector<Gaussian>& gaussians, const 
 
 	return true;
 }
+
+
+bool save_composite_object_to_obj_without_mtl(const std::vector<Gaussian>& gaussians, const CompositeObject& object, const char* filename) {
+	// 파일 스트림 열기
+	std::ofstream outFile(filename);
+	if (!outFile.is_open()) {
+		fprintf(stderr, "Error: Cannot open file for writing: %s\n", filename);
+		return false;
+	}
+
+	// 파일 헤더 주석 작성
+	outFile << "# OBJ file generated from a CompositeObject structure\n";
+	outFile << "# Total Triangles: " << object.n_triangles << "\n";
+	const int total_vertices = object.n_triangles * 3;
+	outFile << "# Total Vertices in Array: " << total_vertices << "\n\n";
+
+	// 정점(vertex) 및 법선(vertex normal) 데이터 작성
+	for (int i = 0; i < total_vertices; ++i) {
+		const ExtendedVertex& v = object.extended_vertices[i];
+
+		// 정점 좌표 (v x y z)
+		outFile << "v " << v.vertex[0] << " " << v.vertex[1] << " " << v.vertex[2] << "\n";
+
+	}
+
+	outFile << "\n"; // 데이터 섹션 구분을 위한 공백 라인
+
+	// 면(face) 데이터 작성
+	// OBJ 파일의 인덱스는 1부터 시작하므로, C++ 배열 인덱스에 1을 더해줘야 
+	for (int i = 0; i < object.n_triangles; ++i) {
+
+		// 현재 삼각형을 구성하는 세 정점의 시작 인덱스
+		const int v1_idx = 3 * i + 1;
+		const int v2_idx = 3 * i + 2;
+		const int v3_idx = 3 * i + 3;
+
+		// 각 정점과 법선이 1:1로 매칭되므로, 정점 인덱스와 법선 인덱스는 동일
+		outFile << "f " << v1_idx << " " << v2_idx << " " << v3_idx << "\n";
+	}
+
+	// 파일 닫기 및 완료 메시지
+	outFile.close();
+	printf("Successfully saved CompositeObject to %s\n", filename);
+
+	return true;
+}
 //shyun added end
 
 SL_KDT_CONFIG_command_ID query_SL_KDT_CONFIG_command_ID(const char *command) {
@@ -2013,6 +2418,48 @@ int read_SL_KDT_CONFIG_file(void) {
 	return 1;
 }
 
+void setCameraLookAt(float eyeX, float eyeY, float eyeZ,
+	float centerX, float centerY, float centerZ,
+	float upX, float upY, float upZ)
+{
+	// 1. 위치 설정
+	camera.pos[0] = eyeX;
+	camera.pos[1] = eyeY;
+	camera.pos[2] = eyeZ;
+
+	// 2. 축 계산 (Gram-Schmidt 과정과 유사)
+	// naxis (Z축): 바라보는 방향의 반대 (Eye - Center)
+	float n[3] = { -centerX, -centerY, -centerZ };
+	fMyVecNormalize(n);
+
+	// uaxis (X축): Up 벡터와 n의 외적 (Right Vector)
+	float up[3] = { upX, upY, upZ };
+	float u[3];
+	fMyVecCrossProduct(up, n, u);
+	fMyVecNormalize(u);
+
+	// vaxis (Y축): n과 u의 외적 (Real Up Vector)
+	float v[3];
+	fMyVecCrossProduct(n, u, v);
+	// v는 이미 정규화된 두 벡터의 외적이므로 정규화 불필요하지만 안전을 위해 수행 가능
+
+	// 3. 카메라 구조체에 적용
+	memcpy(camera.naxis, n, sizeof(float) * 3);
+	memcpy(camera.uaxis, u, sizeof(float) * 3);
+	memcpy(camera.vaxis, v, sizeof(float) * 3);
+
+	// 4. 뷰 행렬 업데이트 (OpenGLStuffs.h의 함수 혹은 직접 계산)
+	// 보통 set_rotate_mat(&camera) 같은 함수가 있다면 호출, 
+	// 없으면 아래처럼 직접 회전 행렬 구성 (User Code의 mousemove 로직 참조)
+	camera.mat[0] = u[0]; camera.mat[4] = u[1]; camera.mat[8] = u[2]; camera.mat[12] = 0.0f;
+	camera.mat[1] = v[0]; camera.mat[5] = v[1]; camera.mat[9] = v[2]; camera.mat[13] = 0.0f;
+	camera.mat[2] = n[0]; camera.mat[6] = n[1]; camera.mat[10] = n[2]; camera.mat[14] = 0.0f;
+	camera.mat[3] = 0.0f; camera.mat[7] = 0.0f; camera.mat[11] = 0.0f; camera.mat[15] = 1.0f;
+
+	// 5. CUDA 렌더링 갱신 플래그 설정
+	g_camera_dirty = true;
+}
+
 void subMenuHandler(int value) {
 	render_gaussian = true;
 	g_gaussians.clear();
@@ -2159,6 +2606,11 @@ void subMenuHandler(int value) {
 		base_obj_str = "../../Data/ply/bicycle/bicycle_new.obj";
 		base_build_str = "../../Data/ply/bicycle/bicycle_kdt.txt";
 		ply_to_obj_mtl = "bicycle_3dgrt.mtl";
+		setCameraLookAt(-2.023807, -0.754826, -0.456976,
+			0.771919, 0.577881, 0.264942,
+			0.462657, -0.796489, 0.389299);
+		camera.fovy = 39.10f;
+		adaptive_mesh = ADAPTIVE_MESH;
 		break;
 	case 107: printf("kitchen selected\n");
 		ply_file_path = "../../Data/ply/kitchen/kitchen_3dgrt.ply";
@@ -2167,6 +2619,7 @@ void subMenuHandler(int value) {
 		base_obj_str = "../../Data/ply/kitchen/kitchen_new.obj";
 		base_build_str = "../../Data/ply/kitchen/kitchen_kdt.txt";
 		ply_to_obj_mtl = "kitchen_3dgrt.mtl";
+		adaptive_mesh = ADAPTIVE_MESH;
 		break;
 	case 108: printf("garden selected\n");
 		//ply_file_path = "../../Data/ply/garden/garden_3dgrt.ply";
@@ -2176,6 +2629,7 @@ void subMenuHandler(int value) {
 		base_obj_str = "../../Data/ply/garden/garden_new.obj";
 		base_build_str = "../../Data/ply/garden/garden_kdt.txt";
 		ply_to_obj_mtl = "gardem_3dgrt.mtl";
+		adaptive_mesh = ADAPTIVE_MESH;
 		break;
 	case 109: printf("counter selected\n");
 		ply_file_path = "../../Data/ply/counter/counter_3dgrt.ply";
@@ -2184,6 +2638,7 @@ void subMenuHandler(int value) {
 		base_obj_str = "../../Data/ply/counter/counter_new.obj";
 		base_build_str = "../../Data/ply/counter/counter_kdt.txt";
 		ply_to_obj_mtl = "counter_3dgrt.mtl";
+		adaptive_mesh = ADAPTIVE_MESH;
 		break;
 	case 110: printf("room selected\n");
 		ply_file_path = "../../Data/ply/room/room_3dgrt.ply";
@@ -2192,6 +2647,7 @@ void subMenuHandler(int value) {
 		base_obj_str = "../../Data/ply/room/room_new.obj";
 		base_build_str = "../../Data/ply/room/room_kdt.txt";
 		ply_to_obj_mtl = "room_3dgrt.mtl";
+		adaptive_mesh = ADAPTIVE_MESH;
 		break;
 	case 111: printf("truck selected\n");
 		ply_file_path = "../../Data/ply/truck/truck_3dgrt.ply";
@@ -2200,6 +2656,7 @@ void subMenuHandler(int value) {
 		base_obj_str = "../../Data/ply/truck/truck_new.obj";
 		base_build_str = "../../Data/ply/truck/truck_kdt.txt";
 		ply_to_obj_mtl = "truck_3dgrt.mtl";
+		adaptive_mesh = ADAPTIVE_MESH;
 		break;
 	case 112: printf("stump selected\n");
 		ply_file_path = "../../Data/ply/stump/stump_3dgrt.ply";
@@ -2208,6 +2665,7 @@ void subMenuHandler(int value) {
 		base_obj_str = "../../Data/ply/stump/stump_new.obj";
 		base_build_str = "../../Data/ply/stump/stump_kdt.txt";
 		ply_to_obj_mtl = "stump_3dgrt.mtl";
+		adaptive_mesh = ADAPTIVE_MESH;
 		break;
 	}
 
@@ -2355,12 +2813,14 @@ void main_menu_action(int selection) {
 				ply_igeom_path         // 저장할 geometry
 			);
 
-			save_composite_object_to_obj(g_gaussians, uip.poly_model, ply_to_obj);
+			//adaptive sampling 프로젝트에서 .bin을 읽도록 수정하여 불필요해짐.
+			//save_composite_object_to_obj(g_gaussians, uip.poly_model, ply_to_obj);
 		}
 		else {
 			dump_kd_tree_for_composite_object(&uip.poly_model, full_kd_tree_file_name,
 				uip.kd_tree_dump_format, full_i_geometry_file_name);
 		}
+		fprintf(stdout, "Done!\n");
 		break;
 	case 500: // load kd-tree
 		strcpy(full_kd_tree_file_name, uip.kd_tree_dump_dir);
@@ -2408,7 +2868,8 @@ void main_menu_action(int selection) {
 	case 700:
 		fprintf(stdout, "dump .obj file\n");
 		if (uip.composite_object_read) {
-			save_composite_object_to_obj(g_gaussians, uip.poly_model, ply_to_obj);
+			//save_composite_object_to_obj(g_gaussians, uip.poly_model, ply_to_obj);
+			save_composite_object_to_obj_without_mtl(g_gaussians, uip.poly_model, ply_to_obj);
 			fprintf(stdout, "Done!\n");
 		}
 		else {
@@ -2442,7 +2903,8 @@ void main_menu_action(int selection) {
 
 void register_callbacks_and_create_menu(void) {
 	glutDisplayFunc(display); 
-	glutKeyboardFunc(keyboard); 
+	glutKeyboardFunc(keyboard);
+	glutKeyboardUpFunc(keyboardUp);
 	glutReshapeFunc(reshape);
 	glutMouseFunc(mousepress); 
 	glutMotionFunc(mousemove);
@@ -2558,6 +3020,54 @@ void show_greetings(void) {
 }
 
 void idle() {
+	bool camera_moved = false;
+	if (is_w_pressed) { // 전진 (카메라 앞 방향)
+		camera.pos[0] -= camera.naxis[0] * CAMERA_MOVE_SPEED;
+		camera.pos[1] -= camera.naxis[1] * CAMERA_MOVE_SPEED;
+		camera.pos[2] -= camera.naxis[2] * CAMERA_MOVE_SPEED;
+		camera_moved = true;
+	}
+	if (is_s_pressed) { // 후진 (카메라 뒤 방향)
+		camera.pos[0] += camera.naxis[0] * CAMERA_MOVE_SPEED;
+		camera.pos[1] += camera.naxis[1] * CAMERA_MOVE_SPEED;
+		camera.pos[2] += camera.naxis[2] * CAMERA_MOVE_SPEED;
+		camera_moved = true;
+	}
+	if (is_a_pressed) { // 왼쪽 (카메라 왼쪽 방향)
+		camera.pos[0] -= camera.uaxis[0] * CAMERA_MOVE_SPEED;
+		camera.pos[1] -= camera.uaxis[1] * CAMERA_MOVE_SPEED;
+		camera.pos[2] -= camera.uaxis[2] * CAMERA_MOVE_SPEED;
+		camera_moved = true;
+	}
+	if (is_d_pressed) { // 오른쪽 (카메라 오른쪽 방향)
+		camera.pos[0] += camera.uaxis[0] * CAMERA_MOVE_SPEED;
+		camera.pos[1] += camera.uaxis[1] * CAMERA_MOVE_SPEED;
+		camera.pos[2] += camera.uaxis[2] * CAMERA_MOVE_SPEED;
+		camera_moved = true;
+	}
+	if (is_q_pressed) {
+		camera.pos[0] += camera.vaxis[0] * CAMERA_MOVE_SPEED;
+		camera.pos[1] += camera.vaxis[1] * CAMERA_MOVE_SPEED;
+		camera.pos[2] += camera.vaxis[2] * CAMERA_MOVE_SPEED;
+		camera_moved = true;
+	}
+	if (is_e_pressed) {
+		camera.pos[0] -= camera.vaxis[0] * CAMERA_MOVE_SPEED;
+		camera.pos[1] -= camera.vaxis[1] * CAMERA_MOVE_SPEED;
+		camera.pos[2] -= camera.vaxis[2] * CAMERA_MOVE_SPEED;
+		camera_moved = true;
+	}
+
+	if (camera_moved) {
+		g_camera_dirty = true; // CUDA 렌더링을 위해 플래그 설정
+
+		// OpenGL 뷰 매트릭스도 업데이트 (mousemove와 동일하게)
+		glMatrixMode(GL_MODELVIEW);
+		glLoadIdentity();
+		glMultMatrixf(camera.mat);
+		glTranslatef(-camera.pos[X], -camera.pos[Y], -camera.pos[Z]);
+	}
+
 	// 인터랙티브 모드가 켜져 있고, 카메라가 변경되었을 때만 다시 렌더링
 	if (g_cuda_interactive_mode && g_camera_dirty) {
 		g_camera_dirty = false; // 플래그 리셋
@@ -2646,6 +3156,10 @@ void idle() {
 
 		g_cuda_rendering_done = true;
 		glutPostRedisplay(); // 화면 갱신 요청
+	}
+	else if (camera_moved && !g_cuda_interactive_mode) {
+		// CUDA 모드가 아닐 때 카메라가 움직였으면, OpenGL 뷰도 다시 그리도록 요청
+		glutPostRedisplay();
 	}
 }
 

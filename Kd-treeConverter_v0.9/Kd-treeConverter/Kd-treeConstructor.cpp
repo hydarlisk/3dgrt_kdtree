@@ -38,8 +38,10 @@ TriangleList *g_pTriangleInfos = NULL;
 unsigned int  g_iTriangleSize;
 
 unsigned int  g_iKdTree_Level;
-unsigned int  g_iKdTree_TriOffset_Count;
-unsigned int  g_iKdTree_TriOffset_CountAlloc;
+//unsigned int  g_iKdTree_TriOffset_Count;
+//unsigned int  g_iKdTree_TriOffset_CountAlloc;
+unsigned long long  g_iKdTree_TriOffset_Count;
+unsigned long long  g_iKdTree_TriOffset_CountAlloc;
 unsigned int *g_pKdTree_TriOffset_Array = NULL;
 unsigned int  g_iKdTree_Node_Count;
 unsigned int  g_iKdTree_Node_CountAlloc;
@@ -49,12 +51,17 @@ unsigned int  g_iKdTree_LeafNode_Count;
 unsigned int  g_iKdTree_MaxTriInLeafNode_Count;
 
 extern std::vector<Gaussian> g_gaussians;
-
-void _reAllocTriangleOffsetList(unsigned int _newAllocSize, unsigned int &_oldAllocSize, unsigned int** _ppTriOffsetArray)
+#include <iostream>
+void _reAllocTriangleOffsetList(unsigned long long _newAllocSize, unsigned long long& _oldAllocSize, unsigned int** _ppTriOffsetArray)
 {
-	unsigned int *tmpList = new unsigned int [ _newAllocSize ];
-	memcpy( tmpList, *_ppTriOffsetArray, sizeof( unsigned int ) * _oldAllocSize );
-	delete[] *_ppTriOffsetArray; 
+	//for debug
+	double requested_MB = (double)_newAllocSize * sizeof(unsigned int) / (1024.0 * 1024.0);
+	std::cerr << "    Attempted re-alloc. Current Count: " << _oldAllocSize
+		<< ", New Count: " << _newAllocSize << " (" << requested_MB << " MB)" << std::endl;
+
+	unsigned int* tmpList = new unsigned int[_newAllocSize];
+	memcpy(tmpList, *_ppTriOffsetArray, sizeof(unsigned int) * _oldAllocSize);
+	delete[] * _ppTriOffsetArray;
 	*_ppTriOffsetArray = tmpList;
 	_oldAllocSize = _newAllocSize;
 }
@@ -1143,8 +1150,7 @@ void uninitialize_kd_tree(void) {
 }
 
 #define DEBUG_FLAG 0
-#define USE_STD_VECTOR 0
-long long lv = 0;
+#define USE_STD_VECTOR 1
 
 void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pTriangleInfos, unsigned int triangleSize,
 	BoundingBox& bbox, unsigned int inNodeLevel, KdTreeNode* inNode)
@@ -1241,9 +1247,6 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pTriangleInfo
 	if (max_area_in_node > KD_TREE_EPSILON) {
 		bestCost.cost /= max_area_in_node;
 	}
-	else if(DEBUG_FLAG) {
-		printf("lv %d: tiny max area %f\n", inNodeLevel, max_area_in_node);
-	}
 #endif
 
 #if SAH_OPACITY == 20 | SAH_OPACITY == 201 | SAH_OPACITY == 2010 | SAH_OPACITY == 2000
@@ -1256,7 +1259,39 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pTriangleInfo
 #endif
 
 #if FORCE_SPLIT_THRESHOLD
-	if (triangleSize > FORCE_SPLIT_THRESHOLD) bestCost.cost = DBL_MAX; //shyun added
+//#define MAX_TRIANGLE_OFFSET_BUDGET 18446744073709551615
+//#define MAX_TRIANGLE_OFFSET_BUDGET 9223372036854775807
+//#define MAX_TRIANGLE_OFFSET_BUDGET 17179869184
+//#define MAX_TRIANGLE_OFFSET_BUDGET 8589934592
+#define MAX_TRIANGLE_OFFSET_BUDGET2 4294967295
+//#define MAX_TRIANGLE_OFFSET_BUDGET 2147483647
+//#define MAX_TRIANGLE_OFFSET_BUDGET 1073741824
+	//if (triangleSize > FORCE_SPLIT_THRESHOLD) bestCost.cost = DBL_MAX; //shyun added
+	if (triangleSize > FORCE_SPLIT_THRESHOLD) {
+#if MAX_TRIANGLE_OFFSET_BUDGET
+		// 강제 분할 전, 메모리 예산을 초과했는지 확인.
+#if SOFT_SPLIT_THRESHOLD
+		if ((triangleSize < SOFT_SPLIT_THRESHOLD &&
+			g_iKdTree_TriOffset_Count > MAX_TRIANGLE_OFFSET_BUDGET) ||
+			(triangleSize < SOFT_SPLIT_THRESHOLD2 &&
+				g_iKdTree_TriOffset_Count > MAX_TRIANGLE_OFFSET_BUDGET2)) {
+#else
+		if (g_iKdTree_TriOffset_Count > MAX_TRIANGLE_OFFSET_BUDGET) {
+#endif
+
+			// 예산 초과 시: 강제 분할(DBL_MAX)을 하지 않고, 
+			// SAH 비용(bestCost.cost)을 그대로 둬서 리프 노드가 되도록 함.
+			fprintf(stdout, "WARNING: Memory budget exceeded (%u refs). Forcing leaf node at level %u with %u tris.\n",
+				g_iKdTree_TriOffset_Count, inNodeLevel, triangleSize);
+		}
+		else {
+			// 예산 미초과 시: 원래대로 강제 분할 실행
+			bestCost.cost = DBL_MAX; //shyun added
+		}
+#else
+		bestCost.cost = DBL_MAX; //shyun added
+#endif
+	}
 #endif
 
 #if SAH_MAXIMIZE
@@ -1306,11 +1341,6 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pTriangleInfo
 	// Leaf node 생성
 	// ----------------------------------------------------------------------------
 	if (!bestCost.is_valid()) {
-		++lv;
-		//if(lv%10000 == 0)
-		//if(triangleSize > FORCE_SPLIT_THRESHOLD)
-			//printf("leaf lev: %3d || leaf count: %10llu || tri count: %u\n", g_iKdTree_Level, lv, triangleSize);
-		//fprintf(stdout, "-> Leaf Node generated with %u triangles.\n", triangleSize);
 
 		unsigned int iTriOffset;
 

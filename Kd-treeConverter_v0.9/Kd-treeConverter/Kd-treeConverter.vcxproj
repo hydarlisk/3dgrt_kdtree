@@ -118,13 +118,13 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>$(CUDA_PATH)\include(CUDA_INC_PATH)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(CUDA_PATH_V13_0)\include(CUDA_INC_PATH)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalDependencies>freeglut.lib;glew32.lib;cudart_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
-      <AdditionalLibraryDirectories>$(CUDA_PATH)\lib\$(Platform)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(CUDA_PATH_v13_0)\lib\$(Platform)</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
       <StackReserveSize>134217728</StackReserveSize>
@@ -133,6 +133,7 @@
     <CudaCompile />
     <CudaCompile>
       <CodeGeneration>compute_89,sm_89</CodeGeneration>
+      <GPUDebugInfo>false</GPUDebugInfo>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -179,7 +180,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <AdditionalLibraryDirectories>$(CUDA_PATH_v13_0)\lib\$(Platform)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>freeglut.lib;glew32.lib;cudart_static.lib;;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>freeglut.lib;glew32.lib;cudart_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalOptions>/fixed:no
 /LARGEADDRESSAWARE %(AdditionalOptions)</AdditionalOptions>
       <IgnoreSpecificDefaultLibraries>
