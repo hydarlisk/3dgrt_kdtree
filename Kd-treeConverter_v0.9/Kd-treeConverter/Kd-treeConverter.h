@@ -20,6 +20,7 @@
 
 #define BLEND_SELECT false
 #define ADAPTIVE_MESH true
+#define LESS_TRI true
 
 #define USE_KERNEL_SCALE false					// 기존의 OptiX 방식 kernelScale 사용
 

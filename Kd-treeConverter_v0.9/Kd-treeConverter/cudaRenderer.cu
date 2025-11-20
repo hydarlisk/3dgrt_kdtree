@@ -40,6 +40,11 @@ inline void gpuAssert(cudaError_t code, const char* file, int line) {
 #define EPSILON8 1e-8f
 #define EPSILON9 1e-9f
 
+using float33 = float3[3]; // row major matrix
+static __device__ inline float3 operator*(const float3& p, const float33& m) {
+    return make_float3(dot(m[0], p), dot(m[1], p), dot(m[2], p));
+}
+
 // --- Device-side Data Structures ---
 struct cuRay {
     float3 pos;
@@ -728,7 +733,58 @@ __device__ __forceinline__ float evaluateGaussianResponse_3dgrt(const cuRay& ray
     const float density = particleResponse<GAUSSIAN_DEGREE>(grayDist);
 
     // 기본 불투명도와 밀도를 곱하여 최종 결과 반환
-    return g.opacity * density;
+    return fminf(0.99f, g.opacity * density);
+}
+
+__device__ __forceinline__ void quaternionWXYZToMatrix(const float4& q, float33& ret) {
+    const float r = q.x;
+    const float x = q.y;
+    const float y = q.z;
+    const float z = q.w;
+
+    const float xx = x * x;
+    const float yy = y * y;
+    const float zz = z * z;
+    const float xy = x * y;
+    const float xz = x * z;
+    const float yz = y * z;
+    const float rx = r * x;
+    const float ry = r * y;
+    const float rz = r * z;
+
+    // Compute rotation matrix from quaternion
+    ret[0] = make_float3((1.f - 2.f * (yy + zz)), 2.f * (xy + rz), 2.f * (xz - ry));
+    ret[1] = make_float3(2.f * (xy - rz), (1.f - 2.f * (xx + zz)), 2.f * (yz + rx));
+    ret[2] = make_float3(2.f * (xz + ry), 2.f * (yz - rx), (1.f - 2.f * (xx + yy)));
+}
+
+__device__ __forceinline__ float evaluateGaussianResponse_origin(const cuRay& ray, const Gaussian& g)
+{
+    // 가우시안 파라미터 준비
+    const float3 particlePosition = make_float3(g.pos[0], g.pos[1], g.pos[2]);
+    const float3 particleScale = make_float3(g.scale[0], g.scale[1], g.scale[2]);
+    //float4 particleQquaternion = make_float4(g.rot[1], g.rot[2], g.rot[3], g.rot[0]);
+    float4 particleQquaternion = make_float4(g.rot[0], g.rot[1], g.rot[2], g.rot[3]);
+    float33 particleRotation;
+    quaternionWXYZToMatrix(particleQquaternion, particleRotation);
+    // 광선을 가우시안의 로컬 좌표계로 변환 (회전 및 스케일링)
+    const float3 giscl = make_float3(1 / particleScale.x, 1 / particleScale.y, 1 / particleScale.z);
+    const float3 gposc = (ray.pos - particlePosition);
+    const float3 gposcr = (gposc * particleRotation);
+    const float3 gro = giscl * gposcr;
+    const float3 rayDirR = ray.dir * particleRotation;
+    const float3 grdu = giscl * rayDirR;
+    const float3 grd = normalize(grdu);
+
+    // cross product를 이용해 grayDist(제곱된 마할라노비스 거리) 계산
+    const float3 gcrod = cross(grd, gro);
+    const float grayDist = dot(gcrod, gcrod);
+
+    // particleResponse 함수를 통해 밀도 계산
+    const float gres = particleResponse<GAUSSIAN_DEGREE>(grayDist);
+
+    // 기본 불투명도와 밀도를 곱하여 최종 결과 반환
+    return fminf(0.99f, g.opacity * gres);
 }
 
 __device__ __forceinline__ float3 eval_sh_final_ptr(
@@ -1135,37 +1191,53 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
 #else
                     Gaussian g = g_d_gaussians[gaussianID];
 #endif
-                    /*
-                    float sample_opacity = evaluateGaussianResponse_3dgrt(currRay, g);
-                    //float sample_opacity = evaluateGaussianResponse(currRay, g);
+                    // 가우시안 파라미터 준비
+                    const float3 particlePosition = make_float3(g.pos[0], g.pos[1], g.pos[2]);
+                    const float3 particleScale = make_float3(g.scale[0], g.scale[1], g.scale[2]);
+                    //float4 particleQquaternion = make_float4(g.rot[1], g.rot[2], g.rot[3], g.rot[0]);
+                    float4 particleQquaternion = make_float4(g.rot[0], g.rot[1], g.rot[2], g.rot[3]);
+                    float33 particleRotation;
+                    quaternionWXYZToMatrix(particleQquaternion, particleRotation);
+                    // 광선을 가우시안의 로컬 좌표계로 변환 (회전 및 스케일링)
+                    const float3 giscl = make_float3(1 / particleScale.x, 1 / particleScale.y, 1 / particleScale.z);
+                    const float3 gposc = (currRay.pos - particlePosition);
+                    const float3 gposcr = (gposc * particleRotation);
+                    const float3 gro = giscl * gposcr;
+                    const float3 rayDirR = currRay.dir * particleRotation;
+                    const float3 grdu = giscl * rayDirR;
+                    const float3 grd = normalize(grdu);
 
-                    float3 view_dir = normalize(make_float3(g.pos[0], g.pos[1], g.pos[2]) - currRay.pos);
-                    //float3 sample_color = eval_sh_final(SPH_EVAL_DEGREE, view_dir, g);
-                    float3 sample_color = eval_sh_final2(SPH_EVAL_DEGREE, view_dir, g);
+                    // cross product를 이용해 grayDist(제곱된 마할라노비스 거리) 계산
+                    const float3 gcrod = cross(grd, gro);
+                    const float grayDist = dot(gcrod, gcrod);
+
+                    // particleResponse 함수를 통해 밀도 계산
+                    const float gres = particleResponse<GAUSSIAN_DEGREE>(grayDist);
+
+                    // 기본 불투명도와 밀도를 곱하여 최종 결과 반환
+                    float sample_opacity = fminf(0.99f, g.opacity * gres);
+                    //*
+                    //float sample_opacity = evaluateGaussianResponse_origin(currRay, g);
+                    //float sample_opacity = evaluateGaussianResponse_3dgrt(currRay, g);
+                    //float sample_opacity = evaluateGaussianResponse(currRay, g);
+                    if (sample_opacity < 1.0f / 255.0f) continue;
+                    //float3 view_dir = normalize(make_float3(g.pos[0], g.pos[1], g.pos[2]) - currRay.pos);
+                    float3 sample_color = eval_sh_final(SPH_EVAL_DEGREE, currRay.dir, g);
+                    //float3 sample_color = eval_sh_final2(SPH_EVAL_DEGREE, view_dir, g);
 
                     accumulated_color += sample_color * sample_opacity * (1.0f - accumulated_opacity);
                     accumulated_opacity += sample_opacity * (1.0f - accumulated_opacity);
                     /*/
-                    float density = evaluateGaussianResponse_3dgrt(currRay, g);
+                    float sample_opacity = evaluateGaussianResponse_3dgrt(currRay, g);
+                    sample_opacity = fminf(0.99f, sample_opacity);
 
-                    // 2. Beer-Lambert 법칙을 사용해 밀도를 알파(alpha)로 변환합니다.
-                    const float alpha = 1.0f - expf(-density);
+                    //float3 view_dir = normalize(make_float3(g.pos[0], g.pos[1], g.pos[2]) - currRay.pos);
+                    float3 sample_color = eval_sh_final(SPH_EVAL_DEGREE, currRay.dir, g);
+                    //float3 sample_color = eval_sh_final2(SPH_EVAL_DEGREE, view_dir, g);
 
-                    if (alpha < ALPHA_MIN) { // OptixHeader.h의 ALPHA_MIN (0.0113f) 사용 가능
-                        continue;
-                    }
-
-                    float3 view_dir = normalize(make_float3(g.pos[0], g.pos[1], g.pos[2]) - currRay.pos);
-
-                    // (중요) 2단계에서 수정할 SH 평가 함수 호출
-                    float3 sample_color = eval_sh_final(SPH_EVAL_DEGREE, view_dir, g);
-
-                    // 3. 체적 렌더링 공식 적용 (Transmittance = 1.0 - accumulated_opacity)
                     float transmittance = 1.0f - accumulated_opacity;
-                    accumulated_color += sample_color * transmittance * alpha;
-
-                    // 4. 불투명도 누적 (수학적으로 OptiX의 transmittance *= (1.0 - alpha)와 동일)
-                    accumulated_opacity += transmittance * alpha;
+                    accumulated_color += sample_color * sample_opacity * accumulated_opacity;
+                    accumulated_opacity += sample_opacity * (1.0f - accumulated_opacity);
                     //*/
                     // 블렌딩 중에도 조기 종료 조건을 계속 확인
                     if (accumulated_opacity > OPACITY_THRESHOLD) {
@@ -1939,13 +2011,6 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
     , cu_traceState* d_global_stack
 #endif
 ) {
-
-#if LEAF_NODE_DEBUG
-    float3 h_bbox_min = make_float3(object.AABB[XMIN], object.AABB[YMIN], object.AABB[ZMIN]);
-    float3 h_bbox_max = make_float3(object.AABB[XMAX], object.AABB[YMAX], object.AABB[ZMAX]);
-    CUDA_CHECK(cudaMemcpyToSymbol(g_SceneBBoxMin, &h_bbox_min, sizeof(float3)));
-    CUDA_CHECK(cudaMemcpyToSymbol(g_SceneBBoxMax, &h_bbox_max, sizeof(float3)));
-#endif
 
     SceneInfo h_scene_info = { width, height };
     //CUDA_CHECK(cudaMemcpyToSymbol(g_SceneInfo, &h_scene_info, sizeof(SceneInfo), 0, cudaMemcpyHostToDevice));

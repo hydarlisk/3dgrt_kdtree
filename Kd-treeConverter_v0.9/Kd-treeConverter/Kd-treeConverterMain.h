@@ -78,6 +78,10 @@ const float T_924 = 11.00f; // ~ Bin 58
 const float T_1012 = 13.00f; // ~ Bin 69
 const float T_1104 = 15.00f; // ~ Bin 80
 // 15.0 이상은 1280면체 (Bin 81 ~ 99)
+#elif LESS_TRI
+const float T_8 = 1.5f;  // (Bin 0) 8면체
+const float T_20 = 1.00f;  // (Bin 1) 20면체
+const float T_80 = 2.00f;  // (Bin 2) 80면체
 #else
 const float T_8 = 0.12f;  // (Bin 0) 8면체
 const float T_20 = 0.24f;  // (Bin 1) 20면체

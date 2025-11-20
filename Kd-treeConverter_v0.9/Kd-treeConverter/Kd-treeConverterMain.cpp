@@ -61,8 +61,8 @@ bool is_s_pressed = false;
 bool is_d_pressed = false;
 bool is_q_pressed = false;
 bool is_e_pressed = false;
-const float CAMERA_MOVE_SPEED = 0.5f; // 이동 속도 (조정 가능)
-const float CAMERA_ROT_SPEED = 0.2f;  // 마우스 회전 감도
+const float CAMERA_MOVE_SPEED = 0.1f; // 이동 속도 (조정 가능)
+const float CAMERA_ROT_SPEED = 0.1f;  // 마우스 회전 감도
 
 bool render_gaussian = false;
 int g_render_width = MAIN_WINDOW_WIDTH;
