@@ -45,8 +45,9 @@ char* ply_to_obj_mtl;
 char* kdtree_build_path;
 //int submenu[5] = { 101,1012,102,104,105 };
 #if FORCE_SPLIT_THRESHOLD == 64
-#define P_MODEL_COUNT 5
-int submenu[P_MODEL_COUNT] = { 101,102,103,104,105 };
+#define P_MODEL_COUNT 4
+int submenu[P_MODEL_COUNT] = { 101,102,103,104 };
+//int submenu[P_MODEL_COUNT] = { 101,102,103,104,105 };
 #elif FORCE_SPLIT_THRESHOLD == 256
 #define P_MODEL_COUNT 7
 int submenu[P_MODEL_COUNT] = { 106,107,108,109,110,111,112 };
@@ -1175,8 +1176,8 @@ bool loadGaussiansFromPly(const char* filename, std::vector<Gaussian>& gaussians
 	return true;
 }
 
-float kernelScale_final(float density, float minResponse, float kernel_degree) {
-	const float responseModulation = (0 & (1 << 0)) ? density : 1.0f;
+float kernelScale_final(float density, float minResponse, float kernel_degree, int opt) {
+	const float responseModulation = (opt & (1 << 0)) ? density : 1.0f;
 	const float min_response = fminf(minResponse / responseModulation, 0.97f);
 
 	// kernelDegree < 0 (Bump Kernel)
@@ -1208,7 +1209,8 @@ float kernelScale_final(float density, float minResponse, float kernel_degree) {
  */
 bool load_obj_mesh(const std::string& filename,
 	std::vector<Vertex>& out_vertices,
-	std::vector<Face>& out_faces)
+	std::vector<Face>& out_faces,
+	float scale_factor = 1.0f)
 {
 	std::ifstream file(filename);
 	if (!file.is_open()) {
@@ -1229,6 +1231,11 @@ bool load_obj_mesh(const std::string& filename,
 			// 정점 (v x y z)
 			Vertex v;
 			ss >> v[0] >> v[1] >> v[2];
+
+			v[0] *= scale_factor;
+			v[1] *= scale_factor;
+			v[2] *= scale_factor;
+
 			out_vertices.push_back(v);
 		}
 		else if (prefix == "f") {
@@ -1260,19 +1267,25 @@ bool load_obj_mesh(const std::string& filename,
 
 // --- main 함수 내부 또는 별도 init 함수 ---
 void init_mesh_data() {
-	load_obj_mesh("../../Data/ico/80.obj", g_LOD_80_Vertices, g_LOD_80_Faces);
-	load_obj_mesh("../../Data/ico/162.obj", g_LOD_162_Vertices, g_LOD_162_Faces);
-	load_obj_mesh("../../Data/ico/264.obj", g_LOD_264_Vertices, g_LOD_264_Faces);
-	load_obj_mesh("../../Data/ico/320.obj", g_LOD_320_Vertices, g_LOD_320_Faces);
-	load_obj_mesh("../../Data/ico/420.obj", g_LOD_420_Vertices, g_LOD_420_Faces);
-	load_obj_mesh("../../Data/ico/544.obj", g_LOD_544_Vertices, g_LOD_544_Faces);
-	load_obj_mesh("../../Data/ico/684.obj", g_LOD_684_Vertices, g_LOD_684_Faces);
-	load_obj_mesh("../../Data/ico/760.obj", g_LOD_760_Vertices, g_LOD_760_Faces);
-	load_obj_mesh("../../Data/ico/840.obj", g_LOD_840_Vertices, g_LOD_840_Faces);
-	load_obj_mesh("../../Data/ico/924.obj", g_LOD_924_Vertices, g_LOD_924_Faces);
-	load_obj_mesh("../../Data/ico/1012.obj", g_LOD_1012_Vertices, g_LOD_1012_Faces);
-	load_obj_mesh("../../Data/ico/1104.obj", g_LOD_1104_Vertices, g_LOD_1104_Faces);
-	load_obj_mesh("../../Data/ico/1280.obj", g_LOD_1280_Vertices, g_LOD_1280_Faces);
+#if USE_KERNEL_SCALE
+	const float PRE_SCALE = 1.0f / (0.5f * icosaEdge);
+#else
+	const float PRE_SCALE = 1.9021130325903f;
+#endif
+
+	load_obj_mesh("../../Data/ico/80.obj", g_LOD_80_Vertices, g_LOD_80_Faces, PRE_SCALE);
+	load_obj_mesh("../../Data/ico/162.obj", g_LOD_162_Vertices, g_LOD_162_Faces, PRE_SCALE);
+	load_obj_mesh("../../Data/ico/264.obj", g_LOD_264_Vertices, g_LOD_264_Faces, PRE_SCALE);
+	load_obj_mesh("../../Data/ico/320.obj", g_LOD_320_Vertices, g_LOD_320_Faces, PRE_SCALE);
+	load_obj_mesh("../../Data/ico/420.obj", g_LOD_420_Vertices, g_LOD_420_Faces, PRE_SCALE);
+	load_obj_mesh("../../Data/ico/544.obj", g_LOD_544_Vertices, g_LOD_544_Faces, PRE_SCALE);
+	load_obj_mesh("../../Data/ico/684.obj", g_LOD_684_Vertices, g_LOD_684_Faces, PRE_SCALE);
+	load_obj_mesh("../../Data/ico/760.obj", g_LOD_760_Vertices, g_LOD_760_Faces, PRE_SCALE);
+	load_obj_mesh("../../Data/ico/840.obj", g_LOD_840_Vertices, g_LOD_840_Faces, PRE_SCALE);
+	load_obj_mesh("../../Data/ico/924.obj", g_LOD_924_Vertices, g_LOD_924_Faces, PRE_SCALE);
+	load_obj_mesh("../../Data/ico/1012.obj", g_LOD_1012_Vertices, g_LOD_1012_Faces, PRE_SCALE);
+	load_obj_mesh("../../Data/ico/1104.obj", g_LOD_1104_Vertices, g_LOD_1104_Faces, PRE_SCALE);
+	load_obj_mesh("../../Data/ico/1280.obj", g_LOD_1280_Vertices, g_LOD_1280_Faces, PRE_SCALE);
 
 	// (이전에 추가했던 검증 코드)
 	if (g_LOD_80_Faces.empty() || g_LOD_320_Faces.empty() || g_LOD_1280_Faces.empty() ||
@@ -1373,8 +1386,17 @@ void create_composite_object_from_gaussians(
 	// 메모리 할당
 	long num_gaussians = gaussians.size();
 	long num_total_triangles = num_gaussians * icosaHedronNumTri;
+	long num_max_triangles = num_gaussians * 320;
 	long num_total_vertices = num_total_triangles * 3;
 	num_total_triangles = 0;
+
+	uip.poly_model.n_triangles = 0; // 시작은 0
+	uip.poly_model.extended_vertices = (ExtendedVertex*)malloc(num_max_triangles * sizeof(ExtendedVertex));
+	if (uip.poly_model.extended_vertices == NULL) {
+		fprintf(stderr, "Fatal Error: Memory allocation failed for %ld vertices!\n", num_max_triangles);
+		exit(1);
+	}
+	ExtendedVertex* current_vertex_ptr = uip.poly_model.extended_vertices;
 
 	// AABB 초기화
 	uip.poly_model.AABB[XMIN] = uip.poly_model.AABB[YMIN] = uip.poly_model.AABB[ZMIN] = FLT_MAX;
@@ -1409,25 +1431,18 @@ void create_composite_object_from_gaussians(
 #if USE_KERNEL_SCALE
 		//if (sigma / alpha_min > 1.0f)
 		// kernelScale_final 함수를 호출하여 k_iso 계산
-		k_iso = kernelScale_final(sigma, alpha_min, kernel_degree);
-		//printf("%d, k_iso: %f\n", i, k_iso);
-		//k_iso = fminf(k_iso, 3.0f);
-
-		float final_scale[3] = {
-			g.scale[0] * k_iso * 0.5f * icosaEdge,
-			g.scale[1] * k_iso * 0.5f * icosaEdge,
-			g.scale[2] * k_iso * 0.5f * icosaEdge
-		};
+		if (adaptive_mesh) k_iso = kernelScale_final(sigma, alpha_min, kernel_degree, 0);
+		else k_iso = kernelScale_final(sigma, alpha_min, kernel_degree, 0) * 0.5f * icosaEdge;
 #else
 		if (sigma / alpha_min > 1.0f) {
-			k_iso = sqrtf(2.0f * logf(sigma / alpha_min));
+			k_iso = sqrtf(2.0f * logf(sigma / alpha_min)) * unitspherefactor;
 		}
-		float final_scale[3] = {
-			g.scale[0] * k_iso * unitspherefactor,
-			g.scale[1] * k_iso * unitspherefactor,
-			g.scale[2] * k_iso * unitspherefactor
-		};
 #endif
+		float final_scale[3] = {
+			g.scale[0] * k_iso,
+			g.scale[1] * k_iso,
+			g.scale[2] * k_iso
+		};
 
 		float max_final_scale = fmaxf(fmaxf(final_scale[0], final_scale[1]), final_scale[2]);
 		float min_final_scale = fminf(fminf(final_scale[0], final_scale[1]), final_scale[2]);
@@ -1442,58 +1457,103 @@ void create_composite_object_from_gaussians(
 #ifdef MIN_OPACITY_FOR_20GON
 			if (sigma >= MIN_OPACITY_FOR_20GON && max_final_scale < T_20) {
 				// Opacity가 높으므로 8면체를 건너뛰고 20면체를 사용
+				generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_IcoVertices, g_IcoFaces);
 				triangles_added = g_IcoFaces.size(); cnt_ico++;
 			}
 			// [기존 로직은 else if로 묶임]
 			else
 #endif
+#if LESS_TRI
+				if (max_final_scale < T_LOW) {
+					// LOD 0: 8면체 (Octahedron)
+					generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_OctaVertices, g_OctaFaces);
+					triangles_added = g_OctaFaces.size(); // 8
+					cnt_octa++;
+				}
+				else if (max_final_scale < T_MID) {
+					// LOD 1: 20면체 (Icosahedron)
+					generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_IcoVertices, g_IcoFaces);
+					triangles_added = g_IcoFaces.size(); // 20
+					cnt_ico++;
+				}
+				else if (max_final_scale < T_HIGH) {
+					// LOD 2: 80면체 (L1 Subdivision)
+					generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_80_Vertices, g_LOD_80_Faces);
+					triangles_added = g_LOD_80_Faces.size(); // 80
+					lod_counts[0]++;
+				}
+				else {
+					// LOD 3: 320면체 (L2 Subdivision) - Max Cap
+					// 1280면체는 사용하지 않음!
+					generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_320_Vertices, g_LOD_320_Faces);
+					triangles_added = g_LOD_320_Faces.size(); // 320
+					lod_counts[3]++;
+				}
+#else
 				if (max_final_scale < T_8) {
+					generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_OctaVertices, g_OctaFaces);
 					triangles_added = g_OctaFaces.size(); cnt_octa++;
 				}
 				else if (max_final_scale < T_20) {
+					generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_IcoVertices, g_IcoFaces);
 					triangles_added = g_IcoFaces.size(); cnt_ico++;
 				}
 				else if (max_final_scale < T_80) {
+					generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_80_Vertices, g_LOD_80_Faces);
 					triangles_added = g_LOD_80_Faces.size(); lod_counts[0]++;
 				}
 				else if (max_final_scale < T_162) {
+					generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_162_Vertices, g_LOD_162_Faces);
 					triangles_added = g_LOD_162_Faces.size(); lod_counts[1]++;
 				}
 				else if (max_final_scale < T_264) {
+					generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_264_Vertices, g_LOD_264_Faces);
 					triangles_added = g_LOD_264_Faces.size(); lod_counts[2]++;
 				}
 				else if (max_final_scale < T_320) {
+					generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_320_Vertices, g_LOD_320_Faces);
 					triangles_added = g_LOD_320_Faces.size(); lod_counts[3]++;
 				}
 				else if (max_final_scale < T_420) {
+					generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_420_Vertices, g_LOD_420_Faces);
 					triangles_added = g_LOD_420_Faces.size(); lod_counts[4]++;
 				}
 				else if (max_final_scale < T_544) {
+					generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_544_Vertices, g_LOD_544_Faces);
 					triangles_added = g_LOD_544_Faces.size(); lod_counts[5]++;
 				}
 				else if (max_final_scale < T_684) {
+					generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_684_Vertices, g_LOD_684_Faces);
 					triangles_added = g_LOD_684_Faces.size(); lod_counts[6]++;
 				}
 				else if (max_final_scale < T_760) {
+					generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_760_Vertices, g_LOD_760_Faces);
 					triangles_added = g_LOD_760_Faces.size(); lod_counts[7]++;
 				}
 				else if (max_final_scale < T_840) {
+					generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_840_Vertices, g_LOD_840_Faces);
 					triangles_added = g_LOD_840_Faces.size(); lod_counts[8]++;
 				}
 				else if (max_final_scale < T_924) {
+					generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_924_Vertices, g_LOD_924_Faces);
 					triangles_added = g_LOD_924_Faces.size(); lod_counts[9]++;
 				}
 				else if (max_final_scale < T_1012) {
+					generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_1012_Vertices, g_LOD_1012_Faces);
 					triangles_added = g_LOD_1012_Faces.size(); lod_counts[10]++;
 				}
 				else if (max_final_scale < T_1104) {
+					generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_1104_Vertices, g_LOD_1104_Faces);
 					triangles_added = g_LOD_1104_Faces.size(); lod_counts[11]++;
 				}
 				else {// ( >= T_1104)
+					generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_1280_Vertices, g_LOD_1280_Faces);
 					triangles_added = g_LOD_1280_Faces.size(); lod_counts[12]++;
 				}
+#endif
 		}
 		else {
+			generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_IcoVertices, g_IcoFaces);
 			triangles_added = g_IcoFaces.size(); cnt_ico++;
 		}
 
@@ -1501,114 +1561,6 @@ void create_composite_object_from_gaussians(
 	}
 
 	long num_final_vertices = num_total_triangles * 3;
-
-	uip.poly_model.n_triangles = 0; // 시작은 0
-	uip.poly_model.extended_vertices = (ExtendedVertex*)malloc(num_final_vertices * sizeof(ExtendedVertex));
-	if (uip.poly_model.extended_vertices == NULL) {
-		fprintf(stderr, "Fatal Error: Memory allocation failed for %ld vertices!\n", num_final_vertices);
-		exit(1);
-	}
-	ExtendedVertex* current_vertex_ptr = uip.poly_model.extended_vertices;
-
-	// 모든 가우시안에 대해 20면체 생성 *************************
-	for (long i = 0; i < num_gaussians; ++i) {
-		const Gaussian& g = gaussians[i];
-
-		//sigma(density) 계산
-		const float sigma = g.opacity;
-		//const float sigma = 1.0f / (1.0f + expf(-g.opacity));
-
-		if (sigma < SIGMA_THRESHOLD) { cnt_sigma++; continue; }
-		float k_iso = 0.0f;
-
-#if USE_KERNEL_SCALE
-		//if (sigma / alpha_min > 1.0f)
-		// kernelScale_final 함수를 호출하여 k_iso 계산
-		k_iso = kernelScale_final(sigma, alpha_min, kernel_degree);
-		//printf("%d, k_iso: %f\n", i, k_iso);
-		//k_iso = fminf(k_iso, 3.0f);
-
-		float final_scale[3] = {
-			g.scale[0] * k_iso * 0.5f * icosaEdge,
-			g.scale[1] * k_iso * 0.5f * icosaEdge,
-			g.scale[2] * k_iso * 0.5f * icosaEdge
-	};
-#else
-		if (sigma / alpha_min > 1.0f) {
-			k_iso = sqrtf(2.0f * logf(sigma / alpha_min));
-		}
-		float final_scale[3] = {
-			g.scale[0] * k_iso * unitspherefactor,
-			g.scale[1] * k_iso * unitspherefactor,
-			g.scale[2] * k_iso * unitspherefactor
-		};
-#endif
-
-		float max_final_scale = fmaxf(fmaxf(final_scale[0], final_scale[1]), final_scale[2]);
-
-		k_iso_max = fmaxf(k_iso_max, k_iso);
-
-		if (adaptive_mesh) {
-#ifdef MIN_OPACITY_FOR_20GON
-			if (sigma >= MIN_OPACITY_FOR_20GON && max_final_scale < T_20) {
-				// Opacity가 높으므로 8면체를 건너뛰고 20면체를 사용
-				generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale,
-					g_IcoVertices, g_IcoFaces);
-			}
-			// [기존 로직은 else if로 묶임]
-			else
-#endif
-			if (max_final_scale < T_8) {
-				generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_OctaVertices, g_OctaFaces);
-			}
-			else if (max_final_scale < T_20) {
-				generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_IcoVertices, g_IcoFaces);
-			}
-			else if (max_final_scale < T_80) {
-				generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_80_Vertices, g_LOD_80_Faces);
-			}
-			else if (max_final_scale < T_162) {
-				generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_162_Vertices, g_LOD_162_Faces);
-			}
-			else if (max_final_scale < T_264) {
-				generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_264_Vertices, g_LOD_264_Faces);
-			}
-			else if (max_final_scale < T_320) {
-				generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_320_Vertices, g_LOD_320_Faces);
-			}
-			else if (max_final_scale < T_420) {
-				generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_420_Vertices, g_LOD_420_Faces);
-			}
-			else if (max_final_scale < T_544) {
-				generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_544_Vertices, g_LOD_544_Faces);
-			}
-			else if (max_final_scale < T_684) {
-				generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_684_Vertices, g_LOD_684_Faces);
-			}
-			else if (max_final_scale < T_760) {
-				generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_760_Vertices, g_LOD_760_Faces);
-			}
-			else if (max_final_scale < T_840) {
-				generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_840_Vertices, g_LOD_840_Faces);
-			}
-			else if (max_final_scale < T_924) {
-				generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_924_Vertices, g_LOD_924_Faces);
-			}
-			else if (max_final_scale < T_1012) {
-				generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_1012_Vertices, g_LOD_1012_Faces);
-			}
-			else if (max_final_scale < T_1104) {
-				generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_1104_Vertices, g_LOD_1104_Faces);
-			}
-			else {// ( >= T_1104)
-				generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_1280_Vertices, g_LOD_1280_Faces);
-			}
-		}
-		else {
-			generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_IcoVertices, g_IcoFaces);
-		}
-	}
-
 	uip.poly_model.n_triangles = num_total_triangles;
 
 	const int MAX_BAR_WIDTH = 50; // 막대그래프의 최대 너비
@@ -1696,8 +1648,8 @@ void create_composite_object_from_gaussians(
 	}
 	printf("---------------------------------\n\n");
 #endif
-#if ADAPTIVE_MESH && DEBUG_TRILEN_HISTOGRAM
-	printf("\n--- Final Triangle Edge Length Histogram (Adaptive Mesh) ---\n");
+#if DEBUG_TRILEN_HISTOGRAM
+	printf("\n--- Final Triangle Edge Length Histogram ---\n");
 
 	if (uip.poly_model.n_triangles > 0) {
 		std::vector<float> edge_lengths;
@@ -1761,11 +1713,13 @@ void create_composite_object_from_gaussians(
 	}
 	printf("----------------------------------------------------------\n");
 #endif
+	printf("\n");
 	printf("k_iso_max: %f\n", k_iso_max);
 	printf("delete by SIGMA cnt: %d\n", cnt_sigma);
 	printf("\n");
-	printf("\n--- Adaptive Geometry Stats ---\n");
-	printf("LOD-8   (%lu-face)   : %d\n", g_OctaFaces.size(), cnt_octa);
+	//printf("Low:%.2f, Mid:%.2f, High:%.2f\n", T_LOW, T_MID, T_HIGH);
+	printf("--- Adaptive Geometry Stats ---\n");
+	printf("LOD-8   (%zu-face)   : %d\n", g_OctaFaces.size(), cnt_octa);
 	printf("LOD-20  (20-face)  : %d\n", cnt_ico);
 	printf("LOD-80  (80-face)  : %d\n", lod_counts[0]);
 	printf("LOD-162 (162-face) : %d\n", lod_counts[1]);
@@ -2471,10 +2425,13 @@ void subMenuHandler(int value) {
 	static char final_obj_path[512];
 	static char final_build_path[512];
 
+
+
 	// Kd-treeConverter.h의 매크로를 기반으로 동적 접미사 생성
 	char suffix[256];
-	const char* sah_mode_str = SAH_MAXIMIZE ? "maximize" : "minimize";
-	const char* clip_mode_str = CLIP_AREA ? "_clip" : "";
+	//const char* sah_mode_str = SAH_MAXIMIZE ? "maximize" : "minimize";
+	const char* sah_mode_str = ADAPTIVE_MESH ? "adaptive" : "icosa";
+	const char* clip_mode_str = EXPORTED ? "_exported" : "";
 #if ROTATION
 	const char* scale_mode_str = USE_KERNEL_SCALE ? "_rot_kernelScale" : "_rot";
 #else
@@ -2566,6 +2523,40 @@ void subMenuHandler(int value) {
 		base_obj_str = "../../Data/ply/hotdog2/hotdog_3dgrt2_new.obj";
 		base_build_str = "../../Data/ply/hotdog2/hotdog2_3dgrt_kdt.txt";
 		ply_to_obj_mtl = "hotdog_3dgrt2.mtl";
+#if ADAPTIVE_MESH
+		adaptive_mesh = true;
+		// [절대 다수 구간] - Bin 0 (0.0~0.18) 커버 (약 135만 개)
+		T_8 = 0.20f;
+		T_20 = 0.40f;
+		T_80 = 0.70f;
+		T_162 = 1.10f;
+		T_264 = 1.50f;
+		T_320 = 2.00f;
+		T_420 = 2.80f;
+		T_544 = 3.80f;
+		T_684 = 5.00f;
+		T_760 = 6.50f;
+		T_840 = 8.00f;
+		T_924 = 10.00f;
+		T_1012 = 12.50f;
+		T_1104 = 15.00f;
+#if USE_KERNEL_SCALE
+		T_8    = 0.03f;
+		T_20 = 0.06f;
+		T_80 = 0.12f;
+		T_162 = 0.18f;
+		T_264 = 0.24f;
+		T_320 = 0.30f;
+		T_420 = 0.38f;
+		T_544 = 0.46f;
+		T_684 = 0.54f;
+		T_760 = 0.62f;
+		T_840 = 0.70f;
+		T_924 = 0.80f;
+		T_1012 = 0.90f;
+		T_1104 = 1.00f;
+#endif
+#endif
 		break;
 	case 102: printf("Lego selected\n");
 		ply_file_path = "../../Data/ply/lego/lego_3dgrt.ply";
@@ -2574,6 +2565,9 @@ void subMenuHandler(int value) {
 		base_obj_str = "../../Data/ply/lego/lego_3dgrt_new.obj";
 		base_build_str = "../../Data/ply/lego/lego_3dgrt_kdt.txt";
 		ply_to_obj_mtl = "lego_3dgrt.mtl";
+		setCameraLookAt(1.813285, -4.420316, 5.378814,
+			-0.237450, 0.607866, -0.757704,
+			0.181777, 0.794039, 0.580051);
 		break;
 	case 103: printf("Chair selected\n");
 		ply_file_path = "../../Data/ply/chair/chair_3dgrt.ply";
@@ -2590,27 +2584,137 @@ void subMenuHandler(int value) {
 		base_obj_str = "../../Data/ply/flowers/flowers_new.obj";
 		base_build_str = "../../Data/ply/flowers/flowers_kdt.txt";
 		ply_to_obj_mtl = "flowers_3dgrt.mtl";
+		setCameraLookAt(-6.126542, -3.913612, -0.921384,
+			0.838813, 0.526412, 0.138863,
+			0.519344, -0.850230, 0.085975);
 		break;
 	case 105: printf("Bonsai selected\n");
+#if EXPORTED
+		ply_file_path = "../../Data/ply/bonsai/bonsai_exported.ply";
+#else
 		ply_file_path = "../../Data/ply/bonsai/bonsai.ply";
+#endif
 		base_kdtree_str = "../../Data/ply/bonsai/bonsai_tree.kdt";
 		base_igeom_str = "../../Data/ply/bonsai/bonsai_igeom.bin";
 		base_obj_str = "../../Data/ply/bonsai/bonsai_new.obj";
 		base_build_str = "../../Data/ply/bonsai/bonsai_kdt.txt";
 		ply_to_obj_mtl = "bonsai_3dgrt.mtl";
+		setCameraLookAt(-0.39592796564102175, -0.24931851029396058, 2.1703200340270998,
+			0.389446496963501, 0.7509136199951172, -0.533348023891449,
+			0.007304826285690069, -0.5815656781196594, -0.8134668469429016);
+#if ADAPTIVE_MESH
+		adaptive_mesh = true;
+		// [절대 다수 구간] - Bin 0 (0.0~0.18) 커버 (약 135만 개)
+		T_8 = 0.20f;
+		T_20 = 0.40f;
+		T_80 = 0.70f;
+		T_162 = 1.10f;
+		T_264 = 1.50f;
+		T_320 = 2.00f;
+		T_420 = 2.80f;
+		T_544 = 3.80f;
+		T_684 = 5.00f;
+		T_760 = 6.50f;
+		T_840 = 8.00f;
+		T_924 = 10.00f;
+		T_1012 = 12.50f;
+		T_1104 = 15.00f;
+#if USE_KERNEL_SCALE
+		T_8 = 0.35f;
+		T_20 = 0.70f;
+		T_80 = 1.10f;
+		T_162 = 1.80f;   // ~ Bin 4
+		T_264 = 2.50f;   // ~ Bin 6
+		T_320 = 3.20f;   // ~ Bin 8
+		T_420 = 4.50f;   // ~ Bin 12
+		T_544 = 6.00f;   // ~ Bin 16
+		T_684 = 8.00f;   // ~ Bin 22
+		T_760 = 10.50f;  // ~ Bin 29
+		T_840 = 13.50f;  // ~ Bin 38
+		T_924 = 17.00f;  // ~ Bin 48
+		T_1012 = 21.00f;  // ~ Bin 60
+		T_1104 = 26.00f;  // ~ Bin 74
+#endif
+#endif
 		break;
 	case 106: printf("bicycle selected\n");
+#if EXPORTED
+		ply_file_path = "../../Data/ply/bicycle/bicycle_exported.ply";
+#else
 		ply_file_path = "../../Data/ply/bicycle/bicycle.ply";
+#endif
 		base_kdtree_str = "../../Data/ply/bicycle/bicycle_tree.kdt";
 		base_igeom_str = "../../Data/ply/bicycle/bicycle_igeom.bin";
 		base_obj_str = "../../Data/ply/bicycle/bicycle_new.obj";
 		base_build_str = "../../Data/ply/bicycle/bicycle_kdt.txt";
 		ply_to_obj_mtl = "bicycle_3dgrt.mtl";
-		setCameraLookAt(-2.023807, -0.754826, -0.456976,
-			0.771919, 0.577881, 0.264942,
-			0.462657, -0.796489, 0.389299);
+		setCameraLookAt(-1.0019439458847047, 0.060600921511650088, -0.2790181636810303,
+			0.9081043004989624, 0.20492997765541078, 0.36517176032066347,
+			0.1179303526878357, -0.9619273543357849, 0.2465543895959854);
+#if RESOLUTION != 4
 		camera.fovy = 39.10f;
-		adaptive_mesh = ADAPTIVE_MESH;
+#endif
+#if ADAPTIVE_MESH
+		adaptive_mesh = true;
+		//T_8 = 0.23f;   // Scale < 0.23 -> 8면체 (약 137만 개)
+		//T_20 = 0.48f;   // Scale < 0.48 -> 20면체 (약 2만 개)
+		//T_80 = 0.90f;
+		//T_162 = 1.50f;
+		//T_264 = 2.20f;
+		//T_320 = 3.00f;
+		//T_420 = 3.90f;   // 3.9 * 0.23 ≈ 0.9
+		//T_544 = 4.90f;   // 4.9 * 0.20 ≈ 1.0
+		//T_684 = 6.00f;   // 6.0 * 0.18 ≈ 1.1
+		//T_760 = 7.20f;   // 7.2 * 0.17 ≈ 1.2
+		//T_840 = 8.50f;   // 8.5 * 0.16 ≈ 1.3
+		//T_924 = 9.80f;   // 9.8 * 0.15 ≈ 1.4
+		//T_1012 = 11.00f;  // 11.0 * 0.14 ≈ 1.5 (한계선 도달)
+		//T_1104 = 12.50f;
+		T_8 = 0.24f;
+		T_20 = 0.48f;
+		T_80 = 0.72f;
+		T_162 = 1.20f;   // ~ Bin 4
+		T_264 = 1.70f;   // ~ Bin 6
+		T_320 = 2.30f;   // ~ Bin 9
+		T_420 = 3.10f;   // ~ Bin 13
+		T_544 = 4.00f;   // ~ Bin 17
+		T_684 = 5.20f;   // ~ Bin 22
+		T_760 = 6.50f;   // ~ Bin 28
+		T_840 = 8.50f;   // ~ Bin 37
+		T_924 = 11.00f;  // ~ Bin 48
+		T_1012 = 14.00f;  // ~ Bin 61
+		T_1104 = 17.50f;  // ~ Bin 77
+#if USE_KERNEL_SCALE
+		//T_8 = 0.20f;  // ~ Bin 0 (0.18): 대부분의 가우시안
+		//T_20 = 0.40f;  // ~ Bin 2 (0.37): 약간 큰 것들
+		//T_80 = 0.75f;  // ~ Bin 3 (0.74)
+		//T_162 = 1.15f;  // ~ Bin 5 (1.12)
+		//T_264 = 1.50f;  // ~ Bin 7 (1.49)
+		//T_320 = 2.00f;  // ~ Bin 9 (1.86)
+		//T_420 = 3.00f;  // ~ Bin 15
+		//T_544 = 4.00f;  // ~ Bin 21
+		//T_684 = 5.00f;  // ~ Bin 26
+		//T_760 = 7.00f;  // ~ Bin 36
+		//T_840 = 9.00f;  // ~ Bin 48
+		//T_924 = 11.00f; // ~ Bin 58
+		//T_1012 = 13.00f; // ~ Bin 69
+		//T_1104 = 15.00f; // ~ Bin 80
+		T_8 = 0.30f;
+		T_20 = 0.60f;
+		T_80 = 0.90f;
+		T_162 = 1.50f;   // ~ Bin 4
+		T_264 = 2.20f;   // ~ Bin 7
+		T_320 = 3.00f;   // ~ Bin 10
+		T_420 = 4.50f;   // ~ Bin 15
+		T_544 = 6.00f;   // ~ Bin 21
+		T_684 = 8.00f;   // ~ Bin 28
+		T_760 = 10.00f;  // ~ Bin 35
+		T_840 = 13.00f;  // ~ Bin 45
+		T_924 = 16.00f;  // ~ Bin 56
+		T_1012 = 20.00f;  // ~ Bin 70
+		T_1104 = 24.00f;  // ~ Bin 84
+#endif
+#endif
 		break;
 	case 107: printf("kitchen selected\n");
 		ply_file_path = "../../Data/ply/kitchen/kitchen_3dgrt.ply";
@@ -2622,14 +2726,18 @@ void subMenuHandler(int value) {
 		adaptive_mesh = ADAPTIVE_MESH;
 		break;
 	case 108: printf("garden selected\n");
-		//ply_file_path = "../../Data/ply/garden/garden_3dgrt.ply";
-		ply_file_path = "../../Data/ply/garden/garden_exported.ply";
+		ply_file_path = "../../Data/ply/garden/garden_3dgrt.ply";
+		//ply_file_path = "../../Data/ply/garden/garden_exported.ply";
 		base_kdtree_str = "../../Data/ply/garden/garden_tree.kdt";
 		base_igeom_str = "../../Data/ply/garden/garden_igeom.bin";
 		base_obj_str = "../../Data/ply/garden/garden_new.obj";
 		base_build_str = "../../Data/ply/garden/garden_kdt.txt";
 		ply_to_obj_mtl = "gardem_3dgrt.mtl";
 		adaptive_mesh = ADAPTIVE_MESH;
+		setCameraLookAt(-2.023807, -0.754826, -0.456976,
+			0.771919, 0.577881, 0.264942,
+			0.462657, -0.796489, 0.389299);
+		camera.fovy = 41.90f;
 		break;
 	case 109: printf("counter selected\n");
 		ply_file_path = "../../Data/ply/counter/counter_3dgrt.ply";
@@ -2647,6 +2755,10 @@ void subMenuHandler(int value) {
 		base_obj_str = "../../Data/ply/room/room_new.obj";
 		base_build_str = "../../Data/ply/room/room_kdt.txt";
 		ply_to_obj_mtl = "room_3dgrt.mtl";
+		setCameraLookAt(-1.792984, 1.629362, -5.232583,
+			0.285630, 0.020321, 0.958124,
+			0.005805, -0.999794, 0.019474);
+		camera.fovy = 36.2f;
 		adaptive_mesh = ADAPTIVE_MESH;
 		break;
 	case 111: printf("truck selected\n");
@@ -3116,7 +3228,8 @@ void idle() {
 				//total_real_fps += r_fps;
 			}
 			if (frame_count >= MEASURE_END_FRAME) {
-				printf("avg FPS for %d-%d frame : %f\n", MEASURE_START_FRAME, MEASURE_END_FRAME, (float)(total_fps / (MEASURE_END_FRAME - MEASURE_START_FRAME)));
+				float avg_fps_frame = (float)(total_fps / (MEASURE_END_FRAME - MEASURE_START_FRAME));
+				printf("avg FPS for %d-%d frame : %.2f(%.2f ms)\n", MEASURE_START_FRAME, MEASURE_END_FRAME, avg_fps_frame, 1000.0f / avg_fps_frame);
 				//printf("avg real FPS for %d-%d frame : %f\n", MEASURE_START_FRAME, MEASURE_END_FRAME, (float)(total_real_fps / (MEASURE_END_FRAME - MEASURE_START_FRAME)));
 				frame_count = 0;
 				total_fps = 0.0f;

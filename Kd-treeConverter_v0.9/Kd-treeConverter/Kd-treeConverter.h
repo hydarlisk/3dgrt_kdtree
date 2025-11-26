@@ -11,7 +11,7 @@
 #define TRAVL_COST 1.0
 #define ISCET_COST 5.0
 #define MAX_LEVEL 128
-#define MIN_TRI 16
+#define MIN_TRI 32
 #define EMTPY_BONUS 0.9
 
 #define FORCE_SPLIT_THRESHOLD 128				// kd-tree 강제분할
@@ -20,9 +20,11 @@
 
 #define BLEND_SELECT false
 #define ADAPTIVE_MESH true
-#define LESS_TRI true
+#define EXPORTED false
 
-#define USE_KERNEL_SCALE false					// 기존의 OptiX 방식 kernelScale 사용
+#define USE_KERNEL_SCALE true					// 기존의 OptiX 방식 kernelScale 사용
+
+//#define LESS_TRI false
 
 #define SAH_OPACITY 0
 #define CLIP_AREA false							// 부모 노드의 AABB로 삼각형 면적 clip
@@ -105,7 +107,7 @@
 #define GLOBAL_DEVICE_VAR true
 #define GAUSSIAN_TEXTURE true
 
-#define OFFSET_TEXTURE false
+#define OFFSET_TEXTURE true
 
 #define DUMMY_RUN false
 //Debug Flags=====================================================================================
@@ -126,19 +128,27 @@
 
 //#define MAIN_WINDOW_WIDTH 800
 //#define MAIN_WINDOW_HEIGHT 800
-#define RESOLUTION 0
+#define RESOLUTION 4
 #if RESOLUTION == 0		// FHD
 #define MAIN_WINDOW_WIDTH 1920
 #define MAIN_WINDOW_HEIGHT 1080
+#define FOV_Y 19.6f
 #elif RESOLUTION == 1	// QHD
 #define MAIN_WINDOW_WIDTH 2560
 #define MAIN_WINDOW_HEIGHT 1440
+#define FOV_Y 19.6f
 #elif RESOLUTION == 2	// 4K
 #define MAIN_WINDOW_WIDTH 3840
 #define MAIN_WINDOW_HEIGHT 2160
+#define FOV_Y 19.6f
 #elif RESOLUTION == 3	// 8K
 #define MAIN_WINDOW_WIDTH 7680
 #define MAIN_WINDOW_HEIGHT 4320
+#define FOV_Y 19.6f
+#elif RESOLUTION == 4	// VR
+#define MAIN_WINDOW_WIDTH 1440
+#define MAIN_WINDOW_HEIGHT 1540
+#define FOV_Y 96.0f
 #endif
  /*
  * List of resolutions
@@ -155,10 +165,9 @@
 //#define RENDERING_HEIGHT 800
 //#define RENDERING_WIDTH 960
 //#define RENDERING_HEIGHT 640
-#define RENDERING_WIDTH 1920
-#define RENDERING_HEIGHT 1080
+//#define RENDERING_WIDTH 1920
+//#define RENDERING_HEIGHT 1080
 
-#define FOV_Y 19.6f
 #define NEAR_PLANE 0.005f
 #define FAR_PLANE 20.00f
 

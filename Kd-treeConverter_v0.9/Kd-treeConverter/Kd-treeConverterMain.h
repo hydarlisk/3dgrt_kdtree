@@ -63,47 +63,72 @@ using Face = std::array<int, 3>;
 //#define MIN_OPACITY_FOR_20GON 0.7f
 //const float MIN_OPACITY_FOR_20GON = 0.7f;
 #if USE_KERNEL_SCALE
-const float T_8 = 0.20f;  // ~ Bin 0 (0.18): 대부분의 가우시안
-const float T_20 = 0.40f;  // ~ Bin 2 (0.37): 약간 큰 것들
-const float T_80 = 0.75f;  // ~ Bin 3 (0.74)
-const float T_162 = 1.15f;  // ~ Bin 5 (1.12)
-const float T_264 = 1.50f;  // ~ Bin 7 (1.49)
-const float T_320 = 2.00f;  // ~ Bin 9 (1.86)
-const float T_420 = 3.00f;  // ~ Bin 15
-const float T_544 = 4.00f;  // ~ Bin 21
-const float T_684 = 5.00f;  // ~ Bin 26
-const float T_760 = 7.00f;  // ~ Bin 36
-const float T_840 = 9.00f;  // ~ Bin 48
-const float T_924 = 11.00f; // ~ Bin 58
-const float T_1012 = 13.00f; // ~ Bin 69
-const float T_1104 = 15.00f; // ~ Bin 80
+float T_8 = 0.20f;  // ~ Bin 0 (0.18): 대부분의 가우시안
+float T_20 = 0.40f;  // ~ Bin 2 (0.37): 약간 큰 것들
+float T_80 = 0.75f;  // ~ Bin 3 (0.74)
+float T_162 = 1.15f;  // ~ Bin 5 (1.12)
+float T_264 = 1.50f;  // ~ Bin 7 (1.49)
+float T_320 = 2.00f;  // ~ Bin 9 (1.86)
+float T_420 = 3.00f;  // ~ Bin 15
+float T_544 = 4.00f;  // ~ Bin 21
+float T_684 = 5.00f;  // ~ Bin 26
+float T_760 = 7.00f;  // ~ Bin 36
+float T_840 = 9.00f;  // ~ Bin 48
+float T_924 = 11.00f; // ~ Bin 58
+float T_1012 = 13.00f; // ~ Bin 69
+float T_1104 = 15.00f; // ~ Bin 80
 // 15.0 이상은 1280면체 (Bin 81 ~ 99)
 #elif LESS_TRI
+const float T_LOW = 2.00f;
+const float T_MID = 10.00f;
+const float T_HIGH = 15.00f;
 const float T_8 = 1.5f;  // (Bin 0) 8면체
 const float T_20 = 1.00f;  // (Bin 1) 20면체
 const float T_80 = 2.00f;  // (Bin 2) 80면체
 #else
-const float T_8 = 0.12f;  // (Bin 0) 8면체
-const float T_20 = 0.24f;  // (Bin 1) 20면체
-const float T_80 = 0.35f;  // (Bin 2) 80면체
-const float T_162 = 0.47f;  // (Bin 3) 162면체
-const float T_264 = 0.59f;  // (Bin 4) 264면체
-const float T_320 = 0.70f;  // (Bin 5) 320면체
-const float T_420 = 0.82f;  // (Bin 6) 420면체
-const float T_544 = 0.94f;  // (Bin 7) 544면체
-const float T_684 = 1.05f;  // (Bin 8) 684면체
-const float T_760 = 1.29f;  // (Bin 9-10) 760면체
-const float T_840 = 1.52f;  // (Bin 11-12) 840면체
-const float T_924 = 1.87f;  // (Bin 13-15) 924면체
-const float T_1012 = 2.34f;  // (Bin 16-19) 1012면체
-const float T_1104 = 3.05f;  // (Bin 20-25) 1104면체
-// 3.05f 이상은 1280면체
+//const float T_8 = 0.12f;  // (Bin 0) 8면체
+//const float T_20 = 0.24f;  // (Bin 1) 20면체
+//const float T_80 = 0.35f;  // (Bin 2) 80면체
+//const float T_162 = 0.47f;  // (Bin 3) 162면체
+//const float T_264 = 0.59f;  // (Bin 4) 264면체
+//const float T_320 = 0.70f;  // (Bin 5) 320면체
+//const float T_420 = 0.82f;  // (Bin 6) 420면체
+//const float T_544 = 0.94f;  // (Bin 7) 544면체
+//const float T_684 = 1.05f;  // (Bin 8) 684면체
+//const float T_760 = 1.29f;  // (Bin 9-10) 760면체
+//const float T_840 = 1.52f;  // (Bin 11-12) 840면체
+//const float T_924 = 1.87f;  // (Bin 13-15) 924면체
+//const float T_1012 = 2.34f;  // (Bin 16-19) 1012면체
+//const float T_1104 = 3.05f;  // (Bin 20-25) 1104면체
+//// 3.05f 이상은 1280면체
+
+float T_8 = 0.22f;  // (Scale < 0.22) -> 8면체 (약 1,350,000개)
+// [구간 2: 중간 크기 방어] - 히스토그램 Bin 1~2 (~0.56) 커버
+float T_20 = 0.45f;  // (Scale < 0.45) -> 20면체 (약 140,000개)
+// [구간 3: 큰 입자 적응형 분할] - 히스토그램 롱테일(Long-tail) 구간
+// Scale이 커질수록 더 많은 면을 사용하여 삼각형 크기(0.3)를 유지합니다.
+float T_80 = 0.85f;  // (Scale < 0.85) -> 80면체
+float T_162 = 1.20f;  // (Scale < 1.20) -> 162면체
+float T_264 = 1.60f;  // (Scale < 1.60) -> 264면체
+float T_320 = 2.00f;  // (Scale < 2.00) -> 320면체
+float T_420 = 2.60f;  // (Scale < 2.60) -> 420면체
+float T_544 = 3.20f;  // (Scale < 3.20) -> 544면체
+float T_684 = 3.80f;  // (Scale < 3.80) -> 684면체
+float T_760 = 4.40f;  // (Scale < 4.40) -> 760면체
+float T_840 = 5.20f;  // (Scale < 5.20) -> 840면체
+float T_924 = 6.00f;  // (Scale < 6.00) -> 924면체
+float T_1012 = 7.50f;  // (Scale < 7.50) -> 1012면체
+float T_1104 = 9.00f;  // (Scale < 9.00) -> 1104면체
 #endif
 
 // --- (추가) 8면체 (Octahedron) ---
 #define OCTA_NUM_VRT 6
 #define OCTA_NUM_TRI 8
+#if ADAPTIVE_MESH
+const float octaHedraDiag = 1.0f;
+#else
 const float octaHedraDiag = 1.7320508075688774; // s / sqrt(2)
+#endif
 
 std::vector<Vertex> g_OctaVertices = {
 	{0.0f, 0.0f, -octaHedraDiag}, {0.0f, octaHedraDiag, 0.0f}, {-octaHedraDiag, 0.0f, 0.0f},
@@ -119,11 +144,18 @@ std::vector<Face> g_OctaFaces = {
 #define icosaHedronNumVrt 12
 #define icosaHedronNumTri 20
 
-const float goldenRatio = 1.618033988749895f;
+const float icosaEdge = 1.323169076499215f;
 const float unitspherefactor = 0.5257311121191335703f;
 
-const float icosaEdge = 1.323169076499215f;
-
+//const float ICO_X = 0.525731112119133606f;
+//const float ICO_Z = 0.850650808352039932f;
+//std::vector<Vertex> g_IcoVertices = {
+//	{-ICO_X, ICO_Z, 0}, {ICO_X, ICO_Z, 0}, {0, ICO_X, -ICO_Z},
+//	{-ICO_Z, 0, -ICO_X}, {-ICO_Z, 0, ICO_X}, {0, ICO_X, ICO_Z},
+//	{ICO_Z, 0, ICO_X}, {0, -ICO_X, ICO_Z}, {-ICO_X, -ICO_Z, 0},
+//	{0, -ICO_X, -ICO_Z}, {ICO_Z, 0, -ICO_X}, {ICO_X, -ICO_Z, 0}
+//};
+const float goldenRatio = 1.618033988749895f;
 std::vector<Vertex> g_IcoVertices = {
 	{-1, goldenRatio, 0}, {1, goldenRatio, 0}, {0, 1, -goldenRatio},
 	{-goldenRatio, 0, -1}, {-goldenRatio, 0, 1}, {0, 1, goldenRatio},

@@ -421,7 +421,8 @@ __device__ void selectionSortStep(HitRecord* hits, int count, int i)
 __device__ __forceinline__ float3 eval_sh_final(
     const int degree,
     const float3& view_dir,
-    const Gaussian& g
+    const Gaussian& g,
+    bool clamped = true
 ) {
     // 계산을 용이하게 하기 위해 g.f_dc와 g.f_rest를 하나의 배열로
     float3 sphCoefficients[16];
@@ -486,7 +487,8 @@ __device__ __forceinline__ float3 eval_sh_final(
 
     // 최종 활성화: 원본과 동일하게 0.5를 더하고, 0 미만 값은 0으로 클램핑
     rad += make_float3(0.5f);
-    return min(max(rad, make_float3(0.f)), make_float3(1.f));
+    //return min(max(rad, make_float3(0.f)), make_float3(1.f));
+    return clamped ? max(rad, make_float3(0.0f)) : rad;
 }
 
 __device__ __forceinline__ float3 eval_sh_final2(
@@ -986,6 +988,8 @@ __device__ inline void singlePassIntersectRoutine(const cuRay& ray, const int id
     p.pos.x = (tri.n_d() - p.pos.x - tri.n_u() * p.pos.y - tri.n_v() * p.pos.z);
     const float denum = (p.dir.x + tri.n_u() * p.dir.y + tri.n_v() * p.dir.z);
     //if (denum > 0.0f) return; //뒷면 확인
+    int flag = __float_as_int(tri.internal2.z);
+    if (denum * (float)flag > 0.0f) return;
     const float t = __fdividef(p.pos.x, denum);
     if (isnan(t)) return;
     if ((t < t_near - EPSILON4) | (t > t_far + EPSILON4)) return;
@@ -1017,6 +1021,8 @@ __device__ inline void singlePassIntersectPlane(const cuRay& ray, const int id,
     p.pos.x = (tri.n_d() - p.pos.x - tri.n_u() * p.pos.y - tri.n_v() * p.pos.z);
     const float denum = (p.dir.x + tri.n_u() * p.dir.y + tri.n_v() * p.dir.z);
     //if (denum > 0.0f) return; //뒷면 확인
+    int flag = __float_as_int(tri.internal2.z);
+    if (denum * (float)flag > 0.0f) return;
     const float t = __fdividef(p.pos.x, denum);
     if (isnan(t)) return;
     if ((t < t_near - EPSILON4) | (t > t_far + EPSILON4)) return;
@@ -1074,6 +1080,8 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
 #else
     int blend_ops = 0;
 #endif
+    int x = blockIdx.x * blockDim.x + threadIdx.x;
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
     // 광선의 유효 범위 설정
     float t_scene_near = RAY_START_EPSILON, t_scene_far = FLT_MAX;
     if (BoundsRayIntersect(g_SceneBBoxMin, g_SceneBBoxMax, &currRay, &t_scene_near, &t_scene_far)) {
@@ -1155,7 +1163,7 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
 #if BLEND_SELECT
                 if(blend_ops <= 25)
 #endif
-                    sortHits(local_hits, local_hit_count);
+                sortHits(local_hits, local_hit_count);
                 //sortHits_Hybrid(local_hits, local_hit_count);
                 // 블렌딩: 정렬된 순서대로 알파 블렌딩 수행
                 for (int i = 0; i < local_hit_count; ++i) {
@@ -1177,6 +1185,8 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
 #else
                     float4 internal2 = tex1Dfetch<float4>(inTriAccelTex, 3 * local_hits[i].triIndex + 2);
                     gaussianID = __float_as_int(internal2.w);
+
+                    if (x == g_SceneInfo.resX / 2 && y == g_SceneInfo.resY) printf("%d ", gaussianID);
 #endif
 
 #else
@@ -1259,6 +1269,7 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
                 t_far = trace.tMax;
             }
         } // while(true) == while(accumulated_opacity < OPACITY_THRESHOLD)
+        if (x == g_SceneInfo.resX / 2 && y == g_SceneInfo.resY) printf("\n");
     } // if (BoundsRayIntersect)
 }
 
@@ -2201,13 +2212,16 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
     float milliseconds = 0;
     CUDA_CHECK(cudaEventElapsedTime(&milliseconds, start_ev, stop_ev));
     float k_fps = 1000.0f / milliseconds;
+
+#if HIT_AND_NODE_COUNT_DEBUG
     //if(k_fps < 100.0f)
-    //printf("FPS : %f-------------------------------------------------------------\n", k_fps);
+    printf("FPS : %f-------------------------------------------------------------\n", k_fps);
     //if (++frame_count >= 100) {
     //    printf("avg FPS for 100 frame : %f\n", (float)(total_frame / frame_count));
     //    frame_count = 0;
     //    total_frame = 0.0f;
     //}
+#endif
 
     return k_fps;
 }
