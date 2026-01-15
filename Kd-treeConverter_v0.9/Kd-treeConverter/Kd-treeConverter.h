@@ -11,18 +11,19 @@
 #define TRAVL_COST 1.0
 #define ISCET_COST 5.0
 #define MAX_LEVEL 128
-#define MIN_TRI 32
+#define MIN_TRI 16
 #define EMTPY_BONUS 0.9
 
-#define FORCE_SPLIT_THRESHOLD 128				// kd-tree 강제분할
+#define FORCE_SPLIT_THRESHOLD 64				// kd-tree 강제분할
 //#define SOFT_SPLIT_THRESHOLD 128				// kd-tree 강제분할(완화)
 #define SOFT_SPLIT_THRESHOLD2 256				// kd-tree 강제분할(완화)
 
 #define BLEND_SELECT false
-#define ADAPTIVE_MESH true
 #define EXPORTED false
 
-#define USE_KERNEL_SCALE true					// 기존의 OptiX 방식 kernelScale 사용
+#define SIGMA_THRESHOLD_MODE 1
+#define ADAPTIVE_MESH false
+#define USE_KERNEL_SCALE false					// 기존의 OptiX 방식 kernelScale 사용
 
 //#define LESS_TRI false
 
@@ -102,6 +103,7 @@
 #define GAUSSIAN_DEGREE 4
 #define QUATERNION true
 #define WALD_METHOD true
+#define MAIL_BOX false
 #define SIGMA_THRESHOLD 0//.03   					// sigma(density) 작은 가우시안 제거
 
 #define GLOBAL_DEVICE_VAR true
@@ -111,11 +113,11 @@
 
 #define DUMMY_RUN false
 //Debug Flags=====================================================================================
-#define DEBUG_SIGMA_HISTOGRAM 100 				// gaussian의 sigma들의 histogram 출력
-#define DEBUG_SCALE_HISTOGRAM 100 				// gaussian의 sigma들의 histogram 출력
-#define DEBUG_TRILEN_HISTOGRAM 100 				// gaussian의 sigma들의 histogram 출력
+#define DEBUG_SIGMA_HISTOGRAM 0 				// gaussian의 sigma들의 histogram 출력
+#define DEBUG_SCALE_HISTOGRAM 0 				// gaussian의 sigma들의 histogram 출력
+#define DEBUG_TRILEN_HISTOGRAM 0 				// gaussian의 sigma들의 histogram 출력
 #define WARP_OCCUPANCY false   					// warp occupancy 출력
-#define HIT_AND_NODE_COUNT_DEBUG false			// Ray 마다 hitcount, node count, ... 확인
+#define HIT_AND_NODE_COUNT_DEBUG true			// Ray 마다 hitcount, node count, ... 확인
 												// kd-tree hitmap 확인 가능
 #define LEAF_NODE_DEBUG false					// kd-tree leaf node 렌더링
 
@@ -336,6 +338,8 @@ void collectTriangleCounts_recursive(
 	unsigned int& max_level,
 	unsigned int& total_level
 );
+// [추가] 바이너리 지오메트리 파일(.bin)을 읽어오는 함수
+bool read_igeom_from_file(CompositeObject* c_object, const char* filename);
 //shyun added end
 void dump_kd_tree_for_composite_object(CompositeObject *, const char *, int, const char *);
 int read_kd_tree_from_file(CompositeObject *, const char *, int);
@@ -367,3 +371,24 @@ int read_kd_tree_from_file(CompositeObject *, const char *, int);
 #define OBJECT_SIZE(node)			( (node).x >> 3)
 #define OBJECTLIST_OFFSET(node)		( (node).y)
 #endif
+
+//int HS;
+//#define TABLE(i, j) table[(i)*(HS+1)+(j)]
+//
+//void build_DP_table(int* a, int* table, int n) {
+//	for (int i = 0; i <= n; i++) TABLE(i, 0) = 1;
+//	for (int j = 0; j <= n; j++) TABLE(0, j) = 1;
+//
+//	for (int i = 1; i <= n; i++) {
+//		for (int j = 1; j <= HS; j++) {
+//			if ( < Part_B > )
+//				TABLE(i, j) = 1;
+//			else {
+//				if ((a[i] <= j) && ( < Part_C > ))
+//					TABLE(i, j) = 1;
+//				else
+//					TABLE(i, j) = 0;
+//			}
+//		}
+//	}
+//}

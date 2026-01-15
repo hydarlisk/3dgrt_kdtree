@@ -16,7 +16,7 @@
 #define ZOOM_SENSITIVITY 0.25
 #define GLOBALROTATION_SENSITIVITY 0.25
 #define MIN_FOVY 0.5
-#define MAX_FOVY 90.0
+#define MAX_FOVY 100.0
 #define EPSILON 0.00001
 
 typedef enum { FLAT_SHADING, SMOOTH_SHADING } OpenGLShadingMode;
@@ -70,14 +70,7 @@ float T_162 = 1.15f;  // ~ Bin 5 (1.12)
 float T_264 = 1.50f;  // ~ Bin 7 (1.49)
 float T_320 = 2.00f;  // ~ Bin 9 (1.86)
 float T_420 = 3.00f;  // ~ Bin 15
-float T_544 = 4.00f;  // ~ Bin 21
-float T_684 = 5.00f;  // ~ Bin 26
-float T_760 = 7.00f;  // ~ Bin 36
-float T_840 = 9.00f;  // ~ Bin 48
-float T_924 = 11.00f; // ~ Bin 58
-float T_1012 = 13.00f; // ~ Bin 69
-float T_1104 = 15.00f; // ~ Bin 80
-// 15.0 이상은 1280면체 (Bin 81 ~ 99)
+
 #elif LESS_TRI
 const float T_LOW = 2.00f;
 const float T_MID = 10.00f;
@@ -93,14 +86,6 @@ const float T_80 = 2.00f;  // (Bin 2) 80면체
 //const float T_264 = 0.59f;  // (Bin 4) 264면체
 //const float T_320 = 0.70f;  // (Bin 5) 320면체
 //const float T_420 = 0.82f;  // (Bin 6) 420면체
-//const float T_544 = 0.94f;  // (Bin 7) 544면체
-//const float T_684 = 1.05f;  // (Bin 8) 684면체
-//const float T_760 = 1.29f;  // (Bin 9-10) 760면체
-//const float T_840 = 1.52f;  // (Bin 11-12) 840면체
-//const float T_924 = 1.87f;  // (Bin 13-15) 924면체
-//const float T_1012 = 2.34f;  // (Bin 16-19) 1012면체
-//const float T_1104 = 3.05f;  // (Bin 20-25) 1104면체
-//// 3.05f 이상은 1280면체
 
 float T_8 = 0.22f;  // (Scale < 0.22) -> 8면체 (약 1,350,000개)
 // [구간 2: 중간 크기 방어] - 히스토그램 Bin 1~2 (~0.56) 커버
@@ -112,23 +97,22 @@ float T_162 = 1.20f;  // (Scale < 1.20) -> 162면체
 float T_264 = 1.60f;  // (Scale < 1.60) -> 264면체
 float T_320 = 2.00f;  // (Scale < 2.00) -> 320면체
 float T_420 = 2.60f;  // (Scale < 2.60) -> 420면체
-float T_544 = 3.20f;  // (Scale < 3.20) -> 544면체
-float T_684 = 3.80f;  // (Scale < 3.80) -> 684면체
-float T_760 = 4.40f;  // (Scale < 4.40) -> 760면체
-float T_840 = 5.20f;  // (Scale < 5.20) -> 840면체
-float T_924 = 6.00f;  // (Scale < 6.00) -> 924면체
-float T_1012 = 7.50f;  // (Scale < 7.50) -> 1012면체
-float T_1104 = 9.00f;  // (Scale < 9.00) -> 1104면체
 #endif
 
 // --- (추가) 8면체 (Octahedron) ---
 #define OCTA_NUM_VRT 6
 #define OCTA_NUM_TRI 8
-#if ADAPTIVE_MESH
+//#if ADAPTIVE_MESH
 const float octaHedraDiag = 1.0f;
-#else
-const float octaHedraDiag = 1.7320508075688774; // s / sqrt(2)
-#endif
+//#else
+//const float octaHedraDiag = 1.7320508075688774; // s / sqrt(2)
+//#endif
+
+//#if USE_KERNEL_SCALE
+//const float octaHedraDiag = 1.5115226281523f; //1.0f / (0.5f * icosaEdge);
+//#else
+//const float octaHedraDiag = 1.9021130325903f;
+//#endif
 
 std::vector<Vertex> g_OctaVertices = {
 	{0.0f, 0.0f, -octaHedraDiag}, {0.0f, octaHedraDiag, 0.0f}, {-octaHedraDiag, 0.0f, 0.0f},
@@ -179,19 +163,19 @@ std::vector<Vertex> g_LOD_320_Vertices; // 320.obj
 std::vector<Face>   g_LOD_320_Faces;
 std::vector<Vertex> g_LOD_420_Vertices; // 420.obj
 std::vector<Face>   g_LOD_420_Faces;
-std::vector<Vertex> g_LOD_544_Vertices; // 544.obj
-std::vector<Face>   g_LOD_544_Faces;
-std::vector<Vertex> g_LOD_684_Vertices; // 684.obj
-std::vector<Face>   g_LOD_684_Faces;
-std::vector<Vertex> g_LOD_760_Vertices; // 760.obj
-std::vector<Face>   g_LOD_760_Faces;
-std::vector<Vertex> g_LOD_840_Vertices; // 840.obj
-std::vector<Face>   g_LOD_840_Faces;
-std::vector<Vertex> g_LOD_924_Vertices; // 924.obj
-std::vector<Face>   g_LOD_924_Faces;
-std::vector<Vertex> g_LOD_1012_Vertices; // 1012.obj
-std::vector<Face>   g_LOD_1012_Faces;
-std::vector<Vertex> g_LOD_1104_Vertices; // 1104.obj
-std::vector<Face>   g_LOD_1104_Faces;
-std::vector<Vertex> g_LOD_1280_Vertices; // 1280.obj
-std::vector<Face>   g_LOD_1280_Faces;
+//std::vector<Vertex> g_LOD_544_Vertices; // 544.obj
+//std::vector<Face>   g_LOD_544_Faces;
+//std::vector<Vertex> g_LOD_684_Vertices; // 684.obj
+//std::vector<Face>   g_LOD_684_Faces;
+//std::vector<Vertex> g_LOD_760_Vertices; // 760.obj
+//std::vector<Face>   g_LOD_760_Faces;
+//std::vector<Vertex> g_LOD_840_Vertices; // 840.obj
+//std::vector<Face>   g_LOD_840_Faces;
+//std::vector<Vertex> g_LOD_924_Vertices; // 924.obj
+//std::vector<Face>   g_LOD_924_Faces;
+//std::vector<Vertex> g_LOD_1012_Vertices; // 1012.obj
+//std::vector<Face>   g_LOD_1012_Faces;
+//std::vector<Vertex> g_LOD_1104_Vertices; // 1104.obj
+//std::vector<Face>   g_LOD_1104_Faces;
+//std::vector<Vertex> g_LOD_1280_Vertices; // 1280.obj
+//std::vector<Face>   g_LOD_1280_Faces;

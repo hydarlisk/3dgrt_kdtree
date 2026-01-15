@@ -178,54 +178,54 @@ struct shortStack {
         --_top; --quant;
     }
 };
-// LIFO 캐시 구조체
-struct ShortStackCache {
-    unsigned int head;       // 가장 오래된 데이터의 위치 (다음에 밀려날 대상)
-    unsigned int tail;       // 다음에 데이터를 쓸 위치
-    unsigned int count;      // 현재 캐시 안의 데이터 개수
-    unsigned int baseOffset;
-
-    __device__ void init(const unsigned int smem_baseOffset) {
-        baseOffset = smem_baseOffset * SHORT_STACK_DEPTH;
-        head = 0;
-        tail = 0;
-        count = 0;
-    }
-
-    __device__ bool is_empty() const { return count == 0; }
-    __device__ bool is_full() const { return count >= SHORT_STACK_DEPTH; }
-
-    // 데이터를 캐시에 PUSH하는 함수. 캐시가 꽉 찼으면 밀려나는 데이터를 반환.
-    __device__ cu_traceState push(const cu_traceState& item) {
-        cu_traceState evicted_item = {}; // 기본값으로 초기화
-
-        if (is_full()) {
-            // 가장 오래된 데이터를 evicted_item에 저장
-            evicted_item = smemBuffer[baseOffset + head];
-            // head 포인터를 다음으로 이동 (순환)
-            head = (head + 1) % SHORT_STACK_DEPTH;
-        }
-        else {
-            count++;
-        }
-
-        // tail 위치에 새로운 아이템을 쓰고 tail 포인터를 다음으로 이동 (순환)
-        smemBuffer[baseOffset + tail] = item;
-        tail = (tail + 1) % SHORT_STACK_DEPTH;
-
-        return evicted_item;
-    }
-
-    // 캐시에서 데이터를 POP하는 함수 (LIFO: 가장 나중에 들어온 것부터)
-    __device__ cu_traceState pop() {
-        // tail 포인터를 뒤로 돌려 가장 마지막에 쓴 데이터 위치로 이동 (순환)
-        tail = (tail == 0) ? SHORT_STACK_DEPTH - 1 : tail - 1;
-        count--;
-        return smemBuffer[baseOffset + tail];
-    }
-
-    __device__ int cnt() { return count; }
-};
+//// LIFO 캐시 구조체
+//struct ShortStackCache {
+//    unsigned int head;       // 가장 오래된 데이터의 위치 (다음에 밀려날 대상)
+//    unsigned int tail;       // 다음에 데이터를 쓸 위치
+//    unsigned int count;      // 현재 캐시 안의 데이터 개수
+//    unsigned int baseOffset;
+//
+//    __device__ void init(const unsigned int smem_baseOffset) {
+//        baseOffset = smem_baseOffset * SHORT_STACK_DEPTH;
+//        head = 0;
+//        tail = 0;
+//        count = 0;
+//    }
+//
+//    __device__ bool is_empty() const { return count == 0; }
+//    __device__ bool is_full() const { return count >= SHORT_STACK_DEPTH; }
+//
+//    // 데이터를 캐시에 PUSH하는 함수. 캐시가 꽉 찼으면 밀려나는 데이터를 반환.
+//    __device__ cu_traceState push(const cu_traceState& item) {
+//        cu_traceState evicted_item = {}; // 기본값으로 초기화
+//
+//        if (is_full()) {
+//            // 가장 오래된 데이터를 evicted_item에 저장
+//            evicted_item = smemBuffer[baseOffset + head];
+//            // head 포인터를 다음으로 이동 (순환)
+//            head = (head + 1) % SHORT_STACK_DEPTH;
+//        }
+//        else {
+//            count++;
+//        }
+//
+//        // tail 위치에 새로운 아이템을 쓰고 tail 포인터를 다음으로 이동 (순환)
+//        smemBuffer[baseOffset + tail] = item;
+//        tail = (tail + 1) % SHORT_STACK_DEPTH;
+//
+//        return evicted_item;
+//    }
+//
+//    // 캐시에서 데이터를 POP하는 함수 (LIFO: 가장 나중에 들어온 것부터)
+//    __device__ cu_traceState pop() {
+//        // tail 포인터를 뒤로 돌려 가장 마지막에 쓴 데이터 위치로 이동 (순환)
+//        tail = (tail == 0) ? SHORT_STACK_DEPTH - 1 : tail - 1;
+//        count--;
+//        return smemBuffer[baseOffset + tail];
+//    }
+//
+//    __device__ int cnt() { return count; }
+//};
 #endif
 
 //// --- Device-side Helper Functions ---
@@ -343,7 +343,9 @@ __device__ inline bool BoundsRayIntersect(const float3& bmin, const float3& bmax
 struct HitRecord {
     float t;
     int triIndex;
+#if BLEND_SELECT
     cuWaldTriangleInfo::perm_t perm;
+#endif
 };
 
 __device__ void sortHits(HitRecord* hits, int count) {
@@ -844,81 +846,6 @@ __device__ __forceinline__ float3 eval_sh_final_ptr(
     return min(max(rad, make_float3(0.f)), make_float3(1.f));
 }
 
-__device__ __forceinline__ float evaluateGaussianResponse_ptr(const cuRay& ray, const Gaussian* g)
-{
-    // 파라미터 정리
-    const float3 g_pos = make_float3(g->pos[0], g->pos[1], g->pos[2]);   // μ
-    const float3 g_scale = make_float3(g->scale[0], g->scale[1], g->scale[2]); // 대각 S (표준편차)
-#if QUATERNION
-    const float4 g_rot = make_float4(g->rot[1], g->rot[2], g->rot[3], g->rot[0]); // (x,y,z,w)
-    const float4 inv_rot = quat_inverse(g_rot);
-
-    // 월드 → 가우시안 정렬좌표로 회전(R^T)한 뒤, 스케일의 역수(S^{-1})를 적용
-    float3 o_os = quat_rotate(ray.pos - g_pos, inv_rot);                                  //R^T (o-μ)
-    float3 d_os = quat_rotate(ray.dir, inv_rot);                                          //R^T d
-#else
-    const float3 p = ray.pos - g_pos; // (o - μ)
-
-    // 위치 벡터 회전: o_os = R^T * p
-    float3 o_os;
-    o_os.x = g->rot_matrix.m[0][0] * p.x + g->rot_matrix.m[0][1] * p.y + g->rot_matrix.m[0][2] * p.z;
-    o_os.y = g->rot_matrix.m[1][0] * p.x + g->rot_matrix.m[1][1] * p.y + g->rot_matrix.m[1][2] * p.z;
-    o_os.z = g->rot_matrix.m[2][0] * p.x + g->rot_matrix.m[2][1] * p.y + g->rot_matrix.m[2][2] * p.z;
-
-    // 방향 벡터 회전: d_os = R^T * d
-    float3 d_os;
-    d_os.x = g->rot_matrix.m[0][0] * ray.dir.x + g->rot_matrix.m[0][1] * ray.dir.y + g->rot_matrix.m[0][2] * ray.dir.z;
-    d_os.y = g->rot_matrix.m[1][0] * ray.dir.x + g->rot_matrix.m[1][1] * ray.dir.y + g->rot_matrix.m[1][2] * ray.dir.z;
-    d_os.z = g->rot_matrix.m[2][0] * ray.dir.x + g->rot_matrix.m[2][1] * ray.dir.y + g->rot_matrix.m[2][2] * ray.dir.z;
-#endif
-    // o_g = S^{-1} R^T (o - μ),  d_g = S^{-1} R^T d
-    float3 o_g = make_float3(o_os.x / g_scale.x, o_os.y / g_scale.y, o_os.z / g_scale.z); //S^-1 R^T (o-μ)
-    float3 d_g = make_float3(d_os.x / g_scale.x, d_os.y / g_scale.y, d_os.z / g_scale.z); //S^-1 R^T d
-
-
-    // τ_max = - (o_g·d_g) / (d_g·d_g)  (식 8)
-    float denom = dot(d_g, d_g);
-    // 안전장치: 방향이 너무 작으면 밀도는 원점에서 평가
-    float tau = (denom > 1e-8f) ? (-dot(o_g, d_g) / denom) : 0.0f;
-
-    // τ_max 위치의 가우시안 밀도: ρ = exp(-0.5 * ||o_g + τ_max d_g||^2)
-    //float3 p_g = ray.pos + tau * ray.dir;
-    float3 p_g = o_g + tau * d_g;
-    float  expo = -0.5f * dot(p_g, p_g);
-
-    float  rho = expf(expo);
-
-    return g->opacity * rho;
-}
-
-__device__ __forceinline__ float evaluateGaussianResponse_using_vars(const cuRay& ray, const float3 g_pos, const float3 g_scale, const float g_opacity, const float4 g_rot)
-{
-    const float4 inv_rot = quat_inverse(g_rot);
-
-    // 월드 → 가우시안 정렬좌표로 회전(R^T)한 뒤, 스케일의 역수(S^{-1})를 적용
-    float3 o_os = quat_rotate(ray.pos - g_pos, inv_rot);                                  //R^T (o-μ)
-    float3 d_os = quat_rotate(ray.dir, inv_rot);                                          //R^T d
-
-    // o_g = S^{-1} R^T (o - μ),  d_g = S^{-1} R^T d
-    float3 o_g = make_float3(o_os.x / g_scale.x, o_os.y / g_scale.y, o_os.z / g_scale.z); //S^-1 R^T (o-μ)
-    float3 d_g = make_float3(d_os.x / g_scale.x, d_os.y / g_scale.y, d_os.z / g_scale.z); //S^-1 R^T d
-
-
-    // τ_max = - (o_g·d_g) / (d_g·d_g)  (식 8)
-    float denom = dot(d_g, d_g);
-    // 안전장치: 방향이 너무 작으면 밀도는 원점에서 평가
-    float tau = (denom > 1e-8f) ? (-dot(o_g, d_g) / denom) : 0.0f;
-
-    // τ_max 위치의 가우시안 밀도: ρ = exp(-0.5 * ||o_g + τ_max d_g||^2)
-    //float3 p_g = ray.pos + tau * ray.dir;
-    float3 p_g = o_g + tau * d_g;
-    float  expo = -0.5f * dot(p_g, p_g);
-
-    float  rho = expf(expo);
-
-    return g_opacity * rho;
-}
-
 __device__ void singlePassIntersectRoutineGaussian_sortNode(const cuRay& ray, int id, float t_near, float t_far, HitRecord* local_hits, int& local_hit_count
     //, cudaTextureObject_t inTriAccelTex
 ) {
@@ -987,9 +914,8 @@ __device__ inline void singlePassIntersectRoutine(const cuRay& ray, const int id
     cuWaldTriangleInfo::perm_t p = tri.get_perm(ray);
     p.pos.x = (tri.n_d() - p.pos.x - tri.n_u() * p.pos.y - tri.n_v() * p.pos.z);
     const float denum = (p.dir.x + tri.n_u() * p.dir.y + tri.n_v() * p.dir.z);
-    //if (denum > 0.0f) return; //뒷면 확인
     int flag = __float_as_int(tri.internal2.z);
-    if (denum * (float)flag > 0.0f) return;
+    if (denum * (float)flag > 0.0f) return; //뒷면 확인
     const float t = __fdividef(p.pos.x, denum);
     if (isnan(t)) return;
     if ((t < t_near - EPSILON4) | (t > t_far + EPSILON4)) return;
@@ -1010,6 +936,161 @@ __device__ inline void singlePassIntersectRoutine(const cuRay& ray, const int id
     local_hit_count++;
 }
 
+
+// --- Mailbox Optimization Structure ---
+#define MAILBOX_SIZE 6
+#define MAILBOX_MASK (MAILBOX_SIZE - 1)
+#define PROBE_LENGTH 4  // 충돌 시 몇 칸까지 더 찾아볼지 (4칸 정도면 충분)
+
+//struct Mailbox {
+//    int cached_ids[MAILBOX_SIZE]; // 방문한 Gaussian ID 저장
+//
+//    __device__ void init() {
+//        // 루프 언롤링: 컴파일러가 레지스터에 즉시 할당하도록 유도
+//#pragma unroll
+//        for (int i = 0; i < MAILBOX_SIZE; ++i) {
+//            cached_ids[i] = -1; // -1: 비어있음
+//        }
+//    }
+//
+//    // 캐시 조회: ID가 있으면 true (이미 처리했음)
+//    __device__ bool contains(int gaussianID) {
+//        // [비트 연산 최적화] '%' 대신 '&' 사용
+//        int idx = gaussianID & MAILBOX_MASK;
+//        // Tag Check: 해시 충돌 방지
+//        return (cached_ids[idx] == gaussianID);
+//    }
+//
+//    // 캐시 등록: "이 가우시안은 처리 완료"
+//    __device__ void mark(int gaussianID) {
+//        int idx = gaussianID & MAILBOX_MASK;
+//        cached_ids[idx] = gaussianID;
+//    }
+//};
+struct Mailbox {
+    int cached_ids[MAILBOX_SIZE];
+
+    __device__ __forceinline__ void init() {
+#pragma unroll
+        for (int i = 0; i < MAILBOX_SIZE; ++i) {
+            cached_ids[i] = -1;
+        }
+    }
+
+    // 캐시 조회: 내 ID가 저장되어 있는지 주변 4칸을 뒤져봄
+    __device__ __forceinline__ bool contains(int gaussianID) {
+        int base_idx = gaussianID & MAILBOX_MASK;
+
+        // Loop Unrolling으로 성능 최적화
+#pragma unroll
+        for (int i = 0; i < PROBE_LENGTH; ++i) {
+            // 순환 구조: 15번 다음은 0번
+            int curr_idx = (base_idx + i) & MAILBOX_MASK;
+
+            if (cached_ids[curr_idx] == gaussianID) {
+                return true; // 찾았다!
+            }
+        }
+        return false; // 없다.
+    }
+
+    // 캐시 등록: 빈칸을 찾아 넣거나, 없으면 덮어씀
+    __device__ __forceinline__ void mark(int gaussianID) {
+        int base_idx = gaussianID & MAILBOX_MASK;
+
+        // 1. 빈칸(-1)이 있는지 먼저 확인
+#pragma unroll
+        for (int i = 0; i < PROBE_LENGTH; ++i) {
+            int curr_idx = (base_idx + i) & MAILBOX_MASK;
+
+            // 이미 내가 등록되어 있거나, 빈칸이면 거기에 저장하고 종료
+            if (cached_ids[curr_idx] == gaussianID || cached_ids[curr_idx] == -1) {
+                cached_ids[curr_idx] = gaussianID;
+                return;
+            }
+        }
+
+        // 2. 빈칸이 없으면(꽉 찼으면), 그냥 원래 자리(base_idx)를 덮어씀 (Eviction)
+        cached_ids[base_idx] = gaussianID;
+    }
+};
+__device__ inline void singlePassIntersectRoutineMailBox(
+    const cuRay& ray,
+    const int id, // triIndex
+    const float t_near,
+    const float t_far,
+    HitRecord* local_hits,
+    int& local_hit_count,
+    Mailbox* mailbox
+) {
+    // 1. 최대 히트 수 체크
+    if (local_hit_count >= MAX_HITS) return;
+
+    // 2. Gaussian ID 추출 (가장 저렴한 메모리 접근)
+    // internal2.w에 Gaussian ID가 있음
+    float4 internal2 = tex1Dfetch<float4>(inTriAccelTex, 3 * id + 2);
+    int gaussianID = __float_as_int(internal2.w);
+
+    // 3. Mailbox 확인 (핵심 최적화)
+    if (mailbox->contains(gaussianID)) {
+        return; // 이미 처리했으므로 중복 연산 및 렌더링 방지
+    }
+
+    // 4. 직접 교차 검사 수행 (singlePassIntersectRoutine 로직 복사)
+    cuWaldTriangleInfo tri;
+    // tri.internal2는 위에서 이미 읽었으므로 재사용
+    tri.internal2 = internal2;
+    // 나머지 데이터 로드
+    tri.internal0 = tex1Dfetch<float4>(inTriAccelTex, 3 * id + 0);
+    tri.internal1 = tex1Dfetch<float4>(inTriAccelTex, 3 * id + 1);
+
+    // Permutation 및 교차점 계산
+    cuWaldTriangleInfo::perm_t p = tri.get_perm(ray);
+    p.pos.x = (tri.n_d() - p.pos.x - tri.n_u() * p.pos.y - tri.n_v() * p.pos.z);
+    const float denum = (p.dir.x + tri.n_u() * p.dir.y + tri.n_v() * p.dir.z);
+
+    // Backface Culling 및 평행 검사
+    int flag = __float_as_int(tri.internal2.z);
+    if (denum * (float)flag > 0.0f) {
+        return; // 뒷면이므로 실패 -> Mailbox에 등록하지 않음 (나중에 앞면 만날 기회 줌)
+    }
+
+    const float t = __fdividef(p.pos.x, denum);
+    if (isnan(t)) return;
+
+    // 거리(Spatial) 검사
+    // t가 유효하더라도 현재 노드 범위 밖이면, 
+    // "이 노드에서는 안 그림" (다른 노드에서 그릴 것임) -> Mailbox 등록 안 함
+    if ((t < t_near - EPSILON4) | (t > t_far + EPSILON4)) return;
+
+    // Barycentric 좌표 검사 (삼각형 내부인지 확인)
+    const float hu = p.pos.y + t * p.dir.y - tri.vert_ku();
+    const float hv = p.pos.z + t * p.dir.z - tri.vert_kv();
+    const float beta = hv * tri.b_nu() + hu * tri.b_nv();
+    const float gamma = hu * tri.c_nu() + hv * tri.c_nv();
+
+    if ((beta < 0.f - BARYCENTRY_EPSILON) | (gamma < 0.f - BARYCENTRY_EPSILON) |
+        ((1.0f - beta - gamma) < 0.0f - BARYCENTRY_EPSILON)) {
+        return; // ★ 삼각형 밖이므로 실패 -> Mailbox에 등록하지 않음
+    }
+
+    // -----------------------------------------------------------
+    // [성공] 유효한 앞면(Front-face) Hit!
+    // -----------------------------------------------------------
+
+    // 1. 결과 저장 (perm 생략)
+    local_hits[local_hit_count].t = t;
+    local_hits[local_hit_count].triIndex = id;
+
+    local_hit_count++;
+
+    // 2. Mailbox에 "방문 완료" 마킹
+    // 이제부터 이 Ray가 끝날 때까지, 같은 ID를 가진 다른 삼각형(뒷면 등)이나
+    // 다른 노드에서 마주치는 중복 가우시안은 모두 무시됨.
+    mailbox->mark(gaussianID);
+}
+
+#if BLEND_SELECT
 __device__ inline void singlePassIntersectPlane(const cuRay& ray, const int id,
     const float t_near, const float t_far
     , HitRecord* local_hits, int& local_hit_count) {
@@ -1054,6 +1135,7 @@ __device__ inline int singlePassIntersectCheck(const cuRay& ray, HitRecord local
 
     return __float_as_int(tri.internal2.w);
 }
+#endif
 
 #if USE_STACK == SHORT_STACK
 
@@ -1077,11 +1159,12 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
     hits_found = 0;
     blend_ops = 0;
     max_sort_size = 0;
-#else
+#elif BLEND_SELECT
     int blend_ops = 0;
 #endif
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
+    //int prevGaussianID = -1; // 이전 ID 기억
     // 광선의 유효 범위 설정
     float t_scene_near = RAY_START_EPSILON, t_scene_far = FLT_MAX;
     if (BoundsRayIntersect(g_SceneBBoxMin, g_SceneBBoxMax, &currRay, &t_scene_near, &t_scene_far)) {
@@ -1091,6 +1174,10 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
         shortStack cache;
         //ShortStackCache cache;
         cache.init(threadIdx.y * blockDim.x + threadIdx.x);
+#if MAIL_BOX
+        Mailbox mailbox;
+        mailbox.init();
+#endif
 
         // 메인 순회 루프
         while (accumulated_opacity < OPACITY_THRESHOLD) { //while (true) {
@@ -1143,7 +1230,13 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
                 else
                     singlePassIntersectPlane(currRay, tri_idx, t_near, t_far, local_hits, local_hit_count);
 #else
+
+#if MAIL_BOX
+                singlePassIntersectRoutineMailBox(currRay, tri_idx, t_near, t_far, local_hits, local_hit_count, &mailbox);
+#else
                 singlePassIntersectRoutine(currRay, tri_idx, t_near, t_far, local_hits, local_hit_count);
+#endif
+
 #endif
 
 #else
@@ -1186,16 +1279,19 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
                     float4 internal2 = tex1Dfetch<float4>(inTriAccelTex, 3 * local_hits[i].triIndex + 2);
                     gaussianID = __float_as_int(internal2.w);
 
-                    if (x == g_SceneInfo.resX / 2 && y == g_SceneInfo.resY) printf("%d ", gaussianID);
+                    //if (gaussianID == prevGaussianID) continue;
+                    //prevGaussianID = gaussianID;
+#if HIT_AND_NODE_COUNT_DEBUG
+                    if (x == g_SceneInfo.resX / 2 && y == g_SceneInfo.resY / 2) printf("%d ", gaussianID);
+#endif
+
 #endif
 
 #else
                     float4 d2 = tex1Dfetch<float4>(inTriAccelTex, local_hits[i].triIndex * 4 + 2);
                     gaussianID = __float_as_int(d2.w);
 #endif
-//#if HIT_AND_NODE_COUNT_DEBUG
-                    blend_ops++;
-//#endif
+
 #if GAUSSIAN_TEXTURE
                     Gaussian g = fetch_gaussian(gaussianID);
 #else
@@ -1226,17 +1322,24 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
 
                     // 기본 불투명도와 밀도를 곱하여 최종 결과 반환
                     float sample_opacity = fminf(0.99f, g.opacity * gres);
-                    //*
+                    //if (x == g_SceneInfo.resX / 2 && y == g_SceneInfo.resY / 2)
+                    //    printf("opacity, gres, mul: %f %f, %f\n", g.opacity, gres, g.opacity * gres);
                     //float sample_opacity = evaluateGaussianResponse_origin(currRay, g);
                     //float sample_opacity = evaluateGaussianResponse_3dgrt(currRay, g);
                     //float sample_opacity = evaluateGaussianResponse(currRay, g);
-                    if (sample_opacity < 1.0f / 255.0f) continue;
-                    //float3 view_dir = normalize(make_float3(g.pos[0], g.pos[1], g.pos[2]) - currRay.pos);
+                    if (gres < ALPHA_MIN || sample_opacity < 1.0f / 255.0f) // 0.004
+                        continue;
                     float3 sample_color = eval_sh_final(SPH_EVAL_DEGREE, currRay.dir, g);
+                    //float3 view_dir = normalize(make_float3(g.pos[0], g.pos[1], g.pos[2]) - currRay.pos);
                     //float3 sample_color = eval_sh_final2(SPH_EVAL_DEGREE, view_dir, g);
 
                     accumulated_color += sample_color * sample_opacity * (1.0f - accumulated_opacity);
                     accumulated_opacity += sample_opacity * (1.0f - accumulated_opacity);
+
+#if HIT_AND_NODE_COUNT_DEBUG | BLEND_SELECT
+                    blend_ops++;
+#endif
+
                     /*/
                     float sample_opacity = evaluateGaussianResponse_3dgrt(currRay, g);
                     sample_opacity = fminf(0.99f, sample_opacity);
@@ -1253,7 +1356,7 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
                     if (accumulated_opacity > OPACITY_THRESHOLD) {
                         break;
                     }
-                }
+                } // for (i < local_hit_count)
             } // if (local_hit_count > 0)
             if (accumulated_opacity > OPACITY_THRESHOLD | t_far >= t_scene_far)
                 break;
@@ -1745,10 +1848,12 @@ void build_waldInfoList_from_model(const CompositeObject* poly_model, cuWaldTria
         wald.internal2.y = cnv;
 
         // 투명도 및 기타 플래그 (원본과 동일하게 단순화)
-        wald.internal2.z = int_as_float_H(0); // 투명도 정보 등
+        int flag = 2;
+        if (krec < 0.0f) flag = -flag;
+        wald.internal2.z = int_as_float_H(flag); // 투명도 정보 등
 
         // material_ID 패킹 (getObjectIndex()가 하위 24비트만 사용)
-        unsigned int object_id = pVerts[0].material_ID & 0x00FFFFFF;
+        unsigned int object_id = pVerts[0].material_ID;
         wald.internal2.w = uint_as_float_H(object_id);
     }
 }
@@ -2132,6 +2237,13 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
     }
 
     printf("\n===========================================\n");
+    printf("avg_node_visits\t\t: %f\n", avg_node_visits / node_visits);
+    printf("avg_leaf_visits\t\t: %f\n", avg_leaf_visits / leaf_visits);
+    printf("avg_intersection_tests\t: %f\n", avg_intersection_tests / intersection_tests);
+    printf("avg_hits_found\t\t: %f\n", avg_hits_found / hits_found);
+    printf("avg_blend_ops\t\t: %f\n", avg_blend_ops / blend_ops);
+    printf("avg_max_sort_size\t: %f\n", avg_max_sort_size / max_sort_size);
+    printf("===========================================\n");
     printf("max_node_visits\t\t: %d\n", max_node_visits);
     printf("max_leaf_visits\t\t: %d\n", max_leaf_visits);
     printf("max_intersection_tests\t: %d\n", max_intersection_tests);
@@ -2139,12 +2251,12 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
     printf("max_blend_ops\t\t: %d\n", max_blend_ops);
     printf("max_max_sort_size\t: %d\n", max_max_sort_size);
     printf("===========================================\n");
-    printf("avg_node_visits\t\t: %f\n", avg_node_visits / node_visits);
-    printf("avg_leaf_visits\t\t: %f\n", avg_leaf_visits / leaf_visits);
-    printf("avg_intersection_tests\t: %f\n", avg_intersection_tests / intersection_tests);
-    printf("avg_hits_found\t\t: %f\n", avg_hits_found / hits_found);
-    printf("avg_blend_ops\t\t: %f\n", avg_blend_ops / blend_ops);
-    printf("avg_max_sort_size\t: %f\n", avg_max_sort_size / max_sort_size);
+    printf("tot_node_visits\t\t: %f\n", avg_node_visits);
+    printf("tot_leaf_visits\t\t: %f\n", avg_leaf_visits);
+    printf("tot_intersection_tests\t: %f\n", avg_intersection_tests);
+    printf("tot_hits_found\t\t: %f\n", avg_hits_found);
+    printf("tot_blend_ops\t\t: %f\n", avg_blend_ops);
+    printf("tot_max_sort_size\t: %f\n", avg_max_sort_size);
     printf("===========================================\n");
 
     //delete[] h_debug_buffer1;

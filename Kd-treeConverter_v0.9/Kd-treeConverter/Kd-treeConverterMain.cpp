@@ -45,12 +45,14 @@ char* ply_to_obj_mtl;
 char* kdtree_build_path;
 //int submenu[5] = { 101,1012,102,104,105 };
 #if FORCE_SPLIT_THRESHOLD == 64
-#define P_MODEL_COUNT 4
-int submenu[P_MODEL_COUNT] = { 101,102,103,104 };
+#define P_MODEL_COUNT 6
+int submenu[P_MODEL_COUNT] = { 101,102,103,104,1032,1033 };
 //int submenu[P_MODEL_COUNT] = { 101,102,103,104,105 };
 #elif FORCE_SPLIT_THRESHOLD == 256
-#define P_MODEL_COUNT 7
-int submenu[P_MODEL_COUNT] = { 106,107,108,109,110,111,112 };
+#define P_MODEL_COUNT 2
+//int submenu[P_MODEL_COUNT] = { 106,107,108,109,110,111,112 };
+//int submenu[P_MODEL_COUNT] = { 106,107,109,110,112 };
+int submenu[P_MODEL_COUNT] = { 106,110 };
 #else
 #define P_MODEL_COUNT 12
 int submenu[P_MODEL_COUNT] = { 101,102,103,104,105,106,107,108,109,110,111,112 };
@@ -322,6 +324,29 @@ void display(void) {
 		glEnd();
 
 		glDisable(GL_TEXTURE_2D);
+
+		// 1) 3D 투영 행렬 복구 (Perspective)
+		glMatrixMode(GL_PROJECTION);
+		glLoadIdentity();
+		gluPerspective(camera.fovy, camera.aspect, camera.near_c, camera.far_c);
+
+		// 2) 3D 뷰 행렬 복구 (Camera View)
+		glMatrixMode(GL_MODELVIEW);
+		glLoadIdentity();
+		// 카메라 회전 적용
+		glMultMatrixf(camera.mat);
+		// 카메라 위치 적용 (World -> View 변환이므로 -pos 이동)
+		glTranslatef(-camera.pos[0], -camera.pos[1], -camera.pos[2]);
+
+		// 3) 축 그리기
+		// 배경(CUDA) 위에 항상 보이게 하려면 Depth Test를 끕니다.
+		// (이미 위에서 꺼져 있지만 명시적으로 확인)
+		glDisable(GL_DEPTH_TEST);
+		glDisable(GL_LIGHTING);   // 축 색상(R,G,B)이 잘 보이도록 조명 끄기
+
+		glLineWidth(2.0f);        // 선 두께 설정 (잘 보이게)
+		//draw_axes(1.0f);          // 축 그리기 (길이 1.0, 필요시 10.0 등으로 조절)
+		glLineWidth(1.0f);        // 두께 복구
 
 		draw_fps(); // FPS
 	}
@@ -1268,7 +1293,7 @@ bool load_obj_mesh(const std::string& filename,
 // --- main 함수 내부 또는 별도 init 함수 ---
 void init_mesh_data() {
 #if USE_KERNEL_SCALE
-	const float PRE_SCALE = 1.0f / (0.5f * icosaEdge);
+	const float PRE_SCALE = 1.5115226281523f;//1.0f / (0.5f * icosaEdge);
 #else
 	const float PRE_SCALE = 1.9021130325903f;
 #endif
@@ -1278,21 +1303,20 @@ void init_mesh_data() {
 	load_obj_mesh("../../Data/ico/264.obj", g_LOD_264_Vertices, g_LOD_264_Faces, PRE_SCALE);
 	load_obj_mesh("../../Data/ico/320.obj", g_LOD_320_Vertices, g_LOD_320_Faces, PRE_SCALE);
 	load_obj_mesh("../../Data/ico/420.obj", g_LOD_420_Vertices, g_LOD_420_Faces, PRE_SCALE);
-	load_obj_mesh("../../Data/ico/544.obj", g_LOD_544_Vertices, g_LOD_544_Faces, PRE_SCALE);
-	load_obj_mesh("../../Data/ico/684.obj", g_LOD_684_Vertices, g_LOD_684_Faces, PRE_SCALE);
-	load_obj_mesh("../../Data/ico/760.obj", g_LOD_760_Vertices, g_LOD_760_Faces, PRE_SCALE);
-	load_obj_mesh("../../Data/ico/840.obj", g_LOD_840_Vertices, g_LOD_840_Faces, PRE_SCALE);
-	load_obj_mesh("../../Data/ico/924.obj", g_LOD_924_Vertices, g_LOD_924_Faces, PRE_SCALE);
-	load_obj_mesh("../../Data/ico/1012.obj", g_LOD_1012_Vertices, g_LOD_1012_Faces, PRE_SCALE);
-	load_obj_mesh("../../Data/ico/1104.obj", g_LOD_1104_Vertices, g_LOD_1104_Faces, PRE_SCALE);
-	load_obj_mesh("../../Data/ico/1280.obj", g_LOD_1280_Vertices, g_LOD_1280_Faces, PRE_SCALE);
+	//load_obj_mesh("../../Data/ico/544.obj", g_LOD_544_Vertices, g_LOD_544_Faces, PRE_SCALE);
+	//load_obj_mesh("../../Data/ico/684.obj", g_LOD_684_Vertices, g_LOD_684_Faces, PRE_SCALE);
+	//load_obj_mesh("../../Data/ico/760.obj", g_LOD_760_Vertices, g_LOD_760_Faces, PRE_SCALE);
+	//load_obj_mesh("../../Data/ico/840.obj", g_LOD_840_Vertices, g_LOD_840_Faces, PRE_SCALE);
+	//load_obj_mesh("../../Data/ico/924.obj", g_LOD_924_Vertices, g_LOD_924_Faces, PRE_SCALE);
+	//load_obj_mesh("../../Data/ico/1012.obj", g_LOD_1012_Vertices, g_LOD_1012_Faces, PRE_SCALE);
+	//load_obj_mesh("../../Data/ico/1104.obj", g_LOD_1104_Vertices, g_LOD_1104_Faces, PRE_SCALE);
+	//load_obj_mesh("../../Data/ico/1280.obj", g_LOD_1280_Vertices, g_LOD_1280_Faces, PRE_SCALE);
 
 	// (이전에 추가했던 검증 코드)
-	if (g_LOD_80_Faces.empty() || g_LOD_320_Faces.empty() || g_LOD_1280_Faces.empty() ||
-		g_LOD_162_Faces.empty() || g_LOD_264_Faces.empty() || g_LOD_420_Faces.empty() ||
+	if (g_LOD_80_Faces.empty() || g_LOD_320_Faces.empty() || g_LOD_162_Faces.empty() || g_LOD_264_Faces.empty() || g_LOD_420_Faces.empty()/* ||
 		g_LOD_544_Faces.empty() || g_LOD_684_Faces.empty() || g_LOD_760_Faces.empty() ||
 		g_LOD_840_Faces.empty() || g_LOD_924_Faces.empty() || g_LOD_1012_Faces.empty() ||
-		g_LOD_1104_Faces.empty()) {
+		g_LOD_1104_Faces.empty() || g_LOD_1280_Faces.empty()*/) {
 		std::cerr << "FATAL ERROR: One or more LOD meshes failed to load or parse." << std::endl;
 	}
 }
@@ -1425,14 +1449,18 @@ void create_composite_object_from_gaussians(
 		}
 		sigma_histogram[bin_index]++;
 #endif
-		if (sigma < SIGMA_THRESHOLD) { cnt_sigma++; continue; }
+
+#if SIGMA_THRESHOLD_MODE
+		//if (sigma < SIGMA_THRESHOLD) { cnt_sigma++; continue; }
+		if (sigma < ALPHA_MIN || sigma < SIGMA_THRESHOLD_MODE / 255.0f) { cnt_sigma++; continue; }
+#endif
+
 		float k_iso = 0.0f;
 
 #if USE_KERNEL_SCALE
 		//if (sigma / alpha_min > 1.0f)
 		// kernelScale_final 함수를 호출하여 k_iso 계산
-		if (adaptive_mesh) k_iso = kernelScale_final(sigma, alpha_min, kernel_degree, 0);
-		else k_iso = kernelScale_final(sigma, alpha_min, kernel_degree, 0) * 0.5f * icosaEdge;
+		k_iso = kernelScale_final(sigma, alpha_min, kernel_degree, 0) * 0.5f * icosaEdge;
 #else
 		if (sigma / alpha_min > 1.0f) {
 			k_iso = sqrtf(2.0f * logf(sigma / alpha_min)) * unitspherefactor;
@@ -1514,41 +1542,9 @@ void create_composite_object_from_gaussians(
 					generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_320_Vertices, g_LOD_320_Faces);
 					triangles_added = g_LOD_320_Faces.size(); lod_counts[3]++;
 				}
-				else if (max_final_scale < T_420) {
+				else {
 					generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_420_Vertices, g_LOD_420_Faces);
 					triangles_added = g_LOD_420_Faces.size(); lod_counts[4]++;
-				}
-				else if (max_final_scale < T_544) {
-					generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_544_Vertices, g_LOD_544_Faces);
-					triangles_added = g_LOD_544_Faces.size(); lod_counts[5]++;
-				}
-				else if (max_final_scale < T_684) {
-					generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_684_Vertices, g_LOD_684_Faces);
-					triangles_added = g_LOD_684_Faces.size(); lod_counts[6]++;
-				}
-				else if (max_final_scale < T_760) {
-					generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_760_Vertices, g_LOD_760_Faces);
-					triangles_added = g_LOD_760_Faces.size(); lod_counts[7]++;
-				}
-				else if (max_final_scale < T_840) {
-					generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_840_Vertices, g_LOD_840_Faces);
-					triangles_added = g_LOD_840_Faces.size(); lod_counts[8]++;
-				}
-				else if (max_final_scale < T_924) {
-					generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_924_Vertices, g_LOD_924_Faces);
-					triangles_added = g_LOD_924_Faces.size(); lod_counts[9]++;
-				}
-				else if (max_final_scale < T_1012) {
-					generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_1012_Vertices, g_LOD_1012_Faces);
-					triangles_added = g_LOD_1012_Faces.size(); lod_counts[10]++;
-				}
-				else if (max_final_scale < T_1104) {
-					generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_1104_Vertices, g_LOD_1104_Faces);
-					triangles_added = g_LOD_1104_Faces.size(); lod_counts[11]++;
-				}
-				else {// ( >= T_1104)
-					generate_gaussian_mesh(i, current_vertex_ptr, uip.poly_model.AABB, g, final_scale, g_LOD_1280_Vertices, g_LOD_1280_Faces);
-					triangles_added = g_LOD_1280_Faces.size(); lod_counts[12]++;
 				}
 #endif
 		}
@@ -1746,6 +1742,12 @@ void create_composite_object_from_gaussians(
 	uip.composite_object_read = 1;
 	//printf("\nSuccessfully created CompositeObject with %d triangles from %ld Gaussians.\n\n", uip.poly_model.n_triangles, num_gaussians);
 	printf("\nSuccessfully created CompositeObject with %d triangles from %ld Gaussians.\n\n", uip.poly_model.n_triangles, num_gaussians - (cnt_sigma));
+
+
+	printf("Composite Object AABB: X [%f, %f] Y [%f, %f] Z [%f, %f]\n",
+		uip.poly_model.AABB[XMIN], uip.poly_model.AABB[XMAX],
+		uip.poly_model.AABB[YMIN], uip.poly_model.AABB[YMAX],
+		uip.poly_model.AABB[ZMIN], uip.poly_model.AABB[ZMAX]);
 }
 
 // 축-각도 표현을 쿼터니언으로 변환
@@ -2425,13 +2427,26 @@ void subMenuHandler(int value) {
 	static char final_obj_path[512];
 	static char final_build_path[512];
 
-
-
 	// Kd-treeConverter.h의 매크로를 기반으로 동적 접미사 생성
 	char suffix[256];
 	//const char* sah_mode_str = SAH_MAXIMIZE ? "maximize" : "minimize";
 	const char* sah_mode_str = ADAPTIVE_MESH ? "adaptive" : "icosa";
-	const char* clip_mode_str = EXPORTED ? "_exported" : "";
+	//const char* clip_mode_str = EXPORTED ? "_exported" : "";
+
+	printf("SIGMA_THRESHOLD_MODE: %f\n", static_cast<float>(SIGMA_THRESHOLD_MODE));
+	printf("SIGMA_THRESHOLD: %f\n", SIGMA_THRESHOLD_MODE / 255.0f);
+	printf("%f %f %f %f %f\n", 1.0f / 255.0f, 2.0f / 255.0f, 3.0f / 255.0f, 4.0f / 255.0f, 5.0f / 255.0f);
+#if SIGMA_THRESHOLD_MODE==true || SIGMA_THRESHOLD_MODE==false
+	char* clip_mode_str = SIGMA_THRESHOLD_MODE ? "_smT" : "";
+#elif SIGMA_THRESHOLD_MODE==2
+	char* clip_mode_str = "_smT2";
+#elif SIGMA_THRESHOLD_MODE==3
+	char* clip_mode_str = "_smT3";
+#elif SIGMA_THRESHOLD_MODE==4
+	char* clip_mode_str = "_smT4";
+#elif SIGMA_THRESHOLD_MODE==5
+	char* clip_mode_str = "_smT5";
+#endif
 #if ROTATION
 	const char* scale_mode_str = USE_KERNEL_SCALE ? "_rot_kernelScale" : "_rot";
 #else
@@ -2493,6 +2508,16 @@ void subMenuHandler(int value) {
 		FORCE_SPLIT_THRESHOLD,
 		clip_mode_str,
 		sah_mode_str);
+#if MAX_LEVEL != 128
+		snprintf(suffix, sizeof(suffix), "%s_%.0f_normal_%d_%d_%d%s_%s",
+			scale_mode_str,
+			ISCET_COST,
+			MIN_TRI,
+			FORCE_SPLIT_THRESHOLD,
+			MAX_LEVEL,
+			clip_mode_str,
+			sah_mode_str);
+#endif
 #endif
 
 	// 기본 경로 문자열 포인터
@@ -2523,40 +2548,9 @@ void subMenuHandler(int value) {
 		base_obj_str = "../../Data/ply/hotdog2/hotdog_3dgrt2_new.obj";
 		base_build_str = "../../Data/ply/hotdog2/hotdog2_3dgrt_kdt.txt";
 		ply_to_obj_mtl = "hotdog_3dgrt2.mtl";
-#if ADAPTIVE_MESH
-		adaptive_mesh = true;
-		// [절대 다수 구간] - Bin 0 (0.0~0.18) 커버 (약 135만 개)
-		T_8 = 0.20f;
-		T_20 = 0.40f;
-		T_80 = 0.70f;
-		T_162 = 1.10f;
-		T_264 = 1.50f;
-		T_320 = 2.00f;
-		T_420 = 2.80f;
-		T_544 = 3.80f;
-		T_684 = 5.00f;
-		T_760 = 6.50f;
-		T_840 = 8.00f;
-		T_924 = 10.00f;
-		T_1012 = 12.50f;
-		T_1104 = 15.00f;
-#if USE_KERNEL_SCALE
-		T_8    = 0.03f;
-		T_20 = 0.06f;
-		T_80 = 0.12f;
-		T_162 = 0.18f;
-		T_264 = 0.24f;
-		T_320 = 0.30f;
-		T_420 = 0.38f;
-		T_544 = 0.46f;
-		T_684 = 0.54f;
-		T_760 = 0.62f;
-		T_840 = 0.70f;
-		T_924 = 0.80f;
-		T_1012 = 0.90f;
-		T_1104 = 1.00f;
-#endif
-#endif
+		setCameraLookAt(0.395967, 0.326438, 2.125716,
+			-0.102802, -0.253159, -0.961947,
+			-0.026902, 0.967425, -0.251726);
 		break;
 	case 102: printf("Lego selected\n");
 		ply_file_path = "../../Data/ply/lego/lego_3dgrt.ply";
@@ -2565,9 +2559,9 @@ void subMenuHandler(int value) {
 		base_obj_str = "../../Data/ply/lego/lego_3dgrt_new.obj";
 		base_build_str = "../../Data/ply/lego/lego_3dgrt_kdt.txt";
 		ply_to_obj_mtl = "lego_3dgrt.mtl";
-		setCameraLookAt(1.813285, -4.420316, 5.378814,
-			-0.237450, 0.607866, -0.757704,
-			0.181777, 0.794039, 0.580051);
+		setCameraLookAt(-0.609975278377533, -0.3582107126712799, 1.6545488834381104,
+			0.4628783166408539, 0.304642915725708, -0.8324275016784668,
+			0.36059704422950747, 0.793158233165741, 0.4907844066619873);
 		break;
 	case 103: printf("Chair selected\n");
 		ply_file_path = "../../Data/ply/chair/chair_3dgrt.ply";
@@ -2576,6 +2570,42 @@ void subMenuHandler(int value) {
 		base_obj_str = "../../Data/ply/chair/chair_3dgrt_new.obj";
 		base_build_str = "../../Data/ply/chair/chair_3dgrt_kdt.txt";
 		ply_to_obj_mtl = "chair_3dgrt.mtl";
+		setCameraLookAt(0.30127671360969546, -0.9264131784439087, 1.239231824874878,
+			-0.19798490405082704, 0.6385213732719421, -0.7437019944190979,
+			0.3419942855834961, 0.7560404539108276, 0.5580706596374512);
+		break;
+	case 1031: printf("Ship selected\n");
+		ply_file_path = "../../Data/ply/ship/ship_3dgrt.ply";
+		base_kdtree_str = "../../Data/ply/ship/ship_tree.kdt";
+		base_igeom_str = "../../Data/ply/ship/ship_igeom.bin";
+		base_obj_str = "../../Data/ply/ship/ship_3dgrt_new.obj";
+		base_build_str = "../../Data/ply/ship/ship_3dgrt_kdt.txt";
+		ply_to_obj_mtl = "ship_3dgrt.mtl";
+		setCameraLookAt(-0.9226718544960022, -1.1514099836349488, 1.0478147268295289,
+			0.46329522132873537, 0.5615959167480469, -0.6855421662330627,
+			0.24063725769519807, 0.6647851467132568, 0.7072163224220276);
+		break;
+	case 1032: printf("Drums selected\n");
+		ply_file_path = "../../Data/ply/drums/drums_3dgrt.ply";
+		base_kdtree_str = "../../Data/ply/drums/drums_tree.kdt";
+		base_igeom_str = "../../Data/ply/drums/drums_igeom.bin";
+		base_obj_str = "../../Data/ply/drums/drums_3dgrt_new.obj";
+		base_build_str = "../../Data/ply/drums/drums_3dgrt_kdt.txt";
+		ply_to_obj_mtl = "drums_3dgrt.mtl";
+		setCameraLookAt(-0.7578927874565125, -1.6319409608840943, 0.8437733054161072,
+			0.39351686835289, 0.8284616470336914, -0.39849287271499636,
+			0.032689813524484637, 0.42058202624320986, 0.906665563583374);
+		break;
+	case 1033: printf("Mic selected\n");
+		ply_file_path = "../../Data/ply/mic/mic_3dgrt.ply";
+		base_kdtree_str = "../../Data/ply/mic/mic_tree.kdt";
+		base_igeom_str = "../../Data/ply/mic/mic_igeom.bin";
+		base_obj_str = "../../Data/ply/mic/mic_3dgrt_new.obj";
+		base_build_str = "../../Data/ply/mic/mic_3dgrt_kdt.txt";
+		ply_to_obj_mtl = "mic_3dgrt.mtl";
+		setCameraLookAt(-0.5019276738166809, -1.2671177387237549, 1.6138207912445069,
+			0.356383740901947, 0.5188058614730835, -0.7770676612854004,
+			0.6596000790596008, 0.44934386014938357, 0.6025114059448242);
 		break;
 	case 104: printf("Flowers selected\n");
 		ply_file_path = "../../Data/ply/flowers/flowers.ply";
@@ -2584,9 +2614,9 @@ void subMenuHandler(int value) {
 		base_obj_str = "../../Data/ply/flowers/flowers_new.obj";
 		base_build_str = "../../Data/ply/flowers/flowers_kdt.txt";
 		ply_to_obj_mtl = "flowers_3dgrt.mtl";
-		setCameraLookAt(-6.126542, -3.913612, -0.921384,
-			0.838813, 0.526412, 0.138863,
-			0.519344, -0.850230, 0.085975);
+		setCameraLookAt(-1.3555793762207032, -0.9134408831596375, -0.921384,
+			0.548153817653656, 0.5915342569351196, 0.3431593179702759,
+			0.4626573622226715, -0.7964888215065002, 0.3892991542816162);
 		break;
 	case 105: printf("Bonsai selected\n");
 #if EXPORTED
@@ -2599,9 +2629,9 @@ void subMenuHandler(int value) {
 		base_obj_str = "../../Data/ply/bonsai/bonsai_new.obj";
 		base_build_str = "../../Data/ply/bonsai/bonsai_kdt.txt";
 		ply_to_obj_mtl = "bonsai_3dgrt.mtl";
-		setCameraLookAt(-0.39592796564102175, -0.24931851029396058, 2.1703200340270998,
-			0.389446496963501, 0.7509136199951172, -0.533348023891449,
-			0.007304826285690069, -0.5815656781196594, -0.8134668469429016);
+		setCameraLookAt(-0.3701975643634796, -0.67806476354599, 1.5000991821289063,
+			0.421955406665802, 0.8475437164306641, -0.3219059407711029,
+			0.10673734545707703, -0.3990341126918793, -0.9107025265693665);
 #if ADAPTIVE_MESH
 		adaptive_mesh = true;
 		// [절대 다수 구간] - Bin 0 (0.0~0.18) 커버 (약 135만 개)
@@ -2611,29 +2641,13 @@ void subMenuHandler(int value) {
 		T_162 = 1.10f;
 		T_264 = 1.50f;
 		T_320 = 2.00f;
-		T_420 = 2.80f;
-		T_544 = 3.80f;
-		T_684 = 5.00f;
-		T_760 = 6.50f;
-		T_840 = 8.00f;
-		T_924 = 10.00f;
-		T_1012 = 12.50f;
-		T_1104 = 15.00f;
 #if USE_KERNEL_SCALE
 		T_8 = 0.35f;
-		T_20 = 0.70f;
-		T_80 = 1.10f;
-		T_162 = 1.80f;   // ~ Bin 4
-		T_264 = 2.50f;   // ~ Bin 6
-		T_320 = 3.20f;   // ~ Bin 8
-		T_420 = 4.50f;   // ~ Bin 12
-		T_544 = 6.00f;   // ~ Bin 16
-		T_684 = 8.00f;   // ~ Bin 22
-		T_760 = 10.50f;  // ~ Bin 29
-		T_840 = 13.50f;  // ~ Bin 38
-		T_924 = 17.00f;  // ~ Bin 48
-		T_1012 = 21.00f;  // ~ Bin 60
-		T_1104 = 26.00f;  // ~ Bin 74
+		T_20 = 1.50f;
+		T_80 = 4.00f;
+		T_162 = 8.00f;
+		T_264 = 14.00f;
+		T_320 = 22.00f;
 #endif
 #endif
 		break;
@@ -2648,42 +2662,26 @@ void subMenuHandler(int value) {
 		base_obj_str = "../../Data/ply/bicycle/bicycle_new.obj";
 		base_build_str = "../../Data/ply/bicycle/bicycle_kdt.txt";
 		ply_to_obj_mtl = "bicycle_3dgrt.mtl";
-		setCameraLookAt(-1.0019439458847047, 0.060600921511650088, -0.2790181636810303,
-			0.9081043004989624, 0.20492997765541078, 0.36517176032066347,
-			0.1179303526878357, -0.9619273543357849, 0.2465543895959854);
+		setCameraLookAt(-1.8810417652130128, 0.18281030654907227, 0.9657841324806213,
+			0.9618207216262817, 0.27256786823272707, -0.024726202711462976,
+			0.24284449219703675, -0.8916060328483582, -0.382185161113739);
 #if RESOLUTION != 4
 		camera.fovy = 39.10f;
 #endif
 #if ADAPTIVE_MESH
 		adaptive_mesh = true;
-		//T_8 = 0.23f;   // Scale < 0.23 -> 8면체 (약 137만 개)
-		//T_20 = 0.48f;   // Scale < 0.48 -> 20면체 (약 2만 개)
-		//T_80 = 0.90f;
-		//T_162 = 1.50f;
-		//T_264 = 2.20f;
-		//T_320 = 3.00f;
-		//T_420 = 3.90f;   // 3.9 * 0.23 ≈ 0.9
-		//T_544 = 4.90f;   // 4.9 * 0.20 ≈ 1.0
-		//T_684 = 6.00f;   // 6.0 * 0.18 ≈ 1.1
-		//T_760 = 7.20f;   // 7.2 * 0.17 ≈ 1.2
-		//T_840 = 8.50f;   // 8.5 * 0.16 ≈ 1.3
-		//T_924 = 9.80f;   // 9.8 * 0.15 ≈ 1.4
-		//T_1012 = 11.00f;  // 11.0 * 0.14 ≈ 1.5 (한계선 도달)
-		//T_1104 = 12.50f;
-		T_8 = 0.24f;
-		T_20 = 0.48f;
-		T_80 = 0.72f;
-		T_162 = 1.20f;   // ~ Bin 4
-		T_264 = 1.70f;   // ~ Bin 6
-		T_320 = 2.30f;   // ~ Bin 9
-		T_420 = 3.10f;   // ~ Bin 13
-		T_544 = 4.00f;   // ~ Bin 17
-		T_684 = 5.20f;   // ~ Bin 22
-		T_760 = 6.50f;   // ~ Bin 28
-		T_840 = 8.50f;   // ~ Bin 37
-		T_924 = 11.00f;  // ~ Bin 48
-		T_1012 = 14.00f;  // ~ Bin 61
-		T_1104 = 17.50f;  // ~ Bin 77
+		T_8 = 0.23f;   // Scale < 0.23 -> 8면체 (약 137만 개)
+		T_20 = 0.48f;   // Scale < 0.48 -> 20면체 (약 2만 개)
+		T_80 = 0.90f;
+		T_162 = 1.50f;
+		T_264 = 2.20f;
+		T_320 = 3.00f;
+		//T_8 = 0.24f;
+		//T_20 = 0.48f;
+		//T_80 = 0.72f;
+		//T_162 = 1.20f;   // ~ Bin 4
+		//T_264 = 1.70f;   // ~ Bin 6
+		//T_320 = 2.30f;   // ~ Bin 9
 #if USE_KERNEL_SCALE
 		//T_8 = 0.20f;  // ~ Bin 0 (0.18): 대부분의 가우시안
 		//T_20 = 0.40f;  // ~ Bin 2 (0.37): 약간 큰 것들
@@ -2691,28 +2689,18 @@ void subMenuHandler(int value) {
 		//T_162 = 1.15f;  // ~ Bin 5 (1.12)
 		//T_264 = 1.50f;  // ~ Bin 7 (1.49)
 		//T_320 = 2.00f;  // ~ Bin 9 (1.86)
-		//T_420 = 3.00f;  // ~ Bin 15
-		//T_544 = 4.00f;  // ~ Bin 21
-		//T_684 = 5.00f;  // ~ Bin 26
-		//T_760 = 7.00f;  // ~ Bin 36
-		//T_840 = 9.00f;  // ~ Bin 48
-		//T_924 = 11.00f; // ~ Bin 58
-		//T_1012 = 13.00f; // ~ Bin 69
-		//T_1104 = 15.00f; // ~ Bin 80
-		T_8 = 0.30f;
-		T_20 = 0.60f;
-		T_80 = 0.90f;
-		T_162 = 1.50f;   // ~ Bin 4
-		T_264 = 2.20f;   // ~ Bin 7
-		T_320 = 3.00f;   // ~ Bin 10
-		T_420 = 4.50f;   // ~ Bin 15
-		T_544 = 6.00f;   // ~ Bin 21
-		T_684 = 8.00f;   // ~ Bin 28
-		T_760 = 10.00f;  // ~ Bin 35
-		T_840 = 13.00f;  // ~ Bin 45
-		T_924 = 16.00f;  // ~ Bin 56
-		T_1012 = 20.00f;  // ~ Bin 70
-		T_1104 = 24.00f;  // ~ Bin 84
+		//T_8 = 0.30f;
+		//T_20 = 0.60f;
+		//T_80 = 0.90f;
+		//T_162 = 1.50f;   // ~ Bin 4
+		//T_264 = 2.20f;   // ~ Bin 7
+		//T_320 = 3.00f;   // ~ Bin 10
+		T_8 = 0.60f;   // 8면체 (~Bin 1)
+		T_20 = 2.00f;   // 20면체 (~Bin 6)
+		T_80 = 5.00f;   // 80면체 (~Bin 21)
+		T_162 = 8.00f;   // 162면체 (~Bin 34)
+		T_264 = 12.00f;  // 264면체 (~Bin 53)
+		T_320 = 18.00f;  // 320면체 (~Bin 77)
 #endif
 #endif
 		break;
@@ -2755,11 +2743,32 @@ void subMenuHandler(int value) {
 		base_obj_str = "../../Data/ply/room/room_new.obj";
 		base_build_str = "../../Data/ply/room/room_kdt.txt";
 		ply_to_obj_mtl = "room_3dgrt.mtl";
-		setCameraLookAt(-1.792984, 1.629362, -5.232583,
-			0.285630, 0.020321, 0.958124,
-			0.005805, -0.999794, 0.019474);
+		//setCameraLookAt(-1.792984, 1.629362, -5.232583,
+		//	0.285630, 0.020321, 0.958124,
+		//	0.005805, -0.999794, 0.019474);
+		setCameraLookAt(0.3698529005050659, 1.6679308414459229, -2.3211517333984377,
+			-0.6409549713134766, -0.10555218160152435, 0.7602866888046265,
+			-0.25304168462753298, -0.9060735702514648, -0.33911770582199099);
+#if RESOLUTION != 4
 		camera.fovy = 36.2f;
-		adaptive_mesh = ADAPTIVE_MESH;
+#endif
+#if ADAPTIVE_MESH
+		adaptive_mesh = true;
+		T_8 = 0.25f;
+		T_20 = 1.00f;
+		T_80 = 3.00f;
+		T_162 = 6.00f;
+		T_264 = 12.00f;
+		T_320 = 18.00f;
+#if USE_KERNEL_SCALE
+		T_8 = 0.35f;
+		T_20 = 0.55f;
+		T_80 = 0.95f;
+		T_162 = 1.50f;   // Scale 0.95 ~ 1.50
+		T_264 = 2.20f;   // Scale 1.50 ~ 2.20
+		T_320 = 3.50f;   // Scale 2.20 ~ 3.50
+#endif
+#endif
 		break;
 	case 111: printf("truck selected\n");
 		ply_file_path = "../../Data/ply/truck/truck_3dgrt.ply";
@@ -2942,7 +2951,16 @@ void main_menu_action(int selection) {
 		printf("uip.kd_tree_filename:%s\n", uip.kd_tree_filename);
 		if (render_gaussian) {
 			strcpy(full_kd_tree_file_name, ply_kdtree_path);
+			strcpy(full_i_geometry_file_name, ply_igeom_path); // geometry 경로 복사
 			uip.kd_tree_dump_format = KD_TREE_DUMP_IN_BINARY;
+
+			printf("Loading Geometry from: %s\n", full_i_geometry_file_name);
+
+			if (!read_igeom_from_file(&uip.poly_model, full_i_geometry_file_name)) {
+				fprintf(stderr, "Failed to load geometry. Aborting kd-tree load.\n");
+				break;
+			}
+			uip.composite_object_read = 1; // 객체가 로드되었음을 플래그로 설정
 		}
 		printf("full_kd_tree_file_name:%s\n", full_kd_tree_file_name);
 		read_kd_tree_from_file(&uip.poly_model, full_kd_tree_file_name, uip.kd_tree_dump_format);
@@ -3002,7 +3020,7 @@ void main_menu_action(int selection) {
 				ply_igeom_path         // 저장할 geometry
 			);
 
-			save_composite_object_to_obj(g_gaussians, uip.poly_model, ply_to_obj);
+			//save_composite_object_to_obj(g_gaussians, uip.poly_model, ply_to_obj);
 		}
 		print_current_time("all_build_end\n");
 		break;
@@ -3026,6 +3044,9 @@ void register_callbacks_and_create_menu(void) {
 	//glutAddMenuEntry("hotdog2", 1012);
 	glutAddMenuEntry("lego", 102);
 	glutAddMenuEntry("chair", 103);
+	glutAddMenuEntry("ship", 1031);
+	glutAddMenuEntry("drums", 1032);
+	glutAddMenuEntry("mic", 1033);
 	glutAddMenuEntry("flowers", 104);
 	glutAddMenuEntry("bonsai", 105);
 	glutAddMenuEntry("bicycle", 106);

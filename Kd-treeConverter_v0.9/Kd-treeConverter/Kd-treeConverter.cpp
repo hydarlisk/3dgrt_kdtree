@@ -67,6 +67,9 @@ int build_kd_tree_for_composite_object(CompositeObject *c_object) {
 		fprintf(stdout, "P_s * SUM(sigma(i) * area(i_real))\n");
 		break;
 	}
+
+	fprintf(stdout, "  * Adaptive Mesh Mode: %s\n", ADAPTIVE_MESH ? "Adaptive" : "Icosa");
+	fprintf(stdout, "  * Kernel Scale Mode: %s\n", USE_KERNEL_SCALE ? "KernelScale" : "Paper");
 //shyun added end
 	// allocate memory and initialize data
 	if (initialize_kd_tree(c_object) == 0) {
@@ -414,6 +417,41 @@ int read_kd_tree_from_file(CompositeObject *c_object, const char *filename, int 
 	fprintf(stdout, "Reading Kd-tree is completed.\n");
 
 	return 1;
+}
+
+// [추가] 바이너리 지오메트리 파일(.bin)을 읽어오는 함수
+bool read_igeom_from_file(CompositeObject* c_object, const char* filename) {
+	FILE* fp = fopen(filename, "rb");
+	if (fp == NULL) {
+		fprintf(stderr, "Error: Cannot open i-geometry file %s\n", filename);
+		return false;
+	}
+
+	// 1. 삼각형 개수 읽기
+	fread(&(c_object->n_triangles), sizeof(int), 1, fp);
+
+	// 2. AABB 읽기
+	fread(c_object->AABB, sizeof(float), 6, fp);
+
+	// 3. 정점 데이터 메모리 할당 및 읽기
+	if (c_object->extended_vertices != NULL) {
+		free(c_object->extended_vertices);
+	}
+	// ExtendedVertex는 삼각형 하나당 3개씩 존재
+	size_t total_vertices = 3 * c_object->n_triangles;
+	c_object->extended_vertices = (ExtendedVertex*)malloc(total_vertices * sizeof(ExtendedVertex));
+
+	if (c_object->extended_vertices == NULL) {
+		fprintf(stderr, "Error: Memory allocation failed for i-geometry.\n");
+		fclose(fp);
+		return false;
+	}
+
+	fread(c_object->extended_vertices, sizeof(ExtendedVertex), total_vertices, fp);
+
+	fclose(fp);
+	fprintf(stdout, "Loaded i-geometry: %d triangles from %s\n", c_object->n_triangles, filename);
+	return true;
 }
 
 void collectTriangleCounts_recursive(
