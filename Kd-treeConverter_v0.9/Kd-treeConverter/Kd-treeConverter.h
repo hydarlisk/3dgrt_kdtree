@@ -7,6 +7,8 @@
 #pragma once
 #include <vector>
 
+#define JS_BIN true
+
 //shyun added begin
 #define TRAVL_COST 1.0
 #define ISCET_COST 5.0

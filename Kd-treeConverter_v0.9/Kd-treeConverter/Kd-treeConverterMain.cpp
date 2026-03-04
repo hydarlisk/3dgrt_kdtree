@@ -41,6 +41,9 @@ char* ply_igeom_path;
 char* ply_to_obj;
 char* ply_to_obj_mtl;
 
+char* ply_kdtree_dump_path;
+char* ply_igeom_dump_path;
+
 //cudaEvent_t start_ev, stop_ev;
 char* kdtree_build_path;
 //int submenu[5] = { 101,1012,102,104,105 };
@@ -2427,8 +2430,12 @@ void subMenuHandler(int value) {
 	static char final_obj_path[512];
 	static char final_build_path[512];
 
+	static char final_kdtree_dump_path[512];
+	static char final_igeom_dump_path[512];
+
 	// Kd-treeConverter.h의 매크로를 기반으로 동적 접미사 생성
 	char suffix[256];
+	char suffixDump_JS[256];
 	//const char* sah_mode_str = SAH_MAXIMIZE ? "maximize" : "minimize";
 	const char* sah_mode_str = ADAPTIVE_MESH ? "adaptive" : "icosa";
 	//const char* clip_mode_str = EXPORTED ? "_exported" : "";
@@ -2508,8 +2515,23 @@ void subMenuHandler(int value) {
 		FORCE_SPLIT_THRESHOLD,
 		clip_mode_str,
 		sah_mode_str);
+	snprintf(suffixDump_JS, sizeof(suffixDump_JS), "%s_%.0f_normal_%d_%d%s_%s_JS",
+		scale_mode_str,
+		ISCET_COST,
+		MIN_TRI,
+		FORCE_SPLIT_THRESHOLD,
+		clip_mode_str,
+		sah_mode_str);
 #if MAX_LEVEL != 128
 		snprintf(suffix, sizeof(suffix), "%s_%.0f_normal_%d_%d_%d%s_%s",
+			scale_mode_str,
+			ISCET_COST,
+			MIN_TRI,
+			FORCE_SPLIT_THRESHOLD,
+			MAX_LEVEL,
+			clip_mode_str,
+			sah_mode_str);
+		snprintf(suffixDump_JS, sizeof(suffixDump_JS), "%s_%.0f_normal_%d_%d_%d%s_%s_JS",
 			scale_mode_str,
 			ISCET_COST,
 			MIN_TRI,
@@ -2539,6 +2561,20 @@ void subMenuHandler(int value) {
 			snprintf(buffer, buffer_size, "%s%s", base_path, suffix);
 		}
 	};
+
+	// 동적으로 완전한 파일 경로를 만드는 헬퍼 람다 함수 (dump용)
+	auto construct_path_JS = [&](char* buffer, size_t buffer_size, const char* base_path) {
+		const char* extension = strrchr(base_path, '.');
+		if (extension) {
+			int base_len = extension - base_path;
+			// snprintf를 사용하여 "기반경로 + 접미사 + 확장자" 형식으로 조합
+			snprintf(buffer, buffer_size, "%.*s%s%s", base_len, base_path, suffixDump_JS, extension);
+		}
+		else {
+			// 확장자가 없는 경우 (만약을 대비)
+			snprintf(buffer, buffer_size, "%s%s", base_path, suffixDump_JS);
+		}
+		};
 
 	switch (value) {
 	case 101: printf("Hotdog selected\n");
@@ -2797,11 +2833,17 @@ void subMenuHandler(int value) {
 		construct_path(final_obj_path, sizeof(final_obj_path), base_obj_str);
 		construct_path(final_build_path, sizeof(final_build_path), base_build_str);
 
+		construct_path_JS(final_kdtree_dump_path, sizeof(final_kdtree_dump_path), base_kdtree_str);
+		construct_path_JS(final_igeom_dump_path, sizeof(final_igeom_dump_path), base_igeom_str);
+
 		// 전역 변수에 최종 경로 할당
 		ply_kdtree_path = final_kdtree_path;
 		ply_igeom_path = final_igeom_path;
 		ply_to_obj = final_obj_path;
 		kdtree_build_path = final_build_path;
+
+		ply_kdtree_dump_path = final_kdtree_dump_path;
+		ply_igeom_dump_path = final_igeom_dump_path;
 	}
 
 	printf("%s\n%s\n%s\n%s\n%s\n", ply_file_path,
@@ -2809,6 +2851,8 @@ void subMenuHandler(int value) {
 		ply_igeom_path,
 		ply_to_obj,
 		kdtree_build_path);
+
+	printf("dump path :\n\t%s\n\t%s\n", ply_kdtree_dump_path, ply_igeom_dump_path);
 
 	// 3DGS 학습 결과물을 로드
 	if (!loadGaussiansFromPly(ply_file_path, g_gaussians)) {
@@ -2929,9 +2973,9 @@ void main_menu_action(int selection) {
 		if (render_gaussian) {
 			dump_kd_tree_for_composite_object(
 				&uip.poly_model,
-				ply_kdtree_path,         // 저장할 kd-tree
+				ply_kdtree_dump_path,         // 저장할 kd-tree
 				KD_TREE_DUMP_IN_BINARY,    // 저장 포맷
-				ply_igeom_path         // 저장할 geometry
+				ply_igeom_dump_path         // 저장할 geometry
 			);
 
 			//adaptive sampling 프로젝트에서 .bin을 읽도록 수정하여 불필요해짐.

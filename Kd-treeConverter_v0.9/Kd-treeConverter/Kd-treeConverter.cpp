@@ -301,13 +301,20 @@ void dump_kd_tree_for_composite_object(CompositeObject *c_object, const char *fi
 		exit(-1);
 	}
 	fprintf(stdout, "   * I-geometry format: BINARY\n");
-
+#if JS_BIN
+	int tmp;
+	tmp = c_object->n_triangles * 3 * 8;	//vntArrLength
+	fwrite(&tmp, sizeof(int), 1, fp);
+	tmp = c_object->n_triangles * 3; //faceArrLength
+	fwrite(&tmp, sizeof(int), 1, fp);
+	fwrite(c_object->extended_vertices, sizeof(ExtendedVertex), 3 * c_object->n_triangles, fp);
+#else
 	fwrite(&(c_object->n_triangles), sizeof(int), 1, fp);
 	fwrite(c_object->AABB, sizeof(float), 6, fp);
 	fwrite(c_object->extended_vertices, sizeof(ExtendedVertex), 3 * c_object->n_triangles, fp);
 	//fwrite(, sizeof(Gaussian), , fp);//TODO gaussian read
+#endif
 	fclose(fp);
-
 	fprintf(stdout, "\n> Done!\n\n");
 }
 
@@ -341,6 +348,9 @@ int read_kd_tree_from_file(CompositeObject *c_object, const char *filename, int 
 		g_pKdTree_TriOffset_Array = new unsigned int [ g_iKdTree_TriOffset_CountAlloc ];
 		fread( g_pKdTree_TriOffset_Array, 4, nTriOffCount, fp );
 
+		printf("KD_Tree_Node size %d * 4 = %d B\n", nTreeNodeCount, nTreeNodeCount * 4);
+		printf("Tri_Offset_List size %d * 4 = %d B\n", nTriOffCount, nTriOffCount * 4);
+		printf("Total kd-Tree Size = [%d B][%.2f MB]\n", (nTreeNodeCount + nTriOffCount) * 4, (float)(nTreeNodeCount + nTriOffCount) * 4 / 1024 / 1024);
 	} else {
 
 		fp = fopen( filename, "r" );
