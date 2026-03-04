@@ -1038,89 +1038,91 @@ bool initialize_kd_tree(CompositeObject *poly_model) {
 	ExtendedVertex *pVertexList = poly_model->extended_vertices;
 
 	g_pTriangleInfos = new TriangleList[g_iTriangleSize];
-		if( g_pTriangleInfos == NULL ) {
-			bError |= true;
-		} else {
-			for( int i = 0; i < g_iTriangleSize; i++ ) {
-				g_pTriangleInfos[i].offset = i;
-				g_pTriangleInfos[i].point[0] = pVertexList[3*i];
-				g_pTriangleInfos[i].point[1] = pVertexList[3*i+1];
-				g_pTriangleInfos[i].point[2] = pVertexList[3*i+2];
+	if( g_pTriangleInfos == NULL ) {
+		bError |= true;
+	}
+	else {
+		for( int i = 0; i < g_iTriangleSize; i++ ) {
+			g_pTriangleInfos[i].offset = i;
+			g_pTriangleInfos[i].point[0] = pVertexList[3*i];
+			g_pTriangleInfos[i].point[1] = pVertexList[3*i+1];
+			g_pTriangleInfos[i].point[2] = pVertexList[3*i+2];
 //shyun added begin
 #if SAH_OPACITY
-				int gaussian_idx = g_pTriangleInfos[i].point[0].material_ID;
+			int gaussian_idx = g_pTriangleInfos[i].point[0].material_ID;
 
-				// 인덱스가 유효한지 확인하고 Opacity 값 가져오기
-				if (gaussian_idx >= 0 && gaussian_idx < g_gaussians.size()) {
+			// 인덱스가 유효한지 확인하고 Opacity 값 가져오기
+			if (gaussian_idx >= 0 && gaussian_idx < g_gaussians.size()) {
 #if TRANSPARENCY
-					g_pTriangleInfos[i].opacity = 1 - g_gaussians[gaussian_idx].opacity;
+				g_pTriangleInfos[i].opacity = 1 - g_gaussians[gaussian_idx].opacity;
 #else
-					g_pTriangleInfos[i].opacity = g_gaussians[gaussian_idx].opacity;
-#endif
-				}
-				else {
-					// 가우시안이 아닌 일반 지오메트리를 위한 기본값
-					g_pTriangleInfos[i].opacity = 1.0f;
-				}
-#endif
-//shyun added end
-				g_pTriangleInfos[i].AABB.min[0] = MyMIN (MyMIN (g_pTriangleInfos[i].point[0].vertex[0], g_pTriangleInfos[i].point[1].vertex[0]), g_pTriangleInfos[i].point[2].vertex[0]);
-				g_pTriangleInfos[i].AABB.min[1] = MyMIN (MyMIN (g_pTriangleInfos[i].point[0].vertex[1], g_pTriangleInfos[i].point[1].vertex[1]), g_pTriangleInfos[i].point[2].vertex[1]);
-				g_pTriangleInfos[i].AABB.min[2] = MyMIN (MyMIN (g_pTriangleInfos[i].point[0].vertex[2], g_pTriangleInfos[i].point[1].vertex[2]), g_pTriangleInfos[i].point[2].vertex[2]);
-				g_pTriangleInfos[i].AABB.max[0] = MyMAX (MyMAX (g_pTriangleInfos[i].point[0].vertex[0], g_pTriangleInfos[i].point[1].vertex[0]), g_pTriangleInfos[i].point[2].vertex[0]);
-				g_pTriangleInfos[i].AABB.max[1] = MyMAX (MyMAX (g_pTriangleInfos[i].point[0].vertex[1], g_pTriangleInfos[i].point[1].vertex[1]), g_pTriangleInfos[i].point[2].vertex[1]);
-				g_pTriangleInfos[i].AABB.max[2] = MyMAX (MyMAX (g_pTriangleInfos[i].point[0].vertex[2], g_pTriangleInfos[i].point[1].vertex[2]), g_pTriangleInfos[i].point[2].vertex[2]);
-
-#if SAH_OPACITY >= 2
-				// 삼각형의 면적을 계산하여 contribution 값을 채웁니다.
-				float v0[3], v1[3], v2[3];
-				memcpy(v0, g_pTriangleInfos[i].point[0].vertex, sizeof(float) * 3);
-				memcpy(v1, g_pTriangleInfos[i].point[1].vertex, sizeof(float) * 3);
-				memcpy(v2, g_pTriangleInfos[i].point[2].vertex, sizeof(float) * 3);
-
-				// 두 개의 엣지 벡터 계산
-				double edge1[3] = { (double)v1[0] - v0[0], (double)v1[1] - v0[1], (double)v1[2] - v0[2] };
-				double edge2[3] = { (double)v2[0] - v0[0], (double)v2[1] - v0[1], (double)v2[2] - v0[2] };
-
-				// 외적 계산
-				double cross_product[3];
-				dMyVecCrossProduct(edge1, edge2, cross_product);
-
-				// 외적 벡터의 크기(길이) 계산
-				double magnitude = dMyVecLength(cross_product);
-
-				// 최종 면적 및 contribution 계산
-				float area = (float)(0.5 * magnitude);
-				g_pTriangleInfos[i].area = area;
-#endif
-#if SAH_OPACITY == 9
-				g_pTriangleInfos[i].AABBareaOrigin = get_surface_area(g_pTriangleInfos[i].AABB);
-				g_pTriangleInfos[i].AABBarea = g_pTriangleInfos[i].AABBareaOrigin;
+				g_pTriangleInfos[i].opacity = g_gaussians[gaussian_idx].opacity;
 #endif
 			}
+			else {
+				// 가우시안이 아닌 일반 지오메트리를 위한 기본값
+				g_pTriangleInfos[i].opacity = 1.0f;
+			}
+#endif
+//shyun added end
+			//calc triangle aabb
+			g_pTriangleInfos[i].AABB.min[0] = MyMIN (MyMIN (g_pTriangleInfos[i].point[0].vertex[0], g_pTriangleInfos[i].point[1].vertex[0]), g_pTriangleInfos[i].point[2].vertex[0]);
+			g_pTriangleInfos[i].AABB.min[1] = MyMIN (MyMIN (g_pTriangleInfos[i].point[0].vertex[1], g_pTriangleInfos[i].point[1].vertex[1]), g_pTriangleInfos[i].point[2].vertex[1]);
+			g_pTriangleInfos[i].AABB.min[2] = MyMIN (MyMIN (g_pTriangleInfos[i].point[0].vertex[2], g_pTriangleInfos[i].point[1].vertex[2]), g_pTriangleInfos[i].point[2].vertex[2]);
+			g_pTriangleInfos[i].AABB.max[0] = MyMAX (MyMAX (g_pTriangleInfos[i].point[0].vertex[0], g_pTriangleInfos[i].point[1].vertex[0]), g_pTriangleInfos[i].point[2].vertex[0]);
+			g_pTriangleInfos[i].AABB.max[1] = MyMAX (MyMAX (g_pTriangleInfos[i].point[0].vertex[1], g_pTriangleInfos[i].point[1].vertex[1]), g_pTriangleInfos[i].point[2].vertex[1]);
+			g_pTriangleInfos[i].AABB.max[2] = MyMAX (MyMAX (g_pTriangleInfos[i].point[0].vertex[2], g_pTriangleInfos[i].point[1].vertex[2]), g_pTriangleInfos[i].point[2].vertex[2]);
+
+#if SAH_OPACITY >= 2
+			// 삼각형의 면적을 계산하여 contribution 값을 채웁니다.
+			float v0[3], v1[3], v2[3];
+			memcpy(v0, g_pTriangleInfos[i].point[0].vertex, sizeof(float) * 3);
+			memcpy(v1, g_pTriangleInfos[i].point[1].vertex, sizeof(float) * 3);
+			memcpy(v2, g_pTriangleInfos[i].point[2].vertex, sizeof(float) * 3);
+
+			// 두 개의 엣지 벡터 계산
+			double edge1[3] = { (double)v1[0] - v0[0], (double)v1[1] - v0[1], (double)v1[2] - v0[2] };
+			double edge2[3] = { (double)v2[0] - v0[0], (double)v2[1] - v0[1], (double)v2[2] - v0[2] };
+
+			// 외적 계산
+			double cross_product[3];
+			dMyVecCrossProduct(edge1, edge2, cross_product);
+
+			// 외적 벡터의 크기(길이) 계산
+			double magnitude = dMyVecLength(cross_product);
+
+			// 최종 면적 및 contribution 계산
+			float area = (float)(0.5 * magnitude);
+			g_pTriangleInfos[i].area = area;
+#endif
+#if SAH_OPACITY == 9
+			g_pTriangleInfos[i].AABBareaOrigin = get_surface_area(g_pTriangleInfos[i].AABB);
+			g_pTriangleInfos[i].AABBarea = g_pTriangleInfos[i].AABBareaOrigin;
+#endif
 		}
+	}
 
 	g_bEdge = new BoundEdge[g_iTriangleSize * 2];
-		if( g_bEdge == NULL ) {
-			bError |= true;
-		} else {
-			memset( g_bEdge, 0x00, sizeof( BoundEdge ) * g_iTriangleSize * 2 );
-		}
+	if( g_bEdge == NULL ) {
+		bError |= true;
+	} else {
+		memset( g_bEdge, 0x00, sizeof( BoundEdge ) * g_iTriangleSize * 2 );
+	}
 		
 	g_pKdTree_Node_Array = new KdTreeNode[ g_iKdTree_Node_CountAlloc ];
-		if( g_pKdTree_Node_Array == NULL ) {
-			bError |= true;
-		} else {
-			memset( g_pKdTree_Node_Array, 0x00, sizeof( KdTreeNode ) * g_iKdTree_Node_CountAlloc );
-			g_iKdTree_Node_Count = 1; 
-		}
+	if( g_pKdTree_Node_Array == NULL ) {
+		bError |= true;
+	} else {
+		memset( g_pKdTree_Node_Array, 0x00, sizeof( KdTreeNode ) * g_iKdTree_Node_CountAlloc );
+		g_iKdTree_Node_Count = 1; 
+	}
 		
 	g_pKdTree_TriOffset_Array = new unsigned int [ g_iKdTree_TriOffset_CountAlloc ];
-		if( g_pKdTree_TriOffset_Array == NULL )	{
-			bError |= true;
-		} else {
-			memset( g_pKdTree_TriOffset_Array, 0x00, sizeof( unsigned int ) * g_iKdTree_TriOffset_CountAlloc );
-		}
+	if( g_pKdTree_TriOffset_Array == NULL )	{
+		bError |= true;
+	} else {
+		memset( g_pKdTree_TriOffset_Array, 0x00, sizeof( unsigned int ) * g_iKdTree_TriOffset_CountAlloc );
+	}
 
 	if (bError) {
 		printf("init kd-tree bError");

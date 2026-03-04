@@ -1224,20 +1224,20 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
 #endif
 #if WALD_METHOD
 
-#if BLEND_SELECT
+    #if BLEND_SELECT
                 if (blend_ops <= 25)
                     singlePassIntersectRoutine(currRay, tri_idx, t_near, t_far, local_hits, local_hit_count);
                 else
                     singlePassIntersectPlane(currRay, tri_idx, t_near, t_far, local_hits, local_hit_count);
-#else
+    #else
 
-#if MAIL_BOX
+        #if MAIL_BOX
                 singlePassIntersectRoutineMailBox(currRay, tri_idx, t_near, t_far, local_hits, local_hit_count, &mailbox);
-#else
+        #else
                 singlePassIntersectRoutine(currRay, tri_idx, t_near, t_far, local_hits, local_hit_count);
-#endif
+        #endif
 
-#endif
+    #endif
 
 #else
                 singlePassIntersectRoutineGaussian_sortNode(currRay, tri_idx, t_near, t_far, local_hits, local_hit_count);
@@ -1263,7 +1263,7 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
                     int gaussianID = 0;
 #if WALD_METHOD
 
-#if BLEND_SELECT
+    #if BLEND_SELECT
                     if (blend_ops > 20) {
                         selectionSortStep(local_hits, local_hit_count, i);
                         gaussianID = singlePassIntersectCheck(currRay, local_hits[i]);
@@ -1275,17 +1275,17 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
                         float4 internal2 = tex1Dfetch<float4>(inTriAccelTex, 3 * local_hits[i].triIndex + 2);
                         gaussianID = __float_as_int(internal2.w);
                     }
-#else
+    #else
                     float4 internal2 = tex1Dfetch<float4>(inTriAccelTex, 3 * local_hits[i].triIndex + 2);
                     gaussianID = __float_as_int(internal2.w);
 
                     //if (gaussianID == prevGaussianID) continue;
                     //prevGaussianID = gaussianID;
-#if HIT_AND_NODE_COUNT_DEBUG
+        #if HIT_AND_NODE_COUNT_DEBUG
                     if (x == g_SceneInfo.resX / 2 && y == g_SceneInfo.resY / 2) printf("%d ", gaussianID);
-#endif
+        #endif
 
-#endif
+    #endif
 
 #else
                     float4 d2 = tex1Dfetch<float4>(inTriAccelTex, local_hits[i].triIndex * 4 + 2);
