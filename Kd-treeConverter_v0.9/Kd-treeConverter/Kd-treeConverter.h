@@ -29,6 +29,58 @@
 
 //#define LESS_TRI false
 
+/********* for fast asset setting **********/
+#define HOTDOG 0
+#define BICYCLE 1
+
+///////////// change this part /////////////
+#define ASSET BICYCLE
+#define ORIGINAL false
+////////////////////////////////////////////
+
+#if ASSET == HOTDOG
+	#if ORIGINAL
+		#undef USE_KERNEL_SCALE
+		#define USE_KERNEL_SCALE false
+		#undef FORCE_SPLIT_THRESHOLD
+		#define FORCE_SPLIT_THRESHOLD 0
+		#undef SIGMA_THRESHOLD_MODE
+		#define SIGMA_THRESHOLD_MODE 0
+		#undef ADAPTIVE_MESH
+		#define ADAPTIVE_MESH false
+	#else
+		#undef USE_KERNEL_SCALE
+		#define USE_KERNEL_SCALE false
+		#undef FORCE_SPLIT_THRESHOLD
+		#define FORCE_SPLIT_THRESHOLD 64
+		#undef SIGMA_THRESHOLD_MODE
+		#define SIGMA_THRESHOLD_MODE 1
+		#undef ADAPTIVE_MESH
+		#define ADAPTIVE_MESH false
+	#endif
+#elif ASSET == BICYCLE
+	#if ORIGINAL
+		#undef USE_KERNEL_SCALE
+		#define USE_KERNEL_SCALE false
+		#undef FORCE_SPLIT_THRESHOLD
+		#define FORCE_SPLIT_THRESHOLD 0
+		#undef SIGMA_THRESHOLD_MODE
+		#define SIGMA_THRESHOLD_MODE 0
+		#undef ADAPTIVE_MESH
+		#define ADAPTIVE_MESH false
+	#else
+		#undef USE_KERNEL_SCALE
+		#define USE_KERNEL_SCALE true
+		#undef FORCE_SPLIT_THRESHOLD
+		#define FORCE_SPLIT_THRESHOLD 128
+		#undef SIGMA_THRESHOLD_MODE
+		#define SIGMA_THRESHOLD_MODE 1
+		#undef ADAPTIVE_MESH
+		#define ADAPTIVE_MESH true
+	#endif
+#endif
+
+
 #define SAH_OPACITY 0
 #define CLIP_AREA false							// 부모 노드의 AABB로 삼각형 면적 clip
 #define SAH_MAXIMIZE false

@@ -2457,7 +2457,7 @@ void subMenuHandler(int value) {
 #if ROTATION
 	const char* scale_mode_str = USE_KERNEL_SCALE ? "_rot_kernelScale" : "_rot";
 #else
-	const char* scale_mode_str = USE_KERNEL_SCALE ? "_kernelScale" : "";
+	const char* scale_mode_str = USE_KERNEL_SCALE ? "_ks" : "";
 #endif
 	// SAH_OPACITY 값에 따라 "_opacity<N>..." 형식으로 생성
 #if SAH_OPACITY >= 1000 && TRANSPARENCY
