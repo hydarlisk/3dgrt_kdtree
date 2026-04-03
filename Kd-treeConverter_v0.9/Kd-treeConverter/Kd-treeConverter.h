@@ -32,9 +32,11 @@
 /********* for fast asset setting **********/
 #define HOTDOG 0
 #define BICYCLE 1
+#define BONSAI 2
+#define LEGO 3
 
 ///////////// change this part /////////////
-#define ASSET BICYCLE
+#define ASSET HOTDOG
 #define ORIGINAL false
 ////////////////////////////////////////////
 
@@ -78,7 +80,48 @@
 		#undef ADAPTIVE_MESH
 		#define ADAPTIVE_MESH true
 	#endif
+#elif ASSET == BONSAI
+	#if ORIGINAL
+		#undef USE_KERNEL_SCALE
+		#define USE_KERNEL_SCALE false
+		#undef FORCE_SPLIT_THRESHOLD
+		#define FORCE_SPLIT_THRESHOLD 0
+		#undef SIGMA_THRESHOLD_MODE
+		#define SIGMA_THRESHOLD_MODE 0
+		#undef ADAPTIVE_MESH
+		#define ADAPTIVE_MESH false
+	#else
+		#undef USE_KERNEL_SCALE
+		#define USE_KERNEL_SCALE false
+		#undef FORCE_SPLIT_THRESHOLD
+		#define FORCE_SPLIT_THRESHOLD 256
+		#undef SIGMA_THRESHOLD_MODE
+		#define SIGMA_THRESHOLD_MODE 1
+		#undef ADAPTIVE_MESH
+		#define ADAPTIVE_MESH false
+	#endif
+#elif ASSET == LEGO
+	#if ORIGINAL
+		#undef USE_KERNEL_SCALE
+		#define USE_KERNEL_SCALE false
+		#undef FORCE_SPLIT_THRESHOLD
+		#define FORCE_SPLIT_THRESHOLD 0
+		#undef SIGMA_THRESHOLD_MODE
+		#define SIGMA_THRESHOLD_MODE 0
+		#undef ADAPTIVE_MESH
+		#define ADAPTIVE_MESH false
+	#else
+		#undef USE_KERNEL_SCALE
+		#define USE_KERNEL_SCALE false
+		#undef FORCE_SPLIT_THRESHOLD
+		#define FORCE_SPLIT_THRESHOLD 64
+		#undef SIGMA_THRESHOLD_MODE
+		#define SIGMA_THRESHOLD_MODE 1
+		#undef ADAPTIVE_MESH
+		#define ADAPTIVE_MESH false
+	#endif
 #endif
+
 
 
 #define SAH_OPACITY 0
@@ -204,6 +247,10 @@
 #elif RESOLUTION == 4	// VR
 #define MAIN_WINDOW_WIDTH 1440
 #define MAIN_WINDOW_HEIGHT 1540
+#define FOV_Y 96.0f
+#elif RESOLUTION ==	5	// sgmrt
+#define MAIN_WINDOW_WIDTH 1080
+#define MAIN_WINDOW_HEIGHT 2102
 #define FOV_Y 96.0f
 #endif
  /*
