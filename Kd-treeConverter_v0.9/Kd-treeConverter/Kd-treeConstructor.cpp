@@ -654,7 +654,7 @@ void try_to_split(const int axis, BoundingBox &inBBox, const TriangleList *pTria
 #if SAH_OPACITY == 1 | SAH_OPACITY == 10 | SAH_OPACITY == 101 | SAH_OPACITY == 1000 | SAH_OPACITY == 1001 | SAH_OPACITY == 201 | SAH_OPACITY == 2010
 				const float tri_opacity = tmp_bEdge.triangleInfo->opacity;
 #elif SAH_OPACITY >= 2 & SAH_OPACITY != 20 & SAH_OPACITY != 2000// & SAH_OPACITY < 6
-#if SAH_OPACITY == 21
+	#if SAH_OPACITY == 21
 				const float opacity = tmp_bEdge.triangleInfo->opacity;
 				const float area = tmp_bEdge.triangleInfo->area;
 
@@ -662,23 +662,23 @@ void try_to_split(const int axis, BoundingBox &inBBox, const TriangleList *pTria
 				const float high_opacity_penalty = (opacity > OPACITY_THRESHOLD) ? OPACITY_PENALTY : 1.0f;
 
 				const float tri_contrib = opacity * area * high_opacity_penalty;
-#elif SAH_OPACITY == 8
+	#elif SAH_OPACITY == 8
 				const double parent_node_sa = get_surface_area(inBBox);
 				double tri_contrib = 0.0;
 				if (parent_node_sa > 1e-6) {
 					tri_contrib = tmp_bEdge.triangleInfo->opacity * (tmp_bEdge.triangleInfo->AABBarea / parent_node_sa);
 				}
-#elif SAH_OPACITY == 9
+	#elif SAH_OPACITY == 9
 				float tri_contrib = 0.0f;
 				if (tmp_bEdge.triangleInfo->AABBareaOrigin > 1e-6f) {
 					tri_contrib = tmp_bEdge.triangleInfo->opacity
 						* tmp_bEdge.triangleInfo->area
 						* (tmp_bEdge.triangleInfo->AABBarea / tmp_bEdge.triangleInfo->AABBareaOrigin);
 				}
-#else
+	#else
 				const float tri_contrib = tmp_bEdge.triangleInfo->opacity
 										* tmp_bEdge.triangleInfo->area;
-#endif
+	#endif
 #endif
 //shyun added end
 				//카운팅
@@ -1173,11 +1173,11 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pTriangleInfo
 //shyun added begin
 #if SAH_OPACITY >= 1000 & SAH_OPACITY < 2000 // 새로운 깊이 기반 하이브리드 모드
 	double total_opacity_in_node = 0.0;
-#if SAH_OPACITY == 1000
-	if (inNodeLevel < HYBRID_SAH_DEPTH_THRESHOLD) {
-#elif SAH_OPACITY == 1001
-	if (triangleSize > HYBRID_SAH_TRIANGLE_THRESHOLD) {
-#endif
+	#if SAH_OPACITY == 1000
+		if (inNodeLevel < HYBRID_SAH_DEPTH_THRESHOLD) {
+	#elif SAH_OPACITY == 1001
+		if (triangleSize > HYBRID_SAH_TRIANGLE_THRESHOLD) {
+	#endif
 		// Opacity 기반(SAH=1)으로 비용 계산
 		total_opacity_in_node = 0.0;
 		for (unsigned int i = 0; i < triangleSize; ++i) {
@@ -1194,48 +1194,47 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pTriangleInfo
 	for (unsigned int i = 0; i < triangleSize; ++i) {
 		total_opacity_in_node += pTriangleInfos[i].opacity;
 	}
-#if SAH_OPACITY == 10 | SAH_OPACITY == 101
-	double AABB_volume = get_surface_volume(bbox);
-	AABB_volume = AABB_volume > KD_TREE_EPSILON ? AABB_volume / 2 : 1.0;
-	bestCost.cost = (total_opacity_in_node / AABB_volume) * v_KD_TREE_ISECT_COST;
-#else
+	#if SAH_OPACITY == 10 | SAH_OPACITY == 101
+		double AABB_volume = get_surface_volume(bbox);
+		AABB_volume = AABB_volume > KD_TREE_EPSILON ? AABB_volume / 2 : 1.0;
+		bestCost.cost = (total_opacity_in_node / AABB_volume) * v_KD_TREE_ISECT_COST;
+	#else
 
-#if SAH_OPACITY == 1000 | SAH_OPACITY == 2010 | SAH_OPACITY == 2000
-	if (inNodeLevel < HYBRID_SAH_DEPTH_THRESHOLD)
-#elif SAH_OPACITY == 1001 | SAH_OPACITY == 2011 | SAH_OPACITY == 2001
-	if (triangleSize > HYBRID_SAH_TRIANGLE_THRESHOLD)
-#endif
-		bestCost.cost = total_opacity_in_node * v_KD_TREE_ISECT_COST;
-
-#endif
+		#if SAH_OPACITY == 1000 | SAH_OPACITY == 2010 | SAH_OPACITY == 2000
+			if (inNodeLevel < HYBRID_SAH_DEPTH_THRESHOLD)
+		#elif SAH_OPACITY == 1001 | SAH_OPACITY == 2011 | SAH_OPACITY == 2001
+			if (triangleSize > HYBRID_SAH_TRIANGLE_THRESHOLD)
+		#endif
+			bestCost.cost = total_opacity_in_node * v_KD_TREE_ISECT_COST;
+	#endif
 #elif SAH_OPACITY >= 2 & SAH_OPACITY != 20 & SAH_OPACITY != 2000
 	double total_contribution_in_node = 0.0;
-#if SAH_OPACITY == 8
-	double parent_node_sa = get_surface_area(bbox); // 부모 노드 표면적 계산
-	if (parent_node_sa > 1e-6) {
+	#if SAH_OPACITY == 8
+		double parent_node_sa = get_surface_area(bbox); // 부모 노드 표면적 계산
+		if (parent_node_sa > 1e-6) {
+			for (unsigned int i = 0; i < triangleSize; ++i) {
+				// 삼각형 AABB의 표면적을 부모 노드 표면적으로 정규화
+				total_contribution_in_node += pTriangleInfos[i].opacity * (pTriangleInfos[i].AABBarea / parent_node_sa);
+			}
+		}
+	#else
 		for (unsigned int i = 0; i < triangleSize; ++i) {
-			// 삼각형 AABB의 표면적을 부모 노드 표면적으로 정규화
-			total_contribution_in_node += pTriangleInfos[i].opacity * (pTriangleInfos[i].AABBarea / parent_node_sa);
+			const float opacity = pTriangleInfos[i].opacity;
+			const float area = pTriangleInfos[i].area;
+		#if SAH_OPACITY == 21
+				// OPACITY_THRESHOLD보다 높은 불투명도에 10배의 페널티를 부과
+				const float high_opacity_penalty = (opacity > OPACITY_THRESHOLD) ? OPACITY_PENALTY : 1.0f;
+				total_contribution_in_node += area * opacity * high_opacity_penalty;
+		#elif SAH_OPACITY == 9
+				if (pTriangleInfos[i].AABBareaOrigin > 1e-6f) {
+					total_contribution_in_node += opacity * area * (pTriangleInfos[i].AABBarea / pTriangleInfos[i].AABBareaOrigin);
+				}
+		#else
+				//total_contribution_in_node += pTriangleInfos[i].area * pTriangleInfos[i].opacity;
+				total_contribution_in_node += area * opacity;
+		#endif
 		}
-	}
-#else
-	for (unsigned int i = 0; i < triangleSize; ++i) {
-		const float opacity = pTriangleInfos[i].opacity;
-		const float area = pTriangleInfos[i].area;
-#if SAH_OPACITY == 21
-		// OPACITY_THRESHOLD보다 높은 불투명도에 10배의 페널티를 부과
-		const float high_opacity_penalty = (opacity > OPACITY_THRESHOLD) ? OPACITY_PENALTY : 1.0f;
-		total_contribution_in_node += area * opacity * high_opacity_penalty;
-#elif SAH_OPACITY == 9
-		if (pTriangleInfos[i].AABBareaOrigin > 1e-6f) {
-			total_contribution_in_node += opacity * area * (pTriangleInfos[i].AABBarea / pTriangleInfos[i].AABBareaOrigin);
-		}
-#else
-		//total_contribution_in_node += pTriangleInfos[i].area * pTriangleInfos[i].opacity;
-		total_contribution_in_node += area * opacity;
-#endif
-	}
-#endif
+	#endif
 	bestCost.cost = total_contribution_in_node * v_KD_TREE_ISECT_COST;
 #endif
 #if SAH_OPACITY >= 4 & SAH_OPACITY < 6
@@ -1252,47 +1251,47 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pTriangleInfo
 #endif
 
 #if SAH_OPACITY == 20 | SAH_OPACITY == 201 | SAH_OPACITY == 2010 | SAH_OPACITY == 2000
-#if SAH_OPACITY == 1000 | SAH_OPACITY == 2010 | SAH_OPACITY == 2000
-	if (inNodeLevel < HYBRID_SAH_DEPTH_THRESHOLD)
-#elif SAH_OPACITY == 1001 | SAH_OPACITY == 2011 | SAH_OPACITY == 2001
-	if (triangleSize > HYBRID_SAH_TRIANGLE_THRESHOLD)
-#endif
-		bestCost.cost *= 4.0 * (get_surface_volume(bbox) / get_surface_area(bbox));
+	#if SAH_OPACITY == 1000 | SAH_OPACITY == 2010 | SAH_OPACITY == 2000
+		if (inNodeLevel < HYBRID_SAH_DEPTH_THRESHOLD)
+	#elif SAH_OPACITY == 1001 | SAH_OPACITY == 2011 | SAH_OPACITY == 2001
+		if (triangleSize > HYBRID_SAH_TRIANGLE_THRESHOLD)
+	#endif
+	bestCost.cost *= 4.0 * (get_surface_volume(bbox) / get_surface_area(bbox));
 #endif
 
 #if FORCE_SPLIT_THRESHOLD
-//#define MAX_TRIANGLE_OFFSET_BUDGET 18446744073709551615
-//#define MAX_TRIANGLE_OFFSET_BUDGET 9223372036854775807
-//#define MAX_TRIANGLE_OFFSET_BUDGET 17179869184
-//#define MAX_TRIANGLE_OFFSET_BUDGET 8589934592
-#define MAX_TRIANGLE_OFFSET_BUDGET2 4294967295
-//#define MAX_TRIANGLE_OFFSET_BUDGET 2147483647
-//#define MAX_TRIANGLE_OFFSET_BUDGET 1073741824
+	//#define MAX_TRIANGLE_OFFSET_BUDGET 18446744073709551615
+	//#define MAX_TRIANGLE_OFFSET_BUDGET 9223372036854775807
+	//#define MAX_TRIANGLE_OFFSET_BUDGET 17179869184
+	//#define MAX_TRIANGLE_OFFSET_BUDGET 8589934592
+	#define MAX_TRIANGLE_OFFSET_BUDGET2 4294967295
+	//#define MAX_TRIANGLE_OFFSET_BUDGET 2147483647
+	//#define MAX_TRIANGLE_OFFSET_BUDGET 1073741824
 	//if (triangleSize > FORCE_SPLIT_THRESHOLD) bestCost.cost = DBL_MAX; //shyun added
 	if (triangleSize > FORCE_SPLIT_THRESHOLD) {
-#if MAX_TRIANGLE_OFFSET_BUDGET
-		// 강제 분할 전, 메모리 예산을 초과했는지 확인.
-#if SOFT_SPLIT_THRESHOLD
-		if ((triangleSize < SOFT_SPLIT_THRESHOLD &&
-			g_iKdTree_TriOffset_Count > MAX_TRIANGLE_OFFSET_BUDGET) ||
-			(triangleSize < SOFT_SPLIT_THRESHOLD2 &&
-				g_iKdTree_TriOffset_Count > MAX_TRIANGLE_OFFSET_BUDGET2)) {
-#else
-		if (g_iKdTree_TriOffset_Count > MAX_TRIANGLE_OFFSET_BUDGET) {
-#endif
+	#if MAX_TRIANGLE_OFFSET_BUDGET
+			// 강제 분할 전, 메모리 예산을 초과했는지 확인.
+		#if SOFT_SPLIT_THRESHOLD
+				if ((triangleSize < SOFT_SPLIT_THRESHOLD &&
+					g_iKdTree_TriOffset_Count > MAX_TRIANGLE_OFFSET_BUDGET) ||
+					(triangleSize < SOFT_SPLIT_THRESHOLD2 &&
+						g_iKdTree_TriOffset_Count > MAX_TRIANGLE_OFFSET_BUDGET2)) {
+		#else
+				if (g_iKdTree_TriOffset_Count > MAX_TRIANGLE_OFFSET_BUDGET) {
+		#endif
 
-			// 예산 초과 시: 강제 분할(DBL_MAX)을 하지 않고, 
-			// SAH 비용(bestCost.cost)을 그대로 둬서 리프 노드가 되도록 함.
-			fprintf(stdout, "WARNING: Memory budget exceeded (%u refs). Forcing leaf node at level %u with %u tris.\n",
-				g_iKdTree_TriOffset_Count, inNodeLevel, triangleSize);
-		}
-		else {
-			// 예산 미초과 시: 원래대로 강제 분할 실행
+				// 예산 초과 시: 강제 분할(DBL_MAX)을 하지 않고, 
+				// SAH 비용(bestCost.cost)을 그대로 둬서 리프 노드가 되도록 함.
+				fprintf(stdout, "WARNING: Memory budget exceeded (%u refs). Forcing leaf node at level %u with %u tris.\n",
+					g_iKdTree_TriOffset_Count, inNodeLevel, triangleSize);
+			}
+			else {
+				// 예산 미초과 시: 원래대로 강제 분할 실행
+				bestCost.cost = DBL_MAX; //shyun added
+			}
+	#else
 			bestCost.cost = DBL_MAX; //shyun added
-		}
-#else
-		bestCost.cost = DBL_MAX; //shyun added
-#endif
+	#endif
 	}
 #endif
 

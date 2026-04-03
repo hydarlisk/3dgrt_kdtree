@@ -850,10 +850,10 @@ __device__ void singlePassIntersectRoutineGaussian_sortNode(const cuRay& ray, in
     //, cudaTextureObject_t inTriAccelTex
 ) {
     if (local_hit_count >= MAX_HITS) return;
-
-    //float4 d0 = tex1Dfetch(inTriAccelTex, id * 4 + 0);
     float4 d0 = tex1Dfetch<float4>(inTriAccelTex, id * 4 + 0);
-    //float4 d0 = g_d_accel[id * 4 + 0];
+    float4 d1 = tex1Dfetch<float4>(inTriAccelTex, id * 4 + 1);
+    float4 d2 = tex1Dfetch<float4>(inTriAccelTex, id * 4 + 2);
+
     unsigned int packed_flags = __float_as_uint(d0.w);
     unsigned int k = packed_flags & 0x3;
     float n_u = d0.x, n_v = d0.y, n_d = d0.z;
@@ -875,11 +875,6 @@ __device__ void singlePassIntersectRoutineGaussian_sortNode(const cuRay& ray, in
 
     //if (t >= hit.tHit || t <= t_near || t >= t_far) return;
     if (t <= t_near || t >= t_far) return;
-
-    //float4 d1 = tex1Dfetch(inTriAccelTex, id * 4 + 1);
-    float4 d1 = tex1Dfetch<float4>(inTriAccelTex, id * 4 + 1);
-    //float4 d2 = tex1Dfetch(inTriAccelTex, id * 4 + 2);
-    float4 d2 = tex1Dfetch<float4>(inTriAccelTex, id * 4 + 2);
 
     float u_coord = p_pos.x + t * p_dir.x;
     float v_coord = p_pos.y + t * p_dir.y;
@@ -1186,7 +1181,7 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
 
                 const float2 pos_dir = currRay.get_dir_pos(SPLIT_AXIS(node));
 
-                const float t_split = __fdividef(SPLIT_POS(node) - pos_dir.x, pos_dir.y);
+                const float t_split = __fdividef(SPLIT_POS(node) - pos_dir.x, pos_dir.y); //__fdividef() : faster than "/" but less precise
                 const unsigned sign = signbit(pos_dir.y);
 
                 unsigned idx = childOffset + (sign ^ (t_split <= t_near));
