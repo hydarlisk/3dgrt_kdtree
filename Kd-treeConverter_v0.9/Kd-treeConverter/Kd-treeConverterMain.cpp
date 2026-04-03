@@ -1154,6 +1154,14 @@ bool loadGaussiansFromPly(const char* filename, std::vector<Gaussian>& gaussians
 	if (num_vertices == 0) return false;
 	const int vertex_byte_size = current_offset; // 한 정점 데이터의 총 크기
 
+	printf("---------- PLY Header Debug ----------\n");
+	printf("Total Vertices: %ld\n", num_vertices);
+	printf("Vertex Byte Size: %d bytes\n", vertex_byte_size);
+	for (const auto& prop : properties_order) {
+		printf("Property: %s | Offset: %d\n", prop.c_str(), property_offsets[prop]);
+	}
+	printf("--------------------------------------\n");
+
 	gaussians.clear();
 	gaussians.reserve(num_vertices);
 
@@ -1198,6 +1206,17 @@ bool loadGaussiansFromPly(const char* filename, std::vector<Gaussian>& gaussians
 #endif
 
 		gaussians.push_back(g);
+
+		if (i == 0 || i == num_vertices / 2 || i == num_vertices - 1) {
+			printf("[Vertex %ld] Debug Info:\n", i);
+			printf("  Pos: %.4f, %.4f, %.4f\n", g.pos[0], g.pos[1], g.pos[2]);
+			printf("  Opacity (Sigmoid): %.4f\n", g.opacity);
+			printf("  Scale (Exp): %.4f, %.4f, %.4f\n", g.scale[0], g.scale[1], g.scale[2]);
+			printf("  Rotation (Normalized): %.4f, %.4f, %.4f, %.4f\n", g.rot[0], g.rot[1], g.rot[2], g.rot[3]);
+
+			// SH(Spherical Harmonics) 첫 번째 계수 확인
+			printf("  f_dc: %.4f, %.4f, %.4f\n", g.f_dc[0], g.f_dc[1], g.f_dc[2]);
+		}
 	}
 
 	fprintf(stderr, "Robustly loaded %zu gaussians based on PLY header.\n", gaussians.size());
@@ -2419,6 +2438,41 @@ void setCameraLookAt(float eyeX, float eyeY, float eyeZ,
 	g_camera_dirty = true;
 }
 
+void printCameraConfigStyle(Camera* cam) {
+	printf("[Camera]\n");
+	printf("position=%f %f %f\n", cam->pos[0], cam->pos[1], cam->pos[2]);
+	printf("u=%f %f %f\n", cam->uaxis[0], cam->uaxis[1], cam->uaxis[2]);
+	printf("v=%f %f %f\n", cam->vaxis[0], cam->vaxis[1], cam->vaxis[2]);
+	printf("n=%f %f %f\n", cam->naxis[0], cam->naxis[1], cam->naxis[2]);
+}
+
+void printCameraInfo() {
+	printf("=== camera Full Information ===\n");
+
+	// Position
+	printf("Position: %.2f, %.2f, %.2f\n", camera.pos[0], camera.pos[1], camera.pos[2]);
+
+	// Axes
+	printf("U-Axis: %.2f, %.2f, %.2f\n", camera.uaxis[0], camera.uaxis[1], camera.uaxis[2]);
+	printf("V-Axis: %.2f, %.2f, %.2f\n", camera.vaxis[0], camera.vaxis[1], camera.vaxis[2]);
+	printf("N-Axis: %.2f, %.2f, %.2f\n", camera.naxis[0], camera.naxis[1], camera.naxis[2]);
+
+	// View Matrix (4x4)
+	printf("View Matrix:\n");
+	for (int i = 0; i < 4; i++) {
+		printf("  %.2f %.2f %.2f %.2f\n",
+			camera.mat[i * 4], camera.mat[i * 4 + 1], camera.mat[i * 4 + 2], camera.mat[i * 4 + 3]);
+	}
+
+	// Movement & Projection
+	printf("Move: %d, UpAndDown: %d\n", camera.move, camera.upanddown);
+	printf("Fovy: %.2f, Aspect: %.2f, Near: %.2f, Far: %.2f\n",
+		camera.fovy, camera.aspect, camera.near_c, camera.far_c);
+	printf("===============================\n");
+
+	printCameraConfigStyle(&camera);
+}
+
 void subMenuHandler(int value) {
 	render_gaussian = true;
 	g_gaussians.clear();
@@ -2825,6 +2879,8 @@ void subMenuHandler(int value) {
 		adaptive_mesh = ADAPTIVE_MESH;
 		break;
 	}
+
+	//printCameraInfo();
 
 	// 선택된 모델의 기본 경로와 동적 접미사를 조합하여 최종 경로 생성
 	if (base_kdtree_str) {
@@ -3269,6 +3325,16 @@ void idle() {
 #if DUMMY_RUN
 		warmUp(d_pbo_ptr, compute_stream);
 #endif
+
+		/* print camera setting */
+#include <iomanip>
+		static bool printed = false;
+		if (!printed) {
+			printCameraInfo();
+			printed = !printed;
+		}
+
+
 		//cudaEventRecord(start_real, current_stream); // 시작 기록
 		// [계산 stream] 커널 실행
 		g_fps = renderGaussianWithCudaFrame(camera, g_render_width, g_render_height, d_pbo_ptr, compute_stream

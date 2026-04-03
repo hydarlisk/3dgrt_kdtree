@@ -302,8 +302,12 @@ void dump_kd_tree_for_composite_object(CompositeObject *c_object, const char *fi
 	}
 	fprintf(stdout, "   * I-geometry format: BINARY\n");
 #if JS_BIN
+	printf("aabb min : %f %f %f\n", c_object->AABB[0], c_object->AABB[1], c_object->AABB[2]);
+	printf("aabb max : %f %f %f\n", c_object->AABB[3], c_object->AABB[4], c_object->AABB[5]);
 	int tmp;
 	tmp = c_object->n_triangles * 3 * sizeof(ExtendedVertex) / sizeof(float);	//vntArrLength
+	printf("triangle count : %d\n", c_object->n_triangles);
+	printf("vertex size : %d\n", tmp);
 	fwrite(&tmp, sizeof(int), 1, fp);
 	tmp = c_object->n_triangles * 3; //faceArrLength
 	fwrite(&tmp, sizeof(int), 1, fp);
@@ -348,7 +352,7 @@ int read_kd_tree_from_file(CompositeObject *c_object, const char *filename, int 
 		g_pKdTree_TriOffset_Array = new unsigned int [ g_iKdTree_TriOffset_CountAlloc ];
 		fread( g_pKdTree_TriOffset_Array, 4, nTriOffCount, fp );
 
-		printf("KD_Tree_Node size %d * 4 = %d B\n", nTreeNodeCount, nTreeNodeCount * 4);
+		printf("KD_Tree_Node size %d * 8 = %d B\n", nTreeNodeCount, nTreeNodeCount * 8);
 		printf("Tri_Offset_List size %d * 4 = %d B\n", nTriOffCount, nTriOffCount * 4);
 		printf("Total kd-Tree Size = [%d B][%.2f MB]\n", (nTreeNodeCount + nTriOffCount) * 4, (float)(nTreeNodeCount + nTriOffCount) * 4 / 1024 / 1024);
 	} else {
