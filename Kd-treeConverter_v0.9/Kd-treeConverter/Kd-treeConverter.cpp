@@ -303,7 +303,7 @@ void dump_kd_tree_for_composite_object(CompositeObject *c_object, const char *fi
 	fprintf(stdout, "   * I-geometry format: BINARY\n");
 #if JS_BIN
 	int tmp;
-	tmp = c_object->n_triangles * 3 * 8;	//vntArrLength
+	tmp = c_object->n_triangles * 3 * sizeof(ExtendedVertex) / sizeof(float);	//vntArrLength
 	fwrite(&tmp, sizeof(int), 1, fp);
 	tmp = c_object->n_triangles * 3; //faceArrLength
 	fwrite(&tmp, sizeof(int), 1, fp);
