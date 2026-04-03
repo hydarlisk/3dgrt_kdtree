@@ -8,6 +8,7 @@
 #include <vector>
 
 #define JS_BIN true
+#define COMPACT_VERTEX true
 
 //shyun added begin
 #define TRAVL_COST 1.0

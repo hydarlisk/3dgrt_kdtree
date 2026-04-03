@@ -304,6 +304,30 @@ void dump_kd_tree_for_composite_object(CompositeObject *c_object, const char *fi
 #if JS_BIN
 	printf("aabb min : %f %f %f\n", c_object->AABB[0], c_object->AABB[1], c_object->AABB[2]);
 	printf("aabb max : %f %f %f\n", c_object->AABB[3], c_object->AABB[4], c_object->AABB[5]);
+	#if COMPACT_VERTEX
+	// vertex array length (4byte) (16byte * n_triangles * 3)
+	// vertex array data
+	struct CompactVertex {
+		float pos[3];
+		int material_ID;
+	};
+	int vertCnt = c_object->n_triangles * 3;
+	std::vector<CompactVertex> compVertex;
+	compVertex.resize(vertCnt);
+	for (int i = 0; i < vertCnt; i++) {
+		compVertex[i].pos[0] = c_object->extended_vertices[i].vertex[0];
+		compVertex[i].pos[1] = c_object->extended_vertices[i].vertex[1];
+		compVertex[i].pos[2] = c_object->extended_vertices[i].vertex[2];
+		compVertex[i].material_ID = c_object->extended_vertices[i].material_ID;
+	}
+	int tmp;
+	tmp = c_object->n_triangles * 3 * sizeof(CompactVertex) / sizeof(float);
+	fwrite(&tmp, sizeof(int), 1, fp);
+	fwrite(compVertex.data(), sizeof(CompactVertex), 3 * c_object->n_triangles, fp);
+	#else
+	// vertex array length (4byte) (32byte * n_triangles * 3)
+	// index array length (4byte) (n_triangles * 3)
+	// vertex array data
 	int tmp;
 	tmp = c_object->n_triangles * 3 * sizeof(ExtendedVertex) / sizeof(float);	//vntArrLength
 	printf("triangle count : %d\n", c_object->n_triangles);
@@ -312,6 +336,7 @@ void dump_kd_tree_for_composite_object(CompositeObject *c_object, const char *fi
 	tmp = c_object->n_triangles * 3; //faceArrLength
 	fwrite(&tmp, sizeof(int), 1, fp);
 	fwrite(c_object->extended_vertices, sizeof(ExtendedVertex), 3 * c_object->n_triangles, fp);
+	#endif
 #else
 	fwrite(&(c_object->n_triangles), sizeof(int), 1, fp);
 	fwrite(c_object->AABB, sizeof(float), 6, fp);
