@@ -79,7 +79,11 @@ int build_kd_tree_for_composite_object(CompositeObject *c_object) {
 
 	// build kd-tree
 	fprintf(stdout, "\n  - Building a kd-tree\n");
+
+
 	build_kd_tree_recursive(g_bEdge, g_pTriangleInfos, g_iTriangleSize, g_root_AABB, 0,  &(g_pKdTree_Node_Array[0]));
+
+
 	fprintf(stdout, "  - Done!\n\n");
 	fprintf(stdout, "   * Tree Level: %d\n", g_iKdTree_Level);
 	fprintf(stdout, "   * Node Count (All,Leaf,Empty) : %5d, %5d, %5d(%.1f%%)\n",

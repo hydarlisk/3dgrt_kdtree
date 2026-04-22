@@ -874,29 +874,31 @@ __device__ void singlePassIntersectRoutineGaussian_sortNode(const cuRay& ray, in
     float t = (n_d - (p_pos.z + n_u * p_pos.x + n_v * p_pos.y)) / den;
 
     //if (t >= hit.tHit || t <= t_near || t >= t_far) return;
-    if (t <= t_near || t >= t_far) return;
+    //if (isnan(t)) return;
+    //if ((t < t_near - EPSILON4) | (t > t_far + EPSILON4)) return;
+     if (t <= t_near || t >= t_far) return;
 
     float u_coord = p_pos.x + t * p_dir.x;
     float v_coord = p_pos.y + t * p_dir.y;
 
     float beta = u_coord * d1.x + v_coord * d1.y + d1.z;
     float gamma = u_coord * d2.x + v_coord * d2.y + d2.z;
+    if ((beta < 0.f - BARYCENTRY_EPSILON) || (gamma < 0.f - BARYCENTRY_EPSILON) ||
+        ((1.0f - beta - gamma) < 0.0f - BARYCENTRY_EPSILON)) return;
 
-    if (beta >= -BARYCENTRY_EPSILON && gamma >= -BARYCENTRY_EPSILON && (beta + gamma) <= 1.0f + BARYCENTRY_EPSILON) {
-        //float4 N_packed = tex1Dfetch(inTriAccelTex, id * 4 + 3);
-        float4 N_packed = tex1Dfetch<float4>(inTriAccelTex, id * 4 + 3);
-        float3 N = make_float3(N_packed.x, N_packed.y, N_packed.z);
+    //float4 N_packed = tex1Dfetch(inTriAccelTex, id * 4 + 3);
+    float4 N_packed = tex1Dfetch<float4>(inTriAccelTex, id * 4 + 3);
+    float3 N = make_float3(N_packed.x, N_packed.y, N_packed.z);
 
-        // 법선 벡터와 광선 방향의 내적(dot product)을 계산
-        // 내적 값이 0보다 크면 광선이 삼각형의 뒷면
-        if (dot(N, ray.dir) > 0.0f) {
-            return; // 뒷면이므로 이 충돌을 무시
-        }
-
-        local_hits[local_hit_count].t = t;
-        local_hits[local_hit_count].triIndex = id;
-        local_hit_count++;
+    // 법선 벡터와 광선 방향의 내적(dot product)을 계산
+    // 내적 값이 0보다 크면 광선이 삼각형의 뒷면
+    if (dot(N, ray.dir) > 0.0f) {
+        return; // 뒷면이므로 이 충돌을 무시
     }
+
+    local_hits[local_hit_count].t = t;
+    local_hits[local_hit_count].triIndex = id;
+    local_hit_count++;
 }
 
 __device__ inline void singlePassIntersectRoutine(const cuRay& ray, const int id,
@@ -910,7 +912,7 @@ __device__ inline void singlePassIntersectRoutine(const cuRay& ray, const int id
     p.pos.x = (tri.n_d() - p.pos.x - tri.n_u() * p.pos.y - tri.n_v() * p.pos.z);
     const float denum = (p.dir.x + tri.n_u() * p.dir.y + tri.n_v() * p.dir.z);
     int flag = __float_as_int(tri.internal2.z);
-    if (denum * (float)flag > 0.0f) return; //뒷면 확인
+    
     const float t = __fdividef(p.pos.x, denum);
     if (isnan(t)) return;
     if ((t < t_near - EPSILON4) | (t > t_far + EPSILON4)) return;
@@ -925,6 +927,7 @@ __device__ inline void singlePassIntersectRoutine(const cuRay& ray, const int id
     /** 삼각형의 edge 와 부딪힐때, 수치오차가 있으므로 epsilon 을 좀 준다. */
     if ((beta < 0.f - BARYCENTRY_EPSILON) | (gamma < 0.f - BARYCENTRY_EPSILON) |
         ((1.0f - beta - gamma) < 0.0f - BARYCENTRY_EPSILON)) return;
+    //if (denum * (float)flag > 0.0f) return; //뒷면 확인
 
     local_hits[local_hit_count].t = t;
     local_hits[local_hit_count].triIndex = id;
