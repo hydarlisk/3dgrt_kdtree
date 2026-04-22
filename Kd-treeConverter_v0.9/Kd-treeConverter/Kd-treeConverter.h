@@ -33,7 +33,7 @@
 /********* for fast asset setting **********/
 #define HOTDOG 0
 #define BICYCLE 1
-#define BONSAI 2
+#define ROOM 2
 #define LEGO 3
 
 ///////////// change this part /////////////
@@ -81,7 +81,7 @@
 		#undef ADAPTIVE_MESH
 		#define ADAPTIVE_MESH true
 	#endif
-#elif ASSET == BONSAI
+#elif ASSET == ROOM
 	#if ORIGINAL
 		#undef USE_KERNEL_SCALE
 		#define USE_KERNEL_SCALE false
@@ -93,13 +93,13 @@
 		#define ADAPTIVE_MESH false
 	#else
 		#undef USE_KERNEL_SCALE
-		#define USE_KERNEL_SCALE false
+		#define USE_KERNEL_SCALE true
 		#undef FORCE_SPLIT_THRESHOLD
 		#define FORCE_SPLIT_THRESHOLD 256
 		#undef SIGMA_THRESHOLD_MODE
 		#define SIGMA_THRESHOLD_MODE 1
 		#undef ADAPTIVE_MESH
-		#define ADAPTIVE_MESH false
+		#define ADAPTIVE_MESH true
 	#endif
 #elif ASSET == LEGO
 	#if ORIGINAL
