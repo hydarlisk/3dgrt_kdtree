@@ -2519,11 +2519,11 @@ void subMenuHandler(int value) {
 		scale_mode_str,
 		ISCET_COST,
 		SAH_OPACITY,
-#if SAH_OPACITY == 1000 || SAH_OPACITY == 2000 || SAH_OPACITY == 2010
+	#if SAH_OPACITY == 1000 || SAH_OPACITY == 2000 || SAH_OPACITY == 2010
 		HYBRID_SAH_DEPTH_THRESHOLD,
-#elif SAH_OPACITY == 1001
+	#elif SAH_OPACITY == 1001
 		HYBRID_SAH_TRIANGLE_THRESHOLD,
-#endif
+	#endif
 		MIN_TRI,
 		FORCE_SPLIT_THRESHOLD,
 		clip_mode_str,
@@ -2533,11 +2533,11 @@ void subMenuHandler(int value) {
 		scale_mode_str,
 		ISCET_COST,
 		SAH_OPACITY,
-#if SAH_OPACITY == 1000 || SAH_OPACITY == 2000 || SAH_OPACITY == 2010
+	#if SAH_OPACITY == 1000 || SAH_OPACITY == 2000 || SAH_OPACITY == 2010
 		HYBRID_SAH_DEPTH_THRESHOLD,
-#elif SAH_OPACITY == 1001
+	#elif SAH_OPACITY == 1001
 		HYBRID_SAH_TRIANGLE_THRESHOLD,
-#endif
+	#endif
 		MIN_TRI,
 		FORCE_SPLIT_THRESHOLD,
 		clip_mode_str,
