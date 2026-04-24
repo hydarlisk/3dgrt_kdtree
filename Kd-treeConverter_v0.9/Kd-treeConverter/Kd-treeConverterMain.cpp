@@ -35,6 +35,9 @@
 #include <algorithm>
 #include "cudaRenderer.h"
 //#include "SGRTx2Lib/cuda_math.h"
+
+using namespace std;
+
 char* ply_file_path;
 char* ply_kdtree_path;
 char* ply_igeom_path;
@@ -2576,32 +2579,25 @@ void subMenuHandler(int value) {
 		FORCE_SPLIT_THRESHOLD,
 		clip_mode_str,
 		sah_mode_str);
-#if MAX_LEVEL != 128
-		snprintf(suffix, sizeof(suffix), "%s_%.0f_normal_%d_%d_%d%s_%s",
-			scale_mode_str,
-			ISCET_COST,
-			MIN_TRI,
-			FORCE_SPLIT_THRESHOLD,
-			MAX_LEVEL,
-			clip_mode_str,
-			sah_mode_str);
-		snprintf(suffixDump_JS, sizeof(suffixDump_JS), "%s_%.0f_normal_%d_%d_%d%s_%s_JS",
-			scale_mode_str,
-			ISCET_COST,
-			MIN_TRI,
-			FORCE_SPLIT_THRESHOLD,
-			MAX_LEVEL,
-			clip_mode_str,
-			sah_mode_str);
+	#if MAX_LEVEL != 128
+	snprintf(suffix, sizeof(suffix), "%s_%.0f_normal_%d_%d_%d%s_%s",
+		scale_mode_str,
+		ISCET_COST,
+		MIN_TRI,
+		FORCE_SPLIT_THRESHOLD,
+		MAX_LEVEL,
+		clip_mode_str,
+		sah_mode_str);
+	snprintf(suffixDump_JS, sizeof(suffixDump_JS), "%s_%.0f_normal_%d_%d_%d%s_%s_JS",
+		scale_mode_str,
+		ISCET_COST,
+		MIN_TRI,
+		FORCE_SPLIT_THRESHOLD,
+		MAX_LEVEL,
+		clip_mode_str,
+		sah_mode_str);
+	#endif
 #endif
-#endif
-
-	// 기본 경로 문자열 포인터
-	const char* base_kdtree_str = NULL;
-	const char* base_igeom_str = NULL;
-	const char* base_obj_str = NULL;
-	const char* base_build_str = NULL;
-
 	// 동적으로 완전한 파일 경로를 만드는 헬퍼 람다 함수
 	auto construct_path = [&](char* buffer, size_t buffer_size, const char* base_path) {
 		const char* extension = strrchr(base_path, '.');
@@ -2629,96 +2625,59 @@ void subMenuHandler(int value) {
 			snprintf(buffer, buffer_size, "%s%s", base_path, suffixDump_JS);
 		}
 		};
-
+	std::string assetName{};
 	switch (value) {
 	case 101: printf("Hotdog selected\n");
-		ply_file_path = "../../Data/ply/hotdog2/hotdog_3dgrt2.ply";
-		base_kdtree_str = "../../Data/ply/hotdog2/hotdog2_tree.kdt";
-		base_igeom_str = "../../Data/ply/hotdog2/hotdog2_igeom.bin";
-		base_obj_str = "../../Data/ply/hotdog2/hotdog_3dgrt2_new.obj";
-		base_build_str = "../../Data/ply/hotdog2/hotdog2_3dgrt_kdt.txt";
-		ply_to_obj_mtl = "hotdog_3dgrt2.mtl";
+		assetName = "hotdog2";
 		setCameraLookAt(0.395967, 0.326438, 2.125716,
 			-0.102802, -0.253159, -0.961947,
 			-0.026902, 0.967425, -0.251726);
 		break;
 	case 102: printf("Lego selected\n");
-		ply_file_path = "../../Data/ply/lego/lego_3dgrt.ply";
-		base_kdtree_str = "../../Data/ply/lego/lego_tree.kdt";
-		base_igeom_str = "../../Data/ply/lego/lego_igeom.bin";
-		base_obj_str = "../../Data/ply/lego/lego_3dgrt_new.obj";
-		base_build_str = "../../Data/ply/lego/lego_3dgrt_kdt.txt";
-		ply_to_obj_mtl = "lego_3dgrt.mtl";
+		assetName = "lego";
 		setCameraLookAt(-0.609975278377533, -0.3582107126712799, 1.6545488834381104,
 			0.4628783166408539, 0.304642915725708, -0.8324275016784668,
 			0.36059704422950747, 0.793158233165741, 0.4907844066619873);
 		break;
 	case 103: printf("Chair selected\n");
-		ply_file_path = "../../Data/ply/chair/chair_3dgrt.ply";
-		base_kdtree_str = "../../Data/ply/chair/chair_tree.kdt";
-		base_igeom_str = "../../Data/ply/chair/chair_igeom.bin";
-		base_obj_str = "../../Data/ply/chair/chair_3dgrt_new.obj";
-		base_build_str = "../../Data/ply/chair/chair_3dgrt_kdt.txt";
-		ply_to_obj_mtl = "chair_3dgrt.mtl";
+		assetName = "chair";
 		setCameraLookAt(0.30127671360969546, -0.9264131784439087, 1.239231824874878,
 			-0.19798490405082704, 0.6385213732719421, -0.7437019944190979,
 			0.3419942855834961, 0.7560404539108276, 0.5580706596374512);
 		break;
 	case 1031: printf("Ship selected\n");
-		ply_file_path = "../../Data/ply/ship/ship_3dgrt.ply";
-		base_kdtree_str = "../../Data/ply/ship/ship_tree.kdt";
-		base_igeom_str = "../../Data/ply/ship/ship_igeom.bin";
-		base_obj_str = "../../Data/ply/ship/ship_3dgrt_new.obj";
-		base_build_str = "../../Data/ply/ship/ship_3dgrt_kdt.txt";
-		ply_to_obj_mtl = "ship_3dgrt.mtl";
+		assetName = "ship";
 		setCameraLookAt(-0.9226718544960022, -1.1514099836349488, 1.0478147268295289,
 			0.46329522132873537, 0.5615959167480469, -0.6855421662330627,
 			0.24063725769519807, 0.6647851467132568, 0.7072163224220276);
 		break;
 	case 1032: printf("Drums selected\n");
-		ply_file_path = "../../Data/ply/drums/drums_3dgrt.ply";
-		base_kdtree_str = "../../Data/ply/drums/drums_tree.kdt";
-		base_igeom_str = "../../Data/ply/drums/drums_igeom.bin";
-		base_obj_str = "../../Data/ply/drums/drums_3dgrt_new.obj";
-		base_build_str = "../../Data/ply/drums/drums_3dgrt_kdt.txt";
-		ply_to_obj_mtl = "drums_3dgrt.mtl";
+		assetName = "drums";
 		setCameraLookAt(-0.7578927874565125, -1.6319409608840943, 0.8437733054161072,
 			0.39351686835289, 0.8284616470336914, -0.39849287271499636,
 			0.032689813524484637, 0.42058202624320986, 0.906665563583374);
 		break;
 	case 1033: printf("Mic selected\n");
-		ply_file_path = "../../Data/ply/mic/mic_3dgrt.ply";
-		base_kdtree_str = "../../Data/ply/mic/mic_tree.kdt";
-		base_igeom_str = "../../Data/ply/mic/mic_igeom.bin";
-		base_obj_str = "../../Data/ply/mic/mic_3dgrt_new.obj";
-		base_build_str = "../../Data/ply/mic/mic_3dgrt_kdt.txt";
-		ply_to_obj_mtl = "mic_3dgrt.mtl";
+		assetName = "mic";
 		setCameraLookAt(-0.5019276738166809, -1.2671177387237549, 1.6138207912445069,
 			0.356383740901947, 0.5188058614730835, -0.7770676612854004,
 			0.6596000790596008, 0.44934386014938357, 0.6025114059448242);
 		break;
 	case 104: printf("Flowers selected\n");
-		ply_file_path = "../../Data/ply/flowers/flowers.ply";
-		base_kdtree_str = "../../Data/ply/flowers/flowers_tree.kdt";
-		base_igeom_str = "../../Data/ply/flowers/flowers_igeom.bin";
-		base_obj_str = "../../Data/ply/flowers/flowers_new.obj";
-		base_build_str = "../../Data/ply/flowers/flowers_kdt.txt";
-		ply_to_obj_mtl = "flowers_3dgrt.mtl";
+		assetName = "flowers";
 		setCameraLookAt(-1.3555793762207032, -0.9134408831596375, -0.921384,
 			0.548153817653656, 0.5915342569351196, 0.3431593179702759,
 			0.4626573622226715, -0.7964888215065002, 0.3892991542816162);
 		break;
 	case 105: printf("Bonsai selected\n");
+		std::cout << "need name handling about macros\n";
+		system("pause");
+		assetName = "bonsai";
 #if EXPORTED
 		ply_file_path = "../../Data/ply/bonsai/bonsai_exported.ply";
 #else
 		ply_file_path = "../../Data/ply/bonsai/bonsai.ply";
 #endif
-		base_kdtree_str = "../../Data/ply/bonsai/bonsai_tree.kdt";
-		base_igeom_str = "../../Data/ply/bonsai/bonsai_igeom.bin";
-		base_obj_str = "../../Data/ply/bonsai/bonsai_new.obj";
-		base_build_str = "../../Data/ply/bonsai/bonsai_kdt.txt";
-		ply_to_obj_mtl = "bonsai_3dgrt.mtl";
 		setCameraLookAt(-0.3701975643634796, -0.67806476354599, 1.5000991821289063,
 			0.421955406665802, 0.8475437164306641, -0.3219059407711029,
 			0.10673734545707703, -0.3990341126918793, -0.9107025265693665);
@@ -2742,16 +2701,14 @@ void subMenuHandler(int value) {
 #endif
 		break;
 	case 106: printf("bicycle selected\n");
+		std::cout << "need name handling about macros\n";
+		system("pause");
+		assetName = "bicycle";
 #if EXPORTED
 		ply_file_path = "../../Data/ply/bicycle/bicycle_exported.ply";
 #else
 		ply_file_path = "../../Data/ply/bicycle/bicycle.ply";
 #endif
-		base_kdtree_str = "../../Data/ply/bicycle/bicycle_tree.kdt";
-		base_igeom_str = "../../Data/ply/bicycle/bicycle_igeom.bin";
-		base_obj_str = "../../Data/ply/bicycle/bicycle_new.obj";
-		base_build_str = "../../Data/ply/bicycle/bicycle_kdt.txt";
-		ply_to_obj_mtl = "bicycle_3dgrt.mtl";
 		setCameraLookAt(-1.8810417652130128, 0.18281030654907227, 0.9657841324806213,
 			0.9618207216262817, 0.27256786823272707, -0.024726202711462976,
 			0.24284449219703675, -0.8916060328483582, -0.382185161113739);
@@ -2795,22 +2752,13 @@ void subMenuHandler(int value) {
 #endif
 		break;
 	case 107: printf("kitchen selected\n");
-		ply_file_path = "../../Data/ply/kitchen/kitchen_3dgrt.ply";
-		base_kdtree_str = "../../Data/ply/kitchen/kitchen_tree.kdt";
-		base_igeom_str = "../../Data/ply/kitchen/kitchen_igeom.bin";
-		base_obj_str = "../../Data/ply/kitchen/kitchen_new.obj";
-		base_build_str = "../../Data/ply/kitchen/kitchen_kdt.txt";
-		ply_to_obj_mtl = "kitchen_3dgrt.mtl";
+		assetName = "kitchen";
 		adaptive_mesh = ADAPTIVE_MESH;
 		break;
 	case 108: printf("garden selected\n");
-		ply_file_path = "../../Data/ply/garden/garden_3dgrt.ply";
-		//ply_file_path = "../../Data/ply/garden/garden_exported.ply";
-		base_kdtree_str = "../../Data/ply/garden/garden_tree.kdt";
-		base_igeom_str = "../../Data/ply/garden/garden_igeom.bin";
-		base_obj_str = "../../Data/ply/garden/garden_new.obj";
-		base_build_str = "../../Data/ply/garden/garden_kdt.txt";
-		ply_to_obj_mtl = "gardem_3dgrt.mtl";
+		std::cout << "need name handling about macros\n";
+		system("pause");
+		assetName = "garden";
 		adaptive_mesh = ADAPTIVE_MESH;
 		setCameraLookAt(-2.023807, -0.754826, -0.456976,
 			0.771919, 0.577881, 0.264942,
@@ -2818,21 +2766,11 @@ void subMenuHandler(int value) {
 		camera.fovy = 41.90f;
 		break;
 	case 109: printf("counter selected\n");
-		ply_file_path = "../../Data/ply/counter/counter_3dgrt.ply";
-		base_kdtree_str = "../../Data/ply/counter/counter_tree.kdt";
-		base_igeom_str = "../../Data/ply/counter/counter_igeom.bin";
-		base_obj_str = "../../Data/ply/counter/counter_new.obj";
-		base_build_str = "../../Data/ply/counter/counter_kdt.txt";
-		ply_to_obj_mtl = "counter_3dgrt.mtl";
+		assetName = "counter";
 		adaptive_mesh = ADAPTIVE_MESH;
 		break;
 	case 110: printf("room selected\n");
-		ply_file_path = "../../Data/ply/room/room_3dgrt.ply";
-		base_kdtree_str = "../../Data/ply/room/room_tree.kdt";
-		base_igeom_str = "../../Data/ply/room/room_igeom.bin";
-		base_obj_str = "../../Data/ply/room/room_new.obj";
-		base_build_str = "../../Data/ply/room/room_kdt.txt";
-		ply_to_obj_mtl = "room_3dgrt.mtl";
+		assetName = "room";
 		//setCameraLookAt(-1.792984, 1.629362, -5.232583,
 		//	0.285630, 0.020321, 0.958124,
 		//	0.005805, -0.999794, 0.019474);
@@ -2861,29 +2799,36 @@ void subMenuHandler(int value) {
 #endif
 		break;
 	case 111: printf("truck selected\n");
-		ply_file_path = "../../Data/ply/truck/truck_3dgrt.ply";
-		base_kdtree_str = "../../Data/ply/truck/truck_tree.kdt";
-		base_igeom_str = "../../Data/ply/truck/truck_igeom.bin";
-		base_obj_str = "../../Data/ply/truck/truck_new.obj";
-		base_build_str = "../../Data/ply/truck/truck_kdt.txt";
-		ply_to_obj_mtl = "truck_3dgrt.mtl";
+		assetName = "truck";
 		adaptive_mesh = ADAPTIVE_MESH;
 		break;
 	case 112: printf("stump selected\n");
-		ply_file_path = "../../Data/ply/stump/stump_3dgrt.ply";
-		base_kdtree_str = "../../Data/ply/stump/stump_tree.kdt";
-		base_igeom_str = "../../Data/ply/stump/stump_igeom.bin";
-		base_obj_str = "../../Data/ply/stump/stump_new.obj";
-		base_build_str = "../../Data/ply/stump/stump_kdt.txt";
-		ply_to_obj_mtl = "stump_3dgrt.mtl";
+		assetName = "stump";
 		adaptive_mesh = ADAPTIVE_MESH;
 		break;
 	}
 
+	std::string name = assetName;
+	std::string root = "../../Data/ply/" + name + "/";
+
+	std::string s_ply_file_path = root + name + "_3dgrt.ply";
+	std::string s_base_kdtree_str = root + name + "_tree.kdt";
+	std::string s_base_igeom_str = root + name + "_igeom.bin";
+	std::string s_base_obj_str = root + name + "_new.obj";
+	std::string s_base_build_str = root + name + "_kdt.txt";
+	std::string s_ply_to_obj_mtl = name + "_3dgrt.mtl";
+
+	const char* ply_file_path = s_ply_file_path.c_str();
+	const char* base_kdtree_str = s_base_kdtree_str.c_str();
+	const char* base_igeom_str = s_base_igeom_str.c_str();
+
+	const char* base_obj_str = s_base_obj_str.c_str();
+	const char* base_build_str = s_base_build_str.c_str();
+	const char* ply_to_obj_mtl = s_ply_to_obj_mtl.c_str();
+
 	//printCameraInfo();
 
-	// 선택된 모델의 기본 경로와 동적 접미사를 조합하여 최종 경로 생성
-	if (base_kdtree_str) {
+	if (!assetName.empty()) {
 		construct_path(final_kdtree_path, sizeof(final_kdtree_path), base_kdtree_str);
 		construct_path(final_igeom_path, sizeof(final_igeom_path), base_igeom_str);
 		construct_path(final_obj_path, sizeof(final_obj_path), base_obj_str);
