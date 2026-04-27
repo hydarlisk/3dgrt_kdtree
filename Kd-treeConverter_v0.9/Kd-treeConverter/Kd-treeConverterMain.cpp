@@ -46,6 +46,7 @@ char* ply_to_obj_mtl;
 
 char* ply_kdtree_dump_path;
 char* ply_igeom_dump_path;
+char* ply_bspt_dump_path;
 
 //cudaEvent_t start_ev, stop_ev;
 char* kdtree_build_path;
@@ -2489,6 +2490,7 @@ void subMenuHandler(int value) {
 
 	static char final_kdtree_dump_path[512];
 	static char final_igeom_dump_path[512];
+	static char final_bspt_dump_path[512];
 
 	// Kd-treeConverter.h의 매크로를 기반으로 동적 접미사 생성
 	char suffix[256];
@@ -2565,14 +2567,22 @@ void subMenuHandler(int value) {
 		sah_mode_str);
 #else
 	// SAH_OPACITY가 0이면 "_normal..." 형식으로 생성
+#if BSPT
+	snprintf(suffix, sizeof(suffix), "%s_%.0f_normal_%d_%d%s_%s_BSPT",
+#else
 	snprintf(suffix, sizeof(suffix), "%s_%.0f_normal_%d_%d%s_%s",
+#endif
 		scale_mode_str,
 		ISCET_COST,
 		MIN_TRI,
 		FORCE_SPLIT_THRESHOLD,
 		clip_mode_str,
 		sah_mode_str);
+#if BSPT
+	snprintf(suffixDump_JS, sizeof(suffixDump_JS), "%s_%.0f_normal_%d_%d%s_%s_BSPT",
+#else
 	snprintf(suffixDump_JS, sizeof(suffixDump_JS), "%s_%.0f_normal_%d_%d%s_%s_JS",
+#endif
 		scale_mode_str,
 		ISCET_COST,
 		MIN_TRI,
@@ -2814,6 +2824,7 @@ void subMenuHandler(int value) {
 	std::string s_ply_file_path = root + name + "_3dgrt.ply";
 	std::string s_base_kdtree_str = root + name + "_tree.kdt";
 	std::string s_base_igeom_str = root + name + "_igeom.bin";
+	std::string s_base_bspt_str = root + name + "_bspt.bin";
 	std::string s_base_obj_str = root + name + "_new.obj";
 	std::string s_base_build_str = root + name + "_kdt.txt";
 	std::string s_ply_to_obj_mtl = name + "_3dgrt.mtl";
@@ -2821,6 +2832,7 @@ void subMenuHandler(int value) {
 	const char* ply_file_path = s_ply_file_path.c_str();
 	const char* base_kdtree_str = s_base_kdtree_str.c_str();
 	const char* base_igeom_str = s_base_igeom_str.c_str();
+	const char* base_bspt_str = s_base_bspt_str.c_str();
 
 	const char* base_obj_str = s_base_obj_str.c_str();
 	const char* base_build_str = s_base_build_str.c_str();
@@ -2836,6 +2848,7 @@ void subMenuHandler(int value) {
 
 		construct_path_JS(final_kdtree_dump_path, sizeof(final_kdtree_dump_path), base_kdtree_str);
 		construct_path_JS(final_igeom_dump_path, sizeof(final_igeom_dump_path), base_igeom_str);
+		construct_path_JS(final_bspt_dump_path, sizeof(final_bspt_dump_path), base_bspt_str);
 
 		// 전역 변수에 최종 경로 할당
 		ply_kdtree_path = final_kdtree_path;
@@ -2845,6 +2858,7 @@ void subMenuHandler(int value) {
 
 		ply_kdtree_dump_path = final_kdtree_dump_path;
 		ply_igeom_dump_path = final_igeom_dump_path;
+		ply_bspt_dump_path = final_bspt_dump_path;
 	}
 
 	printf("%s\n%s\n%s\n%s\n%s\n", ply_file_path,
@@ -2852,8 +2866,11 @@ void subMenuHandler(int value) {
 		ply_igeom_path,
 		ply_to_obj,
 		kdtree_build_path);
-
+#if BSPT
+	printf("dump path :\n\t%s\n\t%s\n\t%s\n", ply_kdtree_dump_path, ply_igeom_dump_path, ply_bspt_dump_path);
+#else
 	printf("dump path :\n\t%s\n\t%s\n", ply_kdtree_dump_path, ply_igeom_dump_path);
+#endif
 
 	// 3DGS 학습 결과물을 로드
 	if (!loadGaussiansFromPly(ply_file_path, g_gaussians)) {
@@ -2957,7 +2974,7 @@ void main_menu_action(int selection) {
 			//printf("tri_accel_list size: %d\n", sizeof(uip.poly_model.kd_tree->tri_accel_list) / sizeof(*(uip.poly_model.kd_tree->tri_accel_list)));
 		}
 		print_current_time("kdtree build end");
-		printKdTreeLeafNodeInfo();
+		//printKdTreeLeafNodeInfo();
 #if LEAF_NODE_DEBUG
 		leaf_nodes = extract_all_leaf_data(&uip.poly_model, largest_leaf_index);
 #endif
@@ -2974,17 +2991,16 @@ void main_menu_action(int selection) {
 		if (render_gaussian) {
 			dump_kd_tree_for_composite_object(
 				&uip.poly_model,
-				ply_kdtree_dump_path,         // 저장할 kd-tree
 				KD_TREE_DUMP_IN_BINARY,    // 저장 포맷
+				ply_kdtree_dump_path,         // 저장할 kd-tree
 				ply_igeom_dump_path         // 저장할 geometry
 			);
-
-			//adaptive sampling 프로젝트에서 .bin을 읽도록 수정하여 불필요해짐.
-			//save_composite_object_to_obj(g_gaussians, uip.poly_model, ply_to_obj);
 		}
 		else {
-			dump_kd_tree_for_composite_object(&uip.poly_model, full_kd_tree_file_name,
-				uip.kd_tree_dump_format, full_i_geometry_file_name);
+			dump_kd_tree_for_composite_object(&uip.poly_model, uip.kd_tree_dump_format,
+				full_kd_tree_file_name,
+				full_i_geometry_file_name
+);
 		}
 		fprintf(stdout, "Done!\n");
 		break;
@@ -3010,13 +3026,13 @@ void main_menu_action(int selection) {
 		printf("full_kd_tree_file_name:%s\n", full_kd_tree_file_name);
 		read_kd_tree_from_file(&uip.poly_model, full_kd_tree_file_name, uip.kd_tree_dump_format);
 
-		printKdTreeLeafNodeInfo();
+		//printKdTreeLeafNodeInfo();
 #if LEAF_NODE_DEBUG
 		leaf_nodes = extract_all_leaf_data(&uip.poly_model, largest_leaf_index);
 #endif
 		glutPostRedisplay();
 		break;
-	case 600:
+	case 600:	//cuda rendering
 		g_cuda_interactive_mode = !g_cuda_interactive_mode; // 인터랙티브 모드 토글
 		if (g_cuda_interactive_mode) {
 			cudaEventCreate(&start_real);
@@ -3060,8 +3076,8 @@ void main_menu_action(int selection) {
 
 			dump_kd_tree_for_composite_object(
 				&uip.poly_model,
-				ply_kdtree_path,         // 저장할 kd-tree
 				KD_TREE_DUMP_IN_BINARY,    // 저장 포맷
+				ply_kdtree_path,         // 저장할 kd-tree
 				ply_igeom_path         // 저장할 geometry
 			);
 
@@ -3267,9 +3283,9 @@ void idle() {
 		renderObjWithCuda(uip.poly_model, camera, g_render_width, g_render_height, d_pbo_ptr, g_cuda_rendering_done);
 #else
 		//renderGaussianWithCuda(uip.poly_model, g_gaussians, camera, g_render_width, g_render_height, d_pbo_ptr, g_cuda_rendering_done);
-#if DUMMY_RUN
+	#if DUMMY_RUN
 		warmUp(d_pbo_ptr, compute_stream);
-#endif
+	#endif
 
 		/* print camera setting */
 #include <iomanip>
@@ -3283,12 +3299,12 @@ void idle() {
 		//cudaEventRecord(start_real, current_stream); // 시작 기록
 		// [계산 stream] 커널 실행
 		g_fps = renderGaussianWithCudaFrame(camera, g_render_width, g_render_height, d_pbo_ptr, compute_stream
-#if HIT_AND_NODE_COUNT_DEBUG
+	#if HIT_AND_NODE_COUNT_DEBUG
 			, h_debug_buffer1_main, h_debug_buffer2_main
-#endif
-#if USE_STACK > SHORT_STACK
+	#endif
+	#if USE_STACK > SHORT_STACK
 			, g_d_global_stack
-#endif
+	#endif
 		);
 		//cudaEventRecord(stop_real, current_stream); // 종료 기록
 		//cudaEventSynchronize(stop_real); // GPU 작업 완료까지 대기
@@ -3318,7 +3334,7 @@ void idle() {
 		// [전송 stream] Unmap 예약: CUDA → OpenGL 동기화 해제
 		cudaGraphicsUnmapResources(1, &pbo_cuda_resource, transfer_stream);
 
-#if HIT_AND_NODE_COUNT_DEBUG
+	#if HIT_AND_NODE_COUNT_DEBUG
 		// 최댓값을 계산하여 전역 변수에 저장
 		memset(max_debug_values, 0, sizeof(max_debug_values));
 		if (h_debug_buffer1_main != nullptr) {
@@ -3333,7 +3349,7 @@ void idle() {
 				max_debug_values[5] = MyMAX(max_debug_values[5], (int)h_debug_buffer2_main[i].z);
 			}
 		}
-#endif
+	#endif
 #endif
 
 		// PBO의 내용을 텍스처로 복사

@@ -23,6 +23,8 @@
 #include <algorithm> // for std::remove_if
 #include <array>       // std::array 사용을 위해 추가
 
+using namespace std;
+
 static const unsigned int modulo[] = { 0,1,2,0,1 };
 
 // From macros to variables to be able to modify through the configuration file
@@ -50,8 +52,305 @@ unsigned int  g_iKdTree_EmptyNode_Count;
 unsigned int  g_iKdTree_LeafNode_Count;
 unsigned int  g_iKdTree_MaxTriInLeafNode_Count;
 
-extern std::vector<Gaussian> g_gaussians;
 #include <iostream>
+
+#if BSPT
+#include <vector>
+
+vector<BSPNode> g_BSPTNodes;
+vector<TriangleList> g_BSPTTris;
+
+/* binary space partitioning tree */
+struct Vec3 {
+	float x, y, z;
+};
+
+inline Vec3 GetPos(const ExtendedVertex& v) {
+	return { v.vertex[0], v.vertex[1], v.vertex[2] };
+}
+
+inline Vec3 Cross(Vec3 a, Vec3 b) {
+	return { a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x };
+}
+
+inline float Dot(Vec3 a, Vec3 b) {
+	return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+inline Vec3 Normalize(Vec3& a) {
+	float tmp = sqrt(a.x * a.x + a.y * a.y + a.z * a.z);
+	a.x /= tmp;
+	a.y /= tmp;
+	a.z /= tmp;
+	return a;
+}
+
+// 노드 내 삼각형 정보 출력 함수
+void PrintNodeTriangles(BSPNode_Build* node) {
+	if (node->onPlaneTriangles.empty()) return;
+
+	std::cout << "--- Node Plane (n: [" << node->n[0] << ", " << node->n[1] << ", " << node->n[2]
+		<< "], d: " << node->d << ") ---" << std::endl;
+
+	for (size_t i = 0; i < node->onPlaneTriangles.size(); ++i) {
+		const TriangleList& tri = node->onPlaneTriangles[i];
+		std::cout << "  Triangle " << i << " [Offset: " << tri.offset << "]" << std::endl;
+		for (int j = 0; j < 3; ++j) {
+			std::cout << "    V" << j << ": ("
+				<< tri.point[j].vertex[0] << ", "
+				<< tri.point[j].vertex[1] << ", "
+				<< tri.point[j].vertex[2] << ")" << std::endl;
+		}
+	}
+}
+
+// 카메라 위치(eye)에 따른 BSP 트리 순회
+void TraverseBSPTree(BSPNode_Build* node, const float eye[3]) {
+	if (node == nullptr) return;
+
+	// 1. 현재 노드의 평면과 카메라 사이의 거리 계산 (Plane Equation: Ax + By + Cz - D = 0)
+	// dist > 0 이면 카메라가 평면의 앞(Front)에 있음
+	float dist = node->n[0] * eye[0] +
+		node->n[1] * eye[1] +
+		node->n[2] * eye[2] - node->d;
+
+	// 2. 방문 순서 결정 (Back-to-Front)
+	if (dist > 0) {
+		// 카메라가 앞쪽에 있음: 뒤쪽 자식 -> 현재 평면 -> 앞쪽 자식 순서
+		TraverseBSPTree(node->back, eye);
+		PrintNodeTriangles(node);
+		TraverseBSPTree(node->front, eye);
+	}
+	else {
+		// 카메라가 뒤쪽에 있음: 앞쪽 자식 -> 현재 평면 -> 뒤쪽 자식 순서
+		TraverseBSPTree(node->front, eye);
+		PrintNodeTriangles(node);
+		TraverseBSPTree(node->back, eye);
+	}
+}
+
+//point-plane signed distance(not normalized)
+inline float CalculateDistanceToPlane(const Vec3 n, const float d, const ExtendedVertex& V) {
+	return Dot(n, GetPos(V)) - d;
+}
+
+Side ClassifyTriangle(const Vec3 n, const float d, const TriangleList& testTri) {
+	int frontCnt = 0, backCnt = 0;
+
+	for (int i = 0; i < 3; i++) {
+		float dist = CalculateDistanceToPlane(n, d, testTri.point[i]);
+		if (dist > 0.0001f) frontCnt++;
+		else if (dist < -0.0001f) backCnt++;
+	}
+	if (frontCnt > 0 && backCnt > 0) return STRADDLE;
+	if (frontCnt > 0) return FRONT;
+	if (backCnt > 0) return BACK;
+	return ON_PLANE;
+}
+
+int PickBestSplitter(const vector<TriangleList>& triangles) {
+	int bestIndex = -1;
+	float bestScore = 1e30f; // 매우 큰 값으로 초기화
+
+	// 가중치 설정 (쪼개지는 것을 방지하는 정도)
+	const float SPLIT_WEIGHT = 15.0f;
+	const float BALANCE_WEIGHT = 1.0f;
+
+	// 후보 개수가 너무 많으면 성능을 위해 무작위 샘플링을 하기도 하지만,
+	// 일단은 모든 삼각형을 후보로 전수 조사합니다.
+	for (int i = 0; i < triangles.size(); ++i) {
+		const TriangleList& candidate = triangles[i];
+
+		// 후보 평면 추출
+		Vec3 p0 = GetPos(candidate.point[0]);
+		Vec3 e1 = { candidate.point[1].vertex[0] - p0.x, candidate.point[1].vertex[1] - p0.y, candidate.point[1].vertex[2] - p0.z };
+		Vec3 e2 = { candidate.point[2].vertex[0] - p0.x, candidate.point[2].vertex[1] - p0.y, candidate.point[2].vertex[2] - p0.z };
+		Vec3 n = Cross(e1, e2);
+		// n의 길이가 0에 가까우면(Degenerate) 무시
+		if (Dot(n, n) < 0.000001f) continue;
+		n = Normalize(n);
+		float d = Dot(n, p0);
+
+		int frontCnt = 0, backCnt = 0, splitCnt = 0;
+
+		// 다른 모든 삼각형과의 관계 계산
+		for (int j = 0; j < triangles.size(); ++j) {
+			if (i == j) continue;
+
+			Side side = ClassifyTriangle(n, d, triangles[j]);
+			switch (side) {
+			case FRONT:    frontCnt++; break;
+			case BACK:     backCnt++;  break;
+			case STRADDLE: splitCnt++; break;
+			case ON_PLANE: break;
+			}
+		}
+
+		// 점수 계산 (점수가 낮을수록 좋음)
+		float score = (SPLIT_WEIGHT * splitCnt) + (BALANCE_WEIGHT * abs(frontCnt - backCnt));
+
+		if (score < bestScore) {
+			bestScore = score;
+			bestIndex = i;
+		}
+
+		// 만약 쪼개지는 삼각형이 하나도 없는 완벽한 평면을 찾았다면 즉시 반환
+		if (splitCnt == 0 && abs(frontCnt - backCnt) < (triangles.size() / 4)) {
+			return i;
+		}
+	}
+
+	return (bestIndex == -1) ? 0 : bestIndex;
+}
+
+// 교점 계산 (ExtendedVertex vertex[3] 대응)
+ExtendedVertex GetIntersect(const ExtendedVertex& a, const ExtendedVertex& b, const Vec3 n, const float d) {
+	Vec3 posA = GetPos(a);
+	Vec3 posB = GetPos(b);
+
+	float distA = Dot(n, posA) - d;
+	float distB = Dot(n, posB) - d;
+
+	float t = distA / (distA - distB);
+
+	ExtendedVertex res = a;
+	res.vertex[0] = a.vertex[0] + t * (b.vertex[0] - a.vertex[0]);
+	res.vertex[1] = a.vertex[1] + t * (b.vertex[1] - a.vertex[1]);
+	res.vertex[2] = a.vertex[2] + t * (b.vertex[2] - a.vertex[2]);
+	return res;
+}
+
+void SplitTriangle(const TriangleList& tri, const Vec3 n, const float d, std::vector<TriangleList>& frontPart, std::vector<TriangleList>& backPart) {
+	std::vector<ExtendedVertex> fPts, bPts;
+	const float EPSILON = 0.00001f;
+
+	for (int i = 0; i < 3; ++i) {
+		int next = (i + 1) % 3;
+		const ExtendedVertex& A = tri.point[i];
+		const ExtendedVertex& B = tri.point[next];
+
+		float distA = Dot(n, GetPos(A)) - d;
+		float distB = Dot(n, GetPos(B)) - d;
+
+		if (distA >= -EPSILON) fPts.push_back(A);
+		if (distA <= EPSILON) bPts.push_back(A);
+
+		if ((distA > EPSILON && distB < -EPSILON) || (distA < -EPSILON && distB > EPSILON)) {
+			ExtendedVertex intersect = GetIntersect(A, B, n, d);
+			fPts.push_back(intersect);
+			bPts.push_back(intersect);
+		}
+	}
+
+	auto Finalize = [&](std::vector<ExtendedVertex>& pts, std::vector<TriangleList>& target) {
+		if (pts.size() < 3) return;
+		for (size_t i = 1; i < pts.size() - 1; ++i) {
+			TriangleList nt = tri;
+			nt.point[0] = pts[0];
+			nt.point[1] = pts[i];
+			nt.point[2] = pts[i + 1];
+			nt.offset = tri.point[0].material_ID;
+			target.push_back(nt);
+		}
+	};
+
+	Finalize(fPts, frontPart);
+	Finalize(bPts, backPart);
+}
+
+int maxTriInNode = 0;
+int maxDepth = 0;
+
+BSPNode_Build* BuildBSPTree(vector<TriangleList>& triangles, int depth) {
+	if (triangles.empty()) return nullptr;
+	if (depth > maxDepth) {
+		maxDepth = depth;
+	}
+
+	BSPNode_Build* node = new BSPNode_Build();
+
+	int bestIdx = PickBestSplitter(triangles);
+	TriangleList splitter = triangles[bestIdx];
+	//TriangleList splitter = triangles[0];
+	
+	//get plane
+	Vec3 p0 = GetPos(splitter.point[0]);
+	Vec3 e1 = { splitter.point[1].vertex[0] - p0.x, splitter.point[1].vertex[1] - p0.y, splitter.point[1].vertex[2] - p0.z };
+	Vec3 e2 = { splitter.point[2].vertex[0] - p0.x, splitter.point[2].vertex[1] - p0.y, splitter.point[2].vertex[2] - p0.z };
+	Vec3 n = Cross(e1, e2);
+	float d = Dot(n, p0);
+
+	node->n[0] = n.x;
+	node->n[1] = n.y;
+	node->n[2] = n.z;
+	node->d = Dot(n, p0);
+
+	vector<TriangleList> frontList;
+	vector<TriangleList> backList;
+
+	for (int i = 0; i < triangles.size(); i++) {
+		Side side = ClassifyTriangle(n, d, triangles[i]);
+		if (side == FRONT) {
+			frontList.push_back(triangles[i]);
+		}
+		else if (side == BACK) {
+			backList.push_back(triangles[i]);
+		}
+		else if (side == STRADDLE) {
+			vector<TriangleList> frontPart, backPart;
+			SplitTriangle(triangles[i], n, d, frontPart, backPart);
+			frontList.insert(frontList.end(), frontPart.begin(), frontPart.end());
+			backList.insert(backList.end(), backPart.begin(), backPart.end());
+		}
+		else if (side == ON_PLANE) {
+			node->onPlaneTriangles.push_back(triangles[i]);
+		}
+	}
+	if (node->onPlaneTriangles.size() > maxTriInNode) {
+		maxTriInNode = node->onPlaneTriangles.size();
+	}
+
+	if (!frontList.empty()) {
+		node->front = BuildBSPTree(frontList, depth+1);
+	}
+	if (!backList.empty()) {
+		node->back = BuildBSPTree(backList, depth+1);
+	}
+	return node;
+}
+
+//dfs traverse
+void FlattenBSPTree(BSPNode_Build* nodeB, vector<unsigned int>& triOffsets) {
+	int currIdx = g_BSPTNodes.size();
+	BSPNode tmp;
+	tmp.n[0] = nodeB->n[0];
+	tmp.n[1] = nodeB->n[1];
+	tmp.n[2] = nodeB->n[2];
+	tmp.d = nodeB->d;
+	tmp.frontChild = -1;
+	tmp.backChild = -1;
+	tmp.triStart = g_iKdTree_TriOffset_Count + triOffsets.size();
+	tmp.triCnt = nodeB->onPlaneTriangles.size();
+
+	for (int i = 0; i < tmp.triCnt; i++) {
+		triOffsets.push_back(g_BSPTTris.size());
+		g_BSPTTris.push_back(nodeB->onPlaneTriangles[i]);
+	}
+	g_BSPTNodes.push_back(tmp);
+
+	if (nodeB->front != nullptr) {
+		g_BSPTNodes[currIdx].frontChild = g_BSPTNodes.size();
+		FlattenBSPTree(nodeB->front, triOffsets);
+	}
+	if (nodeB->back != nullptr) {
+		g_BSPTNodes[currIdx].backChild = g_BSPTNodes.size();
+		FlattenBSPTree(nodeB->back, triOffsets);
+	}
+}
+#endif
+
+extern std::vector<Gaussian> g_gaussians;
+
 void _reAllocTriangleOffsetList(unsigned long long _newAllocSize, unsigned long long& _oldAllocSize, unsigned int** _ppTriOffsetArray)
 {
 	//for debug
@@ -91,6 +390,13 @@ void setLeafNode(KdTreeNode* pNode, unsigned int _objectSize, unsigned int _obje
 	pNode->y = _objectListOffset;
 }
 
+#if BSPT
+void setLeafNodeBSPT(KdTreeNode* pNode, unsigned int _bsptOffset) {
+	pNode->x = 3;
+	pNode->y = _bsptOffset;
+}
+#endif
+
 int compare_bound_edge(const void *elem0, const void *elem1)
 {
 	const BoundEdge* obj0 = (const BoundEdge *)elem0;
@@ -108,11 +414,13 @@ void set_bound_edge(const int axis, const TriangleList *pTriangleInfo, const uns
 
 	for( unsigned int i = 0; i < n_bEdge; ) {
 		BoundingBox worldbound = pTriangleInfo[index].AABB;
-		bEdge[i].type = BoundEdge::START;	bEdge[i].triangleInfo = &pTriangleInfo[index];
+		bEdge[i].type = BoundEdge::START;
+		bEdge[i].triangleInfo = &pTriangleInfo[index];
 		bEdge[i].t = worldbound.min[axis];
 		bEdge[i].isPlanar = ( worldbound.min[axis] == worldbound.max[axis] );
 		i++;
-		bEdge[i].type = BoundEdge::END;		bEdge[i].triangleInfo = &pTriangleInfo[index];
+		bEdge[i].type = BoundEdge::END;
+		bEdge[i].triangleInfo = &pTriangleInfo[index];
 		bEdge[i].t = worldbound.max[axis];
 		bEdge[i].isPlanar = ( worldbound.min[axis] == worldbound.max[axis] );
 		i++; index++;
@@ -697,7 +1005,7 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pTriangleInfo
 	//#define MAX_TRIANGLE_OFFSET_BUDGET 9223372036854775807
 	//#define MAX_TRIANGLE_OFFSET_BUDGET 17179869184
 	//#define MAX_TRIANGLE_OFFSET_BUDGET 8589934592
-	#define MAX_TRIANGLE_OFFSET_BUDGET2 4294967295
+	#define MAX_TRIANGLE_OFFSET_BUDGET 4294967295
 	//#define MAX_TRIANGLE_OFFSET_BUDGET 2147483647
 	//#define MAX_TRIANGLE_OFFSET_BUDGET 1073741824
 	//if (triangleSize > FORCE_SPLIT_THRESHOLD) bestCost.cost = DBL_MAX; //shyun added
@@ -757,6 +1065,36 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pTriangleInfo
 	}
 	
 	if (!bestCost.is_valid()) {
+#if BSPT
+		if (triangleSize > 0) {
+			vector<TriangleList> triangles(triangleSize);
+			for (int i = 0; i < triangleSize; i++) {
+				triangles[i] = pTriangleInfos[i];
+			}
+			int depth = 0;
+			BSPNode_Build* root = BuildBSPTree(triangles, depth);
+			if (depth > maxDepth) {
+				maxDepth = depth;
+			}
+
+			vector<unsigned int> triOffsets;
+			FlattenBSPTree(root, triOffsets);
+
+			unsigned int iTriOffset = g_iKdTree_TriOffset_Count;
+
+			g_iKdTree_TriOffset_Count += triOffsets.size();
+			if (g_iKdTree_TriOffset_Count >= g_iKdTree_TriOffset_CountAlloc) {
+				_reAllocTriangleOffsetList(MyMAX(2 * g_iKdTree_TriOffset_CountAlloc, 512), g_iKdTree_TriOffset_CountAlloc, &g_pKdTree_TriOffset_Array);
+			}
+			unsigned* currOffsetList = &g_pKdTree_TriOffset_Array[iTriOffset];
+
+			unsigned leafCount = 0;
+			for (unsigned i = 0; i < triOffsets.size(); i++) {
+				currOffsetList[leafCount++] = triOffsets[i];
+			}
+		}
+		setLeafNodeBSPT(inNode, g_BSPTNodes.size());
+#else
 		// Leaf node 생성
 		unsigned int iTriOffset;
 		{
@@ -779,6 +1117,7 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pTriangleInfo
 		for (unsigned i = 0; i < triangleSize; i++) {
 			currOffsetList[leafCount++] = pTriangleInfos[i].offset;
 		}
+#endif
 
 		if (triangleSize == 0)
 			g_iKdTree_EmptyNode_Count++;
@@ -790,7 +1129,6 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pTriangleInfo
 		 *	더이상 pTriangleInfos 는 필요없으므로 메모리 공간 절약을 위해 없앤다.
 		 */
 		delete[] pTriangleInfos;
-
 	}
 	else
 		// ----------------------------------------------------------------------------
@@ -853,6 +1191,16 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pTriangleInfo
 		build_kd_tree_recursive(bEdge, pRightTriangles, rightTriangles.size(), rightnBounds, inNodeLevel + 1, &g_pKdTree_Node_Array[nodeNum + 1]);
 	}
 
+#if BSPT
+	if (inNodeLevel < 10) {
+		printf("bspt triangle size: %d\n", g_BSPTTris.size());
+	}
+	if (inNodeLevel == 0) {
+		printf("bspt max depth : %d\n", maxDepth);
+		printf("bspt max tri cnt : %d\n", maxTriInNode);
+	}
+#endif
+
 	if (DEBUG_FLAG) {
 		fprintf(stdout, "b_k_t_r: (E)triangleSize = %d, inNodeLevel = %d\n", triangleSize, inNodeLevel);
 	}
@@ -871,12 +1219,6 @@ void build_TriAccList(CompositeObject *poly_model, TriAccel*& pTriAcc)
 		}
 	}
 	memset(pTriAcc, 0, sizeof(TriAccel)* iTriangleSize);
-
-	// pTriAcc가 NULL인지 확인 (메모리 할당 실패 여부 검사)
-	//if (pTriAcc == NULL) {
-	//	fprintf(stderr, "ERROR: Failed to allocate memory for TriAccel list! (size: %d)\n", iTriangleSize);
-	//	return; // 함수를 안전하게 종료
-	//}
 
 	float A[3], B[3], C[3];
 	float b[3], c[3];
@@ -1050,6 +1392,7 @@ std::vector<BoundingBox> extract_leaves_from_kd_tree()
 //	return all_leaf_info;
 //}
 
+//for debug
 std::vector<LeafNodeInfo> extract_all_leaf_data(CompositeObject* c_object, int& largest_leaf_index) {
 	// Kd-tree가 없으면 빈 벡터 반환
 	if (c_object == nullptr || c_object->kd_tree == nullptr || c_object->kd_tree->tree == nullptr) {

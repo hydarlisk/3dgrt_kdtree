@@ -274,6 +274,9 @@ __device__ Gaussian fetch_gaussian(int gaussianID) {
 #else
 __device__ Gaussian* g_d_gaussians;
 #endif
+#if BSPT
+__device__ cudaTextureObject_t inBSPTNodeTex;
+#endif
 
 struct SceneInfo { int resX, resY; };
 struct CameraInfo { float3 eye, u, v, startPoint; float stepX, stepY; };
@@ -286,13 +289,17 @@ __constant__ float3 g_SceneBBoxMax;
 #if GLOBAL_DEVICE_VAR
 kdtreeNode* g_d_kdtree_nodes = nullptr;
 unsigned int* g_d_tri_offsets = nullptr;
-#if WALD_METHOD
+    #if WALD_METHOD
 cuWaldTriangleInfo* g_d_waldInfo = nullptr;
-#else
+    #else
 TriAccel* g_d_tri_accel = nullptr;
-#endif
+    #endif
 Gaussian* g_d_gaussians_persistent = nullptr;
+    #if BSPT
+BSPNode* g_d_bsptNode = nullptr;
+    #endif
 #endif
+
 
 cudaEvent_t start_ev, stop_ev;
 
@@ -1135,6 +1142,138 @@ __device__ inline int singlePassIntersectCheck(const cuRay& ray, HitRecord local
 }
 #endif
 
+#if BSPT
+__device__ bool RayIntersectsPlane(const cuRay& ray, const float3 n, float d) {
+    float nd = n.x * ray.dir.x + n.y * ray.dir.y + n.z * ray.dir.z;
+
+    //parallel to plane
+    if (fabsf(nd) < 1e-6f) {
+        return false;
+    }
+
+    // t = (d - N · P) / N · D
+    float np = n.x * ray.pos.x + n.y * ray.pos.y + n.z * ray.pos.z;
+    float t = (d - np) / nd;
+
+    return t > 1e-4f;
+}
+
+__device__ void traverseBSPTFrontToBack(kdtreeNode& node, cuRay& currRay, float t_near, float t_far, float3& accumulated_color, float& accumulated_opacity) {
+    int bsptStack[BSPT_MAX_STACK_DEPTH];
+    int stackPtr = 0;
+    int currIdx = BSPT_OFFSET(node);
+
+    // BSPT traversal
+    while (currIdx != -1 || stackPtr > 0) {
+        while (currIdx != -1) {
+            const float4 plane = tex1Dfetch<float4>(inBSPTNodeTex, 2 * currIdx);
+            const float4 child_tri = tex1Dfetch<float4>(inBSPTNodeTex, 2 * currIdx + 1);
+            const int front = __float_as_int(child_tri.x);
+            const int back = __float_as_int(child_tri.y);
+            unsigned int baseOffset = __float_as_uint(child_tri.z);
+            const unsigned int triCnt = __float_as_uint(child_tri.w);
+
+            if (stackPtr < BSPT_MAX_STACK_DEPTH) {
+                bsptStack[stackPtr++] = currIdx;
+            }
+
+            float dist = plane.x * currRay.pos.x + plane.y * currRay.pos.y + plane.z * currRay.pos.z - plane.w;
+
+            if (dist > 0) {
+                currIdx = front;
+            }
+            else {
+                currIdx = back;
+            }
+        }
+
+        currIdx = bsptStack[--stackPtr];
+
+        const float4 plane = tex1Dfetch<float4>(inBSPTNodeTex, 2 * currIdx);
+        const float4 child_tri = tex1Dfetch<float4>(inBSPTNodeTex, 2 * currIdx + 1);
+        const int front = __float_as_int(child_tri.x);
+        const int back = __float_as_int(child_tri.y);
+        unsigned int baseOffset = __float_as_uint(child_tri.z);
+        const unsigned int triCnt = __float_as_uint(child_tri.w);
+
+        HitRecord local_hits[BSPT_MAX_HITS];
+        int local_hit_count = 0;
+        int objectSize = triCnt + baseOffset;
+        for (; baseOffset < objectSize; baseOffset++) {
+#if OFFSET_TEXTURE
+            const unsigned tri_idx = tex1Dfetch<unsigned int>(inObjectOffsetListTex, baseOffset);
+#else
+            const unsigned tri_idx = g_d_tri_offsets_dev[baseOffset];
+#endif
+#if WALD_METHOD
+            singlePassIntersectRoutine(currRay, tri_idx, t_near, t_far, local_hits, local_hit_count);
+#else
+            singlePassIntersectRoutineGaussian_sortNode(currRay, tri_idx, t_near, t_far, local_hits, local_hit_count);
+#endif
+        }
+
+        if (local_hit_count > 0) {
+            sortHits(local_hits, local_hit_count);
+            for (int i = 0; i < local_hit_count; ++i) {
+                int gaussianID = 0;
+#if WALD_METHOD
+                float4 internal2 = tex1Dfetch<float4>(inTriAccelTex, 3 * local_hits[i].triIndex + 2);
+                gaussianID = __float_as_int(internal2.w);
+#else
+                float4 d2 = tex1Dfetch<float4>(inTriAccelTex, local_hits[i].triIndex * 4 + 2);
+                gaussianID = __float_as_int(d2.w);
+#endif
+
+#if GAUSSIAN_TEXTURE
+                Gaussian g = fetch_gaussian(gaussianID);
+#else
+                Gaussian g = g_d_gaussians[gaussianID];
+#endif
+                const float3 particlePosition = make_float3(g.pos[0], g.pos[1], g.pos[2]);
+                const float3 particleScale = make_float3(g.scale[0], g.scale[1], g.scale[2]);
+                float4 particleQquaternion = make_float4(g.rot[0], g.rot[1], g.rot[2], g.rot[3]);
+                float33 particleRotation;
+                quaternionWXYZToMatrix(particleQquaternion, particleRotation);
+
+                const float3 giscl = make_float3(1 / particleScale.x, 1 / particleScale.y, 1 / particleScale.z);
+                const float3 gposc = (currRay.pos - particlePosition);
+                const float3 gposcr = (gposc * particleRotation);
+                const float3 gro = giscl * gposcr;
+                const float3 rayDirR = currRay.dir * particleRotation;
+                const float3 grdu = giscl * rayDirR;
+                const float3 grd = normalize(grdu);
+
+                const float3 gcrod = cross(grd, gro);
+                const float grayDist = dot(gcrod, gcrod);
+
+                const float gres = particleResponse<GAUSSIAN_DEGREE>(grayDist);
+
+                float sample_opacity = fminf(0.99f, g.opacity * gres);
+
+                if (gres < ALPHA_MIN || sample_opacity < 1.0f / 255.0f) // 0.004
+                    continue;
+                float3 sample_color = eval_sh_final(SPH_EVAL_DEGREE, currRay.dir, g);
+
+                accumulated_color += sample_color * sample_opacity * (1.0f - accumulated_opacity);
+                accumulated_opacity += sample_opacity * (1.0f - accumulated_opacity);
+
+                if (accumulated_opacity > OPACITY_THRESHOLD) {
+                    break;
+                }
+            } // for (i < local_hit_count)
+        } // if (local_hit_count > 0)
+
+        float dist = plane.x * currRay.pos.x + plane.y * currRay.pos.y + plane.z * currRay.pos.z - plane.w;
+        if (dist > 0) {
+            currIdx = back;
+        }
+        else {
+            currIdx = front;
+        }
+    }
+}
+#endif
+
 #if USE_STACK == SHORT_STACK
 
 __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
@@ -1200,6 +1339,12 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
             }
 
             // --- 리프 노드 처리 로직 ---
+#if BSPT
+            traverseBSPTFrontToBack(node, currRay, t_near, t_far, accumulated_color, accumulated_opacity);
+            //accumulated_color = make_float3(1.0f, 0.0f, 0.0f);
+            //accumulated_opacity = 1.0f;
+            //return;
+#else   // BSPT
             unsigned int baseOffset = OBJECTLIST_OFFSET(node);
             int objectSize = OBJECT_SIZE(node) + baseOffset;
             //if (count <= 0) continue;
@@ -1221,14 +1366,12 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
                 const unsigned tri_idx = g_d_tri_offsets_dev[baseOffset];
 #endif
 #if WALD_METHOD
-
     #if BLEND_SELECT
                 if (blend_ops <= 25)
                     singlePassIntersectRoutine(currRay, tri_idx, t_near, t_far, local_hits, local_hit_count);
                 else
                     singlePassIntersectPlane(currRay, tri_idx, t_near, t_far, local_hits, local_hit_count);
     #else
-
         #if MAIL_BOX
                 singlePassIntersectRoutineMailBox(currRay, tri_idx, t_near, t_far, local_hits, local_hit_count, &mailbox);
         #else
@@ -1356,6 +1499,8 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
                     }
                 } // for (i < local_hit_count)
             } // if (local_hit_count > 0)
+#endif // BSPT
+
             if (accumulated_opacity > OPACITY_THRESHOLD | t_far >= t_scene_far)
                 break;
             if (cache.empty()) {
@@ -1646,8 +1791,6 @@ __global__ void renderKernelGaussian_sortNode(float* pFrameBuffer
     , cu_traceState* d_global_stack
 #endif
 ) {
-    //if (g_d_tri_offsets_dev != nullptr) printf("g_d_tri_offsets_dev avaliable\n");
-    //else printf("g_d_tri_offsets_dev null\n");
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
     //if (x == 0 && y == 0) {
@@ -1893,9 +2036,6 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
         return;
     }
 
-    //printf("0. exist KD-Tree\n");
-
-    //printf("[DEBUG] object.n_triangles = %d\n", object.n_triangles);
     if (kdTree == nullptr) {
         printf("[FATAL] kdTree == nullptr\n");
         return;
@@ -1957,28 +2097,33 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
     CUDA_CHECK(cudaMemcpy(g_d_tri_offsets, kdTree->tri_offset_list, offset_size, cudaMemcpyHostToDevice));
 
 #if WALD_METHOD
-#if !GLOBAL_DEVICE_VAR
+    #if !GLOBAL_DEVICE_VAR
     cuWaldTriangleInfo* g_d_waldInfo = nullptr; // Device-side pointer
-#endif
+    #endif
     size_t wald_info_size = sizeof(cuWaldTriangleInfo) * object.n_triangles;
     CUDA_CHECK(cudaMalloc(&g_d_waldInfo, wald_info_size));
     CUDA_CHECK(cudaMemcpy(g_d_waldInfo, h_waldInfo, wald_info_size, cudaMemcpyHostToDevice));
 #else
-#if !GLOBAL_DEVICE_VAR
+    #if !GLOBAL_DEVICE_VAR
     TriAccel* g_d_tri_accel = nullptr;
-#endif
+    #endif
     size_t accel_size = h_triangles.size() * sizeof(float4);
     CUDA_CHECK(cudaMalloc(&g_d_tri_accel, accel_size));
     CUDA_CHECK(cudaMemcpy(g_d_tri_accel, h_triangles.data(), accel_size, cudaMemcpyHostToDevice));
 #endif
-    //new
+
 #if !GLOBAL_DEVICE_VAR
     Gaussian* g_d_gaussians_persistent = nullptr;
 #endif
     size_t gaussians_bytes = gaussians.size() * sizeof(Gaussian);
     CUDA_CHECK(cudaMalloc(&g_d_gaussians_persistent, gaussians_bytes));
     CUDA_CHECK(cudaMemcpy(g_d_gaussians_persistent, gaussians.data(), gaussians_bytes, cudaMemcpyHostToDevice));
-    //new end
+
+#if BSPT
+    size_t bsptNodeSize = sizeof(BSPNode) * object.kd_tree->bsptTree.size();
+    CUDA_CHECK(cudaMalloc(&g_d_bsptNode, bsptNodeSize));
+    CUDA_CHECK(cudaMemcpy(g_d_bsptNode, kdTree->bsptTree.data(), bsptNodeSize, cudaMemcpyHostToDevice));
+#endif
 
     err = cudaGetLastError();
     if (err != cudaSuccess) {
@@ -2058,6 +2203,17 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
     CUDA_CHECK(cudaMemcpyToSymbol(g_d_gaussians, &g_d_gaussians_persistent, sizeof(Gaussian*)));
 #endif
 
+#if BSPT
+    resDesc.res.linear.devPtr = g_d_bsptNode;
+    resDesc.res.linear.desc = cudaCreateChannelDesc<float4>();
+    resDesc.res.linear.sizeInBytes = bsptNodeSize;
+
+    cudaTextureObject_t h_inBsptTex = 0;
+    CUDA_CHECK(cudaCreateTextureObject(&h_inBsptTex, &resDesc, &texDesc, NULL));
+    CUDA_CHECK(cudaMemcpyToSymbol(inBSPTNodeTex, &h_inBsptTex, sizeof(cudaTextureObject_t)));
+#endif
+
+
     if (err != cudaSuccess) {
         std::cerr << "[CUDA Error] texture bind failed: " << cudaGetErrorString(err) << std::endl;
     }
@@ -2068,7 +2224,6 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
     float3 h_bbox_max = make_float3(object.AABB[XMAX], object.AABB[YMAX], object.AABB[ZMAX]);
     CUDA_CHECK(cudaMemcpyToSymbol(g_SceneBBoxMin, &h_bbox_min, sizeof(float3)));
     CUDA_CHECK(cudaMemcpyToSymbol(g_SceneBBoxMax, &h_bbox_max, sizeof(float3)));
-
 
     err = cudaGetLastError();
     if (err != cudaSuccess) {
@@ -2107,13 +2262,16 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
     _aligned_free(h_waldInfo);
 #endif
 
-    if (h_inKdTreeNodeTex)       cudaDestroyTextureObject(h_inKdTreeNodeTex);
+    if (h_inKdTreeNodeTex)          cudaDestroyTextureObject(h_inKdTreeNodeTex);
 #if OFFSET_TEXTURE
-    if (h_inObjectOffsetListTex) cudaDestroyTextureObject(h_inObjectOffsetListTex);
+    if (h_inObjectOffsetListTex)    cudaDestroyTextureObject(h_inObjectOffsetListTex);
 #endif
-    if (h_inTriAccelTex)         cudaDestroyTextureObject(h_inTriAccelTex);
+    if (h_inTriAccelTex)            cudaDestroyTextureObject(h_inTriAccelTex);
 #if GAUSSIAN_TEXTURE
-    if (h_inGaussianTex)         cudaDestroyTextureObject(h_inGaussianTex);
+    if (h_inGaussianTex)            cudaDestroyTextureObject(h_inGaussianTex);
+#endif
+#if BSPT
+    if (h_inBsptTex)                 cudaDestroyTextureObject(h_inBsptTex);
 #endif
 }
 
@@ -2161,9 +2319,9 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
     CUDA_CHECK(cudaEventRecord(start_ev));
     renderKernelGaussian_sortNode << < blocks, threads, shared_mem_size, stream >> > (d_framebuffer
         , d_debug_buffer1, d_debug_buffer2
-#if USE_STACK > SHORT_STACK
+    #if USE_STACK > SHORT_STACK
         , d_global_stack
-#endif
+    #endif
         );
     //CUDA_CHECK(cudaGetLastError());        // DEBUG: launch 실패 확인
     //CUDA_CHECK(cudaDeviceSynchronize());   // DEBUG: 실행 중 오류 확인
@@ -2262,9 +2420,9 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
 #else
     CUDA_CHECK(cudaEventRecord(start_ev, stream)); // 시작 기록
     renderKernelGaussian_sortNode << < blocks, threads, shared_mem_size, stream >> > (d_framebuffer
-#if USE_STACK > SHORT_STACK
+    #if USE_STACK > SHORT_STACK
         , d_global_stack
-#endif
+    #endif
         );
     CUDA_CHECK(cudaEventRecord(stop_ev, stream)); // 종료 기록
     CUDA_CHECK(cudaEventSynchronize(stop_ev)); // GPU 작업 완료까지 대기

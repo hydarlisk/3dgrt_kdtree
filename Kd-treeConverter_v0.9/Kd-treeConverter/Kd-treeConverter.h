@@ -7,8 +7,16 @@
 #pragma once
 #include <vector>
 
-#define JS_BIN true
+#define JS_BIN false
 #define COMPACT_VERTEX true
+#define BSPT true
+#define BSPT_MAX_STACK_DEPTH 64
+#define BSPT_MAX_HITS 95
+
+#if BSPT
+#undef JS_BIN
+#define JS_BIN false
+#endif
 
 //shyun added begin
 #define TRAVL_COST 1.0
@@ -215,7 +223,7 @@
 #define DEBUG_SCALE_HISTOGRAM 0 				// gaussian의 sigma들의 histogram 출력
 #define DEBUG_TRILEN_HISTOGRAM 0 				// gaussian의 sigma들의 histogram 출력
 #define WARP_OCCUPANCY false   					// warp occupancy 출력
-#define HIT_AND_NODE_COUNT_DEBUG true			// Ray 마다 hitcount, node count, ... 확인
+#define HIT_AND_NODE_COUNT_DEBUG false			// Ray 마다 hitcount, node count, ... 확인
 												// kd-tree hitmap 확인 가능
 #define LEAF_NODE_DEBUG false					// kd-tree leaf node 렌더링
 
@@ -361,6 +369,69 @@ typedef __declspec(align(16)) struct _TriAccel {
 	int pad;
 } TriAccel;
 
+
+typedef struct _ExtendedVertex {
+	float vertex[3];
+	float normal[3]; //
+	int material_ID; // Need to be modified
+	char pad[4]; // For 32 byte-alignement
+} ExtendedVertex;
+
+
+typedef struct _BoundingBox {
+	union {
+		struct {
+			float min[3];
+			float max[3];
+		};
+		struct {
+			float pos[2][3];
+		};
+	};
+} BoundingBox;
+
+typedef struct _TriangleList {
+	int offset;
+	BoundingBox AABB;				//	split 되었을때의 가상의 bounding box
+	//GTriangleWrapper *pTriangleWrapper;
+	ExtendedVertex point[3];
+	int side;
+} TriangleList;
+
+#if BSPT
+enum Side { FRONT, BACK, STRADDLE, ON_PLANE };
+
+//bspt node for build
+struct BSPNode_Build {
+	float n[3];
+	float d;
+
+	//TODO
+	//float x;	//x >> 3 : front child, x >> 3 + 1 : back child
+				//IS_LEAF(node) node.x & 7 == 3
+	BSPNode_Build* front = nullptr;
+	BSPNode_Build* back = nullptr;
+
+	std::vector<TriangleList> onPlaneTriangles;
+};
+
+//final bspt node
+struct BSPNode {
+	float n[3];
+	float d;
+
+	//TODO
+	//float x;	//x >> 3 : front child, x >> 3 + 1 : back child
+				//IS_LEAF(node) node.x & 7 == 3
+	int frontChild;
+	int backChild;
+
+	unsigned int triStart;
+	unsigned int triCnt;
+};
+
+#endif
+
 typedef struct _KdTreeNode {
 	// 8 bytes
 	unsigned int x; unsigned int y;
@@ -373,14 +444,11 @@ typedef struct _KdTree {
 	int tri_offset_count;
 	TriAccel *tri_accel_list;
 	float AABB[6];
+#if BSPT
+	std::vector<BSPNode> bsptTree;
+	std::vector<TriangleList> bsptTris;
+#endif
 } KdTree;
-
-typedef struct _ExtendedVertex {
-	float vertex[3];
-	float normal[3]; //
-	int material_ID; // Need to be modified
-	char pad[4]; // For 32 byte-alignement
-} ExtendedVertex;
 
 typedef struct _CompositeObject {
 	int n_triangles;
@@ -443,7 +511,11 @@ void collectTriangleCounts_recursive(
 // [추가] 바이너리 지오메트리 파일(.bin)을 읽어오는 함수
 bool read_igeom_from_file(CompositeObject* c_object, const char* filename);
 //shyun added end
-void dump_kd_tree_for_composite_object(CompositeObject *, const char *, int, const char *);
+void dump_kd_tree_for_composite_object(CompositeObject* c_object,
+	int dump_format,
+	const char* filename,
+	const char* filename_igeom
+);
 int read_kd_tree_from_file(CompositeObject *, const char *, int);
 
 
@@ -466,12 +538,18 @@ int read_kd_tree_from_file(CompositeObject *, const char *, int);
 #define ROPE_NODE_OFFSET(node)		( (node).y)
 #else
 #define IS_LEAF(node)				(((node).x & 7) == 3)
+//internal
 #define SPLIT_AXIS(node)			( (node).x & 3)
 #define FIRST_CHILD_OFFSET(node)	( (node).x >> 3)
 #define SECOND_CHILD_OFFSET(node)	(((node).x >> 3) + 1)
 #define SPLIT_POS(node)				(*(float *)&((node).y))
+//leaf
 #define OBJECT_SIZE(node)			( (node).x >> 3)
 #define OBJECTLIST_OFFSET(node)		( (node).y)
+#endif
+
+#if BSPT
+#define BSPT_OFFSET(node) ((node).y)
 #endif
 
 //int HS;

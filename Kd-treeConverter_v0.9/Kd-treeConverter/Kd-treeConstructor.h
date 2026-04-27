@@ -20,40 +20,6 @@ typedef enum { BOTH_SIDE, MINCOST_SIDE } PlanarTriangleAddMode;
 #define KD_TREE_PLANAR_TRIANGLE_ADD_MODE  MINCOST_SIDE
 //#define KD_TREE_PLANAR_TRIANGLE_ADD_MODE  BOTH_SIDE
 
-typedef struct _BoundingBox {
-	union {
-		struct {
-			float min[3];
-			float max[3];
-		};
-		struct {
-			float pos[2][3];
-		};
-	};
-} BoundingBox;
-
-typedef struct _TriangleList {
-	int offset;
-	BoundingBox AABB;				//	split 되었을때의 가상의 bounding box
-	//GTriangleWrapper *pTriangleWrapper;
-	ExtendedVertex point[3];
-	int side;
-//shyun added begin
-#if SAH_OPACITY
-	float opacity;
-#endif
-#if SAH_OPACITY >= 2
-	float area;
-#endif
-#if SAH_OPACITY == 8 | SAH_OPACITY == 9
-	float AABBarea;
-#endif
-#if SAH_OPACITY == 9
-	float AABBareaOrigin;
-#endif
-//shyun added end
-} TriangleList;
-
 typedef struct _BoundEdge {
 	float t;
 	enum { START, END } type;
@@ -107,8 +73,10 @@ extern unsigned int  g_iKdTree_LeafNode_Count;
 extern unsigned int  g_iKdTree_MaxTriInLeafNode_Count;
 
 
+
+
 inline void setInnerNode(KdTreeNode* pNode, int _splitAxis, unsigned int _firstChildOffset, float _splitPos);
-inline void setLeafNode(KdTreeNode* pNode, unsigned int _objectSize, unsigned int _objectListOffset);
+void setLeafNode(KdTreeNode* pNode, unsigned int _objectSize, unsigned int _objectListOffset);
 
 void set_bound_edge(const int axis, const TriangleList *pTriangleInfo, const unsigned int n_bEdge, BoundEdge *bEdge);
 
@@ -152,3 +120,9 @@ std::vector<LeafNodeInfo> extract_all_leaf_data(CompositeObject* c_object, int& 
 inline double get_surface_area(const BoundingBox& box);
 inline double get_surface_volume(const BoundingBox& box);
 //shyun added end
+
+/* binary space partitioning tree */
+#if BSPT
+extern std::vector<BSPNode> g_BSPTNodes;
+extern std::vector<TriangleList> g_BSPTTris;
+#endif
