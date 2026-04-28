@@ -45,9 +45,6 @@
     <ClCompile Include="RayTraversal.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="AABB_Triangle_Clip\BVHBuilder.cpp">
-      <Filter>AABB_Triangle_Clip</Filter>
-    </ClCompile>
     <ClCompile Include="AABB_Triangle_Clip\AABB_Triangle_Clip.cpp">
       <Filter>AABB_Triangle_Clip</Filter>
     </ClCompile>
@@ -81,9 +78,6 @@
       <Filter>CUDA</Filter>
     </ClInclude>
     <ClInclude Include="AABB_Triangle_Clip\AABB_Clipping.h">
-      <Filter>AABB_Triangle_Clip</Filter>
-    </ClInclude>
-    <ClInclude Include="AABB_Triangle_Clip\BVHBuilder.hpp">
       <Filter>AABB_Triangle_Clip</Filter>
     </ClInclude>
     <ClInclude Include="AABB_Triangle_Clip\AABB_Triangle_Clip.h">

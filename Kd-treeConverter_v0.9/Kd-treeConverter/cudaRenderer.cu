@@ -1316,8 +1316,8 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
         mailbox.init();
 #endif
 
-        // 메인 순회 루프
         while (accumulated_opacity < OPACITY_THRESHOLD) { //while (true) {
+            //traverse internal nodes
             while (!IS_LEAF(node)) {
                 const unsigned childOffset = FIRST_CHILD_OFFSET(node);
 
@@ -1341,9 +1341,6 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
             // --- 리프 노드 처리 로직 ---
 #if BSPT
             traverseBSPTFrontToBack(node, currRay, t_near, t_far, accumulated_color, accumulated_opacity);
-            //accumulated_color = make_float3(1.0f, 0.0f, 0.0f);
-            //accumulated_opacity = 1.0f;
-            //return;
 #else   // BSPT
             unsigned int baseOffset = OBJECTLIST_OFFSET(node);
             int objectSize = OBJECT_SIZE(node) + baseOffset;
