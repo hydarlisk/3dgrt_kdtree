@@ -12,6 +12,7 @@
 #define BSPT true
 #define BSPT_MAX_STACK_DEPTH 64
 #define BSPT_MAX_HITS 95
+#define CLIP_BEFORE_BSPT false
 
 #if BSPT
 #undef JS_BIN

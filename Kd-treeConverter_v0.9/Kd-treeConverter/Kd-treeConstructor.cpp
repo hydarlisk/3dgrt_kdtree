@@ -259,6 +259,7 @@ void SplitTriangle(const TriangleList& tri, const Vec3 n, const float d, std::ve
 }
 
 int maxTriInNode = 0;
+int maxTriDepth = 0;
 int maxDepth = 0;
 
 BSPNode_Build* BuildBSPTree(vector<TriangleList>& triangles, int depth) {
@@ -308,6 +309,7 @@ BSPNode_Build* BuildBSPTree(vector<TriangleList>& triangles, int depth) {
 	}
 	if (node->onPlaneTriangles.size() > maxTriInNode) {
 		maxTriInNode = node->onPlaneTriangles.size();
+		maxTriDepth = depth;
 	}
 
 	if (!frontList.empty()) {
@@ -984,6 +986,67 @@ void uninitialize_kd_tree(void) {
 
 #define DEBUG_FLAG 0
 
+ExtendedVertex intersect(const ExtendedVertex& v1, const ExtendedVertex& v2, int axis, float clipVal) {
+	ExtendedVertex res = v1;
+	float t = (clipVal - v1.vertex[axis]) / (v2.vertex[axis] - v1.vertex[axis]);
+
+	for (int i = 0; i < 3; ++i) {
+		res.vertex[i] = v1.vertex[i] + t * (v2.vertex[i] - v1.vertex[i]);
+	}
+	// material_ID는 보존 (v1의 것을 따름)
+	return res;
+}
+
+// 특정 평면에 대해 다각형 클리핑
+vector<ExtendedVertex> clipWithPlane(const vector<ExtendedVertex>& vertices, int axis, float clipVal, bool isMax) {
+	vector<ExtendedVertex> result;
+	if (vertices.empty()) return result;
+
+	for (size_t i = 0; i < vertices.size(); ++i) {
+		const ExtendedVertex& cur = vertices[i];
+		const ExtendedVertex& prev = vertices[(i + vertices.size() - 1) % vertices.size()];
+
+		bool curInside = isMax ? (cur.vertex[axis] <= clipVal) : (cur.vertex[axis] >= clipVal);
+		bool prevInside = isMax ? (prev.vertex[axis] <= clipVal) : (prev.vertex[axis] >= clipVal);
+
+		if (curInside) {
+			if (!prevInside) {
+				result.push_back(intersect(prev, cur, axis, clipVal));
+			}
+			result.push_back(cur);
+		}
+		else if (prevInside) {
+			result.push_back(intersect(prev, cur, axis, clipVal));
+		}
+	}
+	return result;
+}
+
+void clipTriangleToAABB(const TriangleList& inputTri, vector<TriangleList>& outputList) {
+	vector<ExtendedVertex> polygon;
+	for (int i = 0; i < 3; ++i) polygon.push_back(inputTri.point[i]);
+
+	BoundingBox targetAABB = inputTri.AABB;
+
+	// 6개의 면(x_min, x_max, y_min, y_max, z_min, z_max)에 대해 클리핑
+	for (int axis = 0; axis < 3; ++axis) {
+		polygon = clipWithPlane(polygon, axis, targetAABB.min[axis], false);
+		polygon = clipWithPlane(polygon, axis, targetAABB.max[axis], true);
+	}
+
+	if (polygon.size() < 3) return;
+
+	// 결과 다각형(Fan 형태)을 다시 삼각형들로 분할하여 저장
+	for (size_t i = 1; i < polygon.size() - 1; ++i) {
+		TriangleList tri = inputTri; // 기본값 복사 (offset, side 등)
+		tri.AABB = targetAABB;       // 클리핑된 결과이므로 타겟 AABB 할당
+		tri.point[0] = polygon[0];
+		tri.point[1] = polygon[i];
+		tri.point[2] = polygon[i + 1];
+		outputList.push_back(tri);
+	}
+}
+
 void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pTriangleInfos, unsigned int triangleSize,
 	BoundingBox& bbox, unsigned int inNodeLevel, KdTreeNode* inNode)
 {
@@ -1069,7 +1132,14 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pTriangleInfo
 		if (triangleSize > 0) {
 			vector<TriangleList> triangles(triangleSize);
 			for (int i = 0; i < triangleSize; i++) {
+	#if CLIP_BEFORE_BSPT
+				vector<TriangleList> clippedTris;
+				clipTriangleToAABB(pTriangleInfos[i], clippedTris);
+				triangles.insert(triangles.end(), clippedTris.begin(), clippedTris.end());
+	#else
 				triangles[i] = pTriangleInfos[i];
+	#endif
+				
 			}
 			int depth = 0;
 			BSPNode_Build* root = BuildBSPTree(triangles, depth);
