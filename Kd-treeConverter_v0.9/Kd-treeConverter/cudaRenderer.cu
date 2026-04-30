@@ -251,7 +251,11 @@ __device__ cudaTextureObject_t inObjectOffsetListTex;
 #else
 __device__ unsigned int* g_d_tri_offsets_dev = nullptr;
 #endif
+#if TRIACC_TEXTURE
 __device__ cudaTextureObject_t inTriAccelTex;
+#else
+__device__ float4* g_d_tri_acc_dev = nullptr;
+#endif
 #if GAUSSIAN_TEXTURE
 __device__ cudaTextureObject_t inGaussianTex;
 
@@ -853,13 +857,20 @@ __device__ __forceinline__ float3 eval_sh_final_ptr(
     return min(max(rad, make_float3(0.f)), make_float3(1.f));
 }
 
+//WALD_METHOD == false
 __device__ void singlePassIntersectRoutineGaussian_sortNode(const cuRay& ray, int id, float t_near, float t_far, HitRecord* local_hits, int& local_hit_count
     //, cudaTextureObject_t inTriAccelTex
 ) {
     if (local_hit_count >= MAX_HITS) return;
+#if TRIACC_TEXTURE
     float4 d0 = tex1Dfetch<float4>(inTriAccelTex, id * 4 + 0);
     float4 d1 = tex1Dfetch<float4>(inTriAccelTex, id * 4 + 1);
     float4 d2 = tex1Dfetch<float4>(inTriAccelTex, id * 4 + 2);
+#else
+    float4 d0 = g_d_tri_acc_dev[id * 4 + 0];
+    float4 d1 = g_d_tri_acc_dev[id * 4 + 1];
+    float4 d2 = g_d_tri_acc_dev[id * 4 + 2];
+#endif
 
     unsigned int packed_flags = __float_as_uint(d0.w);
     unsigned int k = packed_flags & 0x3;
@@ -893,8 +904,11 @@ __device__ void singlePassIntersectRoutineGaussian_sortNode(const cuRay& ray, in
     if ((beta < 0.f - BARYCENTRY_EPSILON) || (gamma < 0.f - BARYCENTRY_EPSILON) ||
         ((1.0f - beta - gamma) < 0.0f - BARYCENTRY_EPSILON)) return;
 
-    //float4 N_packed = tex1Dfetch(inTriAccelTex, id * 4 + 3);
+#if TRIACC_TEXTURE
     float4 N_packed = tex1Dfetch<float4>(inTriAccelTex, id * 4 + 3);
+#else
+    float4 N_packed = g_d_tri_acc_dev[id * 4 + 3];
+#endif
     float3 N = make_float3(N_packed.x, N_packed.y, N_packed.z);
 
     // 법선 벡터와 광선 방향의 내적(dot product)을 계산
@@ -912,9 +926,15 @@ __device__ inline void singlePassIntersectRoutine(const cuRay& ray, const int id
     const float t_near, const float t_far
     , HitRecord* local_hits, int& local_hit_count) {
     cuWaldTriangleInfo tri;
+#if TRIACC_TEXTURE
     tri.internal0 = tex1Dfetch<float4>(inTriAccelTex, 3 * id);
     tri.internal1 = tex1Dfetch<float4>(inTriAccelTex, 3 * id + 1);
     tri.internal2 = tex1Dfetch<float4>(inTriAccelTex, 3 * id + 2);
+#else
+    tri.internal0 = g_d_tri_acc_dev[3 * id];
+    tri.internal1 = g_d_tri_acc_dev[3 * id + 1];
+    tri.internal2 = g_d_tri_acc_dev[3 * id + 2];
+#endif
     cuWaldTriangleInfo::perm_t p = tri.get_perm(ray);
     p.pos.x = (tri.n_d() - p.pos.x - tri.n_u() * p.pos.y - tri.n_v() * p.pos.z);
     const float denum = (p.dir.x + tri.n_u() * p.dir.y + tri.n_v() * p.dir.z);
@@ -1033,7 +1053,11 @@ __device__ inline void singlePassIntersectRoutineMailBox(
 
     // 2. Gaussian ID 추출 (가장 저렴한 메모리 접근)
     // internal2.w에 Gaussian ID가 있음
+#if TRIACC_TEXTURE
     float4 internal2 = tex1Dfetch<float4>(inTriAccelTex, 3 * id + 2);
+#else
+    float4 internal2 = g_d_tri_acc_dev[3 * id + 2];
+#endif
     int gaussianID = __float_as_int(internal2.w);
 
     // 3. Mailbox 확인 (핵심 최적화)
@@ -1046,8 +1070,13 @@ __device__ inline void singlePassIntersectRoutineMailBox(
     // tri.internal2는 위에서 이미 읽었으므로 재사용
     tri.internal2 = internal2;
     // 나머지 데이터 로드
+#if TRIACC_TEXTURE
     tri.internal0 = tex1Dfetch<float4>(inTriAccelTex, 3 * id + 0);
     tri.internal1 = tex1Dfetch<float4>(inTriAccelTex, 3 * id + 1);
+#else
+    tri.internal0 = g_d_tri_acc_dev[3 * id + 0];
+    tri.internal1 = g_d_tri_acc_dev[3 * id + 1];
+#endif
 
     // Permutation 및 교차점 계산
     cuWaldTriangleInfo::perm_t p = tri.get_perm(ray);
@@ -1216,12 +1245,22 @@ __device__ void traverseBSPTFrontToBack(kdtreeNode& node, cuRay& currRay, float 
             sortHits(local_hits, local_hit_count);
             for (int i = 0; i < local_hit_count; ++i) {
                 int gaussianID = 0;
-#if WALD_METHOD
+#if TRIACC_TEXTURE
+    #if WALD_METHOD
                 float4 internal2 = tex1Dfetch<float4>(inTriAccelTex, 3 * local_hits[i].triIndex + 2);
                 gaussianID = __float_as_int(internal2.w);
-#else
+    #else
                 float4 d2 = tex1Dfetch<float4>(inTriAccelTex, local_hits[i].triIndex * 4 + 2);
                 gaussianID = __float_as_int(d2.w);
+    #endif
+#else
+    #if WALD_METHOD
+                float4 internal2 = g_d_tri_acc_dev[3 * local_hits[i].triIndex + 2];
+                gaussianID = __float_as_int(internal2.w);
+    #else
+                float4 d2 = g_d_tri_acc_dev[local_hits[i].triIndex * 4 + 2];
+                gaussianID = __float_as_int(d2.w);
+    #endif
 #endif
 
 #if GAUSSIAN_TEXTURE
@@ -1414,7 +1453,11 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
                         gaussianID = __float_as_int(internal2.w);
                     }
     #else
+        #if TRIACC_TEXTURE
                     float4 internal2 = tex1Dfetch<float4>(inTriAccelTex, 3 * local_hits[i].triIndex + 2);
+        #else
+                    float4 internal2 = g_d_tri_acc_dev[3 * local_hits[i].triIndex + 2];
+        #endif
                     gaussianID = __float_as_int(internal2.w);
 
                     //if (gaussianID == prevGaussianID) continue;
@@ -2169,21 +2212,30 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
 #else
     CUDA_CHECK(cudaMemcpyToSymbol(g_d_tri_offsets_dev, &g_d_tri_offsets, sizeof(unsigned int*)));
 #endif
+
+#if TRIACC_TEXTURE
     // 삼각형 가속 구조체 텍스처 객체 생성
-#if WALD_METHOD
+    #if WALD_METHOD
     resDesc.res.linear.devPtr = g_d_waldInfo;
     resDesc.res.linear.desc = cudaCreateChannelDesc<float4>(); // WaldInfo는 float4 3개로 구성
     resDesc.res.linear.sizeInBytes = wald_info_size;
-#else
+    #else
     resDesc.res.linear.devPtr = g_d_tri_accel;
     resDesc.res.linear.desc = cudaCreateChannelDesc<float4>();
     resDesc.res.linear.sizeInBytes = accel_size;
-#endif
+    #endif
 
     // 호스트 전역 변수에 핸들을 저장
     cudaTextureObject_t h_inTriAccelTex = 0;
     CUDA_CHECK(cudaCreateTextureObject(&h_inTriAccelTex, &resDesc, &texDesc, NULL));
     CUDA_CHECK(cudaMemcpyToSymbol(inTriAccelTex, &h_inTriAccelTex, sizeof(cudaTextureObject_t)));
+#else
+    #if WALD_METHOD
+    CUDA_CHECK(cudaMemcpyToSymbol(g_d_tri_acc_dev, &g_d_waldInfo, sizeof(float4*)));
+    #else
+    CUDA_CHECK(cudaMemcpyToSymbol(g_d_tri_acc_dev, &g_d_tri_accel, sizeof(unsigned int*));
+    #endif
+#endif
 
 #if GAUSSIAN_TEXTURE
     // 가우시안 데이터 텍스춰 객체 생성
@@ -2263,7 +2315,9 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
 #if OFFSET_TEXTURE
     if (h_inObjectOffsetListTex)    cudaDestroyTextureObject(h_inObjectOffsetListTex);
 #endif
+#if TRIACC_TEXTURE
     if (h_inTriAccelTex)            cudaDestroyTextureObject(h_inTriAccelTex);
+#endif
 #if GAUSSIAN_TEXTURE
     if (h_inGaussianTex)            cudaDestroyTextureObject(h_inGaussianTex);
 #endif
@@ -2515,7 +2569,9 @@ void cleanupCudaResources() {
 #else
     if (g_d_tri_offsets_dev)   cudaFree(g_d_tri_offsets_dev);
 #endif
+#if TRIACC_TEXTURE
     if (inTriAccelTex)         cudaDestroyTextureObject(inTriAccelTex);
+#endif
 #if GAUSSIAN_TEXTURE
     if (inGaussianTex)         cudaDestroyTextureObject(inGaussianTex);
 #else
