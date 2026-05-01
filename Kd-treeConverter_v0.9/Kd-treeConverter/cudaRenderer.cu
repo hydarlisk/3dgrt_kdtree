@@ -16,6 +16,11 @@
 #include <texture_indirect_functions.h>
 #include <vector_types.h>
 
+#undef Y
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "../external/stb_image_write.h"
+#define Y 1
+
 cudaDeviceProp deviceProp;
 #define CUDA_CHECK(ans) { gpuAssert((ans), __FILE__, __LINE__); }
 inline void gpuAssert(cudaError_t code, const char* file, int line) {
@@ -2326,6 +2331,78 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
 #endif
 }
 
+#include <fstream>
+
+void save_matrix_csv(const std::string& filename, float* data, int width, int height, int stride = 1) {
+    std::ofstream file(filename);
+    if (!file.is_open()) return;
+
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            // 구조체 배열에서 특정 채널만 뽑아내기 위한 인덱싱
+            // float4 형태이므로 stride(보통 4)를 곱하고 오프셋을 더함
+            float val = data[y * width + x];
+
+            file << (int)val;
+            if (x < width - 1) file << ","; // 마지막 열이 아니면 쉼표 추가
+        }
+        file << "\n"; // 행 바꿈
+    }
+    file.close();
+}
+
+// 0.0~1.0 사이의 값을 Jet 컬러맵 RGB로 변환하는 함수
+void get_jet_color(float v, unsigned char& r, unsigned char& g, unsigned char& b) {
+    // 값을 0~1 사이로 클램핑
+    v = std::max(0.0f, std::min(1.0f, v));
+
+    float r_val = std::max(0.0f, std::min(1.0f, 4.0f * v - 3.0f));
+    float g_val = std::max(0.0f, std::min(1.0f, 4.0f * v - 2.0f)) - std::max(0.0f, std::min(1.0f, 4.0f * v - 3.5f)); // 근사치 조정
+    // 단순화된 Jet 로직
+    if (v < 0.125f) { r = 0; g = 0; b = 127 + (unsigned char)(v * 1024); }
+    else if (v < 0.375f) { r = 0; g = (unsigned char)((v - 0.125f) * 1020); b = 255; }
+    else if (v < 0.625f) { r = (unsigned char)((v - 0.375f) * 1020); g = 255; b = 255 - (unsigned char)((v - 0.375f) * 1020); }
+    else if (v < 0.875f) { r = 255; g = 255 - (unsigned char)((v - 0.625f) * 1020); b = 0; }
+    else { r = 255 - (unsigned char)((v - 0.875f) * 1020); g = 0; b = 0; }
+}
+
+// 히트맵 저장 메인 함수
+void save_heatmap_stb(const char* filename, float* values, int width, int height, float max_val) {
+    std::vector<unsigned char> image_data(width * height * 3); // RGB 3채널
+
+    for (int i = 0; i < width * height; i++) {
+        float normalized = (max_val > 0) ? (values[i] / max_val) : 0.0f;
+
+        unsigned char r, g, b;
+        get_jet_color(normalized, r, g, b);
+
+        image_data[i * 3 + 0] = r;
+        image_data[i * 3 + 1] = g;
+        image_data[i * 3 + 2] = b;
+    }
+
+    stbi_write_png(filename, width, height, 3, image_data.data(), width * 3);
+}
+
+void save_histograms_to_csv(const std::string& filename,
+    const std::vector<int>& node_hist,
+    const std::vector<int>& leaf_hist) {
+    std::ofstream file(filename);
+    file << "Value,Node_Visits,Leaf_Visits\n";
+
+    int max_range = std::max(node_hist.size(), leaf_hist.size());
+    for (int i = 0; i < max_range; ++i) {
+        int v1 = (i < node_hist.size()) ? node_hist[i] : 0;
+        int v2 = (i < leaf_hist.size()) ? leaf_hist[i] : 0;
+
+        if (v1 > 0 || v2 > 0) { // 둘 중 하나라도 데이터가 있는 행만 기록
+            file << i << "," << v1 << "," << v2 << "\n";
+        }
+    }
+    file.close();
+    std::cout << "Histogram saved to " << filename << std::endl;
+}
+
 float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, float* d_framebuffer, cudaStream_t stream
 #if HIT_AND_NODE_COUNT_DEBUG
     , float3*& h_debug_buffer1, float3*& h_debug_buffer2
@@ -2414,9 +2491,31 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
     float avg_blend_ops = 0;
     float avg_max_sort_size = 0;
 
+    std::vector<int> hist_node_visits(1024, 0);
+    std::vector<int> hist_leaf_visits(1024, 0);
+    std::vector<int> hist_intersection_tests(1024, 0);
+    std::vector<int> hist_hits_found(256, 0);      // 히트 수는 보통 노드 방문보다 적음
+    // max_sort_size는 보통 값이 작으므로 작게 설정
+    std::vector<int> hist_max_sort_size(128, 0);
+
+    // 벡터 크기를 안전하게 관리하기 위한 람다 함수 (범위 초과 방지)
+    auto add_to_hist = [](std::vector<int>& hist, int value) {
+        if (value >= 0) {
+            if (value >= hist.size()) {
+                hist.resize(value + 1, 0);
+            }
+            hist[value]++;
+        }
+        };
 
     // 각 버퍼에서 올바른 값을 가져와 최댓값을 계산
     for (int i = 0; i < width * height; i++) {
+        int cur_node_visits = (int)h_debug_buffer1[i].x;
+        int cur_leaf_visits = (int)h_debug_buffer1[i].y;
+        int cur_intersection_tests = (int)h_debug_buffer1[i].z;
+        int cur_hits_found = (int)h_debug_buffer2[i].x;
+        int cur_max_sort_size = (int)h_debug_buffer2[i].z;
+
         max_node_visits = max(max_node_visits, (int)h_debug_buffer1[i].x);
         max_leaf_visits = max(max_leaf_visits, (int)h_debug_buffer1[i].y);
         max_intersection_tests = max(max_intersection_tests, (int)h_debug_buffer1[i].z);
@@ -2440,8 +2539,50 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
             hits_found++;
             blend_ops++;
             max_sort_size++;
+
+            add_to_hist(hist_node_visits, cur_node_visits);
+            add_to_hist(hist_leaf_visits, cur_leaf_visits);
+            add_to_hist(hist_intersection_tests, cur_intersection_tests);
+            add_to_hist(hist_hits_found, cur_hits_found);
+            add_to_hist(hist_max_sort_size, cur_max_sort_size);
         }
     }
+
+    save_histograms_to_csv("render_stats.csv", hist_node_visits, hist_leaf_visits);
+
+    // 데이터를 임시로 담을 float 배열 생성
+    std::vector<float> temp_buffer(width * height);
+    std::string dirPath = "../../output/";
+
+    // 1. Node Visits 히트맵
+    for (int i = 0; i < width * height; ++i) temp_buffer[i] = (float)h_debug_buffer1[i].x;
+    save_heatmap_stb((dirPath + "heatmap_node_visits.png").c_str(), temp_buffer.data(), width, height, (float)max_node_visits);
+    save_matrix_csv((dirPath + "heatmap_node_visits.csv").c_str(), temp_buffer.data(), width, height, (float)max_node_visits);
+
+    // 2. Leaf Visits 히트맵
+    for (int i = 0; i < width * height; ++i) temp_buffer[i] = (float)h_debug_buffer1[i].y;
+    save_heatmap_stb((dirPath + "heatmap_leaf_visits.png").c_str(), temp_buffer.data(), width, height, (float)max_leaf_visits);
+    save_matrix_csv((dirPath + "heatmap_leaf_visits.csv").c_str(), temp_buffer.data(), width, height, (float)max_leaf_visits);
+
+    // 3. Intersection Tests 히트맵
+    for (int i = 0; i < width * height; ++i) temp_buffer[i] = (float)h_debug_buffer1[i].z;
+    save_heatmap_stb((dirPath + "heatmap_intersection.png").c_str(), temp_buffer.data(), width, height, (float)max_intersection_tests);
+    save_matrix_csv((dirPath + "heatmap_intersection.csv").c_str(), temp_buffer.data(), width, height, (float)max_intersection_tests);
+
+    // 4. Hits Found 히트맵
+    for (int i = 0; i < width * height; ++i) temp_buffer[i] = (float)h_debug_buffer2[i].x;
+    save_heatmap_stb((dirPath + "heatmap_hits_found.png").c_str(), temp_buffer.data(), width, height, (float)max_hits_found);
+    save_matrix_csv((dirPath + "heatmap_hits_found.csv").c_str(), temp_buffer.data(), width, height, (float)max_hits_found);
+
+    // 5. Blend Ops 히트맵
+    for (int i = 0; i < width * height; ++i) temp_buffer[i] = (float)h_debug_buffer2[i].y;
+    save_heatmap_stb((dirPath + "heatmap_blend_ops.png").c_str(), temp_buffer.data(), width, height, (float)max_blend_ops);
+    save_matrix_csv((dirPath + "heatmap_blend_ops.csv").c_str(), temp_buffer.data(), width, height, (float)max_blend_ops);
+
+    // 6. Max Sort Size 히트맵
+    for (int i = 0; i < width * height; ++i) temp_buffer[i] = (float)h_debug_buffer2[i].z;
+    save_heatmap_stb((dirPath + "heatmap_max_sort_size.png").c_str(), temp_buffer.data(), width, height, (float)max_max_sort_size);
+    save_matrix_csv((dirPath + "heatmap_max_sort_size.csv").c_str(), temp_buffer.data(), width, height, (float)max_max_sort_size);
 
     printf("\n===========================================\n");
     printf("avg_node_visits\t\t: %f\n", avg_node_visits / node_visits);
