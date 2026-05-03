@@ -183,7 +183,7 @@
 //2010 - 일정 레벨까지 201, 이후 0
 //2011 - 일정 갯수까지 201, 이후 0
 
-#define ALPHA_MIN 0.0113f
+#define KERNEL_MIN_RESPONSE 0.0113f
 #define KERNEL_DEGREE 4.0f
 
 #define ROTATION false							// R(45degree,1,1,1)

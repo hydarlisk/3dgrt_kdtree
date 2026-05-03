@@ -1099,7 +1099,7 @@ void rotate_vector_by_quaternion(float v_out[3], float v[3], const float q[4]) {
 	//}
 }
 
-
+//read gaussians from ply
 bool loadGaussiansFromPly(const char* filename, std::vector<Gaussian>& gaussians) {
 	std::ifstream file(filename, std::ios::binary);
 	if (!file.is_open()) {
@@ -1396,9 +1396,10 @@ inline void generate_gaussian_mesh(
 	}
 }
 
+//meshify gaussians
 void create_composite_object_from_gaussians(
 	const std::vector<Gaussian>& gaussians,
-	float alpha_min = ALPHA_MIN,
+	float kernelMinResponse = KERNEL_MIN_RESPONSE,
 	float kernel_degree = KERNEL_DEGREE
 ) {
 	if (gaussians.empty()) {
@@ -1463,18 +1464,18 @@ void create_composite_object_from_gaussians(
 
 #if SIGMA_THRESHOLD_MODE
 		//if (sigma < SIGMA_THRESHOLD) { cnt_sigma++; continue; }
-		if (sigma < ALPHA_MIN || sigma < SIGMA_THRESHOLD_MODE / 255.0f) { cnt_sigma++; continue; }
+		if (sigma < KERNEL_MIN_RESPONSE || sigma < SIGMA_THRESHOLD_MODE / 255.0f) { cnt_sigma++; continue; }
 #endif
 
 		float k_iso = 0.0f;
 
 #if USE_KERNEL_SCALE
-		//if (sigma / alpha_min > 1.0f)
+		//if (sigma / kernelMinResponse > 1.0f)
 		// kernelScale_final 함수를 호출하여 k_iso 계산
-		k_iso = kernelScale_final(sigma, alpha_min, kernel_degree, 0) * 0.5f * icosaEdge;
+		k_iso = kernelScale_final(sigma, kernelMinResponse, kernel_degree, 0) * 0.5f * icosaEdge;
 #else
-		if (sigma / alpha_min > 1.0f) {
-			k_iso = sqrtf(2.0f * logf(sigma / alpha_min)) * unitspherefactor;
+		if (sigma / kernelMinResponse > 1.0f) {
+			k_iso = sqrtf(2.0f * logf(sigma / kernelMinResponse)) * unitspherefactor;
 		}
 #endif
 		float final_scale[3] = {

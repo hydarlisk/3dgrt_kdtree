@@ -1294,7 +1294,7 @@ __device__ void traverseBSPTFrontToBack(kdtreeNode& node, cuRay& currRay, float 
 
                 float sample_opacity = fminf(0.99f, g.opacity * gres);
 
-                if (gres < ALPHA_MIN || sample_opacity < 1.0f / 255.0f) // 0.004
+                if (gres < KERNEL_MIN_RESPONSE || sample_opacity < 1.0f / 255.0f) // 0.004
                     continue;
                 float3 sample_color = eval_sh_final(SPH_EVAL_DEGREE, currRay.dir, g);
 
@@ -1513,7 +1513,7 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
                     //float sample_opacity = evaluateGaussianResponse_origin(currRay, g);
                     //float sample_opacity = evaluateGaussianResponse_3dgrt(currRay, g);
                     //float sample_opacity = evaluateGaussianResponse(currRay, g);
-                    if (gres < ALPHA_MIN || sample_opacity < 1.0f / 255.0f) // 0.004
+                    if (gres < KERNEL_MIN_RESPONSE || sample_opacity < 1.0f / 255.0f) // 0.004
                         continue;
                     float3 sample_color = eval_sh_final(SPH_EVAL_DEGREE, currRay.dir, g);
                     //float3 view_dir = normalize(make_float3(g.pos[0], g.pos[1], g.pos[2]) - currRay.pos);
