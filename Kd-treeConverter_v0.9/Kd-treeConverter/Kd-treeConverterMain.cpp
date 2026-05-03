@@ -2300,8 +2300,8 @@ int read_SL_KDT_CONFIG_file(void) {
 			break;
 		case CMD_KD_TREE_MIN_TRIANGLE:
 			ptr_c = strstr(command_buf, SL_KDT_CONFIG_commands[CMD_KD_TREE_MIN_TRIANGLE]);
-			sscanf(ptr_c + strlen(SL_KDT_CONFIG_commands[CMD_KD_TREE_MIN_TRIANGLE]), "%u", &v_KD_TREE_MIN_TRIANGLE);
-			fprintf(stdout, "  * Kd-tree min # of triangles per leaf = %u\n", v_KD_TREE_MIN_TRIANGLE);
+			sscanf(ptr_c + strlen(SL_KDT_CONFIG_commands[CMD_KD_TREE_MIN_TRIANGLE]), "%u", &v_KD_TREE_MIN_PRIMITIVE);
+			fprintf(stdout, "  * Kd-tree min # of triangles per leaf = %u\n", v_KD_TREE_MIN_PRIMITIVE);
 			break;
 		case CMD_KD_TREE_EMTPY_BONUS:
 			ptr_c = strstr(command_buf, SL_KDT_CONFIG_commands[CMD_KD_TREE_EMTPY_BONUS]);
@@ -2482,7 +2482,11 @@ void subMenuHandler(int value) {
 	char suffix[256];
 	char suffixDump_JS[256];
 	//const char* sah_mode_str = SAH_MAXIMIZE ? "maximize" : "minimize";
+#if PRIMITIVE_TYPE == ELLIPSOID
+	const char* sah_mode_str = "ellipsoid";
+#else
 	const char* sah_mode_str = ADAPTIVE_MESH ? "adaptive" : "icosa";
+#endif
 	//const char* clip_mode_str = EXPORTED ? "_exported" : "";
 
 	printf("SIGMA_THRESHOLD_MODE: %f\n", static_cast<float>(SIGMA_THRESHOLD_MODE));
@@ -3160,8 +3164,8 @@ void init_KDT_system(void) {
 	v_KD_TREE_ISECT_COST = ISCET_COST;
 	//v_KD_TREE_MAX_LEVEL = 100;
 	v_KD_TREE_MAX_LEVEL = MAX_LEVEL;
-	//v_KD_TREE_MIN_TRIANGLE = 4;
-	v_KD_TREE_MIN_TRIANGLE = MIN_TRI;
+	//v_KD_TREE_MIN_PRIMITIVE = 4;
+	//v_KD_TREE_MIN_PRIMITIVE = MIN_TRI;
 	//v_KD_TREE_EMTPY_BONUS = 0.9;
 	v_KD_TREE_EMTPY_BONUS = EMTPY_BONUS;
 }

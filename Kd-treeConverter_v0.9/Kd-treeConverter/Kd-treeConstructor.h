@@ -51,27 +51,35 @@ typedef struct _SplitCost {
 extern float v_KD_TREE_TRAVL_COST;
 extern float v_KD_TREE_ISECT_COST;
 extern unsigned int v_KD_TREE_MAX_LEVEL;
-extern unsigned int v_KD_TREE_MIN_TRIANGLE;
 extern float v_KD_TREE_EMTPY_BONUS;
+
+extern unsigned int v_KD_TREE_MIN_PRIMITIVE;
 
 extern BoundingBox   g_root_AABB;
 extern BoundEdge    *g_bEdge;
-extern TriangleList *g_pTriangleInfos;
-extern unsigned int  g_iTriangleSize;
 
 extern unsigned int  g_iKdTree_Level;
-//extern unsigned int  g_iKdTree_TriOffset_Count;
-//extern unsigned int  g_iKdTree_TriOffset_CountAlloc;
+extern unsigned int  g_iKdTree_Node_Count;
+extern unsigned int  g_iKdTree_Node_CountAlloc;
+extern KdTreeNode* g_pKdTree_Node_Array;
+extern unsigned int  g_iKdTree_EmptyNode_Count;
+extern unsigned int  g_iKdTree_LeafNode_Count;
+
+#if PRIMITIVE_TYPE == TRI
+extern TriangleList* g_pTriangleInfos;
+extern unsigned int  g_iTriangleSize;
 extern unsigned long long  g_iKdTree_TriOffset_Count;
 extern unsigned long long  g_iKdTree_TriOffset_CountAlloc;
 extern unsigned int *g_pKdTree_TriOffset_Array;
-extern unsigned int  g_iKdTree_Node_Count;
-extern unsigned int  g_iKdTree_Node_CountAlloc;
-extern KdTreeNode   *g_pKdTree_Node_Array;
-extern unsigned int  g_iKdTree_EmptyNode_Count;
-extern unsigned int  g_iKdTree_LeafNode_Count;
 extern unsigned int  g_iKdTree_MaxTriInLeafNode_Count;
-
+#elif PRIMITIVE_TYPE == ELLIPSOID
+extern TriangleList* g_pEllipsoidInfos;
+extern unsigned int g_iEllipsoidSize;
+extern unsigned long long g_iKdTreeEllipsoidOffsetCnt;
+extern unsigned long long g_iKdTreeEllipsoidOffsetCnt_Alloc;
+extern unsigned int* g_pKdTreeEllipsoidOffsetArray;
+extern unsigned int g_iKdTreeMaxEllipsoidInLeafNodeCnt;
+#endif
 
 inline void setInnerNode(KdTreeNode* pNode, int _splitAxis, unsigned int _firstChildOffset, float _splitPos);
 void setLeafNode(KdTreeNode* pNode, unsigned int _objectSize, unsigned int _objectListOffset);

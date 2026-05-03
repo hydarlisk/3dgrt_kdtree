@@ -26,7 +26,7 @@ int build_kd_tree_for_composite_object(CompositeObject *c_object) {
 	fprintf(stdout, "\n  * AABB: [%7.2f, %7.2f] x [%7.2f, %7.2f] x [%7.2f, %7.2f]\n", c_object->AABB[0], c_object->AABB[1],
 		c_object->AABB[2], c_object->AABB[3], c_object->AABB[4], c_object->AABB[5]); 
 	fprintf(stdout, "\n  * Empty Bonus: %7.3f\n  * Travel Cost: %7.3f\n  * Intersection Cost: %7.3f\n  * Max Tree Level: %d\n  * Min # of Triangles per Leaf: %d\n",
-			v_KD_TREE_EMTPY_BONUS, v_KD_TREE_TRAVL_COST, v_KD_TREE_ISECT_COST, v_KD_TREE_MAX_LEVEL, v_KD_TREE_MIN_TRIANGLE );
+			v_KD_TREE_EMTPY_BONUS, v_KD_TREE_TRAVL_COST, v_KD_TREE_ISECT_COST, v_KD_TREE_MAX_LEVEL, v_KD_TREE_MIN_PRIMITIVE );
 //shyun added begin
 #if FORCE_SPLIT_THRESHOLD
 	fprintf(stdout, "  * Max # of Triangles per Leaf: %d\n", FORCE_SPLIT_THRESHOLD);
@@ -80,8 +80,11 @@ int build_kd_tree_for_composite_object(CompositeObject *c_object) {
 	// build kd-tree
 	fprintf(stdout, "\n  - Building a kd-tree\n");
 
-
+#if PRIMITIVE_TYPE == ELLIPSOID
+	build_kd_tree_recursive(g_bEdge, g_pEllipsoidInfos, g_iEllipsoidSize, g_root_AABB, 0, &(g_pKdTree_Node_Array[0]));
+#elif PRIMITIVE_TYPE == TRI
 	build_kd_tree_recursive(g_bEdge, g_pTriangleInfos, g_iTriangleSize, g_root_AABB, 0,  &(g_pKdTree_Node_Array[0]));
+#endif
 
 	printf("after build_kd_tree_recursive\n");
 #if BSPT
@@ -110,8 +113,15 @@ int build_kd_tree_for_composite_object(CompositeObject *c_object) {
 	fprintf(stdout, "   * Node Count (All,Leaf,Empty) : %5d, %5d, %5d(%.1f%%)\n",
 									g_iKdTree_Node_Count, g_iKdTree_LeafNode_Count, g_iKdTree_EmptyNode_Count,
 									100.0f * g_iKdTree_EmptyNode_Count / g_iKdTree_Node_Count);
+#if PRIMITIVE_TYPE == ELLIPSOID
+	fprintf(stdout, "   * Maximum Ellipsoid# in LeafNode: %d\n", g_iKdTreeMaxEllipsoidInLeafNodeCnt);
+#elif PRIMITIVE_TYPE == TRI
 	fprintf(stdout, "   * Maximum Tri# in LeafNode: %d\n", g_iKdTree_MaxTriInLeafNode_Count);
+#endif
 
+#if PRIMITIVE_TYPE == ELLIPSOID
+	//build_Tmat();
+#elif PRIMITIVE_TYPE == TRI
 	fprintf(stdout, "\n  - Building a kd-tree triangle accerlaration list\n");
 	// build triangle acceleration
 	TriAccel *pTriAcc = NULL;
@@ -122,17 +132,24 @@ int build_kd_tree_for_composite_object(CompositeObject *c_object) {
 		return 0; // 혹은 false
 	}
 	fprintf(stdout, "  - Done!\n");
+#endif
 
 	c_object->kd_tree = new KdTree;
 	c_object->kd_tree->tree = g_pKdTree_Node_Array;
 	c_object->kd_tree->tree_node_count = g_iKdTree_Node_Count;
+#if PRIMITIVE_TYPE == ELLIPSOID
+	c_object->kd_tree->tri_offset_list = g_pKdTreeEllipsoidOffsetArray;
+	c_object->kd_tree->tri_offset_count = g_iKdTreeEllipsoidOffsetCnt;
+#elif PRIMITIVE_TYPE == TRI
 	c_object->kd_tree->tri_offset_list = g_pKdTree_TriOffset_Array;
 	c_object->kd_tree->tri_offset_count = g_iKdTree_TriOffset_Count;
 	c_object->kd_tree->tri_accel_list = pTriAcc;
-#if BSPT
+	#if BSPT
 	c_object->kd_tree->bsptTree = g_BSPTNodes;
 	c_object->kd_tree->bsptTris = g_BSPTTris;
+	#endif
 #endif
+
 	fprintf(stdout, "\n> Done!\n\n");
 	return 1;
 }
@@ -175,7 +192,7 @@ int build_kd_tree_for_composite_object2(CompositeObject* c_object, const char* f
 	fprintf(fp, "\n  * AABB: [%7.2f, %7.2f] x [%7.2f, %7.2f] x [%7.2f, %7.2f]\n", c_object->AABB[0], c_object->AABB[1],
 		c_object->AABB[2], c_object->AABB[3], c_object->AABB[4], c_object->AABB[5]);
 	fprintf(fp, "\n  * Empty Bonus: %7.3f\n  * Travel Cost: %7.3f\n  * Intersection Cost: %7.3f\n  * Max Tree Level: %d\n  * Min # of Triangles per Leaf: %d\n",
-		v_KD_TREE_EMTPY_BONUS, v_KD_TREE_TRAVL_COST, v_KD_TREE_ISECT_COST, v_KD_TREE_MAX_LEVEL, v_KD_TREE_MIN_TRIANGLE);
+		v_KD_TREE_EMTPY_BONUS, v_KD_TREE_TRAVL_COST, v_KD_TREE_ISECT_COST, v_KD_TREE_MAX_LEVEL, v_KD_TREE_MIN_PRIMITIVE);
 
 
 //shyun added begin
@@ -226,13 +243,21 @@ int build_kd_tree_for_composite_object2(CompositeObject* c_object, const char* f
 
 	// build kd-tree
 	fprintf(fp, "\n  - Building a kd-tree\n");
+#if PRIMITIVE_TYPE == ELLIPSOID
+	build_kd_tree_recursive(g_bEdge, g_pEllipsoidInfos, g_iEllipsoidSize, g_root_AABB, 0, &(g_pKdTree_Node_Array[0]));
+#elif PRIMITIVE_TYPE == TRI
 	build_kd_tree_recursive(g_bEdge, g_pTriangleInfos, g_iTriangleSize, g_root_AABB, 0, &(g_pKdTree_Node_Array[0]));
+#endif
 	fprintf(fp, "  - Done!\n\n");
 	fprintf(fp, "   * Tree Level: %d\n", g_iKdTree_Level);
 	fprintf(fp, "   * Node Count (All,Leaf,Empty) : %5d, %5d, %5d(%.1f%%)\n",
 		g_iKdTree_Node_Count, g_iKdTree_LeafNode_Count, g_iKdTree_EmptyNode_Count,
 		100.0f * g_iKdTree_EmptyNode_Count / g_iKdTree_Node_Count);
+#if PRIMITIVE_TYPE == ELLIPSOID
+	fprintf(fp, "   * Maximum Ellipsoid# in LeafNode: %d\n", g_iKdTreeMaxEllipsoidInLeafNodeCnt);
+#elif PRIMITIVE_TYPE == TRI
 	fprintf(fp, "   * Maximum Tri# in LeafNode: %d\n", g_iKdTree_MaxTriInLeafNode_Count);
+#endif
 
 	fprintf(fp, "\n  - Building a kd-tree triangle accerlaration list\n");
 	// build triangle acceleration
@@ -248,9 +273,14 @@ int build_kd_tree_for_composite_object2(CompositeObject* c_object, const char* f
 	c_object->kd_tree = new KdTree;
 	c_object->kd_tree->tree = g_pKdTree_Node_Array;
 	c_object->kd_tree->tree_node_count = g_iKdTree_Node_Count;
+#if PRIMITIVE_TYPE == ELLIPSOID
+	c_object->kd_tree->tri_offset_list = g_pKdTreeEllipsoidOffsetArray;
+	c_object->kd_tree->tri_offset_count = g_iKdTreeEllipsoidOffsetCnt;
+#elif PRIMITIVE_TYPE == TRI
 	c_object->kd_tree->tri_offset_list = g_pKdTree_TriOffset_Array;
 	c_object->kd_tree->tri_offset_count = g_iKdTree_TriOffset_Count;
 	c_object->kd_tree->tri_accel_list = pTriAcc;
+#endif
 	//fprintf(fp, "\n> Done!\n\n");
 	print_current_time_for_file("\nkdtree build end\n", fp);
 	fclose(fp);
@@ -407,23 +437,28 @@ int read_kd_tree_from_file(CompositeObject *c_object, const char *filename, int 
 		fread( g_pKdTree_Node_Array, 8, nTreeNodeCount, fp );
 
 		// Load triangle offset info
-		int nTriOffCount = 0;
-		fread( &nTriOffCount, 4, 1, fp );
-		g_iKdTree_TriOffset_CountAlloc = g_iKdTree_TriOffset_Count = nTriOffCount;
+		int nPrimOffCount = 0;
+		fread( &nPrimOffCount, 4, 1, fp );
+#if PRIMITIVE_TYPE == ELLIPSOID
+		g_iKdTreeEllipsoidOffsetCnt_Alloc = g_iKdTreeEllipsoidOffsetCnt = nPrimOffCount;
+		g_pKdTreeEllipsoidOffsetArray = new unsigned int[g_iKdTreeEllipsoidOffsetCnt_Alloc];
+		fread(g_pKdTreeEllipsoidOffsetArray, 4, nPrimOffCount, fp);
+#elif PRIMITIVE_TYPE == TRI
+		g_iKdTree_TriOffset_CountAlloc = g_iKdTree_TriOffset_Count = nPrimOffCount;
 		g_pKdTree_TriOffset_Array = new unsigned int [ g_iKdTree_TriOffset_CountAlloc ];
-		fread( g_pKdTree_TriOffset_Array, 4, nTriOffCount, fp );
-
-#if BSPT
+		fread( g_pKdTree_TriOffset_Array, 4, nPrimOffCount, fp );
+	#if BSPT
 		// Load BSPT info
 		int nBSPTNodeCnt = 0;
 		fread(&nBSPTNodeCnt, 4, 1, fp);
 		g_BSPTNodes.resize(nBSPTNodeCnt);
 		fread(g_BSPTNodes.data(), 32, nBSPTNodeCnt, fp);
+	#endif
 #endif
 
 		printf("KD_Tree_Node size %d * 8 = %d B\n", nTreeNodeCount, nTreeNodeCount * 8);
-		printf("Tri_Offset_List size %d * 4 = %d B\n", nTriOffCount, nTriOffCount * 4);
-		printf("Total kd-Tree Size = [%d B][%.2f MB]\n", (nTreeNodeCount + nTriOffCount) * 4, (float)(nTreeNodeCount + nTriOffCount) * 4 / 1024 / 1024);
+		printf("Tri_Offset_List size %d * 4 = %d B\n", nPrimOffCount, nPrimOffCount * 4);
+		printf("Total kd-Tree Size = [%d B][%.2f MB]\n", (nTreeNodeCount + nPrimOffCount) * 4, (float)(nTreeNodeCount + nPrimOffCount) * 4 / 1024 / 1024);
 	} else {
 
 		fp = fopen( filename, "r" );
@@ -463,18 +498,27 @@ int read_kd_tree_from_file(CompositeObject *c_object, const char *filename, int 
 		}
 
 		// Load kd-tree triangle offset in leafnode
-		int nTriOffCount;
+		int nPrimOffCount;
 		fgets( data, 1024, fp );
-		sscanf(data+1, "%d", &nTriOffCount);
+		sscanf(data+1, "%d", &nPrimOffCount);
 	
-		g_iKdTree_TriOffset_CountAlloc = g_iKdTree_TriOffset_Count = nTriOffCount;
+#if PRIMITIVE_TYPE == ELLIPSOID
+		g_iKdTreeEllipsoidOffsetCnt_Alloc = g_iKdTreeEllipsoidOffsetCnt = nPrimOffCount;
+		g_pKdTreeEllipsoidOffsetArray = new unsigned int[g_iKdTreeEllipsoidOffsetCnt_Alloc];
+#elif PRIMITIVE_TYPE == TRI
+		g_iKdTree_TriOffset_CountAlloc = g_iKdTree_TriOffset_Count = nPrimOffCount;
 		g_pKdTree_TriOffset_Array = new unsigned int [ g_iKdTree_TriOffset_CountAlloc ];
-
-		for ( i = 0; i < nTriOffCount; i++ ) {
+#endif
+		for ( i = 0; i < nPrimOffCount; i++ ) {
 			fgets( data, 1024, fp );
-			int triID;
-			sscanf(data, "%d", &triID);
-			g_pKdTree_TriOffset_Array[i] = triID;
+			int primID;
+			sscanf(data, "%d", &primID);
+
+#if PRIMITIVE_TYPE == ELLIPSOID
+			g_pKdTreeEllipsoidOffsetArray[i] = primID;
+#elif PRIMITIVE_TYPE == TRI
+			g_pKdTree_TriOffset_Array[i] = primID;
+#endif
 		}
 
 	}
@@ -491,12 +535,18 @@ int read_kd_tree_from_file(CompositeObject *c_object, const char *filename, int 
 	c_object->kd_tree = new KdTree;
 	c_object->kd_tree->tree = g_pKdTree_Node_Array;
 	c_object->kd_tree->tree_node_count = g_iKdTree_Node_Count;
+#if PRIMITIVE_TYPE == ELLIPSOID
+	c_object->kd_tree->tri_offset_list = g_pKdTreeEllipsoidOffsetArray;
+	c_object->kd_tree->tri_offset_count = g_iKdTreeEllipsoidOffsetCnt;
+#elif PRIMITIVE_TYPE == TRI
 	c_object->kd_tree->tri_offset_list = g_pKdTree_TriOffset_Array;
 	c_object->kd_tree->tri_offset_count = g_iKdTree_TriOffset_Count;
 	c_object->kd_tree->tri_accel_list = pTriAcc;
-#if BSPT
+	#if BSPT
 	c_object->kd_tree->bsptTree = g_BSPTNodes;
+	#endif
 #endif
+
 	fprintf(stdout, "->n_triangles: %d\n", c_object->n_triangles);
 	if (pTriAcc == NULL) fprintf(stdout, "triaccNULL\n");
 

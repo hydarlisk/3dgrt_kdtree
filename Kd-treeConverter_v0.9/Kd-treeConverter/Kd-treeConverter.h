@@ -9,6 +9,13 @@
 
 #define JS_BIN false
 #define COMPACT_VERTEX true
+
+/* Ellipsoid */
+#define TRI 0
+#define ELLIPSOID 1
+#define PRIMITIVE_TYPE 1
+
+/* BSPT */
 #define BSPT false
 #define BSPT_MAX_STACK_DEPTH 64
 #define BSPT_MAX_HITS 95
@@ -16,21 +23,31 @@
 #define BSPT_DUMP_STATISTICS false
 #define CLIP_BEFORE_BSPT false
 
-#if BSPT
-#undef JS_BIN
-#define JS_BIN false
-#endif
-
 #define EPSILON 0.000001f
 
 //shyun added begin
 #define TRAVL_COST 1.0
 #define ISCET_COST 5.0
 #define MAX_LEVEL 128
-#define MIN_TRI 16
 #define EMTPY_BONUS 0.9
 
-#define FORCE_SPLIT_THRESHOLD 64				// kd-tree 강제분할
+#define MIN_TRI 16
+#define MIN_ELLIPSOID 16
+
+#if PRIMITIVE_TYPE ELLIPSOID
+#undef ISCET_COST
+#define ISCET_COST 20
+#undef BSPT
+#define BSPT 0
+#endif
+
+#if BSPT
+#undef JS_BIN
+#define JS_BIN false
+#endif
+
+//#define FORCE_SPLIT_THRESHOLD 64				// kd-tree 강제분할
+#define FORCE_SPLIT_THRESHOLD 0				// kd-tree 강제분할
 //#define SOFT_SPLIT_THRESHOLD 128				// kd-tree 강제분할(완화)
 #define SOFT_SPLIT_THRESHOLD2 256				// kd-tree 강제분할(완화)
 
@@ -54,6 +71,7 @@
 #define ORIGINAL false
 ////////////////////////////////////////////
 
+#if PRIMITIVE_TYPE == TRI
 #if ASSET == HOTDOG
 	#if ORIGINAL
 		#undef USE_KERNEL_SCALE
@@ -135,7 +153,7 @@
 		#define ADAPTIVE_MESH false
 	#endif
 #endif
-
+#endif // PRIMITIVE_TYPE == TRI
 
 
 #define SAH_OPACITY 0
@@ -466,10 +484,9 @@ typedef struct LeafForDump {
 
 typedef struct _CompositeObject {
 	int n_triangles;
-	float AABB[6];
+	float AABB[6];	//macro: XMIN, XMAX, YMIN, YMAX, ZMIN, ZMAX
 	ExtendedVertex *extended_vertices;
 	KdTree *kd_tree;
-	std::vector<LeafForDump> leavsDump;
 } CompositeObject;
 
 //shyun added begin
