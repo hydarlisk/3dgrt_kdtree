@@ -212,21 +212,6 @@ Camera camera;
 KdTree kd_tree;
 
 GLuint buf_obj;
-
-void load_poly_model_into_OpenGL(void) {
-	/* suffering memory problem for the entire model
-	glGenBuffers(1, &buf_obj);
-	glBindBuffer(GL_ARRAY_BUFFER, buf_obj);
-	glBufferData(GL_ARRAY_BUFFER, uip.poly_model.n_triangles*3*sizeof(ExtendedVertex), 
-					uip.poly_model.exteded_vertices, GL_STATIC_DRAW);
-
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glEnableClientState(GL_NORMAL_ARRAY);
- 
-	glVertexPointer(3, GL_FLOAT, sizeof(ExtendedVertex), BUFFER_OFFSET(0));
-	glNormalPointer(GL_FLOAT, sizeof(ExtendedVertex), BUFFER_OFFSET(3));
-	*/
-}
  
 void display(void) {
 #if HIT_AND_NODE_COUNT_DEBUG
@@ -2903,7 +2888,6 @@ void subMenuHandler(int value) {
 		original_model_AABB.max[2] = uip.poly_model.AABB[ZMAX];
 	}
 #endif
-	load_poly_model_into_OpenGL();
 	g_cuda_rendering_done = false;
 	glutPostRedisplay();
 }
@@ -2938,7 +2922,6 @@ void main_menu_action(int selection) {
 			else
 				fprintf(stdout, "m_m_a: kd_tree_dump_format = ASCII\n");
 		}
-		load_poly_model_into_OpenGL();
 		g_cuda_rendering_done = false;
 		glutPostRedisplay();
 		break;
@@ -2957,7 +2940,6 @@ void main_menu_action(int selection) {
 
 		uip.composite_object_read = 1;
 
-		load_poly_model_into_OpenGL();
 		g_cuda_rendering_done = false;
 		glutPostRedisplay();
 		printf("draw DONE\n");

@@ -71,9 +71,6 @@ extern KdTreeNode   *g_pKdTree_Node_Array;
 extern unsigned int  g_iKdTree_EmptyNode_Count;
 extern unsigned int  g_iKdTree_LeafNode_Count;
 extern unsigned int  g_iKdTree_MaxTriInLeafNode_Count;
-extern std::vector<LeafForDump> leavesForDump;
-
-
 
 
 inline void setInnerNode(KdTreeNode* pNode, int _splitAxis, unsigned int _firstChildOffset, float _splitPos);
