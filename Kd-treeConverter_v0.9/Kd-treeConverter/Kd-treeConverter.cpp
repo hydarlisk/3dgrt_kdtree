@@ -85,6 +85,7 @@ int build_kd_tree_for_composite_object(CompositeObject *c_object) {
 
 	printf("after build_kd_tree_recursive\n");
 #if BSPT
+	#if !BSPT_NO_SPLIT
 	/* copy vertices to original vertex */
 	c_object->n_triangles = g_BSPTTris.size();
 	if (c_object->extended_vertices != NULL) {
@@ -101,6 +102,7 @@ int build_kd_tree_for_composite_object(CompositeObject *c_object) {
 			c_object->extended_vertices[3 * i + j] = g_BSPTTris[i].point[j];
 		}
 	}
+	#endif
 #endif
 
 	fprintf(stdout, "  - Done!\n\n");

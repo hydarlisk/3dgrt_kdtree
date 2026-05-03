@@ -9,15 +9,19 @@
 
 #define JS_BIN false
 #define COMPACT_VERTEX true
-#define BSPT true
+#define BSPT false
 #define BSPT_MAX_STACK_DEPTH 64
 #define BSPT_MAX_HITS 95
+#define BSPT_NO_SPLIT false
+#define BSPT_DUMP_STATISTICS false
 #define CLIP_BEFORE_BSPT false
 
 #if BSPT
 #undef JS_BIN
 #define JS_BIN false
 #endif
+
+#define EPSILON 0.000001f
 
 //shyun added begin
 #define TRAVL_COST 1.0
@@ -215,10 +219,13 @@
 
 #define GLOBAL_DEVICE_VAR true
 #define GAUSSIAN_TEXTURE true
+#define TRIACC_TEXTURE false
 
 #define OFFSET_TEXTURE true
 
 #define DUMMY_RUN false
+
+#define DUMP_DIR_PATH "../../output/"
 //Debug Flags=====================================================================================
 #define DEBUG_SIGMA_HISTOGRAM 0 				// gaussian의 sigma들의 histogram 출력
 #define DEBUG_SCALE_HISTOGRAM 0 				// gaussian의 sigma들의 histogram 출력
@@ -226,7 +233,7 @@
 #define WARP_OCCUPANCY false   					// warp occupancy 출력
 #define HIT_AND_NODE_COUNT_DEBUG false			// Ray 마다 hitcount, node count, ... 확인
 												// kd-tree hitmap 확인 가능
-#define LEAF_NODE_DEBUG false					// kd-tree leaf node 렌더링
+#define LEAF_NODE_DEBUG true					// kd-tree leaf node 렌더링
 
 #define MEASURE_START_FRAME 500
 #define MEASURE_END_FRAME 1000
@@ -451,11 +458,18 @@ typedef struct _KdTree {
 #endif
 } KdTree;
 
+typedef struct LeafForDump {
+	int idx;
+	std::vector<float> vertices;
+	std::vector<unsigned int> indices;
+};
+
 typedef struct _CompositeObject {
 	int n_triangles;
 	float AABB[6];
 	ExtendedVertex *extended_vertices;
 	KdTree *kd_tree;
+	std::vector<LeafForDump> leavsDump;
 } CompositeObject;
 
 //shyun added begin

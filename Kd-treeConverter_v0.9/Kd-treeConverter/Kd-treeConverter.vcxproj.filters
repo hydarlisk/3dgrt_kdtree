@@ -22,6 +22,9 @@
     <Filter Include="AABB_Triangle_Clip">
       <UniqueIdentifier>{f6406620-ddbb-445b-8a62-de2d50886a46}</UniqueIdentifier>
     </Filter>
+    <Filter Include="external">
+      <UniqueIdentifier>{40475157-115c-49a4-a1b3-1306b56ec2d5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Kd-treeConverter.cpp">
@@ -85,6 +88,9 @@
     </ClInclude>
     <ClInclude Include="Kd-treeCudaKernels.h">
       <Filter>CUDA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\stb_image_write.h">
+      <Filter>external</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

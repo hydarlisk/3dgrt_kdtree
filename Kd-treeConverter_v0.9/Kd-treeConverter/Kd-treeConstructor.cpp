@@ -139,8 +139,8 @@ Side ClassifyTriangle(const Vec3 n, const float d, const TriangleList& testTri) 
 
 	for (int i = 0; i < 3; i++) {
 		float dist = CalculateDistanceToPlane(n, d, testTri.point[i]);
-		if (dist > 0.0001f) frontCnt++;
-		else if (dist < -0.0001f) backCnt++;
+		if (dist > EPSILON) frontCnt++;
+		else if (dist < -EPSILON) backCnt++;
 	}
 	if (frontCnt > 0 && backCnt > 0) return STRADDLE;
 	if (frontCnt > 0) return FRONT;
@@ -148,36 +148,42 @@ Side ClassifyTriangle(const Vec3 n, const float d, const TriangleList& testTri) 
 	return ON_PLANE;
 }
 
+
+//TODO: valid check of n?
+void getPlaneFromTri(const TriangleList& tri, Vec3& n, float& d) {
+	//get plane
+	Vec3 p0 = GetPos(tri.point[0]);
+	Vec3 e1 = { tri.point[1].vertex[0] - p0.x, tri.point[1].vertex[1] - p0.y, tri.point[1].vertex[2] - p0.z };
+	Vec3 e2 = { tri.point[2].vertex[0] - p0.x, tri.point[2].vertex[1] - p0.y, tri.point[2].vertex[2] - p0.z };
+	n = Cross(e1, e2);
+	//if (Dot(n, n) < 0.000001f) {
+	//	d = FLT_MAX;
+	//	return;
+	//}
+	d = Dot(n, p0);
+}
+
 int PickBestSplitter(const vector<TriangleList>& triangles) {
 	int bestIndex = -1;
-	float bestScore = 1e30f; // 매우 큰 값으로 초기화
+	float bestScore = 1e30f;
 
-	// 가중치 설정 (쪼개지는 것을 방지하는 정도)
-	const float SPLIT_WEIGHT = 15.0f;
+	const float SPLIT_WEIGHT = 100.0f;
 	const float BALANCE_WEIGHT = 1.0f;
 
-	// 후보 개수가 너무 많으면 성능을 위해 무작위 샘플링을 하기도 하지만,
-	// 일단은 모든 삼각형을 후보로 전수 조사합니다.
 	for (int i = 0; i < triangles.size(); ++i) {
 		const TriangleList& candidate = triangles[i];
 
-		// 후보 평면 추출
-		Vec3 p0 = GetPos(candidate.point[0]);
-		Vec3 e1 = { candidate.point[1].vertex[0] - p0.x, candidate.point[1].vertex[1] - p0.y, candidate.point[1].vertex[2] - p0.z };
-		Vec3 e2 = { candidate.point[2].vertex[0] - p0.x, candidate.point[2].vertex[1] - p0.y, candidate.point[2].vertex[2] - p0.z };
-		Vec3 n = Cross(e1, e2);
-		// n의 길이가 0에 가까우면(Degenerate) 무시
-		if (Dot(n, n) < 0.000001f) continue;
-		n = Normalize(n);
-		float d = Dot(n, p0);
+		Vec3 n;
+		float d;
+		getPlaneFromTri(candidate, n, d);
 
 		int frontCnt = 0, backCnt = 0, splitCnt = 0;
 
-		// 다른 모든 삼각형과의 관계 계산
 		for (int j = 0; j < triangles.size(); ++j) {
 			if (i == j) continue;
 
 			Side side = ClassifyTriangle(n, d, triangles[j]);
+			//Side side = ClassifyTriangleWithAABB(n, d, triangles[j]);
 			switch (side) {
 			case FRONT:    frontCnt++; break;
 			case BACK:     backCnt++;  break;
@@ -203,7 +209,7 @@ int PickBestSplitter(const vector<TriangleList>& triangles) {
 	return (bestIndex == -1) ? 0 : bestIndex;
 }
 
-// 교점 계산 (ExtendedVertex vertex[3] 대응)
+//get intersection point of plane and line
 ExtendedVertex GetIntersect(const ExtendedVertex& a, const ExtendedVertex& b, const Vec3 n, const float d) {
 	Vec3 posA = GetPos(a);
 	Vec3 posB = GetPos(b);
@@ -222,7 +228,6 @@ ExtendedVertex GetIntersect(const ExtendedVertex& a, const ExtendedVertex& b, co
 
 void SplitTriangle(const TriangleList& tri, const Vec3 n, const float d, std::vector<TriangleList>& frontPart, std::vector<TriangleList>& backPart) {
 	std::vector<ExtendedVertex> fPts, bPts;
-	const float EPSILON = 0.00001f;
 
 	for (int i = 0; i < 3; ++i) {
 		int next = (i + 1) % 3;
@@ -258,6 +263,61 @@ void SplitTriangle(const TriangleList& tri, const Vec3 n, const float d, std::ve
 	Finalize(bPts, backPart);
 }
 
+//side:
+//		1: front
+//		-1: back
+BoundingBox GetClippedAABB(const TriangleList& tri, const Vec3 n, const float d, int side) {
+	BoundingBox clippedBox;
+	for (int i = 0; i < 3; i++) {
+		clippedBox.min[i] = 1e30f;
+		clippedBox.max[i] = -1e30f;
+	}
+
+	auto UpdateBox = [&](const ExtendedVertex& v) {
+		Vec3 p = GetPos(v);
+		if (p.x < clippedBox.min[0]) clippedBox.min[0] = p.x;
+		if (p.y < clippedBox.min[1]) clippedBox.min[1] = p.y;
+		if (p.z < clippedBox.min[2]) clippedBox.min[2] = p.z;
+		if (p.x > clippedBox.max[0]) clippedBox.max[0] = p.x;
+		if (p.y > clippedBox.max[1]) clippedBox.max[1] = p.y;
+		if (p.z > clippedBox.max[2]) clippedBox.max[2] = p.z;
+	};
+
+	for (int i = 0; i < 3; ++i) {
+		int next = (i + 1) % 3;
+		const ExtendedVertex& A = tri.point[i];
+		const ExtendedVertex& B = tri.point[next];
+
+		float distA = Dot(n, GetPos(A)) - d;
+		float distB = Dot(n, GetPos(B)) - d;
+
+		// 1. 해당 영역(side)에 속한 정점 추가
+		if (side == 1) { // Front
+			if (distA >= -EPSILON) UpdateBox(A);
+		}
+		else { // Back
+			if (distA <= EPSILON) UpdateBox(A);
+		}
+
+		// 2. 평면과 교차하는 지점(Intersect) 추가
+		if ((distA > EPSILON && distB < -EPSILON) || (distA < -EPSILON && distB > EPSILON)) {
+			ExtendedVertex intersect = GetIntersect(A, B, n, d);
+			UpdateBox(intersect);
+		}
+	}
+	BoundingBox result;
+	result.min[0] = MyMAX(tri.AABB.min[0], clippedBox.min[0]);
+	result.min[1] = MyMAX(tri.AABB.min[1], clippedBox.min[1]);
+	result.min[2] = MyMAX(tri.AABB.min[2], clippedBox.min[2]);
+
+	// max는 더 작은 값으로 (조여짐)
+	result.max[0] = MyMIN(tri.AABB.max[0], clippedBox.max[0]);
+	result.max[1] = MyMIN(tri.AABB.max[1], clippedBox.max[1]);
+	result.max[2] = MyMIN(tri.AABB.max[2], clippedBox.max[2]);
+
+	return result;
+}
+
 int maxTriInNode = 0;
 int maxTriDepth = 0;
 int maxDepth = 0;
@@ -266,6 +326,7 @@ BSPNode_Build* BuildBSPTree(vector<TriangleList>& triangles, int depth) {
 	if (triangles.empty()) return nullptr;
 	if (depth > maxDepth) {
 		maxDepth = depth;
+		printf("maxDepth while building: %d\n", maxDepth);
 	}
 
 	BSPNode_Build* node = new BSPNode_Build();
@@ -275,22 +336,29 @@ BSPNode_Build* BuildBSPTree(vector<TriangleList>& triangles, int depth) {
 	//TriangleList splitter = triangles[0];
 	
 	//get plane
-	Vec3 p0 = GetPos(splitter.point[0]);
-	Vec3 e1 = { splitter.point[1].vertex[0] - p0.x, splitter.point[1].vertex[1] - p0.y, splitter.point[1].vertex[2] - p0.z };
-	Vec3 e2 = { splitter.point[2].vertex[0] - p0.x, splitter.point[2].vertex[1] - p0.y, splitter.point[2].vertex[2] - p0.z };
-	Vec3 n = Cross(e1, e2);
-	float d = Dot(n, p0);
+	Vec3 n;
+	float d;
+	getPlaneFromTri(splitter, n, d);
 
 	node->n[0] = n.x;
 	node->n[1] = n.y;
 	node->n[2] = n.z;
-	node->d = Dot(n, p0);
+	node->d = d;
 
 	vector<TriangleList> frontList;
 	vector<TriangleList> backList;
 
+	vector<Side> sideList(triangles.size());
 	for (int i = 0; i < triangles.size(); i++) {
-		Side side = ClassifyTriangle(n, d, triangles[i]);
+		Side side;
+		if (i == bestIdx) {
+			side = ON_PLANE;
+		}
+		else {
+			side = ClassifyTriangle(n, d, triangles[i]);
+			//side = ClassifyTriangleWithAABB(n, d, triangles[i]);
+		}
+		sideList[i] = side;
 		if (side == FRONT) {
 			frontList.push_back(triangles[i]);
 		}
@@ -298,15 +366,23 @@ BSPNode_Build* BuildBSPTree(vector<TriangleList>& triangles, int depth) {
 			backList.push_back(triangles[i]);
 		}
 		else if (side == STRADDLE) {
+#if BSPT_NO_SPLIT
+			frontList.push_back(triangles[i]);
+			backList.push_back(triangles[i]);
+			frontList[frontList.size() - 1].AABB = GetClippedAABB(triangles[i], n, d, 1);
+			backList[backList.size() - 1].AABB = GetClippedAABB(triangles[i], n, d, -1);
+#else
 			vector<TriangleList> frontPart, backPart;
 			SplitTriangle(triangles[i], n, d, frontPart, backPart);
 			frontList.insert(frontList.end(), frontPart.begin(), frontPart.end());
 			backList.insert(backList.end(), backPart.begin(), backPart.end());
+#endif			
 		}
 		else if (side == ON_PLANE) {
 			node->onPlaneTriangles.push_back(triangles[i]);
 		}
 	}
+
 	if (node->onPlaneTriangles.size() > maxTriInNode) {
 		maxTriInNode = node->onPlaneTriangles.size();
 		maxTriDepth = depth;
@@ -322,6 +398,10 @@ BSPNode_Build* BuildBSPTree(vector<TriangleList>& triangles, int depth) {
 }
 
 //dfs traverse
+#if BSPT_DUMP_STATISTICS
+vector<vector<uint32_t>> onPlaneTriangleCnts;
+int onPlaneTriCntsIdx = 0;
+#endif
 void FlattenBSPTree(BSPNode_Build* nodeB, vector<unsigned int>& triOffsets) {
 	int currIdx = g_BSPTNodes.size();
 	BSPNode tmp;
@@ -333,6 +413,9 @@ void FlattenBSPTree(BSPNode_Build* nodeB, vector<unsigned int>& triOffsets) {
 	tmp.backChild = -1;
 	tmp.triStart = g_iKdTree_TriOffset_Count + triOffsets.size();
 	tmp.triCnt = nodeB->onPlaneTriangles.size();
+#if BSPT_DUMP_STATISTICS
+	onPlaneTriangleCnts[onPlaneTriCntsIdx].push_back(tmp.triCnt);
+#endif
 
 	for (int i = 0; i < tmp.triCnt; i++) {
 		triOffsets.push_back(g_BSPTTris.size());
@@ -368,7 +451,7 @@ void _reAllocTriangleOffsetList(unsigned long long _newAllocSize, unsigned long 
 }
 
 void _reAllocKdtreeNodes(unsigned int _newAllocSize, unsigned int &_oldAllocSize, KdTreeNode** _ppNodeArray)
-{
+{               
 	KdTreeNode *tmpList = new KdTreeNode[_newAllocSize];
 	memcpy( tmpList, *_ppNodeArray, sizeof( KdTreeNode ) * _oldAllocSize );
 	delete[] *_ppNodeArray;
@@ -1046,7 +1129,7 @@ void clipTriangleToAABB(const TriangleList& inputTri, vector<TriangleList>& outp
 		outputList.push_back(tri);
 	}
 }
-
+#include <fstream>
 void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pTriangleInfos, unsigned int triangleSize,
 	BoundingBox& bbox, unsigned int inNodeLevel, KdTreeNode* inNode)
 {
@@ -1139,7 +1222,6 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pTriangleInfo
 	#else
 				triangles[i] = pTriangleInfos[i];
 	#endif
-				
 			}
 			int depth = 0;
 			BSPNode_Build* root = BuildBSPTree(triangles, depth);
@@ -1148,7 +1230,9 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pTriangleInfo
 			}
 
 			vector<unsigned int> triOffsets;
+			onPlaneTriangleCnts.resize(onPlaneTriangleCnts.size()+1);
 			FlattenBSPTree(root, triOffsets);
+			onPlaneTriCntsIdx++;
 
 			unsigned int iTriOffset = g_iKdTree_TriOffset_Count;
 
@@ -1268,6 +1352,49 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pTriangleInfo
 	if (inNodeLevel == 0) {
 		printf("bspt max depth : %d\n", maxDepth);
 		printf("bspt max tri cnt : %d\n", maxTriInNode);
+
+	#if BSPT_DUMP_STATISTICS
+		std::ofstream bspt_file("bspt_onplane_stats.csv");
+		bspt_file << "BSPT_Idx,ManyOnPlane_Count,AvgOnPlane_Count,MaxOnPlane_Count\n";
+
+		// 전체적인 분포를 보기 위한 히스토그램 (예: 0~255 범위)
+		std::vector<int> bspt_hist_max(256, 0);
+
+		for (int i = 0; i < onPlaneTriangleCnts.size(); i++) {
+			float avgOnPlaneCnt = 0;
+			int manyOnPlaneTrisCnt = 0;
+			int maxOnPlaneCnt = 0;
+
+			for (int j = 0; j < onPlaneTriangleCnts[i].size(); j++) {
+				int current_cnt = onPlaneTriangleCnts[i][j];
+				if (current_cnt > 1) {
+					manyOnPlaneTrisCnt++;
+					avgOnPlaneCnt += current_cnt;
+					if (current_cnt > maxOnPlaneCnt) {
+						maxOnPlaneCnt = current_cnt;
+					}
+				}
+			}
+
+			if (manyOnPlaneTrisCnt > 0) {
+				avgOnPlaneCnt /= manyOnPlaneTrisCnt;
+			}
+
+			// 2. CSV 파일 기록
+			bspt_file << i << "," << manyOnPlaneTrisCnt << "," << avgOnPlaneCnt << "," << maxOnPlaneCnt << "\n";
+
+			// 3. 히스토그램 수집 (최댓값 분포 확인용)
+			if (maxOnPlaneCnt < bspt_hist_max.size()) {
+				bspt_hist_max[maxOnPlaneCnt]++;
+			}
+			else {
+				// 범위를 벗어나면 확장
+				bspt_hist_max.resize(maxOnPlaneCnt + 1, 0);
+				bspt_hist_max[maxOnPlaneCnt]++;
+			}
+		}
+		bspt_file.close();
+	#endif
 	}
 #endif
 

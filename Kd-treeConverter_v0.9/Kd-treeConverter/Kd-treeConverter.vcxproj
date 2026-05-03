@@ -207,6 +207,7 @@
     <ClCompile Include="SLMeshDataIO.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\external\stb_image_write.h" />
     <ClInclude Include="AABB_Triangle_Clip\AABB_Clipping.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
