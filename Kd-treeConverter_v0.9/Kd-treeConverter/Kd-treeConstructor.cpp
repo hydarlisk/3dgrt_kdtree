@@ -557,7 +557,6 @@ void clip_ellipsoid(const int ellipsoidSize, const SplitCost& bestCost, Triangle
 
 	for (int i = 0; i < ellipsoidSize; i++) {
 		BoundingBox& currBBox = pEllipsoidInfos[i].AABB;
-
 		if (currBBox.min[axis] < splitPos && currBBox.max[axis] > splitPos) {
 			if (side == 0) {
 				if (currBBox.max[axis] > splitPos) {
@@ -625,7 +624,6 @@ void clip_triangle(const int triangleSize, const SplitCost& bestCost, TriangleLi
 				for (size_t k = 0; k < rightSize; k++)
 				{
 					float hitPoint[3];
-					// [수정] vector의 데이터에 접근하기 위해 .data() 사용
 					if (intersect_edge_plane(leftVec[j].data(), rightVec[k].data(), planePoint, planeNorm, hitPoint)) {
 						leftVec.push_back({ hitPoint[0], hitPoint[1], hitPoint[2] });
 						rightVec.push_back({ hitPoint[0], hitPoint[1], hitPoint[2] });
@@ -1012,12 +1010,36 @@ inline float calculateKernelScale(float density, float kernelMinResponse, uint32
 	return std::pow(std::log(minResponse) / a, 1.0f / b);
 
 }
+
+////original quaternion is world 2 local
+//void quaternionWXYZToMatrixTransform(const float* quat, float* rotMat) {
+//	const float r = q.x;
+//	const float x = q.y;
+//	const float y = q.z;
+//	const float z = q.w;
+//
+//	const float xx = x * x;
+//	const float yy = y * y;
+//	const float zz = z * z;
+//	const float xy = x * y;
+//	const float xz = x * z;
+//	const float yz = y * z;
+//	const float rx = r * x;
+//	const float ry = r * y;
+//	const float rz = r * z;
+//
+//	// Compute rotation matrix from quaternion
+//	ret[0] = make_float3((1.f - 2.f * (yy + zz)), 2.f * (xy + rz), 2.f * (xz - ry));
+//	ret[1] = make_float3(2.f * (xy - rz), (1.f - 2.f * (xx + zz)), 2.f * (yz + rx));
+//	ret[2] = make_float3(2.f * (xz + ry), 2.f * (yz - rx), (1.f - 2.f * (xx + yy)));
+//}
+
+//TODO: calc more accurate aabb
 void calcEllipsoidAABB(Gaussian& g, BoundingBox& b) {
-	// 1. 주어진 density와 임계치를 바탕으로 정확한 k_scale(반지름 배수)을 구합니다.
-	// g.opacity 또는 g.density 등 구조체 멤버 명칭에 맞춰 수정 필요 (여기선 g.opacity 가정)
 	float k_scale = calculateKernelScale(g.opacity, KERNEL_MIN_RESPONSE);
 
-	// 2. 쿼터니언 -> 회전 행렬 R 생성
+	//quaternion -> rot mat
+	//original data is world2local 
 	float r = g.rot[0];
 	float x = g.rot[1];
 	float y = g.rot[2];
@@ -1025,19 +1047,17 @@ void calcEllipsoidAABB(Gaussian& g, BoundingBox& b) {
 
 	float R[3][3];
 	R[0][0] = 1.0f - 2.0f * (y * y + z * z);
-	R[0][1] = 2.0f * (x * y - r * z);
-	R[0][2] = 2.0f * (x * z + r * y);
+	R[1][0] = 2.0f * (x * y - r * z);
+	R[2][0] = 2.0f * (x * z + r * y);
 
-	R[1][0] = 2.0f * (x * y + r * z);
+	R[0][1] = 2.0f * (x * y + r * z);
 	R[1][1] = 1.0f - 2.0f * (x * x + z * z);
-	R[1][2] = 2.0f * (y * z - r * x);
+	R[2][1] = 2.0f * (y * z - r * x);
 
-	R[2][0] = 2.0f * (x * z - r * y);
-	R[2][1] = 2.0f * (y * z + r * x);
+	R[0][2] = 2.0f * (x * z - r * y);
+	R[1][2] = 2.0f * (y * z + r * x);
 	R[2][2] = 1.0f - 2.0f * (x * x + y * y);
 
-	// 3. 공분산 대각 성분(Sigma_ii) 계산
-	// 타원체의 축 방향 팽창 정도를 결정합니다.
 	float s0 = g.scale[0];
 	float s1 = g.scale[1];
 	float s2 = g.scale[2];
@@ -1046,8 +1066,6 @@ void calcEllipsoidAABB(Gaussian& g, BoundingBox& b) {
 	float sigma_yy = (R[1][0] * s0) * (R[1][0] * s0) + (R[1][1] * s1) * (R[1][1] * s1) + (R[1][2] * s2) * (R[1][2] * s2);
 	float sigma_zz = (R[2][0] * s0) * (R[2][0] * s0) + (R[2][1] * s1) * (R[2][1] * s1) + (R[2][2] * s2) * (R[2][2] * s2);
 
-	// 4. 최종 AABB 반경 계산
-	// sqrt(sigma_ii)는 해당 축의 표준편차이며, k_scale은 임계치에 도달하는 배수입니다.
 	float half_x = k_scale * std::sqrt(sigma_xx);
 	float half_y = k_scale * std::sqrt(sigma_yy);
 	float half_z = k_scale * std::sqrt(sigma_zz);
@@ -1061,11 +1079,12 @@ void calcEllipsoidAABB(Gaussian& g, BoundingBox& b) {
 }
 
 //calculate ellipsoid aabb and update scene aabb
-void setEllipsoidAABB(CompositeObject& poly_model) {
+void initEllipsoid(CompositeObject& poly_model) {
 	poly_model.AABB[XMIN] = poly_model.AABB[YMIN] = poly_model.AABB[ZMIN] = FLT_MAX;
 	poly_model.AABB[XMAX] = poly_model.AABB[YMAX] = poly_model.AABB[ZMAX] = -FLT_MAX;
 	for (int i = 0; i < g_gaussians.size(); i++) {
 		calcEllipsoidAABB(g_gaussians[i], g_pEllipsoidInfos[i].AABB);
+		g_pEllipsoidInfos[i].offset = i;
 		poly_model.AABB[XMIN] = MyMIN(poly_model.AABB[XMIN], g_pEllipsoidInfos[i].AABB.min[0]);
 		poly_model.AABB[YMIN] = MyMIN(poly_model.AABB[YMIN], g_pEllipsoidInfos[i].AABB.min[1]);
 		poly_model.AABB[ZMIN] = MyMIN(poly_model.AABB[ZMIN], g_pEllipsoidInfos[i].AABB.min[2]);
@@ -1079,7 +1098,7 @@ bool initialize_kd_tree(CompositeObject* poly_model) {
 	// Returns 1 if kd-tree data was initialized successfully, or 0 otherwise.
 
 	g_pEllipsoidInfos = new TriangleList[g_gaussians.size()];
-	setEllipsoidAABB(*poly_model);
+	initEllipsoid(*poly_model);
 
 	bool bError = false;
 
