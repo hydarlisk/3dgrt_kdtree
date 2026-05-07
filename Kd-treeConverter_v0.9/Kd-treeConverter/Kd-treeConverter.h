@@ -48,6 +48,7 @@
 
 //#define FORCE_SPLIT_THRESHOLD 64				// kd-tree 강제분할
 #define FORCE_SPLIT_THRESHOLD 0				// kd-tree 강제분할
+//#define FORCE_SPLIT_THRESHOLD 256				// kd-tree 강제분할
 //#define SOFT_SPLIT_THRESHOLD 128				// kd-tree 강제분할(완화)
 #define SOFT_SPLIT_THRESHOLD2 256				// kd-tree 강제분할(완화)
 
