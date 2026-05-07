@@ -1143,13 +1143,13 @@ bool loadGaussiansFromPly(const char* filename, std::vector<Gaussian>& gaussians
 	if (num_vertices == 0) return false;
 	const int vertex_byte_size = current_offset; // 한 정점 데이터의 총 크기
 
-	printf("---------- PLY Header Debug ----------\n");
-	printf("Total Vertices: %ld\n", num_vertices);
-	printf("Vertex Byte Size: %d bytes\n", vertex_byte_size);
-	for (const auto& prop : properties_order) {
-		printf("Property: %s | Offset: %d\n", prop.c_str(), property_offsets[prop]);
-	}
-	printf("--------------------------------------\n");
+	//printf("---------- PLY Header Debug ----------\n");
+	//printf("Total Vertices: %ld\n", num_vertices);
+	//printf("Vertex Byte Size: %d bytes\n", vertex_byte_size);
+	//for (const auto& prop : properties_order) {
+	//	printf("Property: %s | Offset: %d\n", prop.c_str(), property_offsets[prop]);
+	//}
+	//printf("--------------------------------------\n");
 
 	gaussians.clear();
 	gaussians.reserve(num_vertices);
@@ -1196,19 +1196,19 @@ bool loadGaussiansFromPly(const char* filename, std::vector<Gaussian>& gaussians
 
 		gaussians.push_back(g);
 
-		if (i == 0 || i == num_vertices / 2 || i == num_vertices - 1) {
-			printf("[Vertex %ld] Debug Info:\n", i);
-			printf("  Pos: %.4f, %.4f, %.4f\n", g.pos[0], g.pos[1], g.pos[2]);
-			printf("  Opacity (Sigmoid): %.4f\n", g.opacity);
-			printf("  Scale (Exp): %.4f, %.4f, %.4f\n", g.scale[0], g.scale[1], g.scale[2]);
-			printf("  Rotation (Normalized): %.4f, %.4f, %.4f, %.4f\n", g.rot[0], g.rot[1], g.rot[2], g.rot[3]);
+		//if (i == 0 || i == num_vertices / 2 || i == num_vertices - 1) {
+		//	printf("[Vertex %ld] Debug Info:\n", i);
+		//	printf("  Pos: %.4f, %.4f, %.4f\n", g.pos[0], g.pos[1], g.pos[2]);
+		//	printf("  Opacity (Sigmoid): %.4f\n", g.opacity);
+		//	printf("  Scale (Exp): %.4f, %.4f, %.4f\n", g.scale[0], g.scale[1], g.scale[2]);
+		//	printf("  Rotation (Normalized): %.4f, %.4f, %.4f, %.4f\n", g.rot[0], g.rot[1], g.rot[2], g.rot[3]);
 
-			// SH(Spherical Harmonics) 첫 번째 계수 확인
-			printf("  f_dc: %.4f, %.4f, %.4f\n", g.f_dc[0], g.f_dc[1], g.f_dc[2]);
-		}
+		//	// SH(Spherical Harmonics) 첫 번째 계수 확인
+		//	printf("  f_dc: %.4f, %.4f, %.4f\n", g.f_dc[0], g.f_dc[1], g.f_dc[2]);
+		//}
 	}
 
-	fprintf(stderr, "Robustly loaded %zu gaussians based on PLY header.\n", gaussians.size());
+	fprintf(stderr, "\nRobustly loaded %zu gaussians based on PLY header.\n", gaussians.size());
 	return true;
 }
 
@@ -3003,11 +3003,12 @@ void main_menu_action(int selection) {
 			uip.kd_tree_dump_format = KD_TREE_DUMP_IN_BINARY;
 
 			printf("Loading Geometry from: %s\n", full_i_geometry_file_name);
-
+#if PRIMITIVE_TYPE != ELLIPSOID
 			if (!read_igeom_from_file(&uip.poly_model, full_i_geometry_file_name)) {
 				fprintf(stderr, "Failed to load geometry. Aborting kd-tree load.\n");
 				break;
 			}
+#endif
 			uip.composite_object_read = 1; // 객체가 로드되었음을 플래그로 설정
 		}
 		printf("full_kd_tree_file_name:%s\n", full_kd_tree_file_name);

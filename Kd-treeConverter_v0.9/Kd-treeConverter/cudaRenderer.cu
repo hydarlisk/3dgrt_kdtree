@@ -947,14 +947,11 @@ __device__ inline void rayPrimIntersect(const cuRay& currRay, const unsigned id
     , HitRecord* local_hits, int& local_hit_count) {
     //fetch gaussian
     Gaussian g;
-    // Gaussian g의 메모리 주소를 float4 포인터로 재해석
     float4* g_as_float4 = reinterpret_cast<float4*>(&g);
-
     const int num_float4s = sizeof(Gaussian) / sizeof(float4);
     int base_idx = id * num_float4s;
 #pragma unroll
     for (int i = 0; i < 3; ++i) {
-        // 중간 배열 없이 g의 메모리에 직접 tex1Dfetch 결과를 씀
         g_as_float4[i] = tex1Dfetch<float4>(inGaussianTex, base_idx + i);
     }
 
@@ -972,14 +969,15 @@ __device__ inline void rayPrimIntersect(const cuRay& currRay, const unsigned id
     //const float3 grdu = giscl * rayDirR;
 
     float2 t = ellipsoidIntersect(gposcr, rayDirR, particleScale);
-    if (t.y < t_near - EPSILON4 || t.x > t_far + EPSILON4) return;
-    float final_t;
-    if (t.x > t_near) final_t = t.x;
-    //TODO
-    else if (t.x < t_near && t.y > t_far) {
+    //if (t.y < t_near - EPSILON4 || t.x > t_far + EPSILON4) return;
+    //float final_t;
+    //if (t.x > t_near) final_t = t.x;
+    ////TODO
+    //else if (t.x < t_near && t.y > t_far) {
 
-    }
-    else  final_t = t.y;
+    //}
+    //else  final_t = t.y;
+    float final_t = t.x;
 
     local_hits[local_hit_count].t = final_t;
     local_hits[local_hit_count].primIndex = id;
@@ -2109,8 +2107,8 @@ __global__ void renderKernelGaussian_sortNode(float* pFrameBuffer
 // =================================================================================
 // Host-Side Public Render Function
 // =================================================================================
-
-void printTextureLimits() {
+//TODO: print device prop on start of app
+void printDeviceLimits() {
     int deviceId;
     cudaError_t err = cudaGetDevice(&deviceId);
     if (err != cudaSuccess) {
@@ -2118,7 +2116,9 @@ void printTextureLimits() {
         return;
     }
 
-    std::cout << "Device Name: " << deviceProp.name << std::endl;
+    CUDA_CHECK(cudaGetDeviceProperties(&deviceProp, deviceId));
+
+    std::cout << "\nDevice Name: " << deviceProp.name << std::endl;
 
     // 1. maxTexture1D (CUDA Array 기반, 작은 값)
     std::cout << "props.maxTexture1D: " << deviceProp.maxTexture1D << " elements" << std::endl;
@@ -2132,6 +2132,22 @@ void printTextureLimits() {
     else {
         std::cerr << "Failed to get MaxTexture1DLinearWidth attribute: " << cudaGetErrorString(err) << std::endl;
     }
+    std::cout << "\n";
+
+    //get device prop
+    int deviceID;
+    cudaGetDevice(&deviceID);
+
+    int maxSharedMemPerBlock;
+    // 현재 GPU의 "블록 당 최대 공유 메모리" 속성
+    cudaDeviceGetAttribute(
+        &maxSharedMemPerBlock,
+        cudaDevAttrMaxSharedMemoryPerBlock,
+        deviceId
+    );
+    printf("This GPU's max shared memory per block: %d bytes\n", maxSharedMemPerBlock);
+    // 49152 bytes
+    // 49152 / (256 * 8) = 24
 }
 
 bool initCuda() {
@@ -2147,6 +2163,7 @@ bool initCuda() {
         return false;
     }
     std::cout << "[CUDA Init] CUDA device initialized successfully." << std::endl;
+    printDeviceLimits();
     return true;
 }
 
@@ -2269,20 +2286,6 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
         return;
     }
 
-    //get device prop
-    int deviceID;
-    cudaGetDevice(&deviceID);
-
-    int deviceId;
-    CUDA_CHECK(cudaGetDevice(&deviceId));
-
-    CUDA_CHECK(cudaGetDeviceProperties(&deviceProp, deviceId));
-    printTextureLimits();
-
-    printf("[DEBUG] kdTree->tri_offset_count = %zu\n", kdTree->tri_offset_count);
-    printf("[DEBUG] maxTexture1D: %d\n", deviceProp.maxTexture1D);
-
-    // GPU 메모리 할당 및 데이터 전송
     cudaError_t err;
 
 #if !GLOBAL_DEVICE_VAR
@@ -2372,16 +2375,7 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
     if (err != cudaSuccess) {
         std::cerr << "[CUDA Error] const memory set failed: " << cudaGetErrorString(err) << std::endl;
     }
-    int maxSharedMemPerBlock;
-    // 현재 GPU의 "블록 당 최대 공유 메모리" 속성
-    cudaDeviceGetAttribute(
-        &maxSharedMemPerBlock,
-        cudaDevAttrMaxSharedMemoryPerBlock,
-        deviceID
-    );
-    printf("This GPU's max shared memory per block: %d bytes\n", maxSharedMemPerBlock);
-    // 49152 bytes
-    // 49152 / (256 * 8) = 24
+
 #if SHORT_STACK_DEPTH > 24
     cudaFuncSetAttribute(
         renderKernelGaussian_sortNode,
@@ -2434,7 +2428,6 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
     CUDA_CHECK(cudaGetDevice(&deviceId));
 
     CUDA_CHECK(cudaGetDeviceProperties(&deviceProp, deviceId));
-    printTextureLimits();
 
     printf("[DEBUG] kdTree->tri_offset_count = %zu\n", kdTree->tri_offset_count);
     printf("[DEBUG] maxTexture1D: %d\n", deviceProp.maxTexture1D);

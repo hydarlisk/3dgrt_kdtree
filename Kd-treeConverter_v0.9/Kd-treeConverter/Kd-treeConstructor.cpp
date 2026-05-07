@@ -23,6 +23,8 @@
 #include <algorithm> // for std::remove_if
 #include <array>       // std::array 사용을 위해 추가
 
+#include <cmath>
+
 using namespace std;
 
 static const unsigned int modulo[] = { 0,1,2,0,1 };
@@ -551,12 +553,35 @@ bool intersect_edge_plane(float *p0, float *p1, float *planePoint, float *planeN
 	return true;
 }
 
+
+//quaternion -> rot mat
+//original data is world2local 
+void quaternionWXYZToMatrixTransform(const float* q, float(&R)[3][3]) {
+	float r = q[0];
+	float x = q[1];
+	float y = q[2];
+	float z = q[3];
+
+	R[0][0] = 1.0f - 2.0f * (y * y + z * z);
+	R[1][0] = 2.0f * (x * y - r * z);
+	R[2][0] = 2.0f * (x * z + r * y);
+
+	R[0][1] = 2.0f * (x * y + r * z);
+	R[1][1] = 1.0f - 2.0f * (x * x + z * z);
+	R[2][1] = 2.0f * (y * z - r * x);
+
+	R[0][2] = 2.0f * (x * z - r * y);
+	R[1][2] = 2.0f * (y * z + r * x);
+	R[2][2] = 1.0f - 2.0f * (x * x + y * y);
+}
+
 void clip_ellipsoid(const int ellipsoidSize, const SplitCost& bestCost, TriangleList* pEllipsoidInfos, int side) {
 	int axis = bestCost.axis;
 	float splitPos = bestCost.splitPos;
 
-	for (int i = 0; i < ellipsoidSize; i++) {
-		BoundingBox& currBBox = pEllipsoidInfos[i].AABB;
+	for (int gi = 0; gi < ellipsoidSize; gi++) {
+		//simple clipping
+		BoundingBox& currBBox = pEllipsoidInfos[gi].AABB;
 		if (currBBox.min[axis] < splitPos && currBBox.max[axis] > splitPos) {
 			if (side == 0) {
 				if (currBBox.max[axis] > splitPos) {
@@ -569,6 +594,71 @@ void clip_ellipsoid(const int ellipsoidSize, const SplitCost& bestCost, Triangle
 				}
 			}
 		}
+
+		//tight clipping
+		//1. calc covariance
+		auto& g = g_gaussians[pEllipsoidInfos[gi].offset];
+		float R[3][3];
+		quaternionWXYZToMatrixTransform(g.rot, R);
+		float s0 = g.scale[0];
+		float s1 = g.scale[1];
+		float s2 = g.scale[2];
+
+		float M[3][3];
+		for (int i = 0; i < 3; i++) {
+			M[i][0] = R[i][0] * s0;
+			M[i][1] = R[i][1] * s0;
+			M[i][2] = R[i][2] * s0;
+		}
+
+		float cov[3][3];
+		cov[0][0] = M[0][0] * M[0][0] + M[0][1] * M[0][1] + M[0][2] * M[0][2];
+		cov[1][1] = M[1][0] * M[1][0] + M[1][1] * M[1][1] + M[1][2] * M[1][2];
+		cov[2][2] = M[2][0] * M[2][0] + M[2][1] * M[2][1] + M[2][2] * M[2][2];
+		cov[0][1] = M[0][0] * M[1][0] + M[0][1] * M[1][1] + M[0][2] * M[1][2];
+		cov[0][2] = M[0][0] * M[2][0] + M[0][1] * M[2][1] + M[0][2] * M[2][2];
+		cov[1][2] = M[1][0] * M[2][0] + M[1][1] * M[2][1] + M[1][2] * M[2][2];
+		cov[1][0] = cov[0][1];
+		cov[2][0] = cov[0][2];
+		cov[2][1] = cov[1][2];
+
+		//2. schur complement
+		float e[3];
+		e[0] = sqrt(cov[0][0]);
+		e[1] = sqrt(cov[0][1]);
+		e[2] = sqrt(cov[0][2]);
+
+		int i = axis;
+		int j = (axis + 1) % 3;
+		int k = (axis + 2) % 3;
+		//z축 극점
+		float jMax = g.pos[i] + cov[i][j] / e[j];
+		float kMax = g.pos[i] + cov[i][k] / e[k];
+		float jMin = g.pos[i] - cov[i][j] / e[j];
+		float kMin = g.pos[i] - cov[i][k] / e[k];
+
+		float invSii = 1.0f / max(cov[i][i], 1e-8f);
+		float di = splitPos - g.pos[i];
+
+		float jMu = g.pos[j] - cov[i][j] * invSii * di;
+		float kMu = g.pos[k] - cov[i][k] * invSii * di;
+
+		float Sjj_cut = max(0.0f, cov[j][j] - (cov[i][j] * cov[i][j]) * invSii);
+		float Skk_cut = max(0.0f, cov[k][k] - (cov[i][k] * cov[i][k]) * invSii);
+
+		float eJ_cut = sqrt(Sjj_cut);
+		float eK_cut = sqrt(Skk_cut);
+		float sign = side ? 1.0f : -1.0f;
+
+		bool condJMax = (jMax * sign >= splitPos * sign);
+		bool condJMin = (jMin * sign >= splitPos * sign);
+		currBBox.max[j] = condJMax ? (g.pos[j] + e[j]) : (jMu + eJ_cut);
+		currBBox.min[j] = condJMin ? (g.pos[j] - e[j]) : (jMu - eJ_cut);
+
+		bool condKMax = (kMax * sign >= splitPos * sign);
+		bool condKMin = (kMin * sign >= splitPos * sign);
+		currBBox.max[k] = condJMax ? (g.pos[k] + e[k]) : (kMu + eK_cut);
+		currBBox.min[k] = condJMin ? (g.pos[k] - e[k]) : (kMu - eK_cut);
 	}
 }
 
@@ -1011,52 +1101,17 @@ inline float calculateKernelScale(float density, float kernelMinResponse, uint32
 
 }
 
-////original quaternion is world 2 local
-//void quaternionWXYZToMatrixTransform(const float* quat, float* rotMat) {
-//	const float r = q.x;
-//	const float x = q.y;
-//	const float y = q.z;
-//	const float z = q.w;
-//
-//	const float xx = x * x;
-//	const float yy = y * y;
-//	const float zz = z * z;
-//	const float xy = x * y;
-//	const float xz = x * z;
-//	const float yz = y * z;
-//	const float rx = r * x;
-//	const float ry = r * y;
-//	const float rz = r * z;
-//
-//	// Compute rotation matrix from quaternion
-//	ret[0] = make_float3((1.f - 2.f * (yy + zz)), 2.f * (xy + rz), 2.f * (xz - ry));
-//	ret[1] = make_float3(2.f * (xy - rz), (1.f - 2.f * (xx + zz)), 2.f * (yz + rx));
-//	ret[2] = make_float3(2.f * (xz + ry), 2.f * (yz - rx), (1.f - 2.f * (xx + yy)));
-//}
-
 //TODO: calc more accurate aabb
 void calcEllipsoidAABB(Gaussian& g, BoundingBox& b) {
 	float k_scale = calculateKernelScale(g.opacity, KERNEL_MIN_RESPONSE);
 
-	//quaternion -> rot mat
-	//original data is world2local 
 	float r = g.rot[0];
 	float x = g.rot[1];
 	float y = g.rot[2];
 	float z = g.rot[3];
 
 	float R[3][3];
-	R[0][0] = 1.0f - 2.0f * (y * y + z * z);
-	R[1][0] = 2.0f * (x * y - r * z);
-	R[2][0] = 2.0f * (x * z + r * y);
-
-	R[0][1] = 2.0f * (x * y + r * z);
-	R[1][1] = 1.0f - 2.0f * (x * x + z * z);
-	R[2][1] = 2.0f * (y * z - r * x);
-
-	R[0][2] = 2.0f * (x * z - r * y);
-	R[1][2] = 2.0f * (y * z + r * x);
-	R[2][2] = 1.0f - 2.0f * (x * x + y * y);
+	quaternionWXYZToMatrixTransform(g.rot, R);
 
 	float s0 = g.scale[0];
 	float s1 = g.scale[1];
