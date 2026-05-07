@@ -555,8 +555,27 @@ bool intersect_edge_plane(float *p0, float *p1, float *planePoint, float *planeN
 
 
 //quaternion -> rot mat
-//original data is world2local 
+//local to world
 void quaternionWXYZToMatrixTransform(const float* q, float(&R)[3][3]) {
+	float r = q[0];
+	float x = q[1];
+	float y = q[2];
+	float z = q[3];
+
+	R[0][0] = 1.0f - 2.0f * (y * y + z * z);
+	R[0][1] = 2.0f * (x * y - r * z);
+	R[0][2] = 2.0f * (x * z + r * y);
+
+	R[1][0] = 2.0f * (x * y + r * z);
+	R[1][1] = 1.0f - 2.0f * (x * x + z * z);
+	R[1][2] = 2.0f * (y * z - r * x);
+
+	R[2][0] = 2.0f * (x * z - r * y);
+	R[2][1] = 2.0f * (y * z + r * x);
+	R[2][2] = 1.0f - 2.0f * (x * x + y * y);
+}
+//world to local
+void quaternionWXYZToMatrix(const float* q, float(&R)[3][3]) {
 	float r = q[0];
 	float x = q[1];
 	float y = q[2];
@@ -607,8 +626,8 @@ void clip_ellipsoid(const int ellipsoidSize, const SplitCost& bestCost, Triangle
 		float M[3][3];
 		for (int i = 0; i < 3; i++) {
 			M[i][0] = R[i][0] * s0;
-			M[i][1] = R[i][1] * s0;
-			M[i][2] = R[i][2] * s0;
+			M[i][1] = R[i][1] * s1;
+			M[i][2] = R[i][2] * s2;
 		}
 
 		float cov[3][3];
@@ -624,24 +643,25 @@ void clip_ellipsoid(const int ellipsoidSize, const SplitCost& bestCost, Triangle
 
 		//2. schur complement
 		float e[3];
-		e[0] = sqrt(cov[0][0]);
-		e[1] = sqrt(cov[0][1]);
-		e[2] = sqrt(cov[0][2]);
+		e[0] = max(EPSILON, sqrt(cov[0][0]));
+		e[1] = max(EPSILON, sqrt(cov[1][1]));
+		e[2] = max(EPSILON, sqrt(cov[2][2]));
 
 		int i = axis;
 		int j = (axis + 1) % 3;
 		int k = (axis + 2) % 3;
+
 		//z축 극점
 		float jMax = g.pos[i] + cov[i][j] / e[j];
-		float kMax = g.pos[i] + cov[i][k] / e[k];
 		float jMin = g.pos[i] - cov[i][j] / e[j];
+		float kMax = g.pos[i] + cov[i][k] / e[k];
 		float kMin = g.pos[i] - cov[i][k] / e[k];
 
 		float invSii = 1.0f / max(cov[i][i], 1e-8f);
 		float di = splitPos - g.pos[i];
 
-		float jMu = g.pos[j] - cov[i][j] * invSii * di;
-		float kMu = g.pos[k] - cov[i][k] * invSii * di;
+		float jMu = g.pos[j] + cov[i][j] * invSii * di;
+		float kMu = g.pos[k] + cov[i][k] * invSii * di;
 
 		float Sjj_cut = max(0.0f, cov[j][j] - (cov[i][j] * cov[i][j]) * invSii);
 		float Skk_cut = max(0.0f, cov[k][k] - (cov[i][k] * cov[i][k]) * invSii);
@@ -657,8 +677,8 @@ void clip_ellipsoid(const int ellipsoidSize, const SplitCost& bestCost, Triangle
 
 		bool condKMax = (kMax * sign >= splitPos * sign);
 		bool condKMin = (kMin * sign >= splitPos * sign);
-		currBBox.max[k] = condJMax ? (g.pos[k] + e[k]) : (kMu + eK_cut);
-		currBBox.min[k] = condJMin ? (g.pos[k] - e[k]) : (kMu - eK_cut);
+		currBBox.max[k] = condKMax ? (g.pos[k] + e[k]) : (kMu + eK_cut);
+		currBBox.min[k] = condKMin ? (g.pos[k] - e[k]) : (kMu - eK_cut);
 	}
 }
 
@@ -723,6 +743,7 @@ void clip_triangle(const int triangleSize, const SplitCost& bestCost, TriangleLi
 
 			if (side == 0)
 			{
+				// smaller than splitpos
 				BoundingBox reducedBBox = {}; // 0으로 초기화
 				if (!leftVec.empty()) {
 					reducedBBox.min[0] = reducedBBox.max[0] = leftVec[0][0];
@@ -748,6 +769,7 @@ void clip_triangle(const int triangleSize, const SplitCost& bestCost, TriangleLi
 			}
 			else
 			{
+				//bigger than splitpos
 				BoundingBox reducedBBox = {}; // 0으로 초기화
 				if (!rightVec.empty()) {
 					reducedBBox.min[0] = reducedBBox.max[0] = rightVec[0][0];

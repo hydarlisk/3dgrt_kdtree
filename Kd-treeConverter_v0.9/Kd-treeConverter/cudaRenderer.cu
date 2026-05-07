@@ -756,6 +756,7 @@ __device__ __forceinline__ float evaluateGaussianResponse_3dgrt(const cuRay& ray
     return fminf(0.99f, g.opacity * density);
 }
 
+//world to local space
 __device__ __forceinline__ void quaternionWXYZToMatrix(const float4& q, float33& ret) {
     const float r = q.x;
     const float x = q.y;
@@ -969,15 +970,10 @@ __device__ inline void rayPrimIntersect(const cuRay& currRay, const unsigned id
     //const float3 grdu = giscl * rayDirR;
 
     float2 t = ellipsoidIntersect(gposcr, rayDirR, particleScale);
-    //if (t.y < t_near - EPSILON4 || t.x > t_far + EPSILON4) return;
-    //float final_t;
-    //if (t.x > t_near) final_t = t.x;
-    ////TODO
-    //else if (t.x < t_near && t.y > t_far) {
 
-    //}
-    //else  final_t = t.y;
+    if (t.y < 0) return;
     float final_t = t.x;
+    if (t.x < 0) final_t = t.y;
 
     local_hits[local_hit_count].t = final_t;
     local_hits[local_hit_count].primIndex = id;
