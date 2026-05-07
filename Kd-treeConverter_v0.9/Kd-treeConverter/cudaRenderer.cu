@@ -932,8 +932,12 @@ __device__ void singlePassIntersectRoutineGaussian_sortNode(const cuRay& ray, in
 //only translate, rotation done
 //no scaling
 __device__ inline float2 ellipsoidIntersect(const float3& pos, const float3& dir, const float3 scale) {
-    float3 ocn = pos / scale;
-    float3 rdn = dir / scale;
+    float3 safeScale = scale;
+    safeScale.x = max(scale.x, EPSILON);
+    safeScale.y = max(scale.y, EPSILON);
+    safeScale.z = max(scale.z, EPSILON);
+    float3 ocn = pos / safeScale;
+    float3 rdn = dir / safeScale;
     float a = dot(rdn, rdn);
     float b = dot(ocn, rdn);
     float c = dot(ocn, ocn);
@@ -971,7 +975,7 @@ __device__ inline void rayPrimIntersect(const cuRay& currRay, const unsigned id
 
     float2 t = ellipsoidIntersect(gposcr, rayDirR, particleScale);
 
-    //if (t.x > t_far || t.y < t_near) return;
+    if (t.x > t_far || t.y < t_near) return;
     float final_t = t.x;
     if (t.x < 0) final_t = t.y;
 
