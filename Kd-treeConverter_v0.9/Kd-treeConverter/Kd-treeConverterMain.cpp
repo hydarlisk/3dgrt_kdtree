@@ -71,8 +71,8 @@ bool is_s_pressed = false;
 bool is_d_pressed = false;
 bool is_q_pressed = false;
 bool is_e_pressed = false;
-const float CAMERA_MOVE_SPEED = 0.1f; // 이동 속도 (조정 가능)
-const float CAMERA_ROT_SPEED = 0.1f;  // 마우스 회전 감도
+const float camMoveSpeed = CAM_MOVE_SPEED; // 이동 속도 (조정 가능)
+const float camRotSpeed = CAM_ROT_SPEED;  // 마우스 회전 감도
 
 bool render_gaussian = false;
 int g_render_width = MAIN_WINDOW_WIDTH;
@@ -81,6 +81,9 @@ bool g_cuda_rendering_done = false;
 bool g_cuda_interactive_mode = false; // CUDA 인터랙티브 모드 활성화 플래그
 bool g_camera_dirty = true;           // 카메라가 변경되었는지 확인하는 플래그
 std::vector<Gaussian> g_gaussians;	  // 전역 변수로 가우시안 데이터를 저장할 벡터
+
+int g_renderMode = 0;	//5: ellipsoid aabb debug
+int g_renderGId = -1;
 
 bool adaptive_mesh = false;
 
@@ -212,6 +215,61 @@ Camera camera;
 KdTree kd_tree;
 
 GLuint buf_obj;
+
+void renderGaussianMesh(int gId) {
+	ExtendedVertex* v = uip.poly_model.extended_vertices;
+
+	glColor3f(1.0, 0.7, 0.1);
+	glBegin(GL_TRIANGLES);
+	for (int i = 0; i < 20; i++) {
+		glVertex3fv(v[3 * (gId * 20 + i) + 0].vertex);
+		glVertex3fv(v[3 * (gId * 20 + i) + 1].vertex);
+		glVertex3fv(v[3 * (gId * 20 + i) + 2].vertex);
+	}
+	glEnd();
+}
+
+//only works for icosa mesh
+void renderEllipsoidAabb(int gId) {
+	TriangleList& e = (*uip.poly_model.ellipsoidAabbDebug)[gId];
+	float aabb[6] = {
+		e.AABB.min[0], e.AABB.max[0],
+		e.AABB.min[1], e.AABB.max[1],
+		e.AABB.min[2], e.AABB.max[2]
+	};
+	draw_AABB(aabb);
+	renderGaussianMesh(gId);
+}
+
+void renderEllipsoidAabbs() {
+	std::vector<TriangleList>& ellipsoidInfos = *uip.poly_model.ellipsoidAabbDebug;
+	for (int i = 0; i < ellipsoidInfos.size(); i++) {
+		renderEllipsoidAabb(ellipsoidInfos[i].offset);
+	}
+}
+
+void renderGaussianMeshes() {
+	int i;
+	ExtendedVertex* ptr_ev;
+	if (uip.bounding_box_display_mode)
+		draw_AABB(uip.poly_model.AABB);
+
+	// use an old way of drawing
+	glColor3f(1.0, 0.7, 0.1);
+
+	ptr_ev = uip.poly_model.extended_vertices;
+	glBegin(GL_TRIANGLES);
+	for (i = 0; i < uip.poly_model.n_triangles; i++) {
+		glVertex3fv(ptr_ev->vertex);
+		ptr_ev++;
+		glVertex3fv(ptr_ev->vertex);
+		ptr_ev++;
+		glVertex3fv(ptr_ev->vertex);
+		ptr_ev++;
+	}
+	glEnd();
+	// use an old way of drawing
+}
  
 void display(void) {
 #if HIT_AND_NODE_COUNT_DEBUG
@@ -314,7 +372,6 @@ void display(void) {
 		glTexCoord2f(1.0f, 1.0f); glVertex2f(1.0f, 1.0f);
 		glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0f, 1.0f);
 		glEnd();
-
 		glDisable(GL_TEXTURE_2D);
 
 		// 1) 3D 투영 행렬 복구 (Perspective)
@@ -343,10 +400,6 @@ void display(void) {
 		draw_fps(); // FPS
 	}
 	else {
-
-		int i;
-		ExtendedVertex* ptr_ev;
-
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glEnable(GL_DEPTH_TEST);
 
@@ -357,38 +410,16 @@ void display(void) {
 			-(uip.poly_model.AABB[ZMIN] + uip.poly_model.AABB[ZMAX]) / 2.0);
 
 		draw_axes(100.0);
-
 		if (uip.composite_object_read == 1) {
-
-			if (uip.bounding_box_display_mode)
-				draw_AABB(uip.poly_model.AABB);
-
-			/* suffering memory problem for the entire model
-			glBindBuffer(GL_ARRAY_BUFFER, buf_obj);
-			glColor3f(1.0, 0.7, 0.1);
-			glDrawArrays(GL_TRIANGLES, 0, 3*uip.poly_model.n_triangles);
-			*/
-
-			// use an old way of drawing
-			glColor3f(1.0, 0.7, 0.1);
-
-			ptr_ev = uip.poly_model.extended_vertices;
-			glBegin(GL_TRIANGLES);
-			for (i = 0; i < uip.poly_model.n_triangles; i++) {
-				//glNormal3fv(ptr_ev->normal);  
-				glVertex3fv(ptr_ev->vertex);
-				ptr_ev++;
-
-				//glNormal3fv(ptr_ev->normal);  
-				glVertex3fv(ptr_ev->vertex);
-				ptr_ev++;
-
-				//glNormal3fv(ptr_ev->normal);  
-				glVertex3fv(ptr_ev->vertex);
-				ptr_ev++;
+			if (g_renderMode == 5) {
+				//ellipsoid aabb debug
+				if(g_renderGId >=0)
+				//renderEllipsoidAabbs();
+				renderEllipsoidAabb(g_renderGId);
 			}
-			glEnd();
-			// use an old way of drawing
+			else {
+				renderGaussianMeshes();
+			}
 		}
 
 		glPopMatrix();
@@ -491,6 +522,16 @@ void keyboard(unsigned char key, int x, int y) {
 			else {
 				printf("need to CUDA rendering first\n");
 			}
+			break;
+		case '[':
+			g_renderGId--;
+			if (g_renderGId < 0) g_renderGId = uip.poly_model.ellipsoidAabbDebug->size() - 1;
+			glutPostRedisplay();
+			break;
+		case ']':
+			g_renderGId++;
+			if (g_renderGId > uip.poly_model.ellipsoidAabbDebug->size() - 1) g_renderGId = 0;
+			glutPostRedisplay();
 			break;
 #if LEAF_NODE_DEBUG
 		case 'm':
@@ -707,8 +748,8 @@ void mousemove(int x, int y) {
 		else if (uip.camera_global_rotation_mode) {
 			g_camera_dirty = true;
 
-			float yaw_angle = delx * CAMERA_ROT_SPEED;   // 좌우 회전 (Yaw)
-			float pitch_angle = dely * CAMERA_ROT_SPEED; // 상하 회전 (Pitch)
+			float yaw_angle = delx * camRotSpeed;   // 좌우 회전 (Yaw)
+			float pitch_angle = dely * camRotSpeed; // 상하 회전 (Pitch)
 
 			// --- 1. Yaw (좌우 회전) ---
 			// Yaw는 항상 월드 Y축(0, 1, 0)을 기준으로 회전합니다.
@@ -1464,7 +1505,9 @@ void create_composite_object_from_gaussians(
 
 #if SIGMA_THRESHOLD_MODE
 		//if (sigma < SIGMA_THRESHOLD) { cnt_sigma++; continue; }
+	#if OCCLUDE_MIN_OPACITY
 		if (sigma < KERNEL_MIN_RESPONSE || sigma < SIGMA_THRESHOLD_MODE / 255.0f) { cnt_sigma++; continue; }
+	#endif
 #endif
 
 		float k_iso = 0.0f;
@@ -2897,6 +2940,19 @@ void subMenuHandler(int value) {
 	glutPostRedisplay();
 }
 
+void subDebugMenuHandler(int value) {
+	switch (value) {
+	case 903:
+		//debug ellipsoid aabb
+		g_renderMode = 5;
+		g_renderGId = 1;
+		break;
+	}
+	
+
+	glutPostRedisplay();
+}
+
 void main_menu_action(int selection) {
 	char full_kd_tree_file_name[512];
 	char full_i_geometry_file_name[512];
@@ -3106,6 +3162,9 @@ void register_callbacks_and_create_menu(void) {
 	glutAddMenuEntry("truck", 111);
 	glutAddMenuEntry("stump", 112);
 
+	int subDebugMenu = glutCreateMenu(subDebugMenuHandler);
+	glutAddMenuEntry("debug ellipsoid aabb", 903);
+
 	uip.main_menu_ID = glutCreateMenu(main_menu_action);
 	glutAddMenuEntry("ChangeMode", 0);
 	glutAddMenuEntry("1. Read SL_KDT_Config File and Prepair I-Geometry", 100);
@@ -3118,6 +3177,7 @@ void register_callbacks_and_create_menu(void) {
 	glutAddMenuEntry("5. Read Kd-tree from File", 500);
 	glutAddMenuEntry("7. CUDA Rendering (Interactive Toggle)", 600);
 	glutAddMenuEntry("8. ply all build", 800);
+	glutAddSubMenu("9. debug kdtree", subDebugMenu);
 	glutAddMenuEntry("Exit", 999); 
 
 	glutAttachMenu(GLUT_RIGHT_BUTTON); 
@@ -3204,39 +3264,39 @@ void show_greetings(void) {
 void idle() {
 	bool camera_moved = false;
 	if (is_w_pressed) { // 전진 (카메라 앞 방향)
-		camera.pos[0] -= camera.naxis[0] * CAMERA_MOVE_SPEED;
-		camera.pos[1] -= camera.naxis[1] * CAMERA_MOVE_SPEED;
-		camera.pos[2] -= camera.naxis[2] * CAMERA_MOVE_SPEED;
+		camera.pos[0] -= camera.naxis[0] * camMoveSpeed;
+		camera.pos[1] -= camera.naxis[1] * camMoveSpeed;
+		camera.pos[2] -= camera.naxis[2] * camMoveSpeed;
 		camera_moved = true;
 	}
 	if (is_s_pressed) { // 후진 (카메라 뒤 방향)
-		camera.pos[0] += camera.naxis[0] * CAMERA_MOVE_SPEED;
-		camera.pos[1] += camera.naxis[1] * CAMERA_MOVE_SPEED;
-		camera.pos[2] += camera.naxis[2] * CAMERA_MOVE_SPEED;
+		camera.pos[0] += camera.naxis[0] * camMoveSpeed;
+		camera.pos[1] += camera.naxis[1] * camMoveSpeed;
+		camera.pos[2] += camera.naxis[2] * camMoveSpeed;
 		camera_moved = true;
 	}
 	if (is_a_pressed) { // 왼쪽 (카메라 왼쪽 방향)
-		camera.pos[0] -= camera.uaxis[0] * CAMERA_MOVE_SPEED;
-		camera.pos[1] -= camera.uaxis[1] * CAMERA_MOVE_SPEED;
-		camera.pos[2] -= camera.uaxis[2] * CAMERA_MOVE_SPEED;
+		camera.pos[0] -= camera.uaxis[0] * camMoveSpeed;
+		camera.pos[1] -= camera.uaxis[1] * camMoveSpeed;
+		camera.pos[2] -= camera.uaxis[2] * camMoveSpeed;
 		camera_moved = true;
 	}
 	if (is_d_pressed) { // 오른쪽 (카메라 오른쪽 방향)
-		camera.pos[0] += camera.uaxis[0] * CAMERA_MOVE_SPEED;
-		camera.pos[1] += camera.uaxis[1] * CAMERA_MOVE_SPEED;
-		camera.pos[2] += camera.uaxis[2] * CAMERA_MOVE_SPEED;
+		camera.pos[0] += camera.uaxis[0] * camMoveSpeed;
+		camera.pos[1] += camera.uaxis[1] * camMoveSpeed;
+		camera.pos[2] += camera.uaxis[2] * camMoveSpeed;
 		camera_moved = true;
 	}
 	if (is_q_pressed) {
-		camera.pos[0] += camera.vaxis[0] * CAMERA_MOVE_SPEED;
-		camera.pos[1] += camera.vaxis[1] * CAMERA_MOVE_SPEED;
-		camera.pos[2] += camera.vaxis[2] * CAMERA_MOVE_SPEED;
+		camera.pos[0] += camera.vaxis[0] * camMoveSpeed;
+		camera.pos[1] += camera.vaxis[1] * camMoveSpeed;
+		camera.pos[2] += camera.vaxis[2] * camMoveSpeed;
 		camera_moved = true;
 	}
 	if (is_e_pressed) {
-		camera.pos[0] -= camera.vaxis[0] * CAMERA_MOVE_SPEED;
-		camera.pos[1] -= camera.vaxis[1] * CAMERA_MOVE_SPEED;
-		camera.pos[2] -= camera.vaxis[2] * CAMERA_MOVE_SPEED;
+		camera.pos[0] -= camera.vaxis[0] * camMoveSpeed;
+		camera.pos[1] -= camera.vaxis[1] * camMoveSpeed;
+		camera.pos[2] -= camera.vaxis[2] * camMoveSpeed;
 		camera_moved = true;
 	}
 

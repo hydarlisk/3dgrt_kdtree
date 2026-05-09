@@ -65,6 +65,8 @@ unsigned int  g_iKdTree_LeafNode_Count;
 
 extern std::vector<Gaussian> g_gaussians;
 
+std::vector<TriangleList> g_ellipsoidAabbDebug;
+
 #include <iostream>
 #include <fstream>
 
@@ -1136,6 +1138,7 @@ void calcEllipsoidAABB(Gaussian& g, BoundingBox& b) {
 void initEllipsoid(CompositeObject& poly_model) {
 	poly_model.AABB[XMIN] = poly_model.AABB[YMIN] = poly_model.AABB[ZMIN] = FLT_MAX;
 	poly_model.AABB[XMAX] = poly_model.AABB[YMAX] = poly_model.AABB[ZMAX] = -FLT_MAX;
+	g_ellipsoidAabbDebug.resize(g_gaussians.size());
 	for (int i = 0; i < g_gaussians.size(); i++) {
 		calcEllipsoidAABB(g_gaussians[i], g_pEllipsoidInfos[i].AABB);
 		g_pEllipsoidInfos[i].offset = i;
@@ -1145,6 +1148,7 @@ void initEllipsoid(CompositeObject& poly_model) {
 		poly_model.AABB[XMAX] = MyMAX(poly_model.AABB[XMAX], g_pEllipsoidInfos[i].AABB.max[0]);
 		poly_model.AABB[YMAX] = MyMAX(poly_model.AABB[YMAX], g_pEllipsoidInfos[i].AABB.max[1]);
 		poly_model.AABB[ZMAX] = MyMAX(poly_model.AABB[ZMAX], g_pEllipsoidInfos[i].AABB.max[2]);
+		g_ellipsoidAabbDebug[i] = g_pEllipsoidInfos[i];
 	}
 }
 

@@ -7,8 +7,13 @@
 #pragma once
 #include <vector>
 
+#define CAM_MOVE_SPEED 0.05
+#define CAM_ROT_SPEED 0.1
+
 #define JS_BIN false
 #define COMPACT_VERTEX true
+
+#define OCCLUDE_MIN_OPACITY 0
 
 /* Ellipsoid */
 #define TRI 0
@@ -488,6 +493,7 @@ typedef struct _CompositeObject {
 	float AABB[6];	//macro: XMIN, XMAX, YMIN, YMAX, ZMIN, ZMAX
 	ExtendedVertex *extended_vertices;
 	KdTree *kd_tree;
+	std::vector<TriangleList>* ellipsoidAabbDebug;
 } CompositeObject;
 
 //shyun added begin
