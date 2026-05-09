@@ -603,7 +603,7 @@ void clip_ellipsoid(const int ellipsoidSize, const SplitCost& bestCost, Triangle
 		BoundingBox& currBBox = pEllipsoidInfos[gi].AABB;
 		if (currBBox.min[axis] < splitPos && currBBox.max[axis] > splitPos) {
 			if (side == 0) {
-				if (currBBox.max[axis] > splitPos) {
+				if (currBBox.max[axis] >= splitPos) {
 					currBBox.max[axis] = splitPos;
 				}
 			}
@@ -867,56 +867,34 @@ void push_triangles_to_child_vector(const unsigned n_bEdge, const BoundEdge* bEd
 	std::vector<TriangleList>& pLeftTriangles, std::vector<TriangleList>& pRightTriangles,
 	const SplitCost& bestCost)
 {
-	if (KD_TREE_PLANAR_TRIANGLE_ADD_MODE == BOTH_SIDE) {
-		// NlogN (in RTGPU) 방식
-		for (unsigned int i = 0; i < n_bEdge; ++i) {
-			if (!bEdge[i].isPlanar) {
+	// NlogN (in RTGPU) 방식
+	for (unsigned int i = 0; i < n_bEdge; ++i) {
+		if (!bEdge[i].isPlanar) {
 
-				if (bEdge[i].t < bestCost.splitPos && bEdge[i].type == BoundEdge::START)
-					pLeftTriangles.push_back(*(bEdge[i].triangleInfo));
-				else if (bEdge[i].t > bestCost.splitPos && bEdge[i].type == BoundEdge::END)
-					pRightTriangles.push_back(*(bEdge[i].triangleInfo));
+			if (bEdge[i].t < bestCost.splitPos && bEdge[i].type == BoundEdge::START)
+				pLeftTriangles.push_back(*(bEdge[i].triangleInfo));
+			else if (bEdge[i].t > bestCost.splitPos && bEdge[i].type == BoundEdge::END)
+				pRightTriangles.push_back(*(bEdge[i].triangleInfo));
 
-			}
-			else if (bEdge[i].type == BoundEdge::START) {
-
-				if (bEdge[i].t < bestCost.splitPos)
-					pLeftTriangles.push_back(*(bEdge[i].triangleInfo));
-				else if (bEdge[i].t > bestCost.splitPos)
-					pRightTriangles.push_back(*(bEdge[i].triangleInfo));
-				else {
-					pLeftTriangles.push_back(*(bEdge[i].triangleInfo));
-					pRightTriangles.push_back(*(bEdge[i].triangleInfo));
-				}
-
-			}
 		}
-	}
-	else if (KD_TREE_PLANAR_TRIANGLE_ADD_MODE == MINCOST_SIDE) {
-		// 기존 SGRTx2 방식 (상락&혁 방법)
-		for (unsigned int i = 0; i < n_bEdge; ++i) {
-			if (!bEdge[i].isPlanar) {
-
-				if (bEdge[i].t < bestCost.splitPos && bEdge[i].type == BoundEdge::START)
-					pLeftTriangles.push_back(*(bEdge[i].triangleInfo));
-				else if (bEdge[i].t > bestCost.splitPos && bEdge[i].type == BoundEdge::END)
-					pRightTriangles.push_back(*(bEdge[i].triangleInfo));
-
+		else if (bEdge[i].type == BoundEdge::START) {
+			if (bEdge[i].t < bestCost.splitPos)
+				pLeftTriangles.push_back(*(bEdge[i].triangleInfo));
+			else if (bEdge[i].t > bestCost.splitPos)
+				pRightTriangles.push_back(*(bEdge[i].triangleInfo));
+#if KD_TREE_PLANAR_TRIANGLE_ADD_MODE == BOTH_SIDE
+			else {
+				pLeftTriangles.push_back(*(bEdge[i].triangleInfo));
+				pRightTriangles.push_back(*(bEdge[i].triangleInfo));
 			}
-			else if (bEdge[i].type == BoundEdge::START) {
-
-				if (bEdge[i].t < bestCost.splitPos)
+#elif KD_TREE_PLANAR_TRIANGLE_ADD_MODE == MINCOST_SIDE
+			else {
+				if (bestCost.planar_side == BoundEdge::START)
 					pLeftTriangles.push_back(*(bEdge[i].triangleInfo));
-				else if (bEdge[i].t > bestCost.splitPos)
+				else
 					pRightTriangles.push_back(*(bEdge[i].triangleInfo));
-				else {
-					if (bestCost.planar_side == BoundEdge::START)
-						pLeftTriangles.push_back(*(bEdge[i].triangleInfo));
-					else
-						pRightTriangles.push_back(*(bEdge[i].triangleInfo));
-				}
-
 			}
+#endif
 		}
 	}
 }
@@ -959,7 +937,6 @@ void try_to_split(const int axis, BoundingBox &inBBox, const TriangleList *pTria
 	set_bound_edge( axis, pTriangles, n_bEdge, bEdge );
 
 	for (unsigned int i = 0; i < n_bEdge; i++) {
-		// 현재 bEdge[i] 가 자르고자 하는 plane candidate
 		BoundEdge curr_bEdge = bEdge[i];
 
 		//planar는 open과 close에 둘 다 포함됨

@@ -23,7 +23,7 @@
 #define BSPT_DUMP_STATISTICS false
 #define CLIP_BEFORE_BSPT false
 
-#define EPSILON 0.000001f
+#define EPSILON 0.00001f
 
 //shyun added begin
 #define TRAVL_COST 1.0
