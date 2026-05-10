@@ -929,6 +929,48 @@ __device__ void singlePassIntersectRoutineGaussian_sortNode(const cuRay& ray, in
 }
 
 #if PRIMITIVE_TYPE == ELLIPSOID
+__device__ inline void rayTriIntersect(const cuRay& ray, const int id,
+    const float t_near, const float t_far
+    , HitRecord* local_hits, int& local_hit_count) {
+    float t;
+    for (int i = 0; i < 20; i++) {
+        cuWaldTriangleInfo tri;
+#if TRIACC_TEXTURE
+        tri.internal0 = tex1Dfetch<float4>(inTriAccelTex, 3 * (20 * id + i));
+        tri.internal1 = tex1Dfetch<float4>(inTriAccelTex, 3 * (20 * id + i) + 1);
+        tri.internal2 = tex1Dfetch<float4>(inTriAccelTex, 3 * (20 * id + i) + 2);
+#else
+        tri.internal0 = g_d_tri_acc_dev[3 * (20 * id + i)];
+        tri.internal1 = g_d_tri_acc_dev[3 * (20 * id + i) + 1];
+        tri.internal2 = g_d_tri_acc_dev[3 * (20 * id + i) + 2];
+#endif
+        cuWaldTriangleInfo::perm_t p = tri.get_perm(ray);
+        p.pos.x = (tri.n_d() - p.pos.x - tri.n_u() * p.pos.y - tri.n_v() * p.pos.z);
+        const float denum = (p.dir.x + tri.n_u() * p.dir.y + tri.n_v() * p.dir.z);
+        int flag = __float_as_int(tri.internal2.z);
+        if (denum * (float)flag > 0.0f) continue; //뒷면 확인
+
+        t = __fdividef(p.pos.x, denum);
+        if (isnan(t)) continue;
+        if ((t < t_near - EPSILON4) | (t > t_far + EPSILON4)) continue;
+        /**
+        * culling 옵션이 있고, object 가 transparent 하지 않다면
+        * 앞면인지 뒷면인지 체크. 뒷면에 맞은거면 hit 처리 안함.
+        */
+        const float hu = p.pos.y + t * p.dir.y - tri.vert_ku();
+        const float hv = p.pos.z + t * p.dir.z - tri.vert_kv();
+        const float beta = hv * tri.b_nu() + hu * tri.b_nv();
+        const float gamma = hu * tri.c_nu() + hv * tri.c_nv();
+        /** 삼각형의 edge 와 부딪힐때, 수치오차가 있으므로 epsilon 을 좀 준다. */
+        if ((beta < 0.f - BARYCENTRY_EPSILON) | (gamma < 0.f - BARYCENTRY_EPSILON) |
+            ((1.0f - beta - gamma) < 0.0f - BARYCENTRY_EPSILON)) continue;
+        break;
+    }
+
+    local_hits[local_hit_count].t = t;
+    local_hits[local_hit_count].primIndex = id;
+    local_hit_count++;
+}
 //only translate, rotation done
 //no scaling
 __device__ inline float2 ellipsoidIntersect(const float3& pos, const float3& dir, const float3 scale) {
@@ -975,9 +1017,10 @@ __device__ inline void rayPrimIntersect(const cuRay& currRay, const unsigned id
 
     float2 t = ellipsoidIntersect(gposcr, rayDirR, particleScale);
 
-    if (t.x > t_far || t.y < t_near) return;
+    //if (t.y < t_near) return;
+    if (t.x < t_near) return;
     float final_t = t.x;
-    if (t.x < 0) final_t = t.y;
+    //if (t.x < 0) final_t = t.y;
 
     local_hits[local_hit_count].t = final_t;
     local_hits[local_hit_count].primIndex = id;
@@ -1001,6 +1044,7 @@ __device__ inline void rayPrimIntersect(const cuRay& ray, const int id,
     p.pos.x = (tri.n_d() - p.pos.x - tri.n_u() * p.pos.y - tri.n_v() * p.pos.z);
     const float denum = (p.dir.x + tri.n_u() * p.dir.y + tri.n_v() * p.dir.z);
     int flag = __float_as_int(tri.internal2.z);
+    if (denum * (float)flag > 0.0f) return; //뒷면 확인
     
     const float t = __fdividef(p.pos.x, denum);
     if (isnan(t)) return;
@@ -1016,7 +1060,7 @@ __device__ inline void rayPrimIntersect(const cuRay& ray, const int id,
     /** 삼각형의 edge 와 부딪힐때, 수치오차가 있으므로 epsilon 을 좀 준다. */
     if ((beta < 0.f - BARYCENTRY_EPSILON) | (gamma < 0.f - BARYCENTRY_EPSILON) |
         ((1.0f - beta - gamma) < 0.0f - BARYCENTRY_EPSILON)) return;
-    //if (denum * (float)flag > 0.0f) return; //뒷면 확인
+    
 
     local_hits[local_hit_count].t = t;
     local_hits[local_hit_count].primIndex = id;
@@ -1427,7 +1471,8 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
 #else
                 const unsigned primIdx = g_d_tri_offsets_dev[baseOffset];
 #endif
-                rayPrimIntersect(currRay, primIdx, t_near, t_far, local_hits, local_hit_count);
+                //rayPrimIntersect(currRay, primIdx, t_near, t_far, local_hits, local_hit_count); 
+                rayTriIntersect(currRay, primIdx, t_near, t_far, local_hits, local_hit_count);
             }
             if (local_hit_count > 0) {
                 sortHits(local_hits, local_hit_count);
@@ -2308,8 +2353,6 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
         std::cerr << "[CUDA Error] GPU memcpy failed: " << cudaGetErrorString(err) << std::endl;
     }
 
-    // 텍스처 바인딩
-
     // 리소스 디스크립터(Resource Descriptor) 설정
     cudaResourceDesc resDesc;
     memset(&resDesc, 0, sizeof(resDesc));
@@ -2323,36 +2366,29 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
     texDesc.readMode = cudaReadModeElementType;    // 원본 타입 그대로 읽기
     texDesc.normalizedCoords = 0;                  // 정규화되지 않은 좌표 사용
 
-    // 각 버퍼에 대해 텍스처 객체 생성 및 전역 변수에 복사
-    // k-d 트리 노드 텍스처 객체 생성
+    /* kdtree node */
     resDesc.res.linear.devPtr = g_d_kdtree_nodes;
     resDesc.res.linear.desc = cudaCreateChannelDesc<uint2>();
     //resDesc.res.linear.desc = cudaCreateChannelDesc(32, 32, 0, 0, cudaChannelFormatKindUnsigned);
     resDesc.res.linear.sizeInBytes = node_size;
-
-    // 지역 변수(texNode) 대신 호스트 전역 변수(h_inKdTreeNodeTex)에 핸들을 저장
     cudaTextureObject_t h_inKdTreeNodeTex = 0;
     CUDA_CHECK(cudaCreateTextureObject(&h_inKdTreeNodeTex, &resDesc, &texDesc, NULL));
     CUDA_CHECK(cudaMemcpyToSymbol(inKdTreeNodeTex, &h_inKdTreeNodeTex, sizeof(cudaTextureObject_t)));
 
-    // 삼각형 오프셋 텍스처 객체 생성
+    /* triangle offsets */
     resDesc.res.linear.devPtr = g_d_tri_offsets;
     resDesc.res.linear.desc = cudaCreateChannelDesc<unsigned int>();
     resDesc.res.linear.sizeInBytes = offset_size;
     printf("g_d_tri_offsets: %u\n", offset_size);
-
-    // 호스트 전역 변수에 핸들을 저장
     cudaTextureObject_t h_inObjectOffsetListTex = 0;
     CUDA_CHECK(cudaCreateTextureObject(&h_inObjectOffsetListTex, &resDesc, &texDesc, NULL));
     CUDA_CHECK(cudaMemcpyToSymbol(inObjectOffsetListTex, &h_inObjectOffsetListTex, sizeof(cudaTextureObject_t)));
 
+    /* gaussian infos */
 #if GAUSSIAN_TEXTURE
-    // 가우시안 데이터 텍스춰 객체 생성
     resDesc.res.linear.devPtr = g_d_gaussians_persistent;
     resDesc.res.linear.desc = cudaCreateChannelDesc<float4>();
     resDesc.res.linear.sizeInBytes = gaussians_bytes;
-
-    // 호스트 전역 변수에 핸들을 저장
     cudaTextureObject_t h_inGaussianTex = 0;
     CUDA_CHECK(cudaCreateTextureObject(&h_inGaussianTex, &resDesc, &texDesc, NULL));
     CUDA_CHECK(cudaMemcpyToSymbol(inGaussianTex, &h_inGaussianTex, sizeof(cudaTextureObject_t)));
@@ -2361,9 +2397,37 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
     CUDA_CHECK(cudaMemcpyToSymbol(g_d_gaussians, &g_d_gaussians_persistent, sizeof(Gaussian*)));
 #endif
 
-    if (err != cudaSuccess) {
-        std::cerr << "[CUDA Error] texture bind failed: " << cudaGetErrorString(err) << std::endl;
-    }
+    /* tri_acc */
+    cuWaldTriangleInfo* h_waldInfo = nullptr;
+    build_waldInfoList_from_model(&object, h_waldInfo);
+#if !GLOBAL_DEVICE_VAR
+    cuWaldTriangleInfo* g_d_waldInfo = nullptr; // Device-side pointer
+#endif
+    size_t wald_info_size = sizeof(cuWaldTriangleInfo) * object.n_triangles;
+    CUDA_CHECK(cudaMalloc(&g_d_waldInfo, wald_info_size));
+    CUDA_CHECK(cudaMemcpy(g_d_waldInfo, h_waldInfo, wald_info_size, cudaMemcpyHostToDevice));
+
+#if TRIACC_TEXTURE
+    #if WALD_METHOD
+    resDesc.res.linear.devPtr = g_d_waldInfo;
+    resDesc.res.linear.desc = cudaCreateChannelDesc<float4>(); // WaldInfo는 float4 3개로 구성
+    resDesc.res.linear.sizeInBytes = wald_info_size;
+    #else
+    resDesc.res.linear.devPtr = g_d_tri_accel;
+    resDesc.res.linear.desc = cudaCreateChannelDesc<float4>();
+    resDesc.res.linear.sizeInBytes = accel_size;
+    #endif
+    // 호스트 전역 변수에 핸들을 저장
+    cudaTextureObject_t h_inTriAccelTex = 0;
+    CUDA_CHECK(cudaCreateTextureObject(&h_inTriAccelTex, &resDesc, &texDesc, NULL));
+    CUDA_CHECK(cudaMemcpyToSymbol(inTriAccelTex, &h_inTriAccelTex, sizeof(cudaTextureObject_t)));
+#else
+    #if WALD_METHOD
+    CUDA_CHECK(cudaMemcpyToSymbol(g_d_tri_acc_dev, &g_d_waldInfo, sizeof(float4*)));
+    #else
+    CUDA_CHECK(cudaMemcpyToSymbol(g_d_tri_acc_dev, &g_d_tri_accel, sizeof(unsigned int*));
+    #endif
+#endif
 
     // 상수 메모리 설정
     float3 h_bbox_min = make_float3(object.AABB[XMIN], object.AABB[YMIN], object.AABB[ZMIN]);
