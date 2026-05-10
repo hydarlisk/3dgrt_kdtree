@@ -66,6 +66,7 @@ unsigned int  g_iKdTree_LeafNode_Count;
 extern std::vector<Gaussian> g_gaussians;
 
 std::vector<TriangleList> g_ellipsoidAabbDebug;
+std::vector<std::vector<std::vector<TriangleList>>> g_ellipsoidClipAabbDebug;
 
 #include <iostream>
 #include <fstream>
@@ -884,19 +885,17 @@ void push_triangles_to_child_vector(const unsigned n_bEdge, const BoundEdge* bEd
 				pLeftTriangles.push_back(*(bEdge[i].triangleInfo));
 			else if (bEdge[i].t > bestCost.splitPos)
 				pRightTriangles.push_back(*(bEdge[i].triangleInfo));
-#if KD_TREE_PLANAR_TRIANGLE_ADD_MODE == BOTH_SIDE
 			else {
+#if KD_TREE_PLANAR_TRIANGLE_ADD_MODE == BOTH_SIDE
 				pLeftTriangles.push_back(*(bEdge[i].triangleInfo));
 				pRightTriangles.push_back(*(bEdge[i].triangleInfo));
-			}
 #elif KD_TREE_PLANAR_TRIANGLE_ADD_MODE == MINCOST_SIDE
-			else {
 				if (bestCost.planar_side == BoundEdge::START)
 					pLeftTriangles.push_back(*(bEdge[i].triangleInfo));
 				else
 					pRightTriangles.push_back(*(bEdge[i].triangleInfo));
-			}
 #endif
+			}
 		}
 	}
 }
@@ -1390,6 +1389,9 @@ void clipTriangleToAABB(const TriangleList& inputTri, vector<TriangleList>& outp
 
 #if PRIMITIVE_TYPE == ELLIPSOID
 void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pEllipsoidInfos, unsigned int ellipsoidSize, BoundingBox& bbox, unsigned int inNodeLevel, KdTreeNode* inNode){
+	if (inNodeLevel >= g_ellipsoidClipAabbDebug.size()) {
+		g_ellipsoidClipAabbDebug.resize(g_ellipsoidClipAabbDebug.size() + 1);
+	}
 	SplitCost bestCost;
 	g_iKdTree_Level = MyMAX(inNodeLevel, g_iKdTree_Level);
 
@@ -1490,6 +1492,18 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pEllipsoidInf
 
 		clip_ellipsoid(leftEllipsoids.size(), bestCost, pLeftEllipsoids, 0);
 		clip_ellipsoid(rightEllipsoids.size(), bestCost, pRightEllipsoids, 1);
+
+#if DEBUG_ELLIPSOID
+		std::vector<TriangleList> forDebug;
+		for (int i = 0; i < leftEllipsoids.size(); i++) {
+			forDebug.push_back(leftEllipsoids[i]);
+		}
+		for (int i = 0; i < rightEllipsoids.size(); i++) {
+			forDebug.push_back(rightEllipsoids[i]);
+		}
+		if(ellipsoidSize > 0)
+			g_ellipsoidClipAabbDebug[inNodeLevel].push_back(forDebug);
+#endif
 
 		delete[] pEllipsoidInfos;
 

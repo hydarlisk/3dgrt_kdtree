@@ -7,7 +7,7 @@
 #pragma once
 #include <vector>
 
-#define CAM_MOVE_SPEED 0.05
+#define CAM_MOVE_SPEED 0.1
 #define CAM_ROT_SPEED 0.1
 
 #define JS_BIN false
@@ -15,10 +15,13 @@
 
 #define OCCLUDE_MIN_OPACITY 0
 
-/* Ellipsoid */
+
 #define TRI 0
 #define ELLIPSOID 1
 #define PRIMITIVE_TYPE 1
+
+ /* Ellipsoid */
+#define DEBUG_ELLIPSOID 1
 
 /* BSPT */
 #define BSPT false
@@ -32,7 +35,7 @@
 
 //shyun added begin
 #define TRAVL_COST 1.0
-#define ISCET_COST 5.0
+#define ISCET_COST 20.0
 #define MAX_LEVEL 128
 #define EMTPY_BONUS 0.9
 
@@ -243,7 +246,7 @@
 
 #define GLOBAL_DEVICE_VAR true
 #define GAUSSIAN_TEXTURE true
-#define TRIACC_TEXTURE false
+#define TRIACC_TEXTURE true
 
 #define OFFSET_TEXTURE true
 
@@ -494,6 +497,7 @@ typedef struct _CompositeObject {
 	ExtendedVertex *extended_vertices;
 	KdTree *kd_tree;
 	std::vector<TriangleList>* ellipsoidAabbDebug;
+	std::vector<std::vector<std::vector<TriangleList>>>* ellipsoidClipAabbDebug;
 } CompositeObject;
 
 //shyun added begin

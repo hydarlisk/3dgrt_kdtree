@@ -84,6 +84,10 @@ std::vector<Gaussian> g_gaussians;	  // 전역 변수로 가우시안 데이터�
 
 int g_renderMode = 0;	//5: ellipsoid aabb debug
 int g_renderGId = -1;
+#if PRIMITIVE_TYPE == ELLIPSOID
+int g_renderNodeId = -1;
+int g_renderDepth = -1;
+#endif
 
 bool adaptive_mesh = false;
 
@@ -240,6 +244,18 @@ void renderEllipsoidAabb(int gId) {
 	draw_AABB(aabb);
 	renderGaussianMesh(gId);
 }
+
+void renderEllipsoidClipAabb(int depth, int nodeId, int idx) {
+	TriangleList& e = (*uip.poly_model.ellipsoidClipAabbDebug)[depth][nodeId][idx];
+	float aabb[6] = {
+		e.AABB.min[0], e.AABB.max[0],
+		e.AABB.min[1], e.AABB.max[1],
+		e.AABB.min[2], e.AABB.max[2]
+	};
+	draw_AABB(aabb);
+	renderGaussianMesh(e.offset);
+}
+
 
 void renderEllipsoidAabbs() {
 	std::vector<TriangleList>& ellipsoidInfos = *uip.poly_model.ellipsoidAabbDebug;
@@ -411,13 +427,17 @@ void display(void) {
 
 		draw_axes(100.0);
 		if (uip.composite_object_read == 1) {
-			if (g_renderMode == 5) {
-				//ellipsoid aabb debug
-				if(g_renderGId >=0)
-				//renderEllipsoidAabbs();
-				renderEllipsoidAabb(g_renderGId);
-			}
-			else {
+			switch (g_renderMode) {
+			case 5:	//ellipsoid aabb debug
+				if (g_renderGId >= 0)
+					//renderEllipsoidAabbs();
+					renderEllipsoidAabb(g_renderGId);
+				break;
+			case 6:	//ellipsoid clip aabb debug
+				if (g_renderGId >= 0)
+					renderEllipsoidClipAabb(g_renderDepth, g_renderNodeId, g_renderGId);
+				break;
+			default:
 				renderGaussianMeshes();
 			}
 		}
@@ -525,14 +545,54 @@ void keyboard(unsigned char key, int x, int y) {
 			break;
 		case '[':
 			g_renderGId--;
-			if (g_renderGId < 0) g_renderGId = uip.poly_model.ellipsoidAabbDebug->size() - 1;
+			if (g_renderMode == 5)
+				if (g_renderGId < 0) g_renderGId = uip.poly_model.ellipsoidAabbDebug->size() - 1;
+			else if(g_renderMode == 6)
+				if (g_renderNodeId < 0) g_renderNodeId = uip.poly_model.ellipsoidClipAabbDebug[g_renderDepth][g_renderNodeId].size() - 1;
+			printf("render gaussian id: %d\n", g_renderGId);
 			glutPostRedisplay();
 			break;
 		case ']':
 			g_renderGId++;
-			if (g_renderGId > uip.poly_model.ellipsoidAabbDebug->size() - 1) g_renderGId = 0;
+			if(g_renderMode == 5)
+				if (g_renderGId > uip.poly_model.ellipsoidAabbDebug->size() - 1) g_renderGId = 0;
+			else if(g_renderMode == 6)
+				if (g_renderNodeId > uip.poly_model.ellipsoidClipAabbDebug[g_renderDepth][g_renderNodeId].size() - 1) g_renderNodeId = 0;
+			printf("render gaussian id: %d\n", g_renderGId);
 			glutPostRedisplay();
 			break;
+#if PRIMITIVE_TYPE == ELLIPSOID
+		case ';':
+			g_renderNodeId--;
+			g_renderGId = 0;
+			if (g_renderNodeId < 0) g_renderNodeId = uip.poly_model.ellipsoidClipAabbDebug[g_renderDepth].size() - 1;
+			printf("render node id: %d\n", g_renderNodeId);
+			glutPostRedisplay();
+			break;
+		case '\'':
+			g_renderNodeId++;
+			g_renderGId = 0;
+			if (g_renderNodeId > uip.poly_model.ellipsoidClipAabbDebug[g_renderDepth].size() - 1) g_renderNodeId = 0;
+			printf("render node id: %d\n", g_renderNodeId);
+			glutPostRedisplay();
+			break;
+		case ':':
+			g_renderDepth--;
+			g_renderNodeId = 0;
+			g_renderGId = 0;
+			if (g_renderDepth < 0) g_renderDepth = uip.poly_model.ellipsoidClipAabbDebug->size() - 1;
+			printf("render depth: %d\n", g_renderDepth);
+			glutPostRedisplay();
+			break;
+		case '"':
+			g_renderDepth--;
+			g_renderNodeId = 0;
+			g_renderGId = 0;
+			if (g_renderDepth > uip.poly_model.ellipsoidClipAabbDebug->size() - 1) g_renderDepth = 0;
+			printf("render depth: %d\n", g_renderDepth);
+			glutPostRedisplay();
+			break;
+#endif
 #if LEAF_NODE_DEBUG
 		case 'm':
 			if (largest_leaf_index == -1) {
@@ -2942,11 +3002,15 @@ void subMenuHandler(int value) {
 
 void subDebugMenuHandler(int value) {
 	switch (value) {
-	case 903:
-		//debug ellipsoid aabb
+	case 903:	//debug ellipsoid aabb
 		g_renderMode = 5;
 		g_renderGId = 1;
 		break;
+	case 904:	//debug ellipsoid clip aabb
+		g_renderMode = 6;
+		g_renderDepth = 5;
+		g_renderNodeId = 0;
+		g_renderGId = 1;
 	}
 	
 
@@ -3164,6 +3228,7 @@ void register_callbacks_and_create_menu(void) {
 
 	int subDebugMenu = glutCreateMenu(subDebugMenuHandler);
 	glutAddMenuEntry("debug ellipsoid aabb", 903);
+	glutAddMenuEntry("debug ellipsoid clip aabb", 904);
 
 	uip.main_menu_ID = glutCreateMenu(main_menu_action);
 	glutAddMenuEntry("ChangeMode", 0);
