@@ -3327,41 +3327,47 @@ void show_greetings(void) {
 }
 
 void idle() {
+	static int prevTime = 0;
+	int currentTime = glutGet(GLUT_ELAPSED_TIME);
+	float deltaTime = (currentTime - prevTime) / 1000.0f;
+	prevTime = currentTime;
+
+	float adjustedSpeed = camMoveSpeed * deltaTime;
 	bool camera_moved = false;
 	if (is_w_pressed) { // 전진 (카메라 앞 방향)
-		camera.pos[0] -= camera.naxis[0] * camMoveSpeed;
-		camera.pos[1] -= camera.naxis[1] * camMoveSpeed;
-		camera.pos[2] -= camera.naxis[2] * camMoveSpeed;
+		camera.pos[0] -= camera.naxis[0] * adjustedSpeed;
+		camera.pos[1] -= camera.naxis[1] * adjustedSpeed;
+		camera.pos[2] -= camera.naxis[2] * adjustedSpeed;
 		camera_moved = true;
 	}
 	if (is_s_pressed) { // 후진 (카메라 뒤 방향)
-		camera.pos[0] += camera.naxis[0] * camMoveSpeed;
-		camera.pos[1] += camera.naxis[1] * camMoveSpeed;
-		camera.pos[2] += camera.naxis[2] * camMoveSpeed;
+		camera.pos[0] += camera.naxis[0] * adjustedSpeed;
+		camera.pos[1] += camera.naxis[1] * adjustedSpeed;
+		camera.pos[2] += camera.naxis[2] * adjustedSpeed;
 		camera_moved = true;
 	}
 	if (is_a_pressed) { // 왼쪽 (카메라 왼쪽 방향)
-		camera.pos[0] -= camera.uaxis[0] * camMoveSpeed;
-		camera.pos[1] -= camera.uaxis[1] * camMoveSpeed;
-		camera.pos[2] -= camera.uaxis[2] * camMoveSpeed;
+		camera.pos[0] -= camera.uaxis[0] * adjustedSpeed;
+		camera.pos[1] -= camera.uaxis[1] * adjustedSpeed;
+		camera.pos[2] -= camera.uaxis[2] * adjustedSpeed;
 		camera_moved = true;
 	}
 	if (is_d_pressed) { // 오른쪽 (카메라 오른쪽 방향)
-		camera.pos[0] += camera.uaxis[0] * camMoveSpeed;
-		camera.pos[1] += camera.uaxis[1] * camMoveSpeed;
-		camera.pos[2] += camera.uaxis[2] * camMoveSpeed;
+		camera.pos[0] += camera.uaxis[0] * adjustedSpeed;
+		camera.pos[1] += camera.uaxis[1] * adjustedSpeed;
+		camera.pos[2] += camera.uaxis[2] * adjustedSpeed;
 		camera_moved = true;
 	}
 	if (is_q_pressed) {
-		camera.pos[0] += camera.vaxis[0] * camMoveSpeed;
-		camera.pos[1] += camera.vaxis[1] * camMoveSpeed;
-		camera.pos[2] += camera.vaxis[2] * camMoveSpeed;
+		camera.pos[0] += camera.vaxis[0] * adjustedSpeed;
+		camera.pos[1] += camera.vaxis[1] * adjustedSpeed;
+		camera.pos[2] += camera.vaxis[2] * adjustedSpeed;
 		camera_moved = true;
 	}
 	if (is_e_pressed) {
-		camera.pos[0] -= camera.vaxis[0] * camMoveSpeed;
-		camera.pos[1] -= camera.vaxis[1] * camMoveSpeed;
-		camera.pos[2] -= camera.vaxis[2] * camMoveSpeed;
+		camera.pos[0] -= camera.vaxis[0] * adjustedSpeed;
+		camera.pos[1] -= camera.vaxis[1] * adjustedSpeed;
+		camera.pos[2] -= camera.vaxis[2] * adjustedSpeed;
 		camera_moved = true;
 	}
 
