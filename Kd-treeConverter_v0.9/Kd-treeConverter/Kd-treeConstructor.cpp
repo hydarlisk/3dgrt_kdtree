@@ -614,73 +614,73 @@ void clip_ellipsoid(const int ellipsoidSize, const SplitCost& bestCost, Triangle
 					currBBox.min[axis] = splitPos;
 				}
 			}
-		}
 
-		//tight clipping
+			//tight clipping
 		//1. calc covariance
-		auto& g = g_gaussians[pEllipsoidInfos[gi].offset];
-		float R[3][3];
-		quaternionWXYZToMatrixTransform(g.rot, R);
-		float s0 = g.scale[0];
-		float s1 = g.scale[1];
-		float s2 = g.scale[2];
+			auto& g = g_gaussians[pEllipsoidInfos[gi].offset];
+			float R[3][3];
+			quaternionWXYZToMatrixTransform(g.rot, R);
+			float s0 = g.scale[0];
+			float s1 = g.scale[1];
+			float s2 = g.scale[2];
 
-		float M[3][3];
-		for (int i = 0; i < 3; i++) {
-			M[i][0] = R[i][0] * s0;
-			M[i][1] = R[i][1] * s1;
-			M[i][2] = R[i][2] * s2;
+			float M[3][3];
+			for (int i = 0; i < 3; i++) {
+				M[i][0] = R[i][0] * s0;
+				M[i][1] = R[i][1] * s1;
+				M[i][2] = R[i][2] * s2;
+			}
+
+			float cov[3][3];
+			cov[0][0] = M[0][0] * M[0][0] + M[0][1] * M[0][1] + M[0][2] * M[0][2];
+			cov[1][1] = M[1][0] * M[1][0] + M[1][1] * M[1][1] + M[1][2] * M[1][2];
+			cov[2][2] = M[2][0] * M[2][0] + M[2][1] * M[2][1] + M[2][2] * M[2][2];
+			cov[0][1] = M[0][0] * M[1][0] + M[0][1] * M[1][1] + M[0][2] * M[1][2];
+			cov[0][2] = M[0][0] * M[2][0] + M[0][1] * M[2][1] + M[0][2] * M[2][2];
+			cov[1][2] = M[1][0] * M[2][0] + M[1][1] * M[2][1] + M[1][2] * M[2][2];
+			cov[1][0] = cov[0][1];
+			cov[2][0] = cov[0][2];
+			cov[2][1] = cov[1][2];
+
+			//2. schur complement
+			float e[3];
+			e[0] = max(EPSILON, sqrt(cov[0][0]));
+			e[1] = max(EPSILON, sqrt(cov[1][1]));
+			e[2] = max(EPSILON, sqrt(cov[2][2]));
+
+			int i = axis;
+			int j = (axis + 1) % 3;
+			int k = (axis + 2) % 3;
+
+			//z축 극점
+			float jMax = g.pos[i] + cov[i][j] / e[j];
+			float jMin = g.pos[i] - cov[i][j] / e[j];
+			float kMax = g.pos[i] + cov[i][k] / e[k];
+			float kMin = g.pos[i] - cov[i][k] / e[k];
+
+			float invSii = 1.0f / max(cov[i][i], 1e-5f);
+			float di = splitPos - g.pos[i];
+
+			float jMu = g.pos[j] + cov[i][j] * invSii * di;
+			float kMu = g.pos[k] + cov[i][k] * invSii * di;
+
+			float Sjj_cut = max(0.0f, cov[j][j] - (cov[i][j] * cov[i][j]) * invSii);
+			float Skk_cut = max(0.0f, cov[k][k] - (cov[i][k] * cov[i][k]) * invSii);
+
+			float eJ_cut = sqrt(Sjj_cut);
+			float eK_cut = sqrt(Skk_cut);
+			float sign = side ? 1.0f : -1.0f;
+
+			bool condJMax = (jMax * sign >= splitPos * sign);
+			bool condJMin = (jMin * sign >= splitPos * sign);
+			currBBox.max[j] = condJMax ? (g.pos[j] + e[j]) : (jMu + eJ_cut);
+			currBBox.min[j] = condJMin ? (g.pos[j] - e[j]) : (jMu - eJ_cut);
+
+			bool condKMax = (kMax * sign >= splitPos * sign);
+			bool condKMin = (kMin * sign >= splitPos * sign);
+			currBBox.max[k] = condKMax ? (g.pos[k] + e[k]) : (kMu + eK_cut);
+			currBBox.min[k] = condKMin ? (g.pos[k] - e[k]) : (kMu - eK_cut);
 		}
-
-		float cov[3][3];
-		cov[0][0] = M[0][0] * M[0][0] + M[0][1] * M[0][1] + M[0][2] * M[0][2];
-		cov[1][1] = M[1][0] * M[1][0] + M[1][1] * M[1][1] + M[1][2] * M[1][2];
-		cov[2][2] = M[2][0] * M[2][0] + M[2][1] * M[2][1] + M[2][2] * M[2][2];
-		cov[0][1] = M[0][0] * M[1][0] + M[0][1] * M[1][1] + M[0][2] * M[1][2];
-		cov[0][2] = M[0][0] * M[2][0] + M[0][1] * M[2][1] + M[0][2] * M[2][2];
-		cov[1][2] = M[1][0] * M[2][0] + M[1][1] * M[2][1] + M[1][2] * M[2][2];
-		cov[1][0] = cov[0][1];
-		cov[2][0] = cov[0][2];
-		cov[2][1] = cov[1][2];
-
-		//2. schur complement
-		float e[3];
-		e[0] = max(EPSILON, sqrt(cov[0][0]));
-		e[1] = max(EPSILON, sqrt(cov[1][1]));
-		e[2] = max(EPSILON, sqrt(cov[2][2]));
-
-		int i = axis;
-		int j = (axis + 1) % 3;
-		int k = (axis + 2) % 3;
-
-		//z축 극점
-		float jMax = g.pos[i] + cov[i][j] / e[j];
-		float jMin = g.pos[i] - cov[i][j] / e[j];
-		float kMax = g.pos[i] + cov[i][k] / e[k];
-		float kMin = g.pos[i] - cov[i][k] / e[k];
-
-		float invSii = 1.0f / max(cov[i][i], 1e-8f);
-		float di = splitPos - g.pos[i];
-
-		float jMu = g.pos[j] + cov[i][j] * invSii * di;
-		float kMu = g.pos[k] + cov[i][k] * invSii * di;
-
-		float Sjj_cut = max(0.0f, cov[j][j] - (cov[i][j] * cov[i][j]) * invSii);
-		float Skk_cut = max(0.0f, cov[k][k] - (cov[i][k] * cov[i][k]) * invSii);
-
-		float eJ_cut = sqrt(Sjj_cut);
-		float eK_cut = sqrt(Skk_cut);
-		float sign = side ? 1.0f : -1.0f;
-
-		bool condJMax = (jMax * sign >= splitPos * sign);
-		bool condJMin = (jMin * sign >= splitPos * sign);
-		currBBox.max[j] = condJMax ? (g.pos[j] + e[j]) : (jMu + eJ_cut);
-		currBBox.min[j] = condJMin ? (g.pos[j] - e[j]) : (jMu - eJ_cut);
-
-		bool condKMax = (kMax * sign >= splitPos * sign);
-		bool condKMin = (kMin * sign >= splitPos * sign);
-		currBBox.max[k] = condKMax ? (g.pos[k] + e[k]) : (kMu + eK_cut);
-		currBBox.min[k] = condKMin ? (g.pos[k] - e[k]) : (kMu - eK_cut);
 	}
 }
 
