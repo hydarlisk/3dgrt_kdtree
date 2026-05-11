@@ -71,8 +71,8 @@ bool is_s_pressed = false;
 bool is_d_pressed = false;
 bool is_q_pressed = false;
 bool is_e_pressed = false;
-const float camMoveSpeed = CAM_MOVE_SPEED; // 이동 속도 (조정 가능)
-const float camRotSpeed = CAM_ROT_SPEED;  // 마우스 회전 감도
+float camMoveSpeed = CAM_MOVE_SPEED; // 이동 속도 (조정 가능)
+float camRotSpeed = CAM_ROT_SPEED;  // 마우스 회전 감도
 
 bool render_gaussian = false;
 int g_render_width = MAIN_WINDOW_WIDTH;
@@ -246,14 +246,33 @@ void renderEllipsoidAabb(int gId) {
 }
 
 void renderEllipsoidClipAabb(int depth, int nodeId, int idx) {
+	static int prevDepth = -1;
+	static int prevNodeId = -1;
+	static int prevIdx = -1;
+	static std::vector<TriangleList*> renderAabb;
 	TriangleList& e = (*uip.poly_model.ellipsoidClipAabbDebug)[depth][nodeId][idx];
-	float aabb[6] = {
-		e.AABB.min[0], e.AABB.max[0],
-		e.AABB.min[1], e.AABB.max[1],
-		e.AABB.min[2], e.AABB.max[2]
-	};
-	draw_AABB(aabb);
-	renderGaussianMesh(e.offset);
+	if (depth != prevDepth || nodeId != prevNodeId || idx != prevIdx) {
+		renderAabb.clear();
+		prevIdx = idx;
+		//int gOffset = e.offset;
+		for (int i = 0; i < (*uip.poly_model.ellipsoidClipAabbDebug)[depth].size(); i++) {
+			for (int j = 0; j < (*uip.poly_model.ellipsoidClipAabbDebug)[depth][i].size(); j++) {
+				if ((*uip.poly_model.ellipsoidClipAabbDebug)[depth][i][j].offset == idx) {
+					renderAabb.push_back(&(*uip.poly_model.ellipsoidClipAabbDebug)[depth][i][j]);
+				}
+			}
+		}
+	}
+	int i = 0;
+	for (auto& g : renderAabb) {
+		float aabb[6] = {
+			g->AABB.min[0], g->AABB.max[0],
+			g->AABB.min[1], g->AABB.max[1],
+			g->AABB.min[2], g->AABB.max[2]
+		};
+		draw_AABB(aabb, i++);
+		renderGaussianMesh(g->offset);
+	}
 }
 
 
@@ -433,10 +452,12 @@ void display(void) {
 					//renderEllipsoidAabbs();
 					renderEllipsoidAabb(g_renderGId);
 				break;
+#if PRIMITIVE_TYPE == ELLIPSOID
 			case 6:	//ellipsoid clip aabb debug
 				if (g_renderGId >= 0)
 					renderEllipsoidClipAabb(g_renderDepth, g_renderNodeId, g_renderGId);
 				break;
+#endif
 			default:
 				renderGaussianMeshes();
 			}
@@ -491,6 +512,13 @@ void keyboard(unsigned char key, int x, int y) {
 			break;
 		case 'e':
 			is_e_pressed = true;
+			break;
+		case '.':
+			if(camMoveSpeed > CAM_MOVE_SHIFT)
+				camMoveSpeed -= CAM_MOVE_SHIFT;
+			break;
+		case '/':
+			camMoveSpeed += CAM_MOVE_SHIFT;
 			break;
 
 		case 'b':
@@ -547,8 +575,10 @@ void keyboard(unsigned char key, int x, int y) {
 			g_renderGId--;
 			if (g_renderMode == 5)
 				if (g_renderGId < 0) g_renderGId = uip.poly_model.ellipsoidAabbDebug->size() - 1;
+#if PRIMITIVE_TYPE == ELLIPSOID
 			else if(g_renderMode == 6)
-				if (g_renderNodeId < 0) g_renderNodeId = uip.poly_model.ellipsoidClipAabbDebug[g_renderDepth][g_renderNodeId].size() - 1;
+				if (g_renderNodeId < 0) g_renderNodeId = (*uip.poly_model.ellipsoidClipAabbDebug)[g_renderDepth][g_renderNodeId].size() - 1;
+#endif
 			printf("render gaussian id: %d\n", g_renderGId);
 			glutPostRedisplay();
 			break;
@@ -556,8 +586,10 @@ void keyboard(unsigned char key, int x, int y) {
 			g_renderGId++;
 			if(g_renderMode == 5)
 				if (g_renderGId > uip.poly_model.ellipsoidAabbDebug->size() - 1) g_renderGId = 0;
+#if PRIMITIVE_TYPE == ELLIPSOID
 			else if(g_renderMode == 6)
-				if (g_renderNodeId > uip.poly_model.ellipsoidClipAabbDebug[g_renderDepth][g_renderNodeId].size() - 1) g_renderNodeId = 0;
+				if (g_renderNodeId > (*uip.poly_model.ellipsoidClipAabbDebug)[g_renderDepth][g_renderNodeId].size() - 1) g_renderNodeId = 0;
+#endif
 			printf("render gaussian id: %d\n", g_renderGId);
 			glutPostRedisplay();
 			break;
@@ -565,14 +597,14 @@ void keyboard(unsigned char key, int x, int y) {
 		case ';':
 			g_renderNodeId--;
 			g_renderGId = 0;
-			if (g_renderNodeId < 0) g_renderNodeId = uip.poly_model.ellipsoidClipAabbDebug[g_renderDepth].size() - 1;
+			if (g_renderNodeId < 0) g_renderNodeId = (*uip.poly_model.ellipsoidClipAabbDebug)[g_renderDepth].size() - 1;
 			printf("render node id: %d\n", g_renderNodeId);
 			glutPostRedisplay();
 			break;
 		case '\'':
 			g_renderNodeId++;
 			g_renderGId = 0;
-			if (g_renderNodeId > uip.poly_model.ellipsoidClipAabbDebug[g_renderDepth].size() - 1) g_renderNodeId = 0;
+			if (g_renderNodeId > (*uip.poly_model.ellipsoidClipAabbDebug)[g_renderDepth].size() - 1) g_renderNodeId = 0;
 			printf("render node id: %d\n", g_renderNodeId);
 			glutPostRedisplay();
 			break;
@@ -580,15 +612,15 @@ void keyboard(unsigned char key, int x, int y) {
 			g_renderDepth--;
 			g_renderNodeId = 0;
 			g_renderGId = 0;
-			if (g_renderDepth < 0) g_renderDepth = uip.poly_model.ellipsoidClipAabbDebug->size() - 1;
+			if (g_renderDepth < 0) g_renderDepth = (*uip.poly_model.ellipsoidClipAabbDebug).size() - 1;
 			printf("render depth: %d\n", g_renderDepth);
 			glutPostRedisplay();
 			break;
 		case '"':
-			g_renderDepth--;
+			g_renderDepth++;
 			g_renderNodeId = 0;
 			g_renderGId = 0;
-			if (g_renderDepth > uip.poly_model.ellipsoidClipAabbDebug->size() - 1) g_renderDepth = 0;
+			if (g_renderDepth > (*uip.poly_model.ellipsoidClipAabbDebug).size() - 1) g_renderDepth = 0;
 			printf("render depth: %d\n", g_renderDepth);
 			glutPostRedisplay();
 			break;
@@ -3002,6 +3034,7 @@ void subMenuHandler(int value) {
 
 void subDebugMenuHandler(int value) {
 	switch (value) {
+#if PRIMITIVE_TYPE == ELLIPSOID
 	case 903:	//debug ellipsoid aabb
 		g_renderMode = 5;
 		g_renderGId = 1;
@@ -3011,6 +3044,7 @@ void subDebugMenuHandler(int value) {
 		g_renderDepth = 5;
 		g_renderNodeId = 0;
 		g_renderGId = 1;
+#endif
 	}
 	
 

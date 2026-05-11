@@ -76,7 +76,30 @@ void initialize_camera(Camera *cam) {
 		 glEnable(GL_LIGHTING);
 }
 
-void draw_AABB(GLfloat *AABB) {	 
+float debug_colors[20][3] = {
+(1.0f, 0.0f, 0.0f),    // 0: Red
+(0.0f, 1.0f, 0.0f),    // 1: Green
+(0.0f, 0.0f, 1.0f),    // 2: Blue
+(1.0f, 1.0f, 0.0f),    // 3: Yellow
+(1.0f, 0.0f, 1.0f),    // 4: Magenta
+(0.0f, 1.0f, 1.0f),    // 5: Cyan
+(1.0f, 0.5f, 0.0f),    // 6: Orange
+(0.5f, 0.0f, 1.0f),    // 7: Purple
+(0.0f, 1.0f, 0.5f),    // 8: Spring Green
+(1.0f, 0.0f, 0.5f),    // 9: Rose
+(0.5f, 1.0f, 0.0f),    // 10: Chartreuse
+(0.0f, 0.5f, 1.0f),    // 11: Azure
+(0.6f, 0.3f, 0.0f),    // 12: Brown
+(0.3f, 0.6f, 0.0f),    // 13: Olive
+(0.0f, 0.6f, 0.3f),    // 14: Teal
+(0.3f, 0.0f, 0.6f),    // 15: Indigo
+(1.0f, 0.75f, 0.8f),   // 16: Pink
+(0.75f, 1.0f, 0.75f),  // 17: Light Green
+(0.75f, 0.75f, 1.0f),  // 18: Light Blue
+(0.5f, 0.5f, 0.5f)     // 19: Gray
+};
+
+void draw_AABB(GLfloat *AABB, int idx) {	 
 	
 	GLboolean lighting_enabled;
 
@@ -87,7 +110,14 @@ void draw_AABB(GLfloat *AABB) {
 
 	glLineWidth(2.0);
 
-	glColor3f(0.0, 1.0, 0.0);
+	if(idx == -1)
+		glColor3f(0.0, 1.0, 0.0);
+	else {
+		float r = debug_colors[idx % 20][0];
+		float g = debug_colors[idx % 20][1];
+		float b = debug_colors[idx % 20][2];
+		glColor3f(r, g, b);
+	}
 	glBegin(GL_LINE_LOOP);
 	glVertex3f(AABB[XMIN], AABB[YMIN], AABB[ZMIN]);
 	glVertex3f(AABB[XMAX], AABB[YMIN], AABB[ZMIN]);

@@ -7,8 +7,9 @@
 #pragma once
 #include <vector>
 
-#define CAM_MOVE_SPEED 0.1
+#define CAM_MOVE_SPEED 0.3
 #define CAM_ROT_SPEED 0.1
+#define CAM_MOVE_SHIFT 0.01
 
 #define JS_BIN false
 #define COMPACT_VERTEX true

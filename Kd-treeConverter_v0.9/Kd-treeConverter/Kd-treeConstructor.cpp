@@ -597,6 +597,18 @@ void quaternionWXYZToMatrix(const float* q, float(&R)[3][3]) {
 	R[2][2] = 1.0f - 2.0f * (x * x + y * y);
 }
 
+inline float calculateKernelScale(float density, float kernelMinResponse, uint32_t opts = 0, float kernelDegree = 4) {
+	const float responseModulation = (opts & 1 /* MOGRenderAdaptiveKernelClamping */) ? density : 1.0f;
+	const float minResponse = std::min(kernelMinResponse / responseModulation, 0.97f);
+	
+	const float b = kernelDegree;
+	const float a = -4.5f / std::pow(3.0f, b);
+
+	// 3. e^{a * r^b} = minResponse 를 만족하는 r(반지름) 계산
+	// r = (ln(minResponse) / a)^(1/b)
+	return std::pow(std::log(minResponse) / a, 1.0f / b);
+}
+
 void clip_ellipsoid(const int ellipsoidSize, const SplitCost& bestCost, TriangleList* pEllipsoidInfos, int side) {
 	int axis = bestCost.axis;
 	float splitPos = bestCost.splitPos;
@@ -616,7 +628,7 @@ void clip_ellipsoid(const int ellipsoidSize, const SplitCost& bestCost, Triangle
 				}
 			}
 
-			//tight clipping
+		//tight clipping
 		//1. calc covariance
 			auto& g = g_gaussians[pEllipsoidInfos[gi].offset];
 			float R[3][3];
@@ -1088,23 +1100,8 @@ void try_to_split(const int axis, BoundingBox &inBBox, const TriangleList *pTria
 }
 
 #if PRIMITIVE_TYPE == ELLIPSOID
-inline float calculateKernelScale(float density, float kernelMinResponse, uint32_t opts = 1, float kernelDegree = 4) {
-	const float responseModulation = (opts & 1 /* MOGRenderAdaptiveKernelClamping */) ? density : 1.0f;
-	const float minResponse = std::min(kernelMinResponse / responseModulation, 0.97f);
-
-	const float b = kernelDegree;
-	const float a = -4.5f / std::pow(3.0f, b);
-
-	// 3. e^{a * r^b} = minResponse 를 만족하는 r(반지름) 계산
-	// r = (ln(minResponse) / a)^(1/b)
-	return std::pow(std::log(minResponse) / a, 1.0f / b);
-
-}
-
 //TODO: calc more accurate aabb
 void calcEllipsoidAABB(Gaussian& g, BoundingBox& b) {
-	float k_scale = calculateKernelScale(g.opacity, KERNEL_MIN_RESPONSE);
-
 	float r = g.rot[0];
 	float x = g.rot[1];
 	float y = g.rot[2];
@@ -1121,6 +1118,7 @@ void calcEllipsoidAABB(Gaussian& g, BoundingBox& b) {
 	float sigma_yy = (R[1][0] * s0) * (R[1][0] * s0) + (R[1][1] * s1) * (R[1][1] * s1) + (R[1][2] * s2) * (R[1][2] * s2);
 	float sigma_zz = (R[2][0] * s0) * (R[2][0] * s0) + (R[2][1] * s1) * (R[2][1] * s1) + (R[2][2] * s2) * (R[2][2] * s2);
 
+	float k_scale = calculateKernelScale(g.opacity, KERNEL_MIN_RESPONSE);
 	float half_x = k_scale * std::sqrt(sigma_xx);
 	float half_y = k_scale * std::sqrt(sigma_yy);
 	float half_z = k_scale * std::sqrt(sigma_zz);
@@ -1389,9 +1387,6 @@ void clipTriangleToAABB(const TriangleList& inputTri, vector<TriangleList>& outp
 
 #if PRIMITIVE_TYPE == ELLIPSOID
 void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pEllipsoidInfos, unsigned int ellipsoidSize, BoundingBox& bbox, unsigned int inNodeLevel, KdTreeNode* inNode){
-	if (inNodeLevel >= g_ellipsoidClipAabbDebug.size()) {
-		g_ellipsoidClipAabbDebug.resize(g_ellipsoidClipAabbDebug.size() + 1);
-	}
 	SplitCost bestCost;
 	g_iKdTree_Level = MyMAX(inNodeLevel, g_iKdTree_Level);
 
@@ -1494,15 +1489,19 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pEllipsoidInf
 		clip_ellipsoid(rightEllipsoids.size(), bestCost, pRightEllipsoids, 1);
 
 #if DEBUG_ELLIPSOID
-		std::vector<TriangleList> forDebug;
-		for (int i = 0; i < leftEllipsoids.size(); i++) {
-			forDebug.push_back(leftEllipsoids[i]);
-		}
-		for (int i = 0; i < rightEllipsoids.size(); i++) {
-			forDebug.push_back(rightEllipsoids[i]);
-		}
-		if(ellipsoidSize > 0)
+		if (ellipsoidSize > 0) {
+			if (inNodeLevel >= g_ellipsoidClipAabbDebug.size()) {
+				g_ellipsoidClipAabbDebug.resize(g_ellipsoidClipAabbDebug.size() + 1);
+			}
+			std::vector<TriangleList> forDebug;
+			for (int i = 0; i < leftEllipsoids.size(); i++) {
+				forDebug.push_back(leftEllipsoids[i]);
+			}
+			for (int i = 0; i < rightEllipsoids.size(); i++) {
+				forDebug.push_back(rightEllipsoids[i]);
+			}
 			g_ellipsoidClipAabbDebug[inNodeLevel].push_back(forDebug);
+		}
 #endif
 
 		delete[] pEllipsoidInfos;

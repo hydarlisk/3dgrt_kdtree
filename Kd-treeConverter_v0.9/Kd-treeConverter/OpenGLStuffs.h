@@ -30,7 +30,7 @@ typedef struct _cam {
 void set_rotate_mat(Camera *); 
 void initialize_camera(Camera *);
 void draw_axes(GLfloat);
-void draw_AABB(GLfloat *);
+void draw_AABB(GLfloat *, int idx = -1);
 void set_OpenGL_material(GLenum, GLfloat, GLfloat, GLfloat, 
 						 GLfloat, GLfloat, GLfloat, GLfloat, GLfloat, GLfloat, GLfloat);
 void set_parallel_OpenGL_head_light_color(void);
