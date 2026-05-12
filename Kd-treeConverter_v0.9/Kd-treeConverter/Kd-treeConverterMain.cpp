@@ -3157,7 +3157,7 @@ void main_menu_action(int selection) {
 			//printf("tri_accel_list size: %d\n", sizeof(uip.poly_model.kd_tree->tri_accel_list) / sizeof(*(uip.poly_model.kd_tree->tri_accel_list)));
 		}
 		print_current_time("kdtree build end");
-		//printKdTreeLeafNodeInfo();
+		printKdTreeLeafNodeInfo();
 #if LEAF_NODE_DEBUG
 		leaf_nodes = extract_all_leaf_data(&uip.poly_model, largest_leaf_index);
 #endif

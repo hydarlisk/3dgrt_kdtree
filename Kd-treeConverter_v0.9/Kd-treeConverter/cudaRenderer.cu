@@ -1018,7 +1018,7 @@ __device__ inline void rayPrimIntersect(const cuRay& currRay, const unsigned id
     float2 t = ellipsoidIntersect(gposcr, rayDirR, particleScale);
 
     //if (t.y < t_near) return;
-    if (t.x < t_near) return;
+    //if (t.x < t_near) return;
     float final_t = t.x;
     //if (t.x < 0) final_t = t.y;
 
@@ -1471,8 +1471,8 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
 #else
                 const unsigned primIdx = g_d_tri_offsets_dev[baseOffset];
 #endif
-                //rayPrimIntersect(currRay, primIdx, t_near, t_far, local_hits, local_hit_count); 
-                rayTriIntersect(currRay, primIdx, t_near, t_far, local_hits, local_hit_count);
+                rayPrimIntersect(currRay, primIdx, t_near, t_far, local_hits, local_hit_count); 
+                //rayTriIntersect(currRay, primIdx, t_near, t_far, local_hits, local_hit_count);
             }
             if (local_hit_count > 0) {
                 sortHits(local_hits, local_hit_count);

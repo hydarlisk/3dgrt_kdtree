@@ -14,7 +14,7 @@
 #define JS_BIN false
 #define COMPACT_VERTEX true
 
-#define OCCLUDE_MIN_OPACITY 0
+#define OCCLUDE_MIN_OPACITY 1
 
 
 #define TRI 0

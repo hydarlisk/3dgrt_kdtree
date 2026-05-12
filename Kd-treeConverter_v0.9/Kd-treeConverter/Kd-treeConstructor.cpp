@@ -1140,29 +1140,42 @@ void calcEllipsoidAABB(Gaussian& g, BoundingBox& b) {
 }
 
 //calculate ellipsoid aabb and update scene aabb
-void initEllipsoid(CompositeObject& poly_model) {
+uint32_t initEllipsoid(CompositeObject& poly_model) {
 	poly_model.AABB[XMIN] = poly_model.AABB[YMIN] = poly_model.AABB[ZMIN] = FLT_MAX;
 	poly_model.AABB[XMAX] = poly_model.AABB[YMAX] = poly_model.AABB[ZMAX] = -FLT_MAX;
 	g_ellipsoidAabbDebug.resize(g_gaussians.size());
+	uint32_t validEllipsoid = 0;
 	for (int i = 0; i < g_gaussians.size(); i++) {
-		calcEllipsoidAABB(g_gaussians[i], g_pEllipsoidInfos[i].AABB);
-		g_pEllipsoidInfos[i].offset = i;
-		poly_model.AABB[XMIN] = MyMIN(poly_model.AABB[XMIN], g_pEllipsoidInfos[i].AABB.min[0]);
-		poly_model.AABB[YMIN] = MyMIN(poly_model.AABB[YMIN], g_pEllipsoidInfos[i].AABB.min[1]);
-		poly_model.AABB[ZMIN] = MyMIN(poly_model.AABB[ZMIN], g_pEllipsoidInfos[i].AABB.min[2]);
-		poly_model.AABB[XMAX] = MyMAX(poly_model.AABB[XMAX], g_pEllipsoidInfos[i].AABB.max[0]);
-		poly_model.AABB[YMAX] = MyMAX(poly_model.AABB[YMAX], g_pEllipsoidInfos[i].AABB.max[1]);
-		poly_model.AABB[ZMAX] = MyMAX(poly_model.AABB[ZMAX], g_pEllipsoidInfos[i].AABB.max[2]);
-		g_ellipsoidAabbDebug[i] = g_pEllipsoidInfos[i];
+#if OCCLUDE_MIN_OPACITY
+		float sigma = g_gaussians[i].opacity;
+		if (sigma < KERNEL_MIN_RESPONSE || sigma < SIGMA_THRESHOLD_MODE / 255.0f) continue;
+#endif
+		calcEllipsoidAABB(g_gaussians[i], g_pEllipsoidInfos[validEllipsoid].AABB);
+		g_pEllipsoidInfos[validEllipsoid].offset = i;
+		poly_model.AABB[XMIN] = MyMIN(poly_model.AABB[XMIN], g_pEllipsoidInfos[validEllipsoid].AABB.min[0]);
+		poly_model.AABB[YMIN] = MyMIN(poly_model.AABB[YMIN], g_pEllipsoidInfos[validEllipsoid].AABB.min[1]);
+		poly_model.AABB[ZMIN] = MyMIN(poly_model.AABB[ZMIN], g_pEllipsoidInfos[validEllipsoid].AABB.min[2]);
+		poly_model.AABB[XMAX] = MyMAX(poly_model.AABB[XMAX], g_pEllipsoidInfos[validEllipsoid].AABB.max[0]);
+		poly_model.AABB[YMAX] = MyMAX(poly_model.AABB[YMAX], g_pEllipsoidInfos[validEllipsoid].AABB.max[1]);
+		poly_model.AABB[ZMAX] = MyMAX(poly_model.AABB[ZMAX], g_pEllipsoidInfos[validEllipsoid].AABB.max[2]);
+		g_ellipsoidAabbDebug[validEllipsoid] = g_pEllipsoidInfos[validEllipsoid];
+		validEllipsoid++;
 	}
+	g_ellipsoidAabbDebug.resize(validEllipsoid);
+	return validEllipsoid;
 }
 
 bool initialize_kd_tree(CompositeObject* poly_model) {
 	// Returns 1 if kd-tree data was initialized successfully, or 0 otherwise.
 
 	g_pEllipsoidInfos = new TriangleList[g_gaussians.size()];
+#if OCCLUDE_MIN_OPACITY
+	uint32_t ellipsoidCnt = initEllipsoid(*poly_model);
+#else
 	initEllipsoid(*poly_model);
-
+	uint32_t ellipsoidCnt = g_gaussians.size();
+#endif
+	
 	bool bError = false;
 
 	g_iKdTree_Node_Count = 0;
@@ -1176,7 +1189,7 @@ bool initialize_kd_tree(CompositeObject* poly_model) {
 	g_pKdTreeEllipsoidOffsetArray = nullptr;
 	g_iKdTreeEllipsoidOffsetCnt_Alloc = 64 * 1024 * 1024;
 	g_iKdTreeMaxEllipsoidInLeafNodeCnt = 0;
-	g_iEllipsoidSize = g_gaussians.size();
+	g_iEllipsoidSize = ellipsoidCnt;
 
 	g_root_AABB.min[0] = poly_model->AABB[0];
 	g_root_AABB.min[1] = poly_model->AABB[2];
