@@ -973,7 +973,7 @@ __device__ inline void rayTriIntersect(const cuRay& ray, const int id,
 }
 //only translate, rotation done
 //no scaling
-__device__ inline float2 ellipsoidIntersect(const float3& pos, const float3& dir, const float3 scale) {
+__device__ inline float ellipsoidIntersect(const float3& pos, const float3& dir, const float3 scale) {
     float3 safeScale = scale;
     safeScale.x = max(scale.x, EPSILON);
     safeScale.y = max(scale.y, EPSILON);
@@ -984,9 +984,21 @@ __device__ inline float2 ellipsoidIntersect(const float3& pos, const float3& dir
     float b = dot(ocn, rdn);
     float c = dot(ocn, ocn);
     float h = b * b - a * (c - 1.0);
-    if (h < 0.0) return make_float2(-1.0);
+    if (h < 0.0) return -1.0;
     h = sqrt(h);
-    return make_float2(-b - h, -b + h) / a;
+    return (-b-h) / a;
+}
+
+__device__ inline float calculateKernelScale(float density, float kernelMinResponse, uint32_t opts = 1, float kernelDegree = KERNEL_DEGREE) {
+    const float responseModulation = (opts & 1 /* MOGRenderAdaptiveKernelClamping */) ? density : 1.0f;
+    const float minResponse = min(kernelMinResponse / responseModulation, 0.97f);
+
+    const float b = kernelDegree;
+    const float a = -4.5f / pow(3.0f, b);
+
+    // 3. e^{a * r^b} = minResponse 를 만족하는 r(반지름) 계산
+    // r = (ln(minResponse) / a)^(1/b)
+    return pow(log(minResponse) / a, 1.0f / b);
 }
 
 __device__ inline void rayPrimIntersect(const cuRay& currRay, const unsigned id
@@ -1014,15 +1026,13 @@ __device__ inline void rayPrimIntersect(const cuRay& currRay, const unsigned id
     //const float3 gro = giscl * gposcr;
     const float3 rayDirR = currRay.dir * particleRotation;
     //const float3 grdu = giscl * rayDirR;
+    float k_scale = calculateKernelScale(g.opacity, KERNEL_MIN_RESPONSE);
+    
+    float t = ellipsoidIntersect(gposcr, rayDirR, particleScale * k_scale);
 
-    float2 t = ellipsoidIntersect(gposcr, rayDirR, particleScale);
+    if (t < t_near) return;
 
-    //if (t.y < t_near) return;
-    //if (t.x < t_near) return;
-    float final_t = t.x;
-    //if (t.x < 0) final_t = t.y;
-
-    local_hits[local_hit_count].t = final_t;
+    local_hits[local_hit_count].t = t;
     local_hits[local_hit_count].primIndex = id;
     local_hit_count++;
 }
