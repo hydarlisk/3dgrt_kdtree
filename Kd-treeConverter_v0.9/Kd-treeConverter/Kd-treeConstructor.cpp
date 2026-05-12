@@ -597,7 +597,7 @@ void quaternionWXYZToMatrix(const float* q, float(&R)[3][3]) {
 	R[2][2] = 1.0f - 2.0f * (x * x + y * y);
 }
 
-inline float calculateKernelScale(float density, float kernelMinResponse, uint32_t opts = 0, float kernelDegree = 4) {
+inline float calculateKernelScale(float density, float kernelMinResponse, uint32_t opts = 1, float kernelDegree = KERNEL_DEGREE) {
 	const float responseModulation = (opts & 1 /* MOGRenderAdaptiveKernelClamping */) ? density : 1.0f;
 	const float minResponse = std::min(kernelMinResponse / responseModulation, 0.97f);
 	
@@ -644,13 +644,14 @@ void clip_ellipsoid(const int ellipsoidSize, const SplitCost& bestCost, Triangle
 				M[i][2] = R[i][2] * s2;
 			}
 
+			float k_scale = calculateKernelScale(g.opacity, KERNEL_MIN_RESPONSE);
 			float cov[3][3];
-			cov[0][0] = M[0][0] * M[0][0] + M[0][1] * M[0][1] + M[0][2] * M[0][2];
-			cov[1][1] = M[1][0] * M[1][0] + M[1][1] * M[1][1] + M[1][2] * M[1][2];
-			cov[2][2] = M[2][0] * M[2][0] + M[2][1] * M[2][1] + M[2][2] * M[2][2];
-			cov[0][1] = M[0][0] * M[1][0] + M[0][1] * M[1][1] + M[0][2] * M[1][2];
-			cov[0][2] = M[0][0] * M[2][0] + M[0][1] * M[2][1] + M[0][2] * M[2][2];
-			cov[1][2] = M[1][0] * M[2][0] + M[1][1] * M[2][1] + M[1][2] * M[2][2];
+			cov[0][0] = (M[0][0] * M[0][0] + M[0][1] * M[0][1] + M[0][2] * M[0][2]) * k_scale * k_scale;
+			cov[1][1] = (M[1][0] * M[1][0] + M[1][1] * M[1][1] + M[1][2] * M[1][2]) * k_scale * k_scale;
+			cov[2][2] = (M[2][0] * M[2][0] + M[2][1] * M[2][1] + M[2][2] * M[2][2]) * k_scale * k_scale;
+			cov[0][1] = (M[0][0] * M[1][0] + M[0][1] * M[1][1] + M[0][2] * M[1][2]) * k_scale * k_scale;
+			cov[0][2] = (M[0][0] * M[2][0] + M[0][1] * M[2][1] + M[0][2] * M[2][2]) * k_scale * k_scale;
+			cov[1][2] = (M[1][0] * M[2][0] + M[1][1] * M[2][1] + M[1][2] * M[2][2]) * k_scale * k_scale;
 			cov[1][0] = cov[0][1];
 			cov[2][0] = cov[0][2];
 			cov[2][1] = cov[1][2];
@@ -686,13 +687,14 @@ void clip_ellipsoid(const int ellipsoidSize, const SplitCost& bestCost, Triangle
 
 			bool condJMax = (jMax * sign >= splitPos * sign);
 			bool condJMin = (jMin * sign >= splitPos * sign);
-			currBBox.max[j] = condJMax ? (g.pos[j] + e[j]) : (jMu + eJ_cut);
-			currBBox.min[j] = condJMin ? (g.pos[j] - e[j]) : (jMu - eJ_cut);
+			currBBox.max[j] = min(currBBox.max[j], condJMax * (g.pos[j] + e[j]) + (1 - condJMax) * (jMu + eJ_cut));
+			currBBox.min[j] = max(currBBox.min[j], condJMin * (g.pos[j] - e[j]) + (1 - condJMin) * (jMu - eJ_cut));
 
 			bool condKMax = (kMax * sign >= splitPos * sign);
 			bool condKMin = (kMin * sign >= splitPos * sign);
-			currBBox.max[k] = condKMax ? (g.pos[k] + e[k]) : (kMu + eK_cut);
-			currBBox.min[k] = condKMin ? (g.pos[k] - e[k]) : (kMu - eK_cut);
+			currBBox.max[k] = min(currBBox.max[k], condKMax * (g.pos[k] + e[k]) + (1 - condKMax) * (kMu + eK_cut));
+			currBBox.min[k] = max(currBBox.min[k], condKMin * (g.pos[k] - e[k]) + (1 - condKMin) * (kMu - eK_cut));
+
 			pEllipsoidInfos[gi].cutAxis = axis;
 			pEllipsoidInfos[gi].cutCenter[i] = splitPos;
 			pEllipsoidInfos[gi].cutCenter[j] = jMu;
