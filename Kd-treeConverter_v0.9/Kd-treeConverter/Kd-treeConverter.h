@@ -7,7 +7,7 @@
 #pragma once
 #include <vector>
 
-#define CAM_MOVE_SPEED 0.3
+#define CAM_MOVE_SPEED 0.5
 #define CAM_ROT_SPEED 0.1
 #define CAM_MOVE_SHIFT 0.01
 
@@ -56,7 +56,7 @@
 #endif
 
 //#define FORCE_SPLIT_THRESHOLD 64				// kd-tree 강제분할
-#define FORCE_SPLIT_THRESHOLD 0				// kd-tree 강제분할
+#define FORCE_SPLIT_THRESHOLD 128				// kd-tree 강제분할
 //#define FORCE_SPLIT_THRESHOLD 256				// kd-tree 강제분할
 //#define SOFT_SPLIT_THRESHOLD 128				// kd-tree 강제분할(완화)
 #define SOFT_SPLIT_THRESHOLD2 256				// kd-tree 강제분할(완화)
@@ -66,7 +66,7 @@
 
 #define SIGMA_THRESHOLD_MODE 1
 #define ADAPTIVE_MESH false
-#define USE_KERNEL_SCALE false					// 기존의 OptiX 방식 kernelScale 사용
+#define USE_KERNEL_SCALE true					// 기존의 OptiX 방식 kernelScale 사용
 
 //#define LESS_TRI false
 
@@ -432,6 +432,9 @@ typedef struct _TriangleList {
 	//GTriangleWrapper *pTriangleWrapper;
 	ExtendedVertex point[3];
 	int side;
+	int cutAxis;
+	float cutCenter[3];
+	float ejCut, ekCut;
 } TriangleList;
 
 #if BSPT

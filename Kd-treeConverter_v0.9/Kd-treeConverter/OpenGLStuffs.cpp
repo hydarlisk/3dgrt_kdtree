@@ -72,8 +72,8 @@ void initialize_camera(Camera *cam) {
 	glEnd();
 	glLineWidth(1.0);
 
-	 if (lighting_enabled)  
-		 glEnable(GL_LIGHTING);
+	 //if (lighting_enabled)  
+		// glEnable(GL_LIGHTING);
 }
 
 float debug_colors[20][3] = {

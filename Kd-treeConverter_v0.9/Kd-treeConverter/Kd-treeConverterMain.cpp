@@ -231,6 +231,17 @@ void renderGaussianMesh(int gId) {
 		glVertex3fv(v[3 * (gId * 20 + i) + 2].vertex);
 	}
 	glEnd();
+	glColor3f(0.0, 0.4, 1.0);
+	glBegin(GL_LINES);
+	for (int i = 0; i < 20; i++) {
+		glVertex3fv(v[3 * (gId * 20 + i) + 0].vertex);
+		glVertex3fv(v[3 * (gId * 20 + i) + 1].vertex);
+		glVertex3fv(v[3 * (gId * 20 + i) + 1].vertex);
+		glVertex3fv(v[3 * (gId * 20 + i) + 2].vertex);
+		glVertex3fv(v[3 * (gId * 20 + i) + 2].vertex);
+		glVertex3fv(v[3 * (gId * 20 + i) + 0].vertex);
+	}
+	glEnd();
 }
 
 //only works for icosa mesh
@@ -271,8 +282,43 @@ void renderEllipsoidClipAabb(int depth, int nodeId, int idx) {
 			g->AABB.min[2], g->AABB.max[2]
 		};
 		draw_AABB(aabb, i++);
-		renderGaussianMesh(g->offset);
+
+		glPointSize(5.0f);
+		glColor3f(1.0f, 0.0f, 0.0f);
+		//cut center
+		glBegin(GL_POINTS);
+			glVertex3fv(g->cutCenter);
+		glEnd();
+
+		//cut plane
+		glColor4f(0.0f, 0.5f, 1.0f, 0.5f);
+		//glBegin(GL_QUADS);
+		//	float p1[3], p2[3], p3[3], p4[3];
+		//	int i = g->cutAxis;
+		//	int j = (i + 1) % 3;
+		//	int k = (i + 2) % 3;
+
+		//	// 모든 정점의 고정축 좌표는 cutCenter[i]와 동일함
+		//	p1[i] = p2[i] = p3[i] = p4[i] = g->cutCenter[i];
+
+		//	// 보조축 좌표 설정 (ejCut, ekCut 범위를 활용)
+		//	//p1[j] = g->cutCenter[j] - g->ejCut; p1[k] = g->cutCenter[k] - g->ekCut;
+		//	//p2[j] = g->cutCenter[j] + g->ejCut; p2[k] = g->cutCenter[k] - g->ekCut;
+		//	//p3[j] = g->cutCenter[j] + g->ejCut; p3[k] = g->cutCenter[k] + g->ekCut;
+		//	//p4[j] = g->cutCenter[j] - g->ejCut; p4[k] = g->cutCenter[k] + g->ekCut;
+
+		//	p1[j] = g->cutCenter[j] - 0.5; p1[k] = g->cutCenter[k] - 0.5;
+		//	p2[j] = g->cutCenter[j] + 0.5; p2[k] = g->cutCenter[k] - 0.5;
+		//	p3[j] = g->cutCenter[j] + 0.5; p3[k] = g->cutCenter[k] + 0.5;
+		//	p4[j] = g->cutCenter[j] - 0.5; p4[k] = g->cutCenter[k] + 0.5;
+
+		//	glVertex3fv(p1);
+		//	glVertex3fv(p2);
+		//	glVertex3fv(p3);
+		//	glVertex3fv(p4);
+		//glEnd();
 	}
+	renderGaussianMesh(idx);
 }
 
 
@@ -596,30 +642,26 @@ void keyboard(unsigned char key, int x, int y) {
 #if PRIMITIVE_TYPE == ELLIPSOID
 		case ';':
 			g_renderNodeId--;
-			g_renderGId = 0;
 			if (g_renderNodeId < 0) g_renderNodeId = (*uip.poly_model.ellipsoidClipAabbDebug)[g_renderDepth].size() - 1;
 			printf("render node id: %d\n", g_renderNodeId);
 			glutPostRedisplay();
 			break;
 		case '\'':
 			g_renderNodeId++;
-			g_renderGId = 0;
 			if (g_renderNodeId > (*uip.poly_model.ellipsoidClipAabbDebug)[g_renderDepth].size() - 1) g_renderNodeId = 0;
 			printf("render node id: %d\n", g_renderNodeId);
 			glutPostRedisplay();
 			break;
 		case ':':
 			g_renderDepth--;
-			g_renderNodeId = 0;
-			g_renderGId = 0;
+			//g_renderNodeId = 0;
 			if (g_renderDepth < 0) g_renderDepth = (*uip.poly_model.ellipsoidClipAabbDebug).size() - 1;
 			printf("render depth: %d\n", g_renderDepth);
 			glutPostRedisplay();
 			break;
 		case '"':
 			g_renderDepth++;
-			g_renderNodeId = 0;
-			g_renderGId = 0;
+			//g_renderNodeId = 0;
 			if (g_renderDepth > (*uip.poly_model.ellipsoidClipAabbDebug).size() - 1) g_renderDepth = 0;
 			printf("render depth: %d\n", g_renderDepth);
 			glutPostRedisplay();
@@ -3192,7 +3234,7 @@ void main_menu_action(int selection) {
 			if (g_d_global_stack) cudaFree(g_d_global_stack);
 			g_d_global_stack = nullptr;
 #endif
-
+			g_cuda_rendering_done = false;
 			printf("CUDA Interactive Mode: OFF\n");
 			// 인터랙티브 모드를 끄면 다시 OpenGL 뷰로 돌아가도록 화면 갱신
 		}

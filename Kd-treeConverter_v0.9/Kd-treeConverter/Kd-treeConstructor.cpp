@@ -693,6 +693,12 @@ void clip_ellipsoid(const int ellipsoidSize, const SplitCost& bestCost, Triangle
 			bool condKMin = (kMin * sign >= splitPos * sign);
 			currBBox.max[k] = condKMax ? (g.pos[k] + e[k]) : (kMu + eK_cut);
 			currBBox.min[k] = condKMin ? (g.pos[k] - e[k]) : (kMu - eK_cut);
+			pEllipsoidInfos[gi].cutAxis = axis;
+			pEllipsoidInfos[gi].cutCenter[i] = splitPos;
+			pEllipsoidInfos[gi].cutCenter[j] = jMu;
+			pEllipsoidInfos[gi].cutCenter[k] = kMu;
+			pEllipsoidInfos[gi].ejCut = eJ_cut;
+			pEllipsoidInfos[gi].ekCut = eK_cut;
 		}
 	}
 }
