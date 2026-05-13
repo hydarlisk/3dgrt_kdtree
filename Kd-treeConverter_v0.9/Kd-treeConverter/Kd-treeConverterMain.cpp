@@ -341,6 +341,10 @@ void renderGaussianMeshes() {
 	ptr_ev = uip.poly_model.extended_vertices;
 	glBegin(GL_TRIANGLES);
 	for (i = 0; i < uip.poly_model.n_triangles; i++) {
+		if (g_gaussians[ptr_ev->material_ID].valid == 0) {
+			ptr_ev += 3;
+			continue;
+		}
 		glVertex3fv(ptr_ev->vertex);
 		ptr_ev++;
 		glVertex3fv(ptr_ev->vertex);
@@ -1339,7 +1343,8 @@ bool loadGaussiansFromPly(const char* filename, std::vector<Gaussian>& gaussians
 			return false;
 		}
 
-		Gaussian g;
+		Gaussian g{};
+		g.valid = 1;
 
 		// 오프셋 맵을 사용하여 버퍼에서 직접 데이터 추출
 		// 헤더에 명시된 순서와 관계없이 이름으로 정확한 위치를 찾아감
@@ -1573,7 +1578,7 @@ inline void generate_gaussian_mesh(
 
 //meshify gaussians
 void create_composite_object_from_gaussians(
-	const std::vector<Gaussian>& gaussians,
+	std::vector<Gaussian>& gaussians,
 	float kernelMinResponse = KERNEL_MIN_RESPONSE,
 	float kernel_degree = KERNEL_DEGREE
 ) {
@@ -1623,7 +1628,7 @@ void create_composite_object_from_gaussians(
 
 	// 초기 데이터 생성 *************************
 	for (long i = 0; i < num_gaussians; ++i) {
-		const Gaussian& g = gaussians[i];
+		Gaussian& g = gaussians[i];
 
 		//sigma(density) 계산
 		const float sigma = g.opacity;
@@ -1640,7 +1645,11 @@ void create_composite_object_from_gaussians(
 #if SIGMA_THRESHOLD_MODE
 		//if (sigma < SIGMA_THRESHOLD) { cnt_sigma++; continue; }
 	#if OCCLUDE_MIN_OPACITY
-		if (sigma < KERNEL_MIN_RESPONSE || sigma < SIGMA_THRESHOLD_MODE / 255.0f) { cnt_sigma++; continue; }
+		if (sigma < KERNEL_MIN_RESPONSE || sigma < SIGMA_THRESHOLD_MODE / 255.0f) {
+			cnt_sigma++;
+			g.valid = 0;
+			continue;
+		}
 	#endif
 #endif
 
@@ -1937,6 +1946,48 @@ void create_composite_object_from_gaussians(
 		uip.poly_model.AABB[XMIN], uip.poly_model.AABB[XMAX],
 		uip.poly_model.AABB[YMIN], uip.poly_model.AABB[YMAX],
 		uip.poly_model.AABB[ZMIN], uip.poly_model.AABB[ZMAX]);
+}
+
+void removeProblematicGaussian(std::vector<Gaussian>& gaussians) {
+	ExtendedVertex* v = uip.poly_model.extended_vertices;
+	float* globalAabb = uip.poly_model.AABB;
+	float globalX = globalAabb[XMAX] - globalAabb[XMIN];
+	float globalY = globalAabb[YMAX] - globalAabb[YMIN];
+	float globalZ = globalAabb[ZMAX] - globalAabb[ZMIN];
+	int validGCnt = 0;
+	int invalidCnt = 0;
+	for (int i = 0; i < gaussians.size(); i++) {
+		if (gaussians[i].valid == 0) continue;
+		BoundingBox aabb;
+		aabb.min[0] = aabb.min[1] = aabb.min[2] = FLT_MAX;
+		aabb.max[0] = aabb.max[1] = aabb.max[2] = -FLT_MAX;
+		for (int j = 0; j < 20; j++) {
+			for (int k = 0; k < 3; k++) {
+				aabb.min[0] = MyMIN(aabb.min[0], v[3 * (20 * validGCnt + j) + k].vertex[0]);
+				aabb.min[1] = MyMIN(aabb.min[1], v[3 * (20 * validGCnt + j) + k].vertex[1]);
+				aabb.min[2] = MyMIN(aabb.min[2], v[3 * (20 * validGCnt + j) + k].vertex[2]);
+
+				aabb.max[0] = MyMAX(aabb.max[0], v[3 * (20 * validGCnt + j) + k].vertex[0]);
+				aabb.max[1] = MyMAX(aabb.max[1], v[3 * (20 * validGCnt + j) + k].vertex[1]);
+				aabb.max[2] = MyMAX(aabb.max[2], v[3 * (20 * validGCnt + j) + k].vertex[2]);
+			}
+		}
+		float xRatio = (aabb.max[0] - aabb.min[0]) / globalX;
+		float yRatio = (aabb.max[1] - aabb.min[1]) / globalY;
+		float zRatio = (aabb.max[2] - aabb.min[2]) / globalZ;
+		validGCnt++;
+		if (xRatio > PROBLEMATIC_THRESHOLD
+			|| yRatio > PROBLEMATIC_THRESHOLD
+			|| zRatio > PROBLEMATIC_THRESHOLD
+			) {
+			gaussians[i].valid = 0;
+			invalidCnt++;
+		}
+	}
+
+	std::cout << "valid gaussians cnt: " << validGCnt << "\n";
+	std::cout << "invalid gaussians cnt: " << invalidCnt << "\n";
+
 }
 
 // 축-각도 표현을 쿼터니언으로 변환
@@ -3045,6 +3096,7 @@ void subMenuHandler(int value) {
 		return;
 	}
 	create_composite_object_from_gaussians(g_gaussians);
+	removeProblematicGaussian(g_gaussians);
 #if ROTATION
 	//printf("%s\n%s\n%s\n", ply_kdtree_path, ply_igeom_path, ply_to_obj);
 	rotate_composite_object(g_gaussians, 45.0f, 1.0f, 1.0f, 1.0f);

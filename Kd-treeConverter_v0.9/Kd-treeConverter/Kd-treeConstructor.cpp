@@ -752,21 +752,21 @@ void clip_ellipsoid(std::vector<TriangleList>& ellipsoidInfos, const SplitCost& 
 			currBBox.min[k] = max(currBBox.min[k], condKMin * (g.pos[k] - e[k]) + (1 - condKMin) * (kMu - eK_cut));
 
 			////ellipsoid aabb side test
-			for (int i = 0; i < 3; i++) {
-			    M[i][0] = R[i][0] / s0;
-			    M[i][1] = R[i][1] / s1;
-			    M[i][2] = R[i][2] / s2;
-			}
+			//for (int i = 0; i < 3; i++) {
+			//    M[i][0] = R[i][0] / s0;
+			//    M[i][1] = R[i][1] / s1;
+			//    M[i][2] = R[i][2] / s2;
+			//}
 
-			MyMat33 covInv;
-			covInv = M.multTranspose();
-			covInv = covInv / k_scale / k_scale;
-			bool isInside = isGaussianIntersectingAABB(currBBox, g.pos, covInv);
-			if (!isInside) {
-				ellipsoidInfos.erase(ellipsoidInfos.begin() + gi);
-				gi--;
-				continue;
-			}
+			//MyMat33 covInv;
+			//covInv = M.multTranspose();
+			//covInv = covInv / k_scale / k_scale;
+			//bool isInside = isGaussianIntersectingAABB(currBBox, g.pos, covInv);
+			//if (!isInside) {
+			//	ellipsoidInfos.erase(ellipsoidInfos.begin() + gi);
+			//	gi--;
+			//	continue;
+			//}
 
 			ellipsoidInfos[gi].cutAxis = axis;
 			ellipsoidInfos[gi].cutCenter[i] = splitPos;
@@ -1219,6 +1219,7 @@ uint32_t initEllipsoid(CompositeObject& poly_model) {
 	g_ellipsoidAabbDebug.resize(g_gaussians.size());
 	uint32_t validEllipsoid = 0;
 	for (int i = 0; i < g_gaussians.size(); i++) {
+		if (g_gaussians[i].valid == 0) continue;
 #if OCCLUDE_MIN_OPACITY
 		float sigma = g_gaussians[i].opacity;
 		if (sigma < KERNEL_MIN_RESPONSE || sigma < SIGMA_THRESHOLD_MODE / 255.0f) continue;

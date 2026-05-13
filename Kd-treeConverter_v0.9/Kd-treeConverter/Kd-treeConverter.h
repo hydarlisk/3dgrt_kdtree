@@ -16,10 +16,11 @@
 
 #define OCCLUDE_MIN_OPACITY 1
 
-
 #define TRI 0
 #define ELLIPSOID 1
 #define PRIMITIVE_TYPE 1
+
+#define PROBLEMATIC_THRESHOLD 0.4
 
  /* Ellipsoid */
 #define DEBUG_ELLIPSOID 1
@@ -517,7 +518,8 @@ struct Gaussian {
 	float f_dc[3];      // 기본 색상 (R, G, B)
 	float f_rest[45];
 #if QUATERNION
-	float pad[5];
+	float valid;
+	float pad[4];
 #endif
 };
 // pad    : 236 + 4 (240 = 16 * 15)
