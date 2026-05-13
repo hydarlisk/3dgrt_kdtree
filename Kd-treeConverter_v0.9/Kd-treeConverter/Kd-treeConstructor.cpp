@@ -609,13 +609,76 @@ inline float calculateKernelScale(float density, float kernelMinResponse, uint32
 	return std::pow(std::log(minResponse) / a, 1.0f / b);
 }
 
-void clip_ellipsoid(const int ellipsoidSize, const SplitCost& bestCost, TriangleList* pEllipsoidInfos, int side) {
+bool isGaussianIntersectingAABB(const BoundingBox& currBBox, const float pos[3], const MyMat33& covInv) {
+	float x_coords[2] = { currBBox.min[0], currBBox.max[0] };
+	float y_coords[2] = { currBBox.min[1], currBBox.max[1] };
+	float z_coords[2] = { currBBox.min[2], currBBox.max[2] };
+	for (int i = 0; i < 2; ++i) {
+		for (int j = 0; j < 2; ++j) {
+			for (int k = 0; k < 2; ++k) {
+				MyVec3 v = { x_coords[i], y_coords[j], z_coords[k] };
+				MyVec3 gPos = { pos[0], pos[1], pos[2] };
+				MyVec3 p = v - gPos;
+				float e = p * covInv * p - 1;
+				if (e < 0) {
+					return true;
+				}
+			}
+		}
+	}
+	return false;
+}
+
+bool isGaussianIntersectingAABB(const float aabbMin[3], const float aabbMax[3], const float pos[3], const float cov[3][3]) {
+
+
+	// 1. AABB 내에서 가우시안 중심(pos)과 가장 가까운 점(closestPoint) 계산
+	float closestPoint[3];
+	for (int i = 0; i < 3; ++i) {
+		closestPoint[i] = std::max(aabbMin[i], std::min(pos[i], aabbMax[i]));
+	}
+
+	// 2. 가우시안 중심으로부터의 변위 벡터 (v = x - mu) 계산
+	float v[3];
+	v[0] = closestPoint[0] - pos[0];
+	v[1] = closestPoint[1] - pos[1];
+	v[2] = closestPoint[2] - pos[2];
+
+	// 3. 3x3 공분산 행렬의 행렬식(Determinant) 계산
+	float det = cov[0][0] * (cov[1][1] * cov[2][2] - cov[1][2] * cov[1][2]) -
+		cov[0][1] * (cov[0][1] * cov[2][2] - cov[1][2] * cov[0][2]) +
+		cov[0][2] * (cov[0][1] * cov[1][2] - cov[1][1] * cov[0][2]);
+
+	// 행렬식이 0에 가까우면 역행렬 존재 불가 (에러 방지)
+	if (std::abs(det) < 1e-9f) return false;
+
+	float invDet = 1.0f / det;
+
+	// 4. 역행렬(Inverse Covariance)의 상삼각 성분 계산 (대칭성 활용)
+	float m00 = (cov[1][1] * cov[2][2] - cov[1][2] * cov[1][2]) * invDet;
+	float m01 = (cov[0][2] * cov[1][2] - cov[0][1] * cov[2][2]) * invDet;
+	float m02 = (cov[0][1] * cov[1][2] - cov[0][2] * cov[1][1]) * invDet;
+	float m11 = (cov[0][0] * cov[2][2] - cov[0][2] * cov[0][2]) * invDet;
+	float m12 = (cov[0][2] * cov[0][1] - cov[0][0] * cov[1][2]) * invDet;
+	float m22 = (cov[0][0] * cov[1][1] - cov[0][1] * cov[0][1]) * invDet;
+
+	// 5. 마할라노비스 거리 제곱 계산 (d^2 = v^T * Sigma^-1 * v)
+	// d^2 = v0*(m00*v0 + m01*v1 + m02*v2) + v1*(m01*v0 + m11*v1 + m12*v2) + ...
+	float d2 = v[0] * (m00 * v[0] + m01 * v[1] + m02 * v[2]) +
+		v[1] * (m01 * v[0] + m11 * v[1] + m12 * v[2]) +
+		v[2] * (m02 * v[0] + m12 * v[1] + m22 * v[2]);
+
+	// 6. 최종 판정 (1.0f는 1-sigma, 4.0f는 2-sigma, 9.0f는 3-sigma)
+	return d2 <= 9.0f;
+}
+
+void clip_ellipsoid(std::vector<TriangleList>& ellipsoidInfos, const SplitCost& bestCost, int side) {
 	int axis = bestCost.axis;
 	float splitPos = bestCost.splitPos;
 
-	for (int gi = 0; gi < ellipsoidSize; gi++) {
+	for (int gi = 0; gi < ellipsoidInfos.size(); gi++) {
 		//simple clipping
-		BoundingBox& currBBox = pEllipsoidInfos[gi].AABB;
+		BoundingBox& currBBox = ellipsoidInfos[gi].AABB;
 		if (currBBox.min[axis] < splitPos && currBBox.max[axis] > splitPos) {
 			if (side == 0) {
 				if (currBBox.max[axis] >= splitPos) {
@@ -630,7 +693,7 @@ void clip_ellipsoid(const int ellipsoidSize, const SplitCost& bestCost, Triangle
 
 		//tight clipping
 		//1. calc covariance
-			auto& g = g_gaussians[pEllipsoidInfos[gi].offset];
+			auto& g = g_gaussians[ellipsoidInfos[gi].offset];
 			float R[3][3];
 			quaternionWXYZToMatrixTransform(g.rot, R);
 			float k_scale = calculateKernelScale(g.opacity, KERNEL_MIN_RESPONSE);
@@ -688,12 +751,29 @@ void clip_ellipsoid(const int ellipsoidSize, const SplitCost& bestCost, Triangle
 			currBBox.max[k] = min(currBBox.max[k], condKMax * (g.pos[k] + e[k]) + (1 - condKMax) * (kMu + eK_cut));
 			currBBox.min[k] = max(currBBox.min[k], condKMin * (g.pos[k] - e[k]) + (1 - condKMin) * (kMu - eK_cut));
 
-			pEllipsoidInfos[gi].cutAxis = axis;
-			pEllipsoidInfos[gi].cutCenter[i] = splitPos;
-			pEllipsoidInfos[gi].cutCenter[j] = jMu;
-			pEllipsoidInfos[gi].cutCenter[k] = kMu;
-			pEllipsoidInfos[gi].ejCut = eJ_cut;
-			pEllipsoidInfos[gi].ekCut = eK_cut;
+			////ellipsoid aabb side test
+			for (int i = 0; i < 3; i++) {
+			    M[i][0] = R[i][0] / s0;
+			    M[i][1] = R[i][1] / s1;
+			    M[i][2] = R[i][2] / s2;
+			}
+
+			MyMat33 covInv;
+			covInv = M.multTranspose();
+			covInv = covInv / k_scale / k_scale;
+			bool isInside = isGaussianIntersectingAABB(currBBox, g.pos, covInv);
+			if (!isInside) {
+				ellipsoidInfos.erase(ellipsoidInfos.begin() + gi);
+				gi--;
+				continue;
+			}
+
+			ellipsoidInfos[gi].cutAxis = axis;
+			ellipsoidInfos[gi].cutCenter[i] = splitPos;
+			ellipsoidInfos[gi].cutCenter[j] = jMu;
+			ellipsoidInfos[gi].cutCenter[k] = kMu;
+			ellipsoidInfos[gi].ejCut = eJ_cut;
+			ellipsoidInfos[gi].ekCut = eK_cut;
 		}
 	}
 }
@@ -1496,11 +1576,12 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pEllipsoidInf
 
 		TriangleList* pLeftEllipsoids = new TriangleList[leftEllipsoids.size()];
 		TriangleList* pRightEllipsoids = new TriangleList[rightEllipsoids.size()];
+
+		clip_ellipsoid(leftEllipsoids, bestCost, 0);
+		clip_ellipsoid(rightEllipsoids, bestCost, 1);
+
 		memcpy(pLeftEllipsoids, leftEllipsoids.data(), sizeof(TriangleList) * leftEllipsoids.size());
 		memcpy(pRightEllipsoids, rightEllipsoids.data(), sizeof(TriangleList) * rightEllipsoids.size());
-
-		clip_ellipsoid(leftEllipsoids.size(), bestCost, pLeftEllipsoids, 0);
-		clip_ellipsoid(rightEllipsoids.size(), bestCost, pRightEllipsoids, 1);
 
 #if DEBUG_ELLIPSOID
 		if (ellipsoidSize > 0) {

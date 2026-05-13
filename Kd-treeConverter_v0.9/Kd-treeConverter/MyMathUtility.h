@@ -34,6 +34,9 @@ public:
     MyVec3 operator+(const MyVec3& v) const { return { x + v.x, y + v.y, z + v.z }; }
     MyVec3 operator-(const MyVec3& v) const { return { x - v.x, y - v.y, z - v.z }; }
     MyVec3 operator*(float s) const { return { x * s, y * s, z * s }; }
+    float operator*(const MyVec3& v) const {
+        return x * v.x + y * v.y + z * v.z;
+    }
 
     float dot(const MyVec3& v) const { return x * v.x + y * v.y + z * v.z; }
 
@@ -77,6 +80,15 @@ public:
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
                 res.rows[i][j] = rows[i][j] * other;
+            }
+        }
+        return res;
+    }
+    MyMat33 operator/(const float& f) const {
+        MyMat33 res{};
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                res.rows[i][j] = rows[i][j] * (1 / f);
             }
         }
         return res;
