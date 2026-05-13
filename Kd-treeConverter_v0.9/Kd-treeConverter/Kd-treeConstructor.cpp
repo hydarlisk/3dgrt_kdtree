@@ -633,28 +633,21 @@ void clip_ellipsoid(const int ellipsoidSize, const SplitCost& bestCost, Triangle
 			auto& g = g_gaussians[pEllipsoidInfos[gi].offset];
 			float R[3][3];
 			quaternionWXYZToMatrixTransform(g.rot, R);
+			float k_scale = calculateKernelScale(g.opacity, KERNEL_MIN_RESPONSE);
+
 			float s0 = g.scale[0];
 			float s1 = g.scale[1];
 			float s2 = g.scale[2];
 
-			float M[3][3];
+			MyMat33 M;
 			for (int i = 0; i < 3; i++) {
 				M[i][0] = R[i][0] * s0;
 				M[i][1] = R[i][1] * s1;
 				M[i][2] = R[i][2] * s2;
 			}
-
-			float k_scale = calculateKernelScale(g.opacity, KERNEL_MIN_RESPONSE);
-			float cov[3][3];
-			cov[0][0] = (M[0][0] * M[0][0] + M[0][1] * M[0][1] + M[0][2] * M[0][2]) * k_scale * k_scale;
-			cov[1][1] = (M[1][0] * M[1][0] + M[1][1] * M[1][1] + M[1][2] * M[1][2]) * k_scale * k_scale;
-			cov[2][2] = (M[2][0] * M[2][0] + M[2][1] * M[2][1] + M[2][2] * M[2][2]) * k_scale * k_scale;
-			cov[0][1] = (M[0][0] * M[1][0] + M[0][1] * M[1][1] + M[0][2] * M[1][2]) * k_scale * k_scale;
-			cov[0][2] = (M[0][0] * M[2][0] + M[0][1] * M[2][1] + M[0][2] * M[2][2]) * k_scale * k_scale;
-			cov[1][2] = (M[1][0] * M[2][0] + M[1][1] * M[2][1] + M[1][2] * M[2][2]) * k_scale * k_scale;
-			cov[1][0] = cov[0][1];
-			cov[2][0] = cov[0][2];
-			cov[2][1] = cov[1][2];
+			MyMat33 cov;
+			cov = M.multTranspose();
+			cov = cov * (k_scale * k_scale);
 
 			//2. schur complement
 			float e[3];
