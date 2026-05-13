@@ -217,6 +217,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </ExcludedFromBuild>
     </ClInclude>
+    <ClInclude Include="Gaussian.h" />
     <ClInclude Include="Kd-treeConstructor.h" />
     <ClInclude Include="Kd-treeConverter.h" />
     <ClInclude Include="Kd-treeConverterMain.h" />

@@ -250,8 +250,8 @@
 #define GLOBAL_DEVICE_VAR true
 #define GAUSSIAN_TEXTURE true
 #define TRIACC_TEXTURE true
-
 #define OFFSET_TEXTURE true
+#define KSCALE_TEXTURE true
 
 #define DUMMY_RUN false
 
@@ -515,13 +515,12 @@ struct Gaussian {
 	float k_scale;
 	float rot[4];       // 회전 쿼터니언 (qw, qx, qy, qz)
 #else
-	float3x3 rot_matrix; // 미리 계산된 회전 행렬 (전치된 상태, R^T)
+	float3x3 rotMat; // 미리 계산된 회전 행렬 (전치된 상태, R^T)
 #endif
 	float f_dc[3];      // 기본 색상 (R, G, B)
 	float f_rest[45];
 #if QUATERNION
-	float valid;
-	float pad[3];
+	float pad[4];
 #endif
 };
 // pad    : 236 + 4 (240 = 16 * 15)

@@ -12,7 +12,7 @@
 
  //quaternion -> rot mat
  //local to world
-void quaternionWXYZToMatrixTransform(const float* q, float(&R)[3][3]) {
+void quaternionWXYZToMatrix(const float* q, float(&R)[3][3]) {
 	float r = q[0];
 	float x = q[1];
 	float y = q[2];
@@ -31,7 +31,7 @@ void quaternionWXYZToMatrixTransform(const float* q, float(&R)[3][3]) {
 	R[2][2] = 1.0f - 2.0f * (x * x + y * y);
 }
 //world to local
-void quaternionWXYZToMatrix(const float* q, float(&R)[3][3]) {
+void quaternionWXYZToMatrixTranspose(const float* q, float(&R)[3][3]) {
 	float r = q[0];
 	float x = q[1];
 	float y = q[2];

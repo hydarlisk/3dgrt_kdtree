@@ -17,6 +17,7 @@
 #include "Kd-treeConverter.h"
 #include "Kd-treeConstructor.h"
 #include "MyMathUtility.h"
+#include "Gaussian.h"
 
 #include "AABB_Triangle_Clip/AABB_Triangle_Clip.h" 
 //#include "Kd-treeCudaKernels.h"
@@ -64,6 +65,10 @@ unsigned int  g_iKdTree_EmptyNode_Count;
 unsigned int  g_iKdTree_LeafNode_Count;
 
 extern std::vector<Gaussian> g_gaussians;
+extern std::vector<bool> g_isValidG;
+#if !QUATERNION
+extern std::vector<float> g_kScales;
+#endif
 
 std::vector<TriangleList> g_ellipsoidAabbDebug;
 std::vector<std::vector<std::vector<TriangleList>>> g_ellipsoidClipAabbDebug;
@@ -641,9 +646,15 @@ void clip_ellipsoid(std::vector<TriangleList>& ellipsoidInfos, const SplitCost& 
 		//tight clipping
 		//1. calc covariance
 			auto& g = g_gaussians[ellipsoidInfos[gi].offset];
+			float k_scale;
 			float R[3][3];
-			quaternionWXYZToMatrixTransform(g.rot, R);
-
+#if QUATERNION
+			quaternionWXYZToMatrix(g.rot, R);
+			k_scale = g.k_scale;
+#else
+			memcpy(R, &g.rotMat, sizeof(float3x3));
+			k_scale = calcKernelScale(g.opacity);
+#endif
 			float s0 = g.scale[0];
 			float s1 = g.scale[1];
 			float s2 = g.scale[2];
@@ -656,7 +667,7 @@ void clip_ellipsoid(std::vector<TriangleList>& ellipsoidInfos, const SplitCost& 
 			}
 			MyMat33 cov;
 			cov = M.multTranspose();
-			cov = cov * (g.k_scale * g.k_scale);
+			cov = cov * (k_scale * k_scale);
 
 			//2. schur complement
 			float e[3];
@@ -1128,14 +1139,20 @@ void try_to_split(const int axis, BoundingBox &inBBox, const TriangleList *pTria
 
 #if PRIMITIVE_TYPE == ELLIPSOID
 //TODO: calc more accurate aabb
-void calcEllipsoidAABB(Gaussian& g, BoundingBox& b) {
-	float r = g.rot[0];
-	float x = g.rot[1];
-	float y = g.rot[2];
-	float z = g.rot[3];
-
+void calcEllipsoidAABB(Gaussian& g, BoundingBox& b
+#if !QUATERNION
+	,int idx
+#endif
+) {
 	float R[3][3];
-	quaternionWXYZToMatrixTransform(g.rot, R);
+	float k_scale;
+#if QUATERNION
+	quaternionWXYZToMatrix(g.rot, R);
+	k_scale = g.k_scale;
+#else
+	memcpy(R, g.rotMat.m, sizeof(float3x3));
+	k_scale = g_kScales[idx];
+#endif
 
 	float s0 = g.scale[0];
 	float s1 = g.scale[1];
@@ -1145,9 +1162,9 @@ void calcEllipsoidAABB(Gaussian& g, BoundingBox& b) {
 	float sigma_yy = (R[1][0] * s0) * (R[1][0] * s0) + (R[1][1] * s1) * (R[1][1] * s1) + (R[1][2] * s2) * (R[1][2] * s2);
 	float sigma_zz = (R[2][0] * s0) * (R[2][0] * s0) + (R[2][1] * s1) * (R[2][1] * s1) + (R[2][2] * s2) * (R[2][2] * s2);
 
-	float half_x = g.k_scale * std::sqrt(sigma_xx);
-	float half_y = g.k_scale * std::sqrt(sigma_yy);
-	float half_z = g.k_scale * std::sqrt(sigma_zz);
+	float half_x = k_scale * std::sqrt(sigma_xx);
+	float half_y = k_scale * std::sqrt(sigma_yy);
+	float half_z = k_scale * std::sqrt(sigma_zz);
 
 	b.min[0] = g.pos[0] - half_x;
 	b.min[1] = g.pos[1] - half_y;
@@ -1164,12 +1181,16 @@ uint32_t initEllipsoid(CompositeObject& poly_model) {
 	g_ellipsoidAabbDebug.resize(g_gaussians.size());
 	uint32_t validEllipsoid = 0;
 	for (int i = 0; i < g_gaussians.size(); i++) {
-		if (g_gaussians[i].valid == 0) continue;
+		if (g_isValidG[i] == 0) continue;
 #if OCCLUDE_MIN_OPACITY
 		float sigma = g_gaussians[i].opacity;
 		if (sigma < KERNEL_MIN_RESPONSE || sigma < SIGMA_THRESHOLD_MODE / 255.0f) continue;
 #endif
-		calcEllipsoidAABB(g_gaussians[i], g_pEllipsoidInfos[validEllipsoid].AABB);
+		calcEllipsoidAABB(g_gaussians[i], g_pEllipsoidInfos[validEllipsoid].AABB
+#if !QUATERNION
+			,i
+#endif
+		);
 		g_pEllipsoidInfos[validEllipsoid].offset = i;
 		poly_model.AABB[XMIN] = MyMIN(poly_model.AABB[XMIN], g_pEllipsoidInfos[validEllipsoid].AABB.min[0]);
 		poly_model.AABB[YMIN] = MyMIN(poly_model.AABB[YMIN], g_pEllipsoidInfos[validEllipsoid].AABB.min[1]);

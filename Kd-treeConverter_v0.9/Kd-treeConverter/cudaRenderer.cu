@@ -283,6 +283,11 @@ __device__ Gaussian fetch_gaussian(int gaussianID) {
 #else
 __device__ Gaussian* g_d_gaussians;
 #endif
+#if KSCALE_TEXTURE
+__device__ cudaTextureObject_t inKScaleTex;
+#else
+__device__ float* g_d_kScale = nullptr;
+#endif
 #if BSPT
 __device__ cudaTextureObject_t inBSPTNodeTex;
 #endif
@@ -304,6 +309,9 @@ cuWaldTriangleInfo* g_d_waldInfo = nullptr;
 TriAccel* g_d_tri_accel = nullptr;
     #endif
 Gaussian* g_d_gaussians_persistent = nullptr;
+    #if !QUATERNION
+float* g_d_kScale_persistent = nullptr;
+    #endif
     #if BSPT
 BSPNode* g_d_bsptNode = nullptr;
     #endif
@@ -676,15 +684,15 @@ __device__ __forceinline__ float evaluateGaussianResponse(const cuRay& ray, cons
 
     // 위치 벡터 회전: o_os = R^T * p
     float3 o_os;
-    o_os.x = g.rot_matrix.m[0][0] * p.x + g.rot_matrix.m[0][1] * p.y + g.rot_matrix.m[0][2] * p.z;
-    o_os.y = g.rot_matrix.m[1][0] * p.x + g.rot_matrix.m[1][1] * p.y + g.rot_matrix.m[1][2] * p.z;
-    o_os.z = g.rot_matrix.m[2][0] * p.x + g.rot_matrix.m[2][1] * p.y + g.rot_matrix.m[2][2] * p.z;
+    o_os.x = g.rotMat.m[0][0] * p.x + g.rotMat.m[0][1] * p.y + g.rotMat.m[0][2] * p.z;
+    o_os.y = g.rotMat.m[1][0] * p.x + g.rotMat.m[1][1] * p.y + g.rotMat.m[1][2] * p.z;
+    o_os.z = g.rotMat.m[2][0] * p.x + g.rotMat.m[2][1] * p.y + g.rotMat.m[2][2] * p.z;
 
     // 방향 벡터 회전: d_os = R^T * d
     float3 d_os;
-    d_os.x = g.rot_matrix.m[0][0] * ray.dir.x + g.rot_matrix.m[0][1] * ray.dir.y + g.rot_matrix.m[0][2] * ray.dir.z;
-    d_os.y = g.rot_matrix.m[1][0] * ray.dir.x + g.rot_matrix.m[1][1] * ray.dir.y + g.rot_matrix.m[1][2] * ray.dir.z;
-    d_os.z = g.rot_matrix.m[2][0] * ray.dir.x + g.rot_matrix.m[2][1] * ray.dir.y + g.rot_matrix.m[2][2] * ray.dir.z;
+    d_os.x = g.rotMat.m[0][0] * ray.dir.x + g.rotMat.m[0][1] * ray.dir.y + g.rotMat.m[0][2] * ray.dir.z;
+    d_os.y = g.rotMat.m[1][0] * ray.dir.x + g.rotMat.m[1][1] * ray.dir.y + g.rotMat.m[1][2] * ray.dir.z;
+    d_os.z = g.rotMat.m[2][0] * ray.dir.x + g.rotMat.m[2][1] * ray.dir.y + g.rotMat.m[2][2] * ray.dir.z;
 #endif
     // o_g = S^{-1} R^T (o - μ),  d_g = S^{-1} R^T d
     float3 o_g = make_float3(o_os.x / g_scale.x, o_os.y / g_scale.y, o_os.z / g_scale.z); //S^-1 R^T (o-μ)
@@ -730,14 +738,14 @@ __device__ __forceinline__ float evaluateGaussianResponse_3dgrt(const cuRay& ray
     const float3 rayDirR = quat_rotate(ray.dir, inv_rot); // R^T * d
 #else
     float3 gposcr; // R^T * (o - μ)
-    gposcr.x = g.rot_matrix.m[0][0] * gposc.x + g.rot_matrix.m[0][1] * gposc.y + g.rot_matrix.m[0][2] * gposc.z;
-    gposcr.y = g.rot_matrix.m[1][0] * gposc.x + g.rot_matrix.m[1][1] * gposc.y + g.rot_matrix.m[1][2] * gposc.z;
-    gposcr.z = g.rot_matrix.m[2][0] * gposc.x + g.rot_matrix.m[2][1] * gposc.y + g.rot_matrix.m[2][2] * gposc.z;
+    gposcr.x = g.rotMat.m[0][0] * gposc.x + g.rotMat.m[0][1] * gposc.y + g.rotMat.m[0][2] * gposc.z;
+    gposcr.y = g.rotMat.m[1][0] * gposc.x + g.rotMat.m[1][1] * gposc.y + g.rotMat.m[1][2] * gposc.z;
+    gposcr.z = g.rotMat.m[2][0] * gposc.x + g.rotMat.m[2][1] * gposc.y + g.rotMat.m[2][2] * gposc.z;
 
     float3 rayDirR; // R^T * d
-    rayDirR.x = g.rot_matrix.m[0][0] * ray.dir.x + g.rot_matrix.m[0][1] * ray.dir.y + g.rot_matrix.m[0][2] * ray.dir.z;
-    rayDirR.y = g.rot_matrix.m[1][0] * ray.dir.x + g.rot_matrix.m[1][1] * ray.dir.y + g.rot_matrix.m[1][2] * ray.dir.z;
-    rayDirR.z = g.rot_matrix.m[2][0] * ray.dir.x + g.rot_matrix.m[2][1] * ray.dir.y + g.rot_matrix.m[2][2] * ray.dir.z;
+    rayDirR.x = g.rotMat.m[0][0] * ray.dir.x + g.rotMat.m[0][1] * ray.dir.y + g.rotMat.m[0][2] * ray.dir.z;
+    rayDirR.y = g.rotMat.m[1][0] * ray.dir.x + g.rotMat.m[1][1] * ray.dir.y + g.rotMat.m[1][2] * ray.dir.z;
+    rayDirR.z = g.rotMat.m[2][0] * ray.dir.x + g.rotMat.m[2][1] * ray.dir.y + g.rotMat.m[2][2] * ray.dir.z;
 #endif
 
     const float3 gro = gposcr / g_scale; //o_g
@@ -757,7 +765,7 @@ __device__ __forceinline__ float evaluateGaussianResponse_3dgrt(const cuRay& ray
 }
 
 //world to local space
-__device__ __forceinline__ void quaternionWXYZToMatrix(const float4& q, float33& ret) {
+__device__ __forceinline__ void quaternionWXYZToMatrixTranspose(const float4& q, float33& ret) {
     const float r = q.x;
     const float x = q.y;
     const float y = q.z;
@@ -779,34 +787,34 @@ __device__ __forceinline__ void quaternionWXYZToMatrix(const float4& q, float33&
     ret[2] = make_float3(2.f * (xz + ry), 2.f * (yz - rx), (1.f - 2.f * (xx + yy)));
 }
 
-__device__ __forceinline__ float evaluateGaussianResponse_origin(const cuRay& ray, const Gaussian& g)
-{
-    // 가우시안 파라미터 준비
-    const float3 particlePosition = make_float3(g.pos[0], g.pos[1], g.pos[2]);
-    const float3 particleScale = make_float3(g.scale[0], g.scale[1], g.scale[2]);
-    //float4 particleQquaternion = make_float4(g.rot[1], g.rot[2], g.rot[3], g.rot[0]);
-    float4 particleQquaternion = make_float4(g.rot[0], g.rot[1], g.rot[2], g.rot[3]);
-    float33 particleRotation;
-    quaternionWXYZToMatrix(particleQquaternion, particleRotation);
-    // 광선을 가우시안의 로컬 좌표계로 변환 (회전 및 스케일링)
-    const float3 giscl = make_float3(1 / particleScale.x, 1 / particleScale.y, 1 / particleScale.z);
-    const float3 gposc = (ray.pos - particlePosition);
-    const float3 gposcr = (gposc * particleRotation);
-    const float3 gro = giscl * gposcr;
-    const float3 rayDirR = ray.dir * particleRotation;
-    const float3 grdu = giscl * rayDirR;
-    const float3 grd = normalize(grdu);
-
-    // cross product를 이용해 grayDist(제곱된 마할라노비스 거리) 계산
-    const float3 gcrod = cross(grd, gro);
-    const float grayDist = dot(gcrod, gcrod);
-
-    // particleResponse 함수를 통해 밀도 계산
-    const float gres = particleResponse<GAUSSIAN_DEGREE>(grayDist);
-
-    // 기본 불투명도와 밀도를 곱하여 최종 결과 반환
-    return fminf(0.99f, g.opacity * gres);
-}
+//__device__ __forceinline__ float evaluateGaussianResponse_origin(const cuRay& ray, const Gaussian& g)
+//{
+//    // 가우시안 파라미터 준비
+//    const float3 particlePosition = make_float3(g.pos[0], g.pos[1], g.pos[2]);
+//    const float3 particleScale = make_float3(g.scale[0], g.scale[1], g.scale[2]);
+//    //float4 particleQquaternion = make_float4(g.rot[1], g.rot[2], g.rot[3], g.rot[0]);
+//    float4 particleQquaternion = make_float4(g.rot[0], g.rot[1], g.rot[2], g.rot[3]);
+//    float33 particleRotation;
+//    quaternionWXYZToMatrixTranspose(particleQquaternion, particleRotation);
+//    // 광선을 가우시안의 로컬 좌표계로 변환 (회전 및 스케일링)
+//    const float3 giscl = make_float3(1 / particleScale.x, 1 / particleScale.y, 1 / particleScale.z);
+//    const float3 gposc = (ray.pos - particlePosition);
+//    const float3 gposcr = (gposc * particleRotation);
+//    const float3 gro = giscl * gposcr;
+//    const float3 rayDirR = ray.dir * particleRotation;
+//    const float3 grdu = giscl * rayDirR;
+//    const float3 grd = normalize(grdu);
+//
+//    // cross product를 이용해 grayDist(제곱된 마할라노비스 거리) 계산
+//    const float3 gcrod = cross(grd, gro);
+//    const float grayDist = dot(gcrod, gcrod);
+//
+//    // particleResponse 함수를 통해 밀도 계산
+//    const float gres = particleResponse<GAUSSIAN_DEGREE>(grayDist);
+//
+//    // 기본 불투명도와 밀도를 곱하여 최종 결과 반환
+//    return fminf(0.99f, g.opacity * gres);
+//}
 
 __device__ __forceinline__ float3 eval_sh_final_ptr(
     const int degree,
@@ -1010,20 +1018,27 @@ __device__ inline void rayPrimIntersect(const cuRay& currRay, const unsigned id
     const int num_float4s = sizeof(Gaussian) / sizeof(float4);
     int base_idx = id * num_float4s;
 #pragma unroll
+#if QUATERNION
     for (int i = 0; i < 3; ++i) {
+#else
+    for (int i = 0; i < 4; i++){
+#endif
         g_as_float4[i] = tex1Dfetch<float4>(inGaussianTex, base_idx + i);
     }
-
+    
     const float3 particlePosition = make_float3(g.pos[0], g.pos[1], g.pos[2]);
     float3 giscl = make_float3(g.scale[0], g.scale[1], g.scale[2]);
-    float4 particleQquaternion = make_float4(g.rot[0], g.rot[1], g.rot[2], g.rot[3]);
     float33 particleRotation;
-    quaternionWXYZToMatrix(particleQquaternion, particleRotation);
-
+    float k_scale;
 #if QUATERNION
-    float k_scale = g.k_scale;
+    float4 particleQquaternion = make_float4(g.rot[0], g.rot[1], g.rot[2], g.rot[3]);
+    quaternionWXYZToMatrixTranspose(particleQquaternion, particleRotation);
+    k_scale = g.k_scale;
 #else
-    float k_scale = calculateKernelScale(g.opacity, KERNEL_MIN_RESPONSE);
+    particleRotation[0] = make_float3(g.rotMat.m[0][0], g.rotMat.m[1][0], g.rotMat.m[2][0]);
+    particleRotation[1] = make_float3(g.rotMat.m[0][1], g.rotMat.m[1][1], g.rotMat.m[2][1]);
+    particleRotation[2] = make_float3(g.rotMat.m[0][2], g.rotMat.m[1][2], g.rotMat.m[2][2]);
+    k_scale = tex1Dfetch<float>(inKScaleTex, id);
 #endif
 #if UPLOAD_INV_SCALE
     giscl = giscl / k_scale;
@@ -1396,7 +1411,7 @@ __device__ void traverseBSPTFrontToBack(kdtreeNode& node, cuRay& currRay, float 
                 const float3 particleScale = make_float3(g.scale[0], g.scale[1], g.scale[2]);
                 float4 particleQquaternion = make_float4(g.rot[0], g.rot[1], g.rot[2], g.rot[3]);
                 float33 particleRotation;
-                quaternionWXYZToMatrix(particleQquaternion, particleRotation);
+                quaternionWXYZToMatrixTranspose(particleQquaternion, particleRotation);
 
                 const float3 giscl = make_float3(1 / particleScale.x, 1 / particleScale.y, 1 / particleScale.z);
                 const float3 gposc = (currRay.pos - particlePosition);
@@ -1508,9 +1523,15 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
 #else
                     const float3 giscl = make_float3(1/g.scale[0], 1/g.scale[1], 1/g.scale[2]);
 #endif
-                    float4 particleQquaternion = make_float4(g.rot[0], g.rot[1], g.rot[2], g.rot[3]);
                     float33 particleRotation;
-                    quaternionWXYZToMatrix(particleQquaternion, particleRotation);
+#if QUATERNION
+                    float4 particleQquaternion = make_float4(g.rot[0], g.rot[1], g.rot[2], g.rot[3]);
+                    quaternionWXYZToMatrixTranspose(particleQquaternion, particleRotation);
+#else
+                    particleRotation[0] = make_float3(g.rotMat.m[0][0], g.rotMat.m[1][0], g.rotMat.m[2][0]);
+                    particleRotation[1] = make_float3(g.rotMat.m[0][1], g.rotMat.m[1][1], g.rotMat.m[2][1]);
+                    particleRotation[2] = make_float3(g.rotMat.m[0][2], g.rotMat.m[1][2], g.rotMat.m[2][2]);
+#endif
 
                     const float3 gposc = (currRay.pos - particlePosition);
                     const float3 gposcr = (gposc * particleRotation);
@@ -1735,7 +1756,7 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
                     //float4 particleQquaternion = make_float4(g.rot[1], g.rot[2], g.rot[3], g.rot[0]);
                     float4 particleQquaternion = make_float4(g.rot[0], g.rot[1], g.rot[2], g.rot[3]);
                     float33 particleRotation;
-                    quaternionWXYZToMatrix(particleQquaternion, particleRotation);
+                    quaternionWXYZToMatrixTranspose(particleQquaternion, particleRotation);
                     // 광선을 가우시안의 로컬 좌표계로 변환 (회전 및 스케일링)
                     const float3 giscl = make_float3(1 / particleScale.x, 1 / particleScale.y, 1 / particleScale.z);
                     const float3 gposc = (currRay.pos - particlePosition);
@@ -2334,7 +2355,11 @@ void warmUp(float* d_framebuffer, cudaStream_t stream) {
 }
 
 #if PRIMITIVE_TYPE == ELLIPSOID
-void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vector<Gaussian>& gaussians) {
+void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vector<Gaussian>& gaussians
+#if !QUATERNION
+    , std::vector<float>& kScales
+#endif
+) {
     printf("Setting up static data for CUDA rendering...\n");
 
     KdTree* kdTree = object.kd_tree;
@@ -2367,6 +2392,12 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
     size_t gaussians_bytes = gaussians.size() * sizeof(Gaussian);
     CUDA_CHECK(cudaMalloc(&g_d_gaussians_persistent, gaussians_bytes));
     CUDA_CHECK(cudaMemcpy(g_d_gaussians_persistent, gaussians.data(), gaussians_bytes, cudaMemcpyHostToDevice));
+
+#if !QUATERNION
+    size_t kScale_bytes = kScales.size() * sizeof(float);
+    CUDA_CHECK(cudaMalloc(&g_d_kScale_persistent, kScale_bytes));
+    CUDA_CHECK(cudaMemcpy(g_d_kScale_persistent, kScales.data(), kScale_bytes, cudaMemcpyHostToDevice));
+#endif
 
     err = cudaGetLastError();
     if (err != cudaSuccess) {
@@ -2416,6 +2447,19 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
     if (g_d_gaussians) cudaFree(g_d_gaussians);
     CUDA_CHECK(cudaMemcpyToSymbol(g_d_gaussians, &g_d_gaussians_persistent, sizeof(Gaussian*)));
 #endif
+#if !QUATERNION
+    #if KSCALE_TEXTURE
+    resDesc.res.linear.devPtr = g_d_kScale_persistent;
+    resDesc.res.linear.desc = cudaCreateChannelDesc<float>();
+    resDesc.res.linear.sizeInBytes = gaussians_bytes;
+    cudaTextureObject_t h_inKScaleTex = 0;
+    CUDA_CHECK(cudaCreateTextureObject(&h_inKScaleTex, &resDesc, &texDesc, NULL));
+    CUDA_CHECK(cudaMemcpyToSymbol(inKScaleTex, &h_inKScaleTex, sizeof(cudaTextureObject_t)));
+    #else
+    if (g_d_kScale) cudaFree(g_d_kScale);
+    CUDA_CHECK(cudaMemcpyToSymbol(g_d_kScale, &g_d_kScale_persistent, sizeof(Gaussian*)));
+    #endif
+#endif
 
     // 상수 메모리 설정
     float3 h_bbox_min = make_float3(object.AABB[XMIN], object.AABB[YMIN], object.AABB[ZMIN]);
@@ -2448,6 +2492,9 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
 #endif
 #if GAUSSIAN_TEXTURE
     if (h_inGaussianTex)            cudaDestroyTextureObject(h_inGaussianTex);
+#endif
+#if !QUATERNION && KSCALE_TEXTURE
+    if (h_inKScaleTex)            cudaDestroyTextureObject(h_inKScaleTex);
 #endif
 }
 #elif PRIMITIVE_TYPE == TRI

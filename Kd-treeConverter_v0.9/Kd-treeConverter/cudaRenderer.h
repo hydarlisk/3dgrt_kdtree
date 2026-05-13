@@ -68,7 +68,11 @@ void renderObjWithCuda(
 //);
 void warmUp(float* d_framebuffer, cudaStream_t stream);
 
-void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vector<Gaussian>& gaussians);
+void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vector<Gaussian>& gaussians
+#if !QUATERNION
+	, std::vector<float>& kScales
+#endif
+);
 
 float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, float* d_framebuffer, cudaStream_t stream
 #if HIT_AND_NODE_COUNT_DEBUG

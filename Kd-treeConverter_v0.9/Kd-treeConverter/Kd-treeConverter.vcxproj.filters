@@ -92,6 +92,9 @@
     <ClInclude Include="..\external\stb_image_write.h">
       <Filter>external</Filter>
     </ClInclude>
+    <ClInclude Include="Gaussian.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cudaRenderer.cu">

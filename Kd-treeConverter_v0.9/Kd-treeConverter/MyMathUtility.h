@@ -153,8 +153,8 @@ public:
     }
 };
 
-void quaternionWXYZToMatrixTransform(const float* q, float(&R)[3][3]);
 void quaternionWXYZToMatrix(const float* q, float(&R)[3][3]);
+void quaternionWXYZToMatrixTranspose(const float* q, float(&R)[3][3]);
 
 
 void dMyVecCrossProduct(double *, double *, double *);

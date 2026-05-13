@@ -23,6 +23,7 @@
 #include "SLMeshDataIO.h"
 #include "OpenGLStuffs.h"
 #include "MyMathUtility.h"
+#include "Gaussian.h"
 
 //shyun added begin
 #include <map>
@@ -81,6 +82,10 @@ bool g_cuda_rendering_done = false;
 bool g_cuda_interactive_mode = false; // CUDA 인터랙티브 모드 활성화 플래그
 bool g_camera_dirty = true;           // 카메라가 변경되었는지 확인하는 플래그
 std::vector<Gaussian> g_gaussians;	  // 전역 변수로 가우시안 데이터를 저장할 벡터
+std::vector<bool> g_isValidG;
+#if !QUATERNION
+std::vector<float> g_kScales;
+#endif
 
 int g_renderMode = 0;	//5: ellipsoid aabb debug
 int g_renderGId = -1;
@@ -341,7 +346,7 @@ void renderGaussianMeshes() {
 	ptr_ev = uip.poly_model.extended_vertices;
 	glBegin(GL_TRIANGLES);
 	for (i = 0; i < uip.poly_model.n_triangles; i++) {
-		if (g_gaussians[ptr_ev->material_ID].valid == 0) {
+		if (g_isValidG[ptr_ev->material_ID] == 0) {
 			ptr_ev += 3;
 			continue;
 		}
@@ -1232,13 +1237,39 @@ inline void fMyVecNormalize4D(float v[4]) {
 	}
 }
 
+void transform_vector_by_matrix(const float v[3], const float3x3& rot, float result[3]) {
+	result[0] = v[0] * rot.m[0][0] + v[1] * rot.m[0][1] + v[2] * rot.m[0][2];
+	result[1] = v[0] * rot.m[1][0] + v[1] * rot.m[1][1] + v[2] * rot.m[1][2];
+	result[2] = v[0] * rot.m[2][0] + v[1] * rot.m[2][1] + v[2] * rot.m[2][2];
+}
+
 void transform_vector_by_matrix_transpose(const float v[3], const float3x3& rot, float result[3]) {
 	result[0] = v[0] * rot.m[0][0] + v[1] * rot.m[1][0] + v[2] * rot.m[2][0];
 	result[1] = v[0] * rot.m[0][1] + v[1] * rot.m[1][1] + v[2] * rot.m[2][1];
 	result[2] = v[0] * rot.m[0][2] + v[1] * rot.m[1][2] + v[2] * rot.m[2][2];
 }
 
-// 쿼터니언(w,x,y,z)을 전치된 회전 행렬로 변환
+// local to world
+void quaternionToMatrix(const float q[4], float3x3& rot) {
+	float w = q[0], x = q[1], y = q[2], z = q[3];
+	float xx = x * x, yy = y * y, zz = z * z;
+	float xy = x * y, xz = x * z, yz = y * z;
+	float wx = w * x, wy = w * y, wz = w * z;
+
+	rot.m[0][0] = 1.0f - 2.0f * (yy + zz);
+	rot.m[0][1] = 2.0f * (xy - wz);
+	rot.m[0][2] = 2.0f * (xz + wy);
+
+	rot.m[1][0] = 2.0f * (xy + wz);
+	rot.m[1][1] = 1.0f - 2.0f * (xx + zz);
+	rot.m[1][2] = 2.0f * (yz - wx);
+
+	rot.m[2][0] = 2.0f * (xz - wy);
+	rot.m[2][1] = 2.0f * (yz + wx);
+	rot.m[2][2] = 1.0f - 2.0f * (xx + yy);
+}
+
+// world to local
 void quaternionToMatrixTranspose(const float q[4], float3x3& rot) {
 	float w = q[0], x = q[1], y = q[2], z = q[3];
 	float xx = x * x, yy = y * y, zz = z * z;
@@ -1276,18 +1307,6 @@ void rotate_vector_by_quaternion(float v_out[3], float v[3], const float q[4]) {
 	//		+ 2.0f * q_vec[i] * fMyVecDotProduct(q_vec, v)
 	//		+ 2.0f * q[0] * VcR[i];
 	//}
-}
-
-inline float calcKernelScale(float density, float kernelMinResponse, uint32_t opts = 1, float kernelDegree = KERNEL_DEGREE) {
-	const float responseModulation = (opts & 1 /* MOGRenderAdaptiveKernelClamping */) ? density : 1.0f;
-	const float minResponse = std::min(kernelMinResponse / responseModulation, 0.97f);
-
-	const float b = kernelDegree;
-	const float a = -4.5f / std::pow(3.0f, b);
-
-	// 3. e^{a * r^b} = minResponse 를 만족하는 r(반지름) 계산
-	// r = (ln(minResponse) / a)^(1/b)
-	return std::pow(std::log(minResponse) / a, 1.0f / b);
 }
 
 //read gaussians from ply
@@ -1356,7 +1375,6 @@ bool loadGaussiansFromPly(const char* filename, std::vector<Gaussian>& gaussians
 		}
 
 		Gaussian g{};
-		g.valid = 1;
 
 		// 오프셋 맵을 사용하여 버퍼에서 직접 데이터 추출
 		// 헤더에 명시된 순서와 관계없이 이름으로 정확한 위치를 찾아감
@@ -1377,16 +1395,16 @@ bool loadGaussiansFromPly(const char* filename, std::vector<Gaussian>& gaussians
 		g.scale[2] = expf(g.scale[2]);
 
 #if QUATERNION
+		g.k_scale = calcKernelScale(g.opacity, KERNEL_MIN_RESPONSE);
 		memcpy(g.rot, &buffer[property_offsets["rot_0"]], sizeof(float) * 4);
 		fMyVecNormalize4D(g.rot);
 #else
+		g_kScales.push_back(calcKernelScale(g.opacity));
 		float quat[4];
 		memcpy(quat, &buffer[property_offsets["rot_0"]], sizeof(float) * 4);
 		fMyVecNormalize4D(quat);
-		quaternionToMatrixTranspose(quat, g.rot_matrix);
+		quaternionToMatrix(quat, g.rotMat);
 #endif
-
-		g.k_scale = calcKernelScale(g.opacity, KERNEL_MIN_RESPONSE);
 
 		gaussians.push_back(g);
 
@@ -1556,7 +1574,7 @@ inline void generate_gaussian_mesh(
 #if QUATERNION
 			rotate_vector_by_quaternion(v_rotated, v_scaled, g.rot);
 #else
-			transform_vector_by_matrix_transpose(v_scaled, g.rot_matrix, v_rotated);
+			transform_vector_by_matrix_transpose(v_scaled, g.rotMat, v_rotated);
 #endif
 
 			// 위치(Translate) 적용
@@ -1661,7 +1679,7 @@ void create_composite_object_from_gaussians(
 	#if OCCLUDE_MIN_OPACITY
 		if (sigma < KERNEL_MIN_RESPONSE || sigma < SIGMA_THRESHOLD_MODE / 255.0f) {
 			cnt_sigma++;
-			g.valid = 0;
+			g_isValidG[i] = 0;
 			continue;
 		}
 	#endif
@@ -1971,7 +1989,7 @@ void removeProblematicGaussian(std::vector<Gaussian>& gaussians) {
 	int validGCnt = 0;
 	int invalidCnt = 0;
 	for (int i = 0; i < gaussians.size(); i++) {
-		if (gaussians[i].valid == 0) continue;
+		if (g_isValidG[i]) continue;
 		BoundingBox aabb;
 		aabb.min[0] = aabb.min[1] = aabb.min[2] = FLT_MAX;
 		aabb.max[0] = aabb.max[1] = aabb.max[2] = -FLT_MAX;
@@ -1994,7 +2012,7 @@ void removeProblematicGaussian(std::vector<Gaussian>& gaussians) {
 			|| yRatio > PROBLEMATIC_THRESHOLD
 			|| zRatio > PROBLEMATIC_THRESHOLD
 			) {
-			gaussians[i].valid = 0;
+			g_isValidG[i] = 0;
 			invalidCnt++;
 		}
 	}
@@ -2097,8 +2115,8 @@ void rotate_composite_object(std::vector<Gaussian>& gaussians, float angle_degre
 		pos[1] = ox * R[1][0] + oy * R[1][1] + oz * R[1][2];
 		pos[2] = ox * R[2][0] + oy * R[2][1] + oz * R[2][2];
 
-		float3x3 old_matrix = gaussians[i].rot_matrix;
-		matrix_multiply(gaussians[i].rot_matrix, old_matrix, R_T);
+		float3x3 old_matrix = gaussians[i].rotMat;
+		matrix_multiply(gaussians[i].rotMat, old_matrix, R_T);
 #endif
 	}
 
@@ -3109,6 +3127,7 @@ void subMenuHandler(int value) {
 		fprintf(stderr, "Failed to load ply file\n");
 		return;
 	}
+	g_isValidG.assign(g_gaussians.size(), 1);
 	create_composite_object_from_gaussians(g_gaussians);
 	removeProblematicGaussian(g_gaussians);
 #if ROTATION
@@ -3294,7 +3313,11 @@ void main_menu_action(int selection) {
 				g.scale[2] = 1 / g.scale[2];
 			}
 #endif
-			renderGaussianWithCudaSetup(uip.poly_model, g_gaussians);
+			renderGaussianWithCudaSetup(uip.poly_model, g_gaussians
+#if !QUATERNION
+				, g_kScales
+#endif
+			);
 #if USE_STACK > SHORT_STACK
 			if (g_d_global_stack) cudaFree(g_d_global_stack);
 			cudaMalloc((void**)&g_d_global_stack, (size_t)g_render_width * g_render_height * MAX_GLOBAL_STACK_DEPTH * sizeof(cu_traceState));
