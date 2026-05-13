@@ -1278,6 +1278,18 @@ void rotate_vector_by_quaternion(float v_out[3], float v[3], const float q[4]) {
 	//}
 }
 
+inline float calcKernelScale(float density, float kernelMinResponse, uint32_t opts = 1, float kernelDegree = KERNEL_DEGREE) {
+	const float responseModulation = (opts & 1 /* MOGRenderAdaptiveKernelClamping */) ? density : 1.0f;
+	const float minResponse = std::min(kernelMinResponse / responseModulation, 0.97f);
+
+	const float b = kernelDegree;
+	const float a = -4.5f / std::pow(3.0f, b);
+
+	// 3. e^{a * r^b} = minResponse 를 만족하는 r(반지름) 계산
+	// r = (ln(minResponse) / a)^(1/b)
+	return std::pow(std::log(minResponse) / a, 1.0f / b);
+}
+
 //read gaussians from ply
 bool loadGaussiansFromPly(const char* filename, std::vector<Gaussian>& gaussians) {
 	std::ifstream file(filename, std::ios::binary);
@@ -1373,6 +1385,8 @@ bool loadGaussiansFromPly(const char* filename, std::vector<Gaussian>& gaussians
 		fMyVecNormalize4D(quat);
 		quaternionToMatrixTranspose(quat, g.rot_matrix);
 #endif
+
+		g.k_scale = calcKernelScale(g.opacity, KERNEL_MIN_RESPONSE);
 
 		gaussians.push_back(g);
 
@@ -3273,6 +3287,13 @@ void main_menu_action(int selection) {
 		if (g_cuda_interactive_mode) {
 			cudaEventCreate(&start_real);
 			cudaEventCreate(&stop_real);
+#if UPLOAD_INV_SCALE
+			for (Gaussian& g : g_gaussians) {
+				g.scale[0] = 1 / g.scale[0];
+				g.scale[1] = 1 / g.scale[1];
+				g.scale[2] = 1 / g.scale[2];
+			}
+#endif
 			renderGaussianWithCudaSetup(uip.poly_model, g_gaussians);
 #if USE_STACK > SHORT_STACK
 			if (g_d_global_stack) cudaFree(g_d_global_stack);

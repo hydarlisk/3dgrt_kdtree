@@ -597,18 +597,6 @@ void quaternionWXYZToMatrix(const float* q, float(&R)[3][3]) {
 	R[2][2] = 1.0f - 2.0f * (x * x + y * y);
 }
 
-inline float calculateKernelScale(float density, float kernelMinResponse, uint32_t opts = 1, float kernelDegree = KERNEL_DEGREE) {
-	const float responseModulation = (opts & 1 /* MOGRenderAdaptiveKernelClamping */) ? density : 1.0f;
-	const float minResponse = std::min(kernelMinResponse / responseModulation, 0.97f);
-	
-	const float b = kernelDegree;
-	const float a = -4.5f / std::pow(3.0f, b);
-
-	// 3. e^{a * r^b} = minResponse 를 만족하는 r(반지름) 계산
-	// r = (ln(minResponse) / a)^(1/b)
-	return std::pow(std::log(minResponse) / a, 1.0f / b);
-}
-
 bool isGaussianIntersectingAABB(const BoundingBox& currBBox, const float pos[3], const MyMat33& covInv) {
 	float x_coords[2] = { currBBox.min[0], currBBox.max[0] };
 	float y_coords[2] = { currBBox.min[1], currBBox.max[1] };
@@ -696,7 +684,6 @@ void clip_ellipsoid(std::vector<TriangleList>& ellipsoidInfos, const SplitCost& 
 			auto& g = g_gaussians[ellipsoidInfos[gi].offset];
 			float R[3][3];
 			quaternionWXYZToMatrixTransform(g.rot, R);
-			float k_scale = calculateKernelScale(g.opacity, KERNEL_MIN_RESPONSE);
 
 			float s0 = g.scale[0];
 			float s1 = g.scale[1];
@@ -710,7 +697,7 @@ void clip_ellipsoid(std::vector<TriangleList>& ellipsoidInfos, const SplitCost& 
 			}
 			MyMat33 cov;
 			cov = M.multTranspose();
-			cov = cov * (k_scale * k_scale);
+			cov = cov * (g.k_scale * g.k_scale);
 
 			//2. schur complement
 			float e[3];
@@ -1199,10 +1186,9 @@ void calcEllipsoidAABB(Gaussian& g, BoundingBox& b) {
 	float sigma_yy = (R[1][0] * s0) * (R[1][0] * s0) + (R[1][1] * s1) * (R[1][1] * s1) + (R[1][2] * s2) * (R[1][2] * s2);
 	float sigma_zz = (R[2][0] * s0) * (R[2][0] * s0) + (R[2][1] * s1) * (R[2][1] * s1) + (R[2][2] * s2) * (R[2][2] * s2);
 
-	float k_scale = calculateKernelScale(g.opacity, KERNEL_MIN_RESPONSE);
-	float half_x = k_scale * std::sqrt(sigma_xx);
-	float half_y = k_scale * std::sqrt(sigma_yy);
-	float half_z = k_scale * std::sqrt(sigma_zz);
+	float half_x = g.k_scale * std::sqrt(sigma_xx);
+	float half_y = g.k_scale * std::sqrt(sigma_yy);
+	float half_z = g.k_scale * std::sqrt(sigma_zz);
 
 	b.min[0] = g.pos[0] - half_x;
 	b.min[1] = g.pos[1] - half_y;

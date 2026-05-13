@@ -297,7 +297,7 @@ __constant__ float3 g_SceneBBoxMax;
 
 #if GLOBAL_DEVICE_VAR
 kdtreeNode* g_d_kdtree_nodes = nullptr;
-unsigned int* g_d_tri_offsets = nullptr;
+unsigned int* g_d_prim_offsets = nullptr;
     #if WALD_METHOD
 cuWaldTriangleInfo* g_d_waldInfo = nullptr;
     #else
@@ -973,13 +973,13 @@ __device__ inline void rayTriIntersect(const cuRay& ray, const int id,
 }
 //only translate, rotation done
 //no scaling
-__device__ inline float ellipsoidIntersect(const float3& pos, const float3& dir, const float3 scale) {
-    float3 safeScale = scale;
-    safeScale.x = max(scale.x, EPSILON);
-    safeScale.y = max(scale.y, EPSILON);
-    safeScale.z = max(scale.z, EPSILON);
-    float3 ocn = pos / safeScale;
-    float3 rdn = dir / safeScale;
+__device__ inline float ellipsoidIntersect(const float3& ocn, const float3& rdn) {
+    //float3 safeScale = scale;
+    //safeScale.x = max(scale.x, EPSILON);
+    //safeScale.y = max(scale.y, EPSILON);
+    //safeScale.z = max(scale.z, EPSILON);
+    //float3 ocn = pos / safeScale;
+    //float3 rdn = dir / safeScale;
     float a = dot(rdn, rdn);
     float b = dot(ocn, rdn);
     float c = dot(ocn, ocn);
@@ -1015,21 +1015,28 @@ __device__ inline void rayPrimIntersect(const cuRay& currRay, const unsigned id
     }
 
     const float3 particlePosition = make_float3(g.pos[0], g.pos[1], g.pos[2]);
-    const float3 particleScale = make_float3(g.scale[0], g.scale[1], g.scale[2]);
+    float3 giscl = make_float3(g.scale[0], g.scale[1], g.scale[2]);
     float4 particleQquaternion = make_float4(g.rot[0], g.rot[1], g.rot[2], g.rot[3]);
     float33 particleRotation;
     quaternionWXYZToMatrix(particleQquaternion, particleRotation);
 
-    const float3 giscl = make_float3(1 / particleScale.x, 1 / particleScale.y, 1 / particleScale.z);
+#if QUATERNION
+    float k_scale = g.k_scale;
+#else
+    float k_scale = calculateKernelScale(g.opacity, KERNEL_MIN_RESPONSE);
+#endif
+#if UPLOAD_INV_SCALE
+    giscl = giscl / k_scale;
+#else
+    giscl = 1 / giscl / k_scale;
+#endif
     const float3 gposc = (currRay.pos - particlePosition);
     const float3 gposcr = (gposc * particleRotation);
-    //const float3 gro = giscl * gposcr;
+    const float3 gro = giscl * gposcr;
     const float3 rayDirR = currRay.dir * particleRotation;
-    //const float3 grdu = giscl * rayDirR;
-    float k_scale = calculateKernelScale(g.opacity, KERNEL_MIN_RESPONSE);
-    
-    float t = ellipsoidIntersect(gposcr, rayDirR, particleScale * k_scale);
+    const float3 grd = rayDirR * giscl;
 
+    float t = ellipsoidIntersect(gro, grd);
     if (t < t_near) return;
 
     local_hits[local_hit_count].t = t;
@@ -1433,8 +1440,8 @@ __device__ void traverseBSPTFrontToBack(kdtreeNode& node, cuRay& currRay, float 
 #if PRIMITIVE_TYPE == ELLIPSOID
 __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
     cuRay& currRay,
-    float3& accumulated_color,      // 수정: 누적 색상을 직접 업데이트
-    float& accumulated_opacity    // 수정: 누적 알파를 직접 업데이트
+    float3& accumulated_color,
+    float& accumulated_opacity
 ) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -1496,12 +1503,15 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
                     Gaussian g = g_d_gaussians[gaussianID];
 #endif
                     const float3 particlePosition = make_float3(g.pos[0], g.pos[1], g.pos[2]);
-                    const float3 particleScale = make_float3(g.scale[0], g.scale[1], g.scale[2]);
+#if UPLOAD_INV_SCALE
+                    const float3 giscl = make_float3(g.scale[0], g.scale[1], g.scale[2]);
+#else
+                    const float3 giscl = make_float3(1/g.scale[0], 1/g.scale[1], 1/g.scale[2]);
+#endif
                     float4 particleQquaternion = make_float4(g.rot[0], g.rot[1], g.rot[2], g.rot[3]);
                     float33 particleRotation;
                     quaternionWXYZToMatrix(particleQquaternion, particleRotation);
 
-                    const float3 giscl = make_float3(1 / particleScale.x, 1 / particleScale.y, 1 / particleScale.z);
                     const float3 gposc = (currRay.pos - particlePosition);
                     const float3 gposcr = (gposc * particleRotation);
                     const float3 gro = giscl * gposcr;
@@ -2351,8 +2361,8 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
     CUDA_CHECK(cudaMemcpy(g_d_kdtree_nodes, kdTree->tree, node_size, cudaMemcpyHostToDevice));
 
     size_t offset_size = kdTree->tri_offset_count * sizeof(unsigned int);
-    CUDA_CHECK(cudaMalloc(&g_d_tri_offsets, offset_size));
-    CUDA_CHECK(cudaMemcpy(g_d_tri_offsets, kdTree->tri_offset_list, offset_size, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMalloc(&g_d_prim_offsets, offset_size));
+    CUDA_CHECK(cudaMemcpy(g_d_prim_offsets, kdTree->tri_offset_list, offset_size, cudaMemcpyHostToDevice));
 
     size_t gaussians_bytes = gaussians.size() * sizeof(Gaussian);
     CUDA_CHECK(cudaMalloc(&g_d_gaussians_persistent, gaussians_bytes));
@@ -2385,11 +2395,11 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
     CUDA_CHECK(cudaCreateTextureObject(&h_inKdTreeNodeTex, &resDesc, &texDesc, NULL));
     CUDA_CHECK(cudaMemcpyToSymbol(inKdTreeNodeTex, &h_inKdTreeNodeTex, sizeof(cudaTextureObject_t)));
 
-    /* triangle offsets */
-    resDesc.res.linear.devPtr = g_d_tri_offsets;
+    /* gaussian offsets */
+    resDesc.res.linear.devPtr = g_d_prim_offsets;
     resDesc.res.linear.desc = cudaCreateChannelDesc<unsigned int>();
     resDesc.res.linear.sizeInBytes = offset_size;
-    printf("g_d_tri_offsets: %u\n", offset_size);
+    printf("g_d_prim_offsets: %u\n", offset_size);
     cudaTextureObject_t h_inObjectOffsetListTex = 0;
     CUDA_CHECK(cudaCreateTextureObject(&h_inObjectOffsetListTex, &resDesc, &texDesc, NULL));
     CUDA_CHECK(cudaMemcpyToSymbol(inObjectOffsetListTex, &h_inObjectOffsetListTex, sizeof(cudaTextureObject_t)));
@@ -2542,11 +2552,11 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
     CUDA_CHECK(cudaMemcpy(g_d_kdtree_nodes, kdTree->tree, node_size, cudaMemcpyHostToDevice));
 
 #if !GLOBAL_DEVICE_VAR
-    unsigned int* g_d_tri_offsets = nullptr;
+    unsigned int* g_d_prim_offsets = nullptr;
 #endif
     size_t offset_size = kdTree->tri_offset_count * sizeof(unsigned int);
-    CUDA_CHECK(cudaMalloc(&g_d_tri_offsets, offset_size));
-    CUDA_CHECK(cudaMemcpy(g_d_tri_offsets, kdTree->tri_offset_list, offset_size, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMalloc(&g_d_prim_offsets, offset_size));
+    CUDA_CHECK(cudaMemcpy(g_d_prim_offsets, kdTree->tri_offset_list, offset_size, cudaMemcpyHostToDevice));
 
 #if WALD_METHOD
     #if !GLOBAL_DEVICE_VAR
@@ -2612,17 +2622,17 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
 
 #if OFFSET_TEXTURE
     // 삼각형 오프셋 텍스처 객체 생성
-    resDesc.res.linear.devPtr = g_d_tri_offsets;
+    resDesc.res.linear.devPtr = g_d_prim_offsets;
     resDesc.res.linear.desc = cudaCreateChannelDesc<unsigned int>();
     resDesc.res.linear.sizeInBytes = offset_size;
-    printf("g_d_tri_offsets: %u\n", offset_size);
+    printf("g_d_prim_offsets: %u\n", offset_size);
 
     // 호스트 전역 변수에 핸들을 저장
     cudaTextureObject_t h_inObjectOffsetListTex = 0;
     CUDA_CHECK(cudaCreateTextureObject(&h_inObjectOffsetListTex, &resDesc, &texDesc, NULL));
     CUDA_CHECK(cudaMemcpyToSymbol(inObjectOffsetListTex, &h_inObjectOffsetListTex, sizeof(cudaTextureObject_t)));
 #else
-    CUDA_CHECK(cudaMemcpyToSymbol(g_d_tri_offsets_dev, &g_d_tri_offsets, sizeof(unsigned int*)));
+    CUDA_CHECK(cudaMemcpyToSymbol(g_d_tri_offsets_dev, &g_d_prim_offsets, sizeof(unsigned int*)));
 #endif
 
 #if TRIACC_TEXTURE
@@ -3098,7 +3108,7 @@ void cleanupCudaResources() {
     printf("Cleaning up CUDA resources...\n");
 #if GLOBAL_DEVICE_VAR
     if (g_d_kdtree_nodes) cudaFree(g_d_kdtree_nodes);
-    if (g_d_tri_offsets) cudaFree(g_d_tri_offsets);
+    if (g_d_prim_offsets) cudaFree(g_d_prim_offsets);
 #if WALD_METHOD
     if (g_d_waldInfo) cudaFree(g_d_waldInfo);
 #else
