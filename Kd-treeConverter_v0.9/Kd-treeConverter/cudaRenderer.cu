@@ -2417,38 +2417,6 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
     CUDA_CHECK(cudaMemcpyToSymbol(g_d_gaussians, &g_d_gaussians_persistent, sizeof(Gaussian*)));
 #endif
 
-    /* tri_acc */
-    cuWaldTriangleInfo* h_waldInfo = nullptr;
-    build_waldInfoList_from_model(&object, h_waldInfo);
-#if !GLOBAL_DEVICE_VAR
-    cuWaldTriangleInfo* g_d_waldInfo = nullptr; // Device-side pointer
-#endif
-    size_t wald_info_size = sizeof(cuWaldTriangleInfo) * object.n_triangles;
-    CUDA_CHECK(cudaMalloc(&g_d_waldInfo, wald_info_size));
-    CUDA_CHECK(cudaMemcpy(g_d_waldInfo, h_waldInfo, wald_info_size, cudaMemcpyHostToDevice));
-
-#if TRIACC_TEXTURE
-    #if WALD_METHOD
-    resDesc.res.linear.devPtr = g_d_waldInfo;
-    resDesc.res.linear.desc = cudaCreateChannelDesc<float4>(); // WaldInfo는 float4 3개로 구성
-    resDesc.res.linear.sizeInBytes = wald_info_size;
-    #else
-    resDesc.res.linear.devPtr = g_d_tri_accel;
-    resDesc.res.linear.desc = cudaCreateChannelDesc<float4>();
-    resDesc.res.linear.sizeInBytes = accel_size;
-    #endif
-    // 호스트 전역 변수에 핸들을 저장
-    cudaTextureObject_t h_inTriAccelTex = 0;
-    CUDA_CHECK(cudaCreateTextureObject(&h_inTriAccelTex, &resDesc, &texDesc, NULL));
-    CUDA_CHECK(cudaMemcpyToSymbol(inTriAccelTex, &h_inTriAccelTex, sizeof(cudaTextureObject_t)));
-#else
-    #if WALD_METHOD
-    CUDA_CHECK(cudaMemcpyToSymbol(g_d_tri_acc_dev, &g_d_waldInfo, sizeof(float4*)));
-    #else
-    CUDA_CHECK(cudaMemcpyToSymbol(g_d_tri_acc_dev, &g_d_tri_accel, sizeof(unsigned int*));
-    #endif
-#endif
-
     // 상수 메모리 설정
     float3 h_bbox_min = make_float3(object.AABB[XMIN], object.AABB[YMIN], object.AABB[ZMIN]);
     float3 h_bbox_max = make_float3(object.AABB[XMAX], object.AABB[YMAX], object.AABB[ZMAX]);
@@ -2477,9 +2445,6 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
     if (h_inKdTreeNodeTex)          cudaDestroyTextureObject(h_inKdTreeNodeTex);
 #if OFFSET_TEXTURE
     if (h_inObjectOffsetListTex)    cudaDestroyTextureObject(h_inObjectOffsetListTex);
-#endif
-#if TRIACC_TEXTURE
-    if (h_inTriAccelTex)            cudaDestroyTextureObject(h_inTriAccelTex);
 #endif
 #if GAUSSIAN_TEXTURE
     if (h_inGaussianTex)            cudaDestroyTextureObject(h_inGaussianTex);

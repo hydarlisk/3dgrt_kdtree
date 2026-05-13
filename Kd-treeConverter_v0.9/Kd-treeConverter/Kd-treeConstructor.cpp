@@ -556,47 +556,6 @@ bool intersect_edge_plane(float *p0, float *p1, float *planePoint, float *planeN
 	return true;
 }
 
-
-//quaternion -> rot mat
-//local to world
-void quaternionWXYZToMatrixTransform(const float* q, float(&R)[3][3]) {
-	float r = q[0];
-	float x = q[1];
-	float y = q[2];
-	float z = q[3];
-
-	R[0][0] = 1.0f - 2.0f * (y * y + z * z);
-	R[0][1] = 2.0f * (x * y - r * z);
-	R[0][2] = 2.0f * (x * z + r * y);
-
-	R[1][0] = 2.0f * (x * y + r * z);
-	R[1][1] = 1.0f - 2.0f * (x * x + z * z);
-	R[1][2] = 2.0f * (y * z - r * x);
-
-	R[2][0] = 2.0f * (x * z - r * y);
-	R[2][1] = 2.0f * (y * z + r * x);
-	R[2][2] = 1.0f - 2.0f * (x * x + y * y);
-}
-//world to local
-void quaternionWXYZToMatrix(const float* q, float(&R)[3][3]) {
-	float r = q[0];
-	float x = q[1];
-	float y = q[2];
-	float z = q[3];
-
-	R[0][0] = 1.0f - 2.0f * (y * y + z * z);
-	R[1][0] = 2.0f * (x * y - r * z);
-	R[2][0] = 2.0f * (x * z + r * y);
-
-	R[0][1] = 2.0f * (x * y + r * z);
-	R[1][1] = 1.0f - 2.0f * (x * x + z * z);
-	R[2][1] = 2.0f * (y * z - r * x);
-
-	R[0][2] = 2.0f * (x * z - r * y);
-	R[1][2] = 2.0f * (y * z + r * x);
-	R[2][2] = 1.0f - 2.0f * (x * x + y * y);
-}
-
 bool isGaussianIntersectingAABB(const BoundingBox& currBBox, const float pos[3], const MyMat33& covInv) {
 	float x_coords[2] = { currBBox.min[0], currBBox.max[0] };
 	float y_coords[2] = { currBBox.min[1], currBBox.max[1] };
