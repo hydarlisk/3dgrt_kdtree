@@ -3306,13 +3306,23 @@ void main_menu_action(int selection) {
 		if (g_cuda_interactive_mode) {
 			cudaEventCreate(&start_real);
 			cudaEventCreate(&stop_real);
-#if UPLOAD_INV_SCALE
+
 			for (Gaussian& g : g_gaussians) {
+#if UPLOAD_INV_SCALE
 				g.scale[0] = 1 / g.scale[0];
 				g.scale[1] = 1 / g.scale[1];
 				g.scale[2] = 1 / g.scale[2];
-			}
 #endif
+#if UPLOAD_INVSR_MAT
+				for (int i = 0; i < 3; i++) {
+					g.rotMat.m[i][0] *= g.scale[0];
+					g.rotMat.m[i][1] *= g.scale[1];
+					g.rotMat.m[i][2] *= g.scale[2];
+				}
+#endif
+			}
+
+
 			renderGaussianWithCudaSetup(uip.poly_model, g_gaussians
 #if !QUATERNION
 				, g_kScales

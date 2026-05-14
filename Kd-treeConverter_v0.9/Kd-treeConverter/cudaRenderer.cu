@@ -50,6 +50,26 @@ static __device__ inline float3 operator*(const float3& p, const float33& m) {
     return make_float3(dot(m[0], p), dot(m[1], p), dot(m[2], p));
 }
 
+#if !QUATERNION
+// vec * mat
+static __device__ inline float3 multiplyMatrixVector(const float3& p, const float3x3& m) {
+    return make_float3(
+        m.m[0][0] * p.x + m.m[0][1] * p.y + m.m[0][2] * p.z,
+        m.m[1][0] * p.x + m.m[1][1] * p.y + m.m[1][2] * p.z,
+        m.m[2][0] * p.x + m.m[2][1] * p.y + m.m[2][2] * p.z
+    );
+}
+
+// mat * vec
+static __device__ inline float3 multMatrixTransposeVector(const float3& p, const float3x3& m) {
+    return make_float3(
+        m.m[0][0] * p.x + m.m[1][0] * p.y + m.m[2][0] * p.z,
+        m.m[0][1] * p.x + m.m[1][1] * p.y + m.m[2][1] * p.z,
+        m.m[0][2] * p.x + m.m[1][2] * p.y + m.m[2][2] * p.z
+    );
+}
+#endif
+
 // --- Device-side Data Structures ---
 struct cuRay {
     float3 pos;
@@ -997,7 +1017,7 @@ __device__ inline float ellipsoidIntersect(const float3& ocn, const float3& rdn)
     return (-b-h) / a;
 }
 
-__device__ inline float calculateKernelScale(float density, float kernelMinResponse, uint32_t opts = 1, float kernelDegree = KERNEL_DEGREE) {
+__device__ inline float calculateKernelScale(float density, float kernelMinResponse = KERNEL_MIN_RESPONSE, uint32_t opts = 1, float kernelDegree = KERNEL_DEGREE) {
     const float responseModulation = (opts & 1 /* MOGRenderAdaptiveKernelClamping */) ? density : 1.0f;
     const float minResponse = min(kernelMinResponse / responseModulation, 0.97f);
 
@@ -1035,10 +1055,16 @@ __device__ inline void rayPrimIntersect(const cuRay& currRay, const unsigned id
     quaternionWXYZToMatrixTranspose(particleQquaternion, particleRotation);
     k_scale = g.k_scale;
 #else
+    #if !DIRECT_ROT_CALC
     particleRotation[0] = make_float3(g.rotMat.m[0][0], g.rotMat.m[1][0], g.rotMat.m[2][0]);
     particleRotation[1] = make_float3(g.rotMat.m[0][1], g.rotMat.m[1][1], g.rotMat.m[2][1]);
     particleRotation[2] = make_float3(g.rotMat.m[0][2], g.rotMat.m[1][2], g.rotMat.m[2][2]);
-    k_scale = tex1Dfetch<float>(inKScaleTex, id);
+    #endif
+    #if PRE_CALC_KSCALE
+        k_scale = tex1Dfetch<float>(inKScaleTex, id);
+    #else
+        k_scale = calculateKernelScale(g.opacity);
+    #endif
 #endif
 #if UPLOAD_INV_SCALE
     giscl = giscl / k_scale;
@@ -1046,10 +1072,23 @@ __device__ inline void rayPrimIntersect(const cuRay& currRay, const unsigned id
     giscl = 1 / giscl / k_scale;
 #endif
     const float3 gposc = (currRay.pos - particlePosition);
+#if QUATERNION || !DIRECT_ROT_CALC
     const float3 gposcr = (gposc * particleRotation);
     const float3 gro = giscl * gposcr;
     const float3 rayDirR = currRay.dir * particleRotation;
     const float3 grd = rayDirR * giscl;
+#else
+    #if UPLOAD_INVSR_MAT
+    k_scale = 1 / k_scale;
+    const float3 gro = multMatrixTransposeVector(gposc, g.rotMat) * (k_scale * k_scale);
+    const float3 grd = multMatrixTransposeVector(currRay.dir, g.rotMat) * (k_scale * k_scale);
+    #else
+    const float3 gposcr = multMatrixTransposeVector(gposc, g.rotMat);
+    const float3 gro = giscl * gposcr;
+    const float3 rayDirR = multMatrixTransposeVector(currRay.dir, g.rotMat);
+    const float3 grd = rayDirR * giscl;
+    #endif
+#endif
 
     float t = ellipsoidIntersect(gro, grd);
     if (t < t_near) return;
@@ -1504,7 +1543,6 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
                 const unsigned primIdx = g_d_tri_offsets_dev[baseOffset];
 #endif
                 rayPrimIntersect(currRay, primIdx, t_near, t_far, local_hits, local_hit_count); 
-                //rayTriIntersect(currRay, primIdx, t_near, t_far, local_hits, local_hit_count);
             }
             if (local_hit_count > 0) {
                 sortHits(local_hits, local_hit_count);
@@ -1528,17 +1566,32 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
                     float4 particleQquaternion = make_float4(g.rot[0], g.rot[1], g.rot[2], g.rot[3]);
                     quaternionWXYZToMatrixTranspose(particleQquaternion, particleRotation);
 #else
+    #if !DIRECT_ROT_CALC
                     particleRotation[0] = make_float3(g.rotMat.m[0][0], g.rotMat.m[1][0], g.rotMat.m[2][0]);
                     particleRotation[1] = make_float3(g.rotMat.m[0][1], g.rotMat.m[1][1], g.rotMat.m[2][1]);
                     particleRotation[2] = make_float3(g.rotMat.m[0][2], g.rotMat.m[1][2], g.rotMat.m[2][2]);
+    #endif
 #endif
 
                     const float3 gposc = (currRay.pos - particlePosition);
+#if QUATERNION || !DIRECT_ROT_CALC
                     const float3 gposcr = (gposc * particleRotation);
                     const float3 gro = giscl * gposcr;
                     const float3 rayDirR = currRay.dir * particleRotation;
                     const float3 grdu = giscl * rayDirR;
                     const float3 grd = normalize(grdu);
+#else
+    #if UPLOAD_INVSR_MAT
+                    const float3 gro = multMatrixTransposeVector(gposc, g.rotMat);
+                    const float3 grd = normalize(multMatrixTransposeVector(currRay.dir, g.rotMat));
+    #else
+                    const float3 gposcr = multMatrixTransposeVector(gposc, g.rotMat);
+                    const float3 gro = giscl * gposcr;
+                    const float3 rayDirR = multMatrixTransposeVector(currRay.dir, g.rotMat);
+                    const float3 grd = normalize(rayDirR * giscl);
+    #endif
+#endif
+                    
 
                     // cross product를 이용해 grayDist(제곱된 마할라노비스 거리) 계산
                     const float3 gcrod = cross(grd, gro);

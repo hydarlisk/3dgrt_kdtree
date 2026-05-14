@@ -20,11 +20,24 @@
 #define ELLIPSOID 1
 #define PRIMITIVE_TYPE 1
 
-#define PROBLEMATIC_THRESHOLD 0.4
+#define PROBLEMATIC_THRESHOLD 1
 #define UPLOAD_INV_SCALE 1
+
+
+#define QUATERNION false
+	#define PRE_CALC_KSCALE 1
+	#define UPLOAD_INVSR_MAT 1
+	#define DIRECT_ROT_CALC 1
 
  /* Ellipsoid */
 #define DEBUG_ELLIPSOID 1
+
+#if QUATERNION
+#undef PRE_CALC_KSCALE
+#define PRE_CALC_KSCALE 1
+#undef UPLOAD_INVSR_MAT 
+#define UPLOAD_INVSR_MAT 0
+#endif
 
 /* BSPT */
 #define BSPT false
@@ -242,7 +255,6 @@
 
 #define SPH_EVAL_DEGREE 3
 #define GAUSSIAN_DEGREE 4
-#define QUATERNION true
 #define WALD_METHOD true
 #define MAIL_BOX false
 #define SIGMA_THRESHOLD 0//.03   					// sigma(density) 작은 가우시안 제거
@@ -510,12 +522,13 @@ typedef struct _CompositeObject {
 struct Gaussian {
 	float pos[3];       // 3D 위치 (x, y, z)
 	float opacity;      // 불투명도 (0.0 ~ 1.0)
-	float scale[3];     // 3축 스케일 (sx, sy, sz)
 #if QUATERNION
+	float scale[3];     // 3축 스케일 (sx, sy, sz)
 	float k_scale;
 	float rot[4];       // 회전 쿼터니언 (qw, qx, qy, qz)
 #else
 	float3x3 rotMat; // 미리 계산된 회전 행렬 (전치된 상태, R^T)
+	float scale[3];     // 3축 스케일 (sx, sy, sz)
 #endif
 	float f_dc[3];      // 기본 색상 (R, G, B)
 	float f_rest[45];
