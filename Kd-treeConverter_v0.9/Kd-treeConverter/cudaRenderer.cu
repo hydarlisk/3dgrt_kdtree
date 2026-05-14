@@ -387,6 +387,9 @@ __device__ inline bool BoundsRayIntersect(const float3& bmin, const float3& bmax
 struct HitRecord {
     float t;
     int primIndex;
+#if STORE_GRAYDIST
+    float grayDist;
+#endif
 #if BLEND_SELECT
     cuWaldTriangleInfo::perm_t perm;
 #endif
@@ -957,48 +960,6 @@ __device__ void singlePassIntersectRoutineGaussian_sortNode(const cuRay& ray, in
 }
 
 #if PRIMITIVE_TYPE == ELLIPSOID
-__device__ inline void rayTriIntersect(const cuRay& ray, const int id,
-    const float t_near, const float t_far
-    , HitRecord* local_hits, int& local_hit_count) {
-    float t;
-    for (int i = 0; i < 20; i++) {
-        cuWaldTriangleInfo tri;
-#if TRIACC_TEXTURE
-        tri.internal0 = tex1Dfetch<float4>(inTriAccelTex, 3 * (20 * id + i));
-        tri.internal1 = tex1Dfetch<float4>(inTriAccelTex, 3 * (20 * id + i) + 1);
-        tri.internal2 = tex1Dfetch<float4>(inTriAccelTex, 3 * (20 * id + i) + 2);
-#else
-        tri.internal0 = g_d_tri_acc_dev[3 * (20 * id + i)];
-        tri.internal1 = g_d_tri_acc_dev[3 * (20 * id + i) + 1];
-        tri.internal2 = g_d_tri_acc_dev[3 * (20 * id + i) + 2];
-#endif
-        cuWaldTriangleInfo::perm_t p = tri.get_perm(ray);
-        p.pos.x = (tri.n_d() - p.pos.x - tri.n_u() * p.pos.y - tri.n_v() * p.pos.z);
-        const float denum = (p.dir.x + tri.n_u() * p.dir.y + tri.n_v() * p.dir.z);
-        int flag = __float_as_int(tri.internal2.z);
-        if (denum * (float)flag > 0.0f) continue; //뒷면 확인
-
-        t = __fdividef(p.pos.x, denum);
-        if (isnan(t)) continue;
-        if ((t < t_near - EPSILON4) | (t > t_far + EPSILON4)) continue;
-        /**
-        * culling 옵션이 있고, object 가 transparent 하지 않다면
-        * 앞면인지 뒷면인지 체크. 뒷면에 맞은거면 hit 처리 안함.
-        */
-        const float hu = p.pos.y + t * p.dir.y - tri.vert_ku();
-        const float hv = p.pos.z + t * p.dir.z - tri.vert_kv();
-        const float beta = hv * tri.b_nu() + hu * tri.b_nv();
-        const float gamma = hu * tri.c_nu() + hv * tri.c_nv();
-        /** 삼각형의 edge 와 부딪힐때, 수치오차가 있으므로 epsilon 을 좀 준다. */
-        if ((beta < 0.f - BARYCENTRY_EPSILON) | (gamma < 0.f - BARYCENTRY_EPSILON) |
-            ((1.0f - beta - gamma) < 0.0f - BARYCENTRY_EPSILON)) continue;
-        break;
-    }
-
-    local_hits[local_hit_count].t = t;
-    local_hits[local_hit_count].primIndex = id;
-    local_hit_count++;
-}
 //only translate, rotation done
 //no scaling
 __device__ inline float ellipsoidIntersect(const float3& ocn, const float3& rdn) {
@@ -1080,8 +1041,8 @@ __device__ inline void rayPrimIntersect(const cuRay& currRay, const unsigned id
 #else
     #if UPLOAD_INVSR_MAT
     k_scale = 1 / k_scale;
-    const float3 gro = multMatrixTransposeVector(gposc, g.rotMat) * (k_scale * k_scale);
-    const float3 grd = multMatrixTransposeVector(currRay.dir, g.rotMat) * (k_scale * k_scale);
+    const float3 gro = multMatrixTransposeVector(gposc, g.rotMat) * (k_scale);
+    const float3 grd = multMatrixTransposeVector(currRay.dir, g.rotMat) * (k_scale);
     #else
     const float3 gposcr = multMatrixTransposeVector(gposc, g.rotMat);
     const float3 gro = giscl * gposcr;
@@ -1092,6 +1053,13 @@ __device__ inline void rayPrimIntersect(const cuRay& currRay, const unsigned id
 
     float t = ellipsoidIntersect(gro, grd);
     if (t < t_near) return;
+#if STORE_GRAYDIST
+    const float3 grdn = normalize(grd);
+    const float3 gron = gro * k_scale;
+    const float3 gcrod = cross(grdn, gron);
+    const float grayDist = dot(gcrod, gcrod);
+    local_hits[local_hit_count].grayDist = grayDist;
+#endif
 
     local_hits[local_hit_count].t = t;
     local_hits[local_hit_count].primIndex = id;
@@ -1555,53 +1523,51 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
 #else
                     Gaussian g = g_d_gaussians[gaussianID];
 #endif
+#if !STORE_GRAYDIST
                     const float3 particlePosition = make_float3(g.pos[0], g.pos[1], g.pos[2]);
-#if UPLOAD_INV_SCALE
+    #if UPLOAD_INV_SCALE
                     const float3 giscl = make_float3(g.scale[0], g.scale[1], g.scale[2]);
-#else
+    #else
                     const float3 giscl = make_float3(1/g.scale[0], 1/g.scale[1], 1/g.scale[2]);
-#endif
+    #endif
                     float33 particleRotation;
-#if QUATERNION
+    #if QUATERNION
                     float4 particleQquaternion = make_float4(g.rot[0], g.rot[1], g.rot[2], g.rot[3]);
                     quaternionWXYZToMatrixTranspose(particleQquaternion, particleRotation);
-#else
-    #if !DIRECT_ROT_CALC
+    #else
+        #if !DIRECT_ROT_CALC
                     particleRotation[0] = make_float3(g.rotMat.m[0][0], g.rotMat.m[1][0], g.rotMat.m[2][0]);
                     particleRotation[1] = make_float3(g.rotMat.m[0][1], g.rotMat.m[1][1], g.rotMat.m[2][1]);
                     particleRotation[2] = make_float3(g.rotMat.m[0][2], g.rotMat.m[1][2], g.rotMat.m[2][2]);
+        #endif
     #endif
-#endif
 
                     const float3 gposc = (currRay.pos - particlePosition);
-#if QUATERNION || !DIRECT_ROT_CALC
+    #if QUATERNION || !DIRECT_ROT_CALC
                     const float3 gposcr = (gposc * particleRotation);
                     const float3 gro = giscl * gposcr;
                     const float3 rayDirR = currRay.dir * particleRotation;
                     const float3 grdu = giscl * rayDirR;
                     const float3 grd = normalize(grdu);
-#else
-    #if UPLOAD_INVSR_MAT
+    #else
+        #if UPLOAD_INVSR_MAT
                     const float3 gro = multMatrixTransposeVector(gposc, g.rotMat);
                     const float3 grd = normalize(multMatrixTransposeVector(currRay.dir, g.rotMat));
-    #else
+        #else
                     const float3 gposcr = multMatrixTransposeVector(gposc, g.rotMat);
                     const float3 gro = giscl * gposcr;
                     const float3 rayDirR = multMatrixTransposeVector(currRay.dir, g.rotMat);
                     const float3 grd = normalize(rayDirR * giscl);
+        #endif
     #endif
-#endif
-                    
-
-                    // cross product를 이용해 grayDist(제곱된 마할라노비스 거리) 계산
                     const float3 gcrod = cross(grd, gro);
                     const float grayDist = dot(gcrod, gcrod);
-
-                    // particleResponse 함수를 통해 밀도 계산
                     const float gres = particleResponse<GAUSSIAN_DEGREE>(grayDist);
-
-                    // 기본 불투명도와 밀도를 곱하여 최종 결과 반환
+#else
+                    const float gres = particleResponse<GAUSSIAN_DEGREE>(local_hits[i].grayDist);
+#endif
                     float sample_opacity = fminf(0.99f, g.opacity * gres);
+                    
                     //if (x == g_SceneInfo.resX / 2 && y == g_SceneInfo.resY / 2)
                     //    printf("opacity, gres, mul: %f %f, %f\n", g.opacity, gres, g.opacity * gres);
                     //float sample_opacity = evaluateGaussianResponse_origin(currRay, g);

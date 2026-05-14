@@ -23,11 +23,11 @@
 #define PROBLEMATIC_THRESHOLD 1
 #define UPLOAD_INV_SCALE 1
 
-
 #define QUATERNION false
 	#define PRE_CALC_KSCALE 1
-	#define UPLOAD_INVSR_MAT 1
+	#define UPLOAD_INVSR_MAT 0
 	#define DIRECT_ROT_CALC 1
+	#define STORE_GRAYDIST 0
 
  /* Ellipsoid */
 #define DEBUG_ELLIPSOID 1
@@ -58,11 +58,17 @@
 #define MIN_TRI 16
 #define MIN_ELLIPSOID 16
 
-#if PRIMITIVE_TYPE ELLIPSOID
-#undef ISCET_COST
-#define ISCET_COST 20
-#undef BSPT
-#define BSPT 0
+#if PRIMITIVE_TYPE == TRI
+	#undef QUATERNION
+	#define QUATERNION true
+	#undef ISCET_COST
+	#define ISCET_COST 5.0
+#endif
+#if PRIMITIVE_TYPE == ELLIPSOID
+	#undef ISCET_COST
+	#define ISCET_COST 20.0
+	#undef BSPT
+	#define BSPT 0
 #endif
 
 #if BSPT
