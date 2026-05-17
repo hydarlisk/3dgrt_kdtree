@@ -1394,16 +1394,21 @@ bool loadGaussiansFromPly(const char* filename, std::vector<Gaussian>& gaussians
 		g.scale[1] = expf(g.scale[1]);
 		g.scale[2] = expf(g.scale[2]);
 
-#if QUATERNION
-		g.k_scale = calcKernelScale(g.opacity, KERNEL_MIN_RESPONSE);
+#if QUATERNION	
 		memcpy(g.rot, &buffer[property_offsets["rot_0"]], sizeof(float) * 4);
 		fMyVecNormalize4D(g.rot);
 #else
-		g_kScales.push_back(calcKernelScale(g.opacity));
 		float quat[4];
 		memcpy(quat, &buffer[property_offsets["rot_0"]], sizeof(float) * 4);
 		fMyVecNormalize4D(quat);
 		quaternionToMatrix(quat, g.rotMat);
+#endif
+#if PRE_CALC_KSCALE
+	#if QUATERNION
+		g.k_scale = calcKernelScale(g.opacity, KERNEL_MIN_RESPONSE);
+	#else
+		g_kScales.push_back(calcKernelScale(g.opacity));
+	#endif
 #endif
 
 		gaussians.push_back(g);

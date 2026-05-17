@@ -33,10 +33,10 @@
 #define DEBUG_ELLIPSOID 1
 
 #if QUATERNION
-#undef PRE_CALC_KSCALE
-#define PRE_CALC_KSCALE 1
-#undef UPLOAD_INVSR_MAT 
-#define UPLOAD_INVSR_MAT 0
+	#undef PRE_CALC_KSCALE
+	#define PRE_CALC_KSCALE 1
+	#undef UPLOAD_INVSR_MAT 
+	#define UPLOAD_INVSR_MAT 0
 #endif
 
 /* BSPT */
