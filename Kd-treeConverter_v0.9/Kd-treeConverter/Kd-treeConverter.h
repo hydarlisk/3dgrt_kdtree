@@ -13,6 +13,7 @@
 
 #define JS_BIN false
 #define COMPACT_VERTEX true
+#define KDT_VERSION 1
 
 #define OCCLUDE_MIN_OPACITY 1
 
@@ -23,7 +24,7 @@
 #define PROBLEMATIC_THRESHOLD 1
 #define UPLOAD_INV_SCALE 1
 
-#define QUATERNION false
+#define QUATERNION true
 	#define PRE_CALC_KSCALE 1
 	#define UPLOAD_INVSR_MAT 0
 	#define DIRECT_ROT_CALC 1

@@ -308,6 +308,20 @@ void dump_kd_tree_for_composite_object(CompositeObject *c_object,
 			fprintf(stderr, "d_k_t_f_c_o: (Error) cannot open the file %s...\n", filename);
 			exit(-1);
 		}
+
+#if KDT_VERSION == 1
+		float kdtVersion = 0.1;
+		fwrite(&kdtVersion, 4, 1, fp);
+		float aabb[6] = {
+			c_object->AABB[XMIN],
+			c_object->AABB[YMIN],
+			c_object->AABB[ZMIN],
+			c_object->AABB[XMAX],
+			c_object->AABB[YMAX],
+			c_object->AABB[ZMAX],
+		};
+		fwrite(aabb, sizeof(float), 6, fp);
+#endif
 		
 		// Dump kd-tree node info
 		int nTreeNodeCount = c_object->kd_tree->tree_node_count;
@@ -429,6 +443,19 @@ int read_kd_tree_from_file(CompositeObject *c_object, const char *filename, int 
 			fprintf(stderr, "%s kd-tree File Load Error!\n", filename );
 			return 0;
 		}
+#if KDT_VERSION == 1
+		float kdtVersion;
+		fread(&kdtVersion, sizeof(float), 1, fp);
+		//c_object->AABB[]
+		float aabb[6];
+		fread(aabb, sizeof(float), 6, fp);
+		c_object->AABB[XMIN] = aabb[0];
+		c_object->AABB[YMIN] = aabb[1];
+		c_object->AABB[ZMIN] = aabb[2];
+		c_object->AABB[XMAX] = aabb[3];
+		c_object->AABB[YMAX] = aabb[4];
+		c_object->AABB[ZMAX] = aabb[5];
+#endif
 
 		// Load kd-tree node info
 		int nTreeNodeCount = 0;
