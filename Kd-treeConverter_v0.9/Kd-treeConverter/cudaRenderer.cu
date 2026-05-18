@@ -1052,8 +1052,7 @@ __device__ inline void rayPrimIntersect(const cuRay& currRay, const unsigned id
 #endif
 
     float t = ellipsoidIntersect(gro, grd);
-    if (t < t_near) return;
-    if (t > t_far) return;
+    if (t < t_near || t > t_far) return;
 #if STORE_GRAYDIST
     const float3 grdn = normalize(grd);
     const float3 gron = gro * k_scale;
@@ -1468,6 +1467,9 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
 ) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
+#if DEBUG_LEAF
+    int maxLeaf = 0;
+#endif
 
     float t_scene_near = RAY_START_EPSILON, t_scene_far = FLT_MAX;
     if (BoundsRayIntersect(g_SceneBBoxMin, g_SceneBBoxMax, &currRay, &t_scene_near, &t_scene_far)) {
@@ -1500,6 +1502,12 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
             // --- 리프 노드 처리 로직 ---
             unsigned int baseOffset = OBJECTLIST_OFFSET(node);
             int objectSize = OBJECT_SIZE(node) + baseOffset;
+#if DEBUG_LEAF
+            if (OBJECT_SIZE(node) > maxLeaf) {
+                maxLeaf = OBJECT_SIZE(node);
+            }
+#endif
+
             //if (count <= 0) continue;
                 // 수집: 이 리프 노드 내의 모든 충돌을 임시 로컬 배열에 저장
             HitRecord local_hits[MAX_HITS];
@@ -1605,6 +1613,18 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
         } // while(true) == while(accumulated_opacity < OPACITY_THRESHOLD)
         if (x == g_SceneInfo.resX / 2 && y == g_SceneInfo.resY) printf("\n");
     } // if (BoundsRayIntersect)
+#if DEBUG_LEAF
+    /* debug */
+    if (maxLeaf < 32) {
+        accumulated_color = make_float3(0.f, 0.0f, maxLeaf / 32.f);
+    }
+    else if(maxLeaf < 64)
+        accumulated_color = make_float3((maxLeaf - 32) / 32.f, (maxLeaf - 32) / 32.f, 0.f);
+    else if (maxLeaf < 96)
+        accumulated_color = make_float3(0.0f, (maxLeaf - 64) / 32.f, 0.f);
+    else
+        accumulated_color = make_float3((maxLeaf - 96) / 32.0f, 0.f, 0.f);
+#endif
 }
 #elif PRIMITIVE_TYPE == TRI
 #if USE_STACK == SHORT_STACK

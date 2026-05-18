@@ -32,6 +32,7 @@
 
  /* Ellipsoid */
 #define DEBUG_ELLIPSOID 1
+#define DEBUG_LEAF 0
 
 #if QUATERNION
 	#undef PRE_CALC_KSCALE
