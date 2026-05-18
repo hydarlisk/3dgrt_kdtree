@@ -7,21 +7,25 @@
 #pragma once
 #include <vector>
 
+/* camera */
 #define CAM_MOVE_SPEED 0.5
 #define CAM_ROT_SPEED 0.1
 #define CAM_MOVE_SHIFT 0.01
 
+/* data format */
 #define JS_BIN false
 #define COMPACT_VERTEX true
 #define KDT_VERSION 1
 
+/* ply read */
 #define OCCLUDE_MIN_OPACITY 1
+#define PROBLEMATIC_THRESHOLD 1	//remove dominant prim from gaussian data
 
+/* primitive type */
 #define TRI 0
 #define ELLIPSOID 1
 #define PRIMITIVE_TYPE 1
 
-#define PROBLEMATIC_THRESHOLD 1
 #define UPLOAD_INV_SCALE 1
 
 #define QUATERNION true
@@ -51,16 +55,27 @@
 
 #define EPSILON 0.00001f
 
-//shyun added begin
+/* kd tree build */
 #define TRAVL_COST 1.0
 #define ISCET_COST 20.0
 #define MAX_LEVEL 128
 #define EMTPY_BONUS 0.9
 //#define IGNORE_THRESHOLD 0.0001
 #define IGNORE_THRESHOLD 0.001
+#define REMOVE_SMALL_PRIM 10
 
 #define MIN_TRI 16
 #define MIN_ELLIPSOID 16
+
+//#define FORCE_SPLIT_THRESHOLD 64				// kd-tree 강제분할
+#define FORCE_SPLIT_THRESHOLD 256				// kd-tree 강제분할
+//#define FORCE_SPLIT_THRESHOLD 256				// kd-tree 강제분할
+//#define SOFT_SPLIT_THRESHOLD 128				// kd-tree 강제분할(완화)
+#define SOFT_SPLIT_THRESHOLD2 256				// kd-tree 강제분할(완화)
+
+#define SIGMA_THRESHOLD_MODE 1
+#define ADAPTIVE_MESH false
+#define USE_KERNEL_SCALE true					// 기존의 OptiX 방식 kernelScale 사용
 
 #if PRIMITIVE_TYPE == TRI
 	#undef QUATERNION
@@ -80,18 +95,8 @@
 #define JS_BIN false
 #endif
 
-//#define FORCE_SPLIT_THRESHOLD 64				// kd-tree 강제분할
-#define FORCE_SPLIT_THRESHOLD 256				// kd-tree 강제분할
-//#define FORCE_SPLIT_THRESHOLD 256				// kd-tree 강제분할
-//#define SOFT_SPLIT_THRESHOLD 128				// kd-tree 강제분할(완화)
-#define SOFT_SPLIT_THRESHOLD2 256				// kd-tree 강제분할(완화)
-
 #define BLEND_SELECT false
 #define EXPORTED false
-
-#define SIGMA_THRESHOLD_MODE 1
-#define ADAPTIVE_MESH false
-#define USE_KERNEL_SCALE true					// 기존의 OptiX 방식 kernelScale 사용
 
 //#define LESS_TRI false
 

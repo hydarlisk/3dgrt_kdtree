@@ -1457,6 +1457,10 @@ void clipTriangleToAABB(const TriangleList& inputTri, vector<TriangleList>& outp
 }
 
 #if PRIMITIVE_TYPE == ELLIPSOID
+bool desc(const TriangleList& a, const TriangleList& b) {
+	return g_gaussians[a.offset].opacity > g_gaussians[b.offset].opacity;
+}
+
 void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pEllipsoidInfos, unsigned int ellipsoidSize, BoundingBox& bbox, unsigned int inNodeLevel, KdTreeNode* inNode){
 	SplitCost bestCost;
 	g_iKdTree_Level = MyMAX(inNodeLevel, g_iKdTree_Level);
@@ -1498,6 +1502,14 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pEllipsoidInf
 
 	if (!bestCost.is_valid()) {
 		//leaf node
+#if REMOVE_SMALL_PRIM
+		std::vector<TriangleList> leaf;
+		for (int i = 0; i < ellipsoidSize; i++) {
+			leaf.push_back(pEllipsoidInfos[i]);
+		}
+		sort(leaf.begin(), leaf.end(), desc);
+		ellipsoidSize = ellipsoidSize - ellipsoidSize / REMOVE_SMALL_PRIM;
+#endif
 		unsigned int iEllipsoidOffset;
 		{
 			iEllipsoidOffset = g_iKdTreeEllipsoidOffsetCnt;
@@ -1512,7 +1524,11 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pEllipsoidInf
 		unsigned* currOffsetList = &g_pKdTreeEllipsoidOffsetArray[iEllipsoidOffset];
 		unsigned leafCount = 0;
 		for (unsigned i = 0; i < ellipsoidSize; i++) {
+#if REMOVE_SMALL_PRIM
+			currOffsetList[leafCount++] = leaf[i].offset;
+#else
 			currOffsetList[leafCount++] = pEllipsoidInfos[i].offset;
+#endif
 		}
 
 		if (ellipsoidSize == 0) {
