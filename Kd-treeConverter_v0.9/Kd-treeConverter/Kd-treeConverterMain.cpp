@@ -3300,7 +3300,7 @@ void main_menu_action(int selection) {
 		printf("full_kd_tree_file_name:%s\n", full_kd_tree_file_name);
 		read_kd_tree_from_file(&uip.poly_model, full_kd_tree_file_name, uip.kd_tree_dump_format);
 
-		printKdTreeLeafNodeInfo();
+		//printKdTreeLeafNodeInfo();
 #if LEAF_NODE_DEBUG
 		leaf_nodes = extract_all_leaf_data(&uip.poly_model, largest_leaf_index);
 #endif

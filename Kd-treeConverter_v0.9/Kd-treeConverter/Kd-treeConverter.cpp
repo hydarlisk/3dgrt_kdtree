@@ -552,15 +552,6 @@ int read_kd_tree_from_file(CompositeObject *c_object, const char *filename, int 
 
 	}
 
-	// build triangle acceleration
-	TriAccel *pTriAcc = NULL;
-	//pTriAcc = (TriAccel*)_aligned_malloc(c_object->n_triangles * sizeof(TriAccel), 16);
-	build_TriAccList(c_object, pTriAcc);
-	if (!pTriAcc) {
-		fprintf(stderr, "TriAccel build failed\n");
-		return 0; // 혹은 false
-	}
-
 	c_object->kd_tree = new KdTree;
 	c_object->kd_tree->tree = g_pKdTree_Node_Array;
 	c_object->kd_tree->tree_node_count = g_iKdTree_Node_Count;
@@ -568,16 +559,23 @@ int read_kd_tree_from_file(CompositeObject *c_object, const char *filename, int 
 	c_object->kd_tree->tri_offset_list = g_pKdTreeEllipsoidOffsetArray;
 	c_object->kd_tree->tri_offset_count = g_iKdTreeEllipsoidOffsetCnt;
 #elif PRIMITIVE_TYPE == TRI
+	// build triangle acceleration
+	TriAccel* pTriAcc = NULL;
+	//pTriAcc = (TriAccel*)_aligned_malloc(c_object->n_triangles * sizeof(TriAccel), 16);
+	build_TriAccList(c_object, pTriAcc);
+	if (!pTriAcc) {
+		fprintf(stderr, "TriAccel build failed\n");
+		return 0; // 혹은 false
+	}
 	c_object->kd_tree->tri_offset_list = g_pKdTree_TriOffset_Array;
 	c_object->kd_tree->tri_offset_count = g_iKdTree_TriOffset_Count;
 	c_object->kd_tree->tri_accel_list = pTriAcc;
 	#if BSPT
 	c_object->kd_tree->bsptTree = g_BSPTNodes;
 	#endif
-#endif
-
 	fprintf(stdout, "->n_triangles: %d\n", c_object->n_triangles);
 	if (pTriAcc == NULL) fprintf(stdout, "triaccNULL\n");
+#endif
 
 	fprintf(stdout, "Reading Kd-tree is completed.\n");
 
