@@ -75,6 +75,54 @@ std::vector<std::vector<std::vector<TriangleList>>> g_ellipsoidClipAabbDebug;
 
 #include <iostream>
 #include <fstream>
+#include <string>
+
+bool exportToCSV(const TriangleList* ellipsoidInfo, const int ellipsoidSize) {
+	static int fileIdx = 0;
+	int dir = 0;
+	if (ellipsoidSize < 32) dir = 32;
+	else if (ellipsoidSize < 64) dir = 64;
+	else if (ellipsoidSize < 96) dir = 96;
+	else if (ellipsoidSize < 128) dir = 128;
+	else if (ellipsoidSize < 192) dir = 192;
+	else if (ellipsoidSize <= 256) dir = 256;
+	string filename = DUMP_DIR_PATH + string("leaves/") + to_string(dir) + string("/leaf") + std::to_string(fileIdx++) + ".csv";
+	std::ofstream outFile(filename);
+
+	vector<Gaussian> leaves;
+	for (int i = 0; i < ellipsoidSize; i++) {
+		leaves.push_back(g_gaussians[ellipsoidInfo[i].offset]);
+	}
+
+	if (!outFile.is_open()) {
+		std::cerr << "cannot open file: " << filename << std::endl;
+		return false;
+	}
+
+	outFile << "pos_x,pos_y,pos_z,scale_x,scale_y,scale_z,rot_w,rot_x,rot_y,rot_z,opacity,k_scale,f_dc_r,f_dc_g,f_dc_b";
+
+	for (int i = 0; i < 45; ++i) {
+		outFile << ",f_rest_" << i;
+	}
+
+	for (const auto& g : leaves) {
+		outFile << g.pos[0] << "," << g.pos[1] << "," << g.pos[2] << ","
+			<< g.scale[0] << "," << g.scale[1] << "," << g.scale[2] << ","
+			<< g.rot[0] << "," << g.rot[1] << "," << g.rot[2] << "," << g.rot[3] << ","
+			<< g.opacity << ","
+			<< g.k_scale << ","
+			<< g.f_dc[0] << "," << g.f_dc[1] << "," << g.f_dc[2];
+
+		for (int i = 0; i < 45; ++i) {
+			outFile << "," << g.f_rest[i];
+		}
+
+		outFile << "\n";
+	}
+
+	outFile.close();
+	return true;
+}
 
 #if BSPT
 #include <vector>
@@ -1510,6 +1558,8 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pEllipsoidInf
 		sort(leaf.begin(), leaf.end(), desc);
 		ellipsoidSize = ellipsoidSize - ellipsoidSize / REMOVE_SMALL_PRIM;
 #endif
+		if(ellipsoidSize > 0)
+			exportToCSV(pEllipsoidInfos, ellipsoidSize);
 		unsigned int iEllipsoidOffset;
 		{
 			iEllipsoidOffset = g_iKdTreeEllipsoidOffsetCnt;
