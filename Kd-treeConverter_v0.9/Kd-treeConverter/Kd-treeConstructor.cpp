@@ -632,15 +632,25 @@ void clip_ellipsoid(std::vector<TriangleList>& ellipsoidInfos, const SplitCost& 
 		//simple clipping
 		BoundingBox& currBBox = ellipsoidInfos[gi].AABB;
 		if (currBBox.min[axis] < splitPos && currBBox.max[axis] > splitPos) {
+			bool remove = false;
 			if (side == 0) {
 				if (currBBox.max[axis] >= splitPos) {
+					if (abs(currBBox.max[axis] - splitPos) / (currBBox.max[axis] - currBBox.min[axis]) < IGNORE_THRESHOLD)
+						remove = true;
 					currBBox.max[axis] = splitPos;
 				}
 			}
 			else {
 				if (currBBox.min[axis] < splitPos) {
+					if (abs(currBBox.max[axis] - splitPos) / (currBBox.max[axis] - currBBox.min[axis]) < IGNORE_THRESHOLD)
+						remove = true;
 					currBBox.min[axis] = splitPos;
 				}
+			}
+			if (remove) {
+				ellipsoidInfos.erase(ellipsoidInfos.begin() + gi);
+				gi--;
+				continue;
 			}
 
 		//tight clipping

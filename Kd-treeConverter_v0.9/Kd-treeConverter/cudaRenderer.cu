@@ -973,8 +973,9 @@ __device__ inline float ellipsoidIntersect(const float3& ocn, const float3& rdn)
     float b = dot(ocn, rdn);
     float c = dot(ocn, ocn);
     float h = b * b - a * (c - 1.0);
-    if (h < 0.0) return -1.0;
-    h = sqrt(h);
+    //if (h < 0.0) return -1.0;
+    if (h < -EPSILON4) return -1.0;
+    h = sqrt(h) + EPSILON3;
     return (-b-h) / a;
 }
 
@@ -2421,14 +2422,15 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
 #if !GLOBAL_DEVICE_VAR
     kdtreeNode* g_d_kdtree_nodes = nullptr;
 #endif
+    /* kdtree node */
     size_t node_size = kdTree->tree_node_count * sizeof(kdtreeNode);
     CUDA_CHECK(cudaMalloc(&g_d_kdtree_nodes, node_size));
     CUDA_CHECK(cudaMemcpy(g_d_kdtree_nodes, kdTree->tree, node_size, cudaMemcpyHostToDevice));
-
+    /* prim offset */
     size_t offset_size = kdTree->tri_offset_count * sizeof(unsigned int);
     CUDA_CHECK(cudaMalloc(&g_d_prim_offsets, offset_size));
     CUDA_CHECK(cudaMemcpy(g_d_prim_offsets, kdTree->tri_offset_list, offset_size, cudaMemcpyHostToDevice));
-
+    /* gaussians */
     size_t gaussians_bytes = gaussians.size() * sizeof(Gaussian);
     CUDA_CHECK(cudaMalloc(&g_d_gaussians_persistent, gaussians_bytes));
     CUDA_CHECK(cudaMemcpy(g_d_gaussians_persistent, gaussians.data(), gaussians_bytes, cudaMemcpyHostToDevice));
@@ -2466,7 +2468,7 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
     CUDA_CHECK(cudaCreateTextureObject(&h_inKdTreeNodeTex, &resDesc, &texDesc, NULL));
     CUDA_CHECK(cudaMemcpyToSymbol(inKdTreeNodeTex, &h_inKdTreeNodeTex, sizeof(cudaTextureObject_t)));
 
-    /* gaussian offsets */
+    /* prim offsets */
     resDesc.res.linear.devPtr = g_d_prim_offsets;
     resDesc.res.linear.desc = cudaCreateChannelDesc<unsigned int>();
     resDesc.res.linear.sizeInBytes = offset_size;

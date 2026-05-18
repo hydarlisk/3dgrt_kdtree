@@ -56,6 +56,8 @@
 #define ISCET_COST 20.0
 #define MAX_LEVEL 128
 #define EMTPY_BONUS 0.9
+//#define IGNORE_THRESHOLD 0.0001
+#define IGNORE_THRESHOLD 0.001
 
 #define MIN_TRI 16
 #define MIN_ELLIPSOID 16
