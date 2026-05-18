@@ -1053,6 +1053,7 @@ __device__ inline void rayPrimIntersect(const cuRay& currRay, const unsigned id
 
     float t = ellipsoidIntersect(gro, grd);
     if (t < t_near) return;
+    if (t > t_far) return;
 #if STORE_GRAYDIST
     const float3 grdn = normalize(grd);
     const float3 gron = gro * k_scale;
