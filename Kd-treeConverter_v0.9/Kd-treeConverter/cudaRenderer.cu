@@ -959,7 +959,7 @@ __device__ void singlePassIntersectRoutineGaussian_sortNode(const cuRay& ray, in
     local_hit_count++;
 }
 
-#if PRIMITIVE_TYPE == ELLIPSOID
+#if PRIMITIVE_TYPE == ELLIPSOID || PRIMITIVE_TYPE == ELLIPSOID_BY_TRI
 //only translate, rotation done
 //no scaling
 __device__ inline float ellipsoidIntersect(const float3& ocn, const float3& rdn) {
@@ -1460,7 +1460,7 @@ __device__ void traverseBSPTFrontToBack(kdtreeNode& node, cuRay& currRay, float 
 }
 #endif
 
-#if PRIMITIVE_TYPE == ELLIPSOID
+#if PRIMITIVE_TYPE == ELLIPSOID || PRIMITIVE_TYPE == ELLIPSOID_BY_TRI
 __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
     cuRay& currRay,
     float3& accumulated_color,
@@ -2395,7 +2395,7 @@ void warmUp(float* d_framebuffer, cudaStream_t stream) {
     //printf("Warm-up complete.\n");
 }
 
-#if PRIMITIVE_TYPE == ELLIPSOID
+#if PRIMITIVE_TYPE == ELLIPSOID || PRIMITIVE_TYPE == ELLIPSOID_BY_TRI
 void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vector<Gaussian>& gaussians
 #if !QUATERNION
     , std::vector<float>& kScales

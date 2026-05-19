@@ -26,6 +26,10 @@
 
 #include <cmath>
 
+#if PRIMITIVE_TYPE == ELLIPSOID_BY_TRI
+#include <set>
+#endif
+
 using namespace std;
 
 static const unsigned int modulo[] = { 0,1,2,0,1 };
@@ -39,7 +43,7 @@ float v_KD_TREE_EMTPY_BONUS = EMTPY_BONUS;
 BoundingBox   g_root_AABB;
 BoundEdge    *g_bEdge = NULL;
 
-#if PRIMITIVE_TYPE == TRI
+#if PRIMITIVE_TYPE == TRI || PRIMITIVE_TYPE == ELLIPSOID_BY_TRI
 unsigned int v_KD_TREE_MIN_PRIMITIVE = MIN_TRI;
 #elif PRIMITIVE_TYPE == ELLIPSOID
 unsigned int v_KD_TREE_MIN_PRIMITIVE = MIN_ELLIPSOID;
@@ -1327,7 +1331,7 @@ bool initialize_kd_tree(CompositeObject* poly_model) {
 	}
 	return 1;
 }
-#elif PRIMITIVE_TYPE == TRI
+#elif PRIMITIVE_TYPE == TRI || PRIMITIVE_TYPE == ELLIPSOID_BY_TRI
 bool initialize_kd_tree(CompositeObject *poly_model) {
 	// Returns 1 if kd-tree data was initialized successfully, or 0 otherwise.
 
@@ -1364,7 +1368,11 @@ bool initialize_kd_tree(CompositeObject *poly_model) {
 	}
 	else {
 		for( int i = 0; i < g_iPrimSize; i++ ) {
+#if PRIMITIVE_TYPE == ELLIPSOID_BY_TRI
+			g_pPrimInfos[i].offset = pVertexList[3 * i].material_ID;
+#else
 			g_pPrimInfos[i].offset = i;
+#endif
 			g_pPrimInfos[i].point[0] = pVertexList[3*i];
 			g_pPrimInfos[i].point[1] = pVertexList[3*i+1];
 			g_pPrimInfos[i].point[2] = pVertexList[3*i+2];
@@ -1673,7 +1681,7 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const PrimList* pEllipsoidInfos, 
 	}
 
 }
-#elif PRIMITIVE_TYPE == TRI
+#elif PRIMITIVE_TYPE == TRI || PRIMITIVE_TYPE == ELLIPSOID_BY_TRI
 void build_kd_tree_recursive(BoundEdge* bEdge, const PrimList* pTriangleInfos, unsigned int triangleSize,
 	BoundingBox& bbox, unsigned int inNodeLevel, KdTreeNode* inNode)
 {
@@ -1695,7 +1703,7 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const PrimList* pTriangleInfos, u
 	//#define MAX_TRIANGLE_OFFSET_BUDGET 9223372036854775807
 	//#define MAX_TRIANGLE_OFFSET_BUDGET 17179869184
 	//#define MAX_TRIANGLE_OFFSET_BUDGET 8589934592
-	#define MAX_TRIANGLE_OFFSET_BUDGET 4294967295
+	#define MAX_TRIANGLE_OFFSET_BUDGET2 4294967295
 	//#define MAX_TRIANGLE_OFFSET_BUDGET 2147483647
 	//#define MAX_TRIANGLE_OFFSET_BUDGET 1073741824
 	//if (triangleSize > FORCE_SPLIT_THRESHOLD) bestCost.cost = DBL_MAX; //shyun added
@@ -1794,6 +1802,21 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const PrimList* pTriangleInfos, u
 		setLeafNodeBSPT(inNode, g_BSPTNodes.size());
 #else
 		// Leaf node 생성
+#if PRIMITIVE_TYPE == ELLIPSOID_BY_TRI
+		std::vector<int> leafOffset;
+		std::set<int> gIds;
+		for (int i = 0; i < triangleSize; i++) {
+			gIds.insert(pTriangleInfos[i].offset);
+		}
+		leafOffset.insert(leafOffset.end(), gIds.begin(), gIds.end());
+		if (leafOffset.size() < triangleSize) {
+			printf("offset converting less\n");
+		}
+		else if (leafOffset.size() > triangleSize) {
+			printf("offset converting error\n");
+		}
+		triangleSize = leafOffset.size();
+#endif
 		unsigned int iTriOffset;
 		{
 			iTriOffset = g_iKdTreePrimOffsetCnt;
@@ -1813,7 +1836,11 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const PrimList* pTriangleInfos, u
 
 		unsigned leafCount = 0;
 		for (unsigned i = 0; i < triangleSize; i++) {
+#if PRIMITIVE_TYPE == ELLIPSOID_BY_TRI
+			currOffsetList[leafCount++] = leafOffset[i];
+#else
 			currOffsetList[leafCount++] = pTriangleInfos[i].offset;
+#endif
 		}
 #endif
 

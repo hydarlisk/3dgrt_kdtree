@@ -24,7 +24,8 @@
 /* primitive type */
 #define TRI 0
 #define ELLIPSOID 1
-#define PRIMITIVE_TYPE 0
+#define ELLIPSOID_BY_TRI 2
+#define PRIMITIVE_TYPE 2
 
 #define UPLOAD_INV_SCALE 1
 
@@ -78,8 +79,8 @@
 #define BSPT_DUMP_STATISTICS false
 #define CLIP_BEFORE_BSPT false
 
-//#define FORCE_SPLIT_THRESHOLD 64				// kd-tree 강제분할
-#define FORCE_SPLIT_THRESHOLD 256				// kd-tree 강제분할
+#define FORCE_SPLIT_THRESHOLD 64				// kd-tree 강제분할
+//#define FORCE_SPLIT_THRESHOLD 256				// kd-tree 강제분할
 //#define FORCE_SPLIT_THRESHOLD 256				// kd-tree 강제분할
 //#define SOFT_SPLIT_THRESHOLD 128				// kd-tree 강제분할(완화)
 #define SOFT_SPLIT_THRESHOLD2 256				// kd-tree 강제분할(완화)
@@ -88,7 +89,7 @@
 #define ADAPTIVE_MESH false
 #define USE_KERNEL_SCALE true					// 기존의 OptiX 방식 kernelScale 사용
 
-#if PRIMITIVE_TYPE == TRI
+#if PRIMITIVE_TYPE == TRI	|| PRIMITIVE_TYPE == ELLIPSOID_BY_TRI
 	#undef QUATERNION
 	#define QUATERNION true
 	#undef ISCET_COST
@@ -124,7 +125,7 @@
 #define ORIGINAL false
 ////////////////////////////////////////////
 
-#if PRIMITIVE_TYPE == TRI
+#if PRIMITIVE_TYPE == TRI || PRIMITIVE_TYPE == ELLIPSOID_BY_TRI
 #if ASSET == HOTDOG
 	#if ORIGINAL
 		#undef USE_KERNEL_SCALE
