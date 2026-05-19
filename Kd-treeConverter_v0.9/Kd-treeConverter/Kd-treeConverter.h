@@ -37,6 +37,7 @@
 /////////////**** Debug ****///////////////
 /* Ellipsoid */
 #define DEBUG_ELLIPSOID_CLIP_AABB 1
+#define DEBUG_LEAF_GL 1
 #define DEBUG_LEAF_CUDA 0
 
 /* Triangle */

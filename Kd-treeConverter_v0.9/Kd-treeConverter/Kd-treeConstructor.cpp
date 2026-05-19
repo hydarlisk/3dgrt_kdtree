@@ -72,6 +72,7 @@ extern std::vector<float> g_kScales;
 
 std::vector<TriangleList> g_ellipsoidAabbDebug;
 std::vector<std::vector<std::vector<TriangleList>>> g_ellipsoidClipAabbDebug;
+std::vector<std::vector<TriangleList>> g_ellipsoidLeafDebug;
 
 #include <iostream>
 #include <fstream>
@@ -1583,6 +1584,18 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pEllipsoidInf
 			currOffsetList[leafCount++] = pEllipsoidInfos[i].offset;
 #endif
 		}
+#if DEBUG_LEAF_GL
+		if (ellipsoidSize > 0) {
+			std::vector<TriangleList> leafDebug;
+			leafDebug.push_back(pEllipsoidInfos[0]);
+			leafDebug[0].AABB = bbox;
+			for (int i = 0; i < ellipsoidSize; i++) {
+				leafDebug.push_back(pEllipsoidInfos[i]);
+				//leafDebug[i].AABB = bbox;
+			}
+			g_ellipsoidLeafDebug.push_back(leafDebug);
+		}
+#endif
 
 		if (ellipsoidSize == 0) {
 			g_iKdTree_EmptyNode_Count++;

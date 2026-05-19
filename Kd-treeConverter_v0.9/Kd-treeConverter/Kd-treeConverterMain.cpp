@@ -296,7 +296,7 @@ void renderEllipsoidClipAabb(int depth, int nodeId, int idx) {
 		glEnd();
 
 		//cut plane
-		glColor4f(0.0f, 0.5f, 1.0f, 0.5f);
+		//glColor4f(0.0f, 0.5f, 1.0f, 0.5f);
 		//glBegin(GL_QUADS);
 		//	float p1[3], p2[3], p3[3], p4[3];
 		//	int i = g->cutAxis;
@@ -324,6 +324,28 @@ void renderEllipsoidClipAabb(int depth, int nodeId, int idx) {
 		//glEnd();
 	}
 	renderGaussianMesh(idx);
+}
+
+void renderEllipsoidLeaf(int nodeId) {
+	std::vector<TriangleList>& ellipsoidInfos = (*uip.poly_model.ellipsoidLeafDebug)[nodeId];
+	
+	//for (int i = 0; i < ellipsoidInfos.size(); i++) {
+	//	renderGaussianMesh(ellipsoidInfos[i].offset);
+	//}
+	for (int i = 0; i < ellipsoidInfos.size(); i++) {
+		float aabb[6] = {
+			ellipsoidInfos[i].AABB.min[0], ellipsoidInfos[i].AABB.max[0],
+			ellipsoidInfos[i].AABB.min[1], ellipsoidInfos[i].AABB.max[1],
+			ellipsoidInfos[i].AABB.min[2], ellipsoidInfos[i].AABB.max[2]
+		};
+		draw_AABB(aabb, i);
+	}
+	//float aabb[6] = {
+	//	ellipsoidInfos[0].AABB.min[0], ellipsoidInfos[0].AABB.max[0],
+	//	ellipsoidInfos[0].AABB.min[1], ellipsoidInfos[0].AABB.max[1],
+	//	ellipsoidInfos[0].AABB.min[2], ellipsoidInfos[0].AABB.max[2]
+	//};
+	//draw_AABB(aabb);
 }
 
 
@@ -513,6 +535,10 @@ void display(void) {
 				if (g_renderGId >= 0)
 					renderEllipsoidClipAabb(g_renderDepth, g_renderNodeId, g_renderGId);
 				break;
+			case 7:
+				if (g_renderNodeId >= 0)
+					renderEllipsoidLeaf(g_renderNodeId);
+				break;
 #endif
 			default:
 				renderGaussianMeshes();
@@ -655,6 +681,9 @@ void keyboard(unsigned char key, int x, int y) {
 			if (g_renderMode == 6) {
 				if (g_renderNodeId < 0) g_renderNodeId = (*uip.poly_model.ellipsoidClipAabbDebug)[g_renderDepth].size() - 1;
 			}
+			else if (g_renderMode == 7) {
+				if (g_renderNodeId < 0) g_renderNodeId = (*uip.poly_model.ellipsoidLeafDebug).size() - 1;
+			}
 			printf("render node id: %d\n", g_renderNodeId);
 			glutPostRedisplay();
 			break;
@@ -662,6 +691,9 @@ void keyboard(unsigned char key, int x, int y) {
 			g_renderNodeId++;
 			if (g_renderMode == 6) {
 				if (g_renderNodeId > (*uip.poly_model.ellipsoidClipAabbDebug)[g_renderDepth].size() - 1) g_renderNodeId = 0;
+			}
+			else if (g_renderMode == 7) {
+				if (g_renderNodeId > (*uip.poly_model.ellipsoidLeafDebug).size() - 1) g_renderNodeId = 0;
 			}
 			printf("render node id: %d\n", g_renderNodeId);
 			glutPostRedisplay();
@@ -3182,6 +3214,10 @@ void subDebugMenuHandler(int value) {
 		g_renderNodeId = 0;
 		g_renderGId = 0;
 		break;
+	case 905:	//debug ellipsoid leaf
+		g_renderMode = 7;
+		g_renderNodeId = 0;
+		break;
 #endif
 	}
 	
@@ -3422,6 +3458,7 @@ void register_callbacks_and_create_menu(void) {
 	int subDebugMenu = glutCreateMenu(subDebugMenuHandler);
 	glutAddMenuEntry("debug ellipsoid aabb", 903);
 	glutAddMenuEntry("debug ellipsoid clip aabb", 904);
+	glutAddMenuEntry("debug ellipsoid leaf", 905);
 
 	uip.main_menu_ID = glutCreateMenu(main_menu_action);
 	glutAddMenuEntry("ChangeMode", 0);
