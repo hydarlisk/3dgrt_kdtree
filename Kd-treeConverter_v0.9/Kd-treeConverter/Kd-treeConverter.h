@@ -15,7 +15,7 @@
 /* data format */
 #define JS_BIN false
 #define COMPACT_VERTEX true
-#define KDT_VERSION 1
+#define KDT_VERSION 0
 
 /* ply read */
 #define OCCLUDE_MIN_OPACITY 1
@@ -34,24 +34,16 @@
 	#define DIRECT_ROT_CALC 1
 	#define STORE_GRAYDIST 0
 
- /* Ellipsoid */
-#define DEBUG_ELLIPSOID 1
-#define DEBUG_LEAF 0
+/////////////**** Debug ****///////////////
+/* Ellipsoid */
+#define DEBUG_ELLIPSOID_CLIP_AABB 1
+#define DEBUG_LEAF_CUDA 0
 
-#if QUATERNION
-	#undef PRE_CALC_KSCALE
-	#define PRE_CALC_KSCALE 1
-	#undef UPLOAD_INVSR_MAT 
-	#define UPLOAD_INVSR_MAT 0
-#endif
+/* Triangle */
+#define LEAF_NODE_DEBUG true					// kd-tree leaf node 렌더링
 
-/* BSPT */
-#define BSPT false
-#define BSPT_MAX_STACK_DEPTH 64
-#define BSPT_MAX_HITS 95
-#define BSPT_NO_SPLIT false
-#define BSPT_DUMP_STATISTICS false
-#define CLIP_BEFORE_BSPT false
+#define DUMP_LEAF_CSV 0
+////////////////////////////////////////////
 
 #define EPSILON 0.00001f
 
@@ -61,11 +53,26 @@
 #define MAX_LEVEL 128
 #define EMTPY_BONUS 0.9
 //#define IGNORE_THRESHOLD 0.0001
-#define IGNORE_THRESHOLD 0.001
-#define REMOVE_SMALL_PRIM 10
+#define IGNORE_THRESHOLD 0
+#define REMOVE_SMALL_PRIM 0
 
 #define MIN_TRI 16
 #define MIN_ELLIPSOID 16
+
+#if QUATERNION
+#undef PRE_CALC_KSCALE
+#define PRE_CALC_KSCALE 1
+#undef UPLOAD_INVSR_MAT 
+#define UPLOAD_INVSR_MAT 0
+#endif
+
+/* BSPT */
+#define BSPT false
+#define BSPT_MAX_STACK_DEPTH 64
+#define BSPT_MAX_HITS 95
+#define BSPT_NO_SPLIT false
+#define BSPT_DUMP_STATISTICS false
+#define CLIP_BEFORE_BSPT false
 
 //#define FORCE_SPLIT_THRESHOLD 64				// kd-tree 강제분할
 #define FORCE_SPLIT_THRESHOLD 256				// kd-tree 강제분할
@@ -82,6 +89,8 @@
 	#define QUATERNION true
 	#undef ISCET_COST
 	#define ISCET_COST 5.0
+	#undef KDT_VERSION
+	#define KDT_VERSION 0
 #endif
 #if PRIMITIVE_TYPE == ELLIPSOID
 	#undef ISCET_COST
@@ -290,7 +299,6 @@
 #define WARP_OCCUPANCY false   					// warp occupancy 출력
 #define HIT_AND_NODE_COUNT_DEBUG false			// Ray 마다 hitcount, node count, ... 확인
 												// kd-tree hitmap 확인 가능
-#define LEAF_NODE_DEBUG true					// kd-tree leaf node 렌더링
 
 #define MEASURE_START_FRAME 500
 #define MEASURE_END_FRAME 1000
@@ -529,8 +537,11 @@ typedef struct _CompositeObject {
 	float AABB[6];	//macro: XMIN, XMAX, YMIN, YMAX, ZMIN, ZMAX
 	ExtendedVertex *extended_vertices;
 	KdTree *kd_tree;
+#if PRIMITIVE_TYPE == ELLIPSOID
 	std::vector<TriangleList>* ellipsoidAabbDebug;
 	std::vector<std::vector<std::vector<TriangleList>>>* ellipsoidClipAabbDebug;
+	std::vector<std::vector<TriangleList>>* ellipsoidLeafDebug;
+#endif
 } CompositeObject;
 
 //shyun added begin

@@ -1468,7 +1468,7 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
 ) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
-#if DEBUG_LEAF
+#if DEBUG_LEAF_CUDA
     int maxLeaf = 0;
 #endif
 
@@ -1503,7 +1503,7 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
             // --- 리프 노드 처리 로직 ---
             unsigned int baseOffset = OBJECTLIST_OFFSET(node);
             int objectSize = OBJECT_SIZE(node) + baseOffset;
-#if DEBUG_LEAF
+#if DEBUG_LEAF_CUDA
             if (OBJECT_SIZE(node) > maxLeaf) {
                 maxLeaf = OBJECT_SIZE(node);
             }
@@ -1614,7 +1614,7 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
         } // while(true) == while(accumulated_opacity < OPACITY_THRESHOLD)
         if (x == g_SceneInfo.resX / 2 && y == g_SceneInfo.resY) printf("\n");
     } // if (BoundsRayIntersect)
-#if DEBUG_LEAF
+#if DEBUG_LEAF_CUDA
     /* debug */
     if (maxLeaf < 32) {
         accumulated_color = make_float3(0.f, 0.0f, maxLeaf / 32.f);

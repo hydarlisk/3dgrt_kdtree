@@ -77,6 +77,7 @@ std::vector<std::vector<std::vector<TriangleList>>> g_ellipsoidClipAabbDebug;
 #include <fstream>
 #include <string>
 
+#if DUMP_LEAF_CSV
 bool exportToCSV(const TriangleList* ellipsoidInfo, const int ellipsoidSize) {
 	static int fileIdx = 0;
 	int dir = 0;
@@ -123,7 +124,7 @@ bool exportToCSV(const TriangleList* ellipsoidInfo, const int ellipsoidSize) {
 	outFile.close();
 	return true;
 }
-
+#endif
 #if BSPT
 #include <vector>
 
@@ -1558,8 +1559,10 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pEllipsoidInf
 		sort(leaf.begin(), leaf.end(), desc);
 		ellipsoidSize = ellipsoidSize - ellipsoidSize / REMOVE_SMALL_PRIM;
 #endif
+#if DUMP_LEAF_CSV
 		if(ellipsoidSize > 0)
 			exportToCSV(pEllipsoidInfos, ellipsoidSize);
+#endif
 		unsigned int iEllipsoidOffset;
 		{
 			iEllipsoidOffset = g_iKdTreeEllipsoidOffsetCnt;
@@ -1626,7 +1629,7 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pEllipsoidInf
 		memcpy(pLeftEllipsoids, leftEllipsoids.data(), sizeof(TriangleList) * leftEllipsoids.size());
 		memcpy(pRightEllipsoids, rightEllipsoids.data(), sizeof(TriangleList) * rightEllipsoids.size());
 
-#if DEBUG_ELLIPSOID
+#if DEBUG_ELLIPSOID_CLIP_AABB
 		if (ellipsoidSize > 0) {
 			if (inNodeLevel >= g_ellipsoidClipAabbDebug.size()) {
 				g_ellipsoidClipAabbDebug.resize(g_ellipsoidClipAabbDebug.size() + 1);

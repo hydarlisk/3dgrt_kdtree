@@ -225,6 +225,7 @@ KdTree kd_tree;
 
 GLuint buf_obj;
 
+#if PRIMITIVE_TYPE == ELLIPSOID
 void renderGaussianMesh(int gId) {
 	ExtendedVertex* v = uip.poly_model.extended_vertices;
 
@@ -270,7 +271,6 @@ void renderEllipsoidClipAabb(int depth, int nodeId, int idx) {
 	if (depth != prevDepth || nodeId != prevNodeId || idx != prevIdx) {
 		renderAabb.clear();
 		prevIdx = idx;
-		//int gOffset = e.offset;
 		for (int i = 0; i < (*uip.poly_model.ellipsoidClipAabbDebug)[depth].size(); i++) {
 			for (int j = 0; j < (*uip.poly_model.ellipsoidClipAabbDebug)[depth][i].size(); j++) {
 				if ((*uip.poly_model.ellipsoidClipAabbDebug)[depth][i][j].offset == idx) {
@@ -333,6 +333,7 @@ void renderEllipsoidAabbs() {
 		renderEllipsoidAabb(ellipsoidInfos[i].offset);
 	}
 }
+#endif
 
 void renderGaussianMeshes() {
 	int i;
@@ -502,12 +503,12 @@ void display(void) {
 		draw_axes(100.0);
 		if (uip.composite_object_read == 1) {
 			switch (g_renderMode) {
+#if PRIMITIVE_TYPE == ELLIPSOID
 			case 5:	//ellipsoid aabb debug
 				if (g_renderGId >= 0)
 					//renderEllipsoidAabbs();
 					renderEllipsoidAabb(g_renderGId);
 				break;
-#if PRIMITIVE_TYPE == ELLIPSOID
 			case 6:	//ellipsoid clip aabb debug
 				if (g_renderGId >= 0)
 					renderEllipsoidClipAabb(g_renderDepth, g_renderNodeId, g_renderGId);
@@ -628,9 +629,9 @@ void keyboard(unsigned char key, int x, int y) {
 			break;
 		case '[':
 			g_renderGId--;
+#if PRIMITIVE_TYPE == ELLIPSOID
 			if (g_renderMode == 5)
 				if (g_renderGId < 0) g_renderGId = uip.poly_model.ellipsoidAabbDebug->size() - 1;
-#if PRIMITIVE_TYPE == ELLIPSOID
 			else if(g_renderMode == 6)
 				if (g_renderNodeId < 0) g_renderNodeId = (*uip.poly_model.ellipsoidClipAabbDebug)[g_renderDepth][g_renderNodeId].size() - 1;
 #endif
@@ -639,10 +640,10 @@ void keyboard(unsigned char key, int x, int y) {
 			break;
 		case ']':
 			g_renderGId++;
-			if(g_renderMode == 5)
-				if (g_renderGId > uip.poly_model.ellipsoidAabbDebug->size() - 1) g_renderGId = 0;
 #if PRIMITIVE_TYPE == ELLIPSOID
-			else if(g_renderMode == 6)
+			if (g_renderMode == 5)
+				if (g_renderGId > uip.poly_model.ellipsoidAabbDebug->size() - 1) g_renderGId = 0;
+			else if (g_renderMode == 6)
 				if (g_renderNodeId > (*uip.poly_model.ellipsoidClipAabbDebug)[g_renderDepth][g_renderNodeId].size() - 1) g_renderNodeId = 0;
 #endif
 			printf("render gaussian id: %d\n", g_renderGId);
@@ -651,13 +652,17 @@ void keyboard(unsigned char key, int x, int y) {
 #if PRIMITIVE_TYPE == ELLIPSOID
 		case ';':
 			g_renderNodeId--;
-			if (g_renderNodeId < 0) g_renderNodeId = (*uip.poly_model.ellipsoidClipAabbDebug)[g_renderDepth].size() - 1;
+			if (g_renderMode == 6) {
+				if (g_renderNodeId < 0) g_renderNodeId = (*uip.poly_model.ellipsoidClipAabbDebug)[g_renderDepth].size() - 1;
+			}
 			printf("render node id: %d\n", g_renderNodeId);
 			glutPostRedisplay();
 			break;
 		case '\'':
 			g_renderNodeId++;
-			if (g_renderNodeId > (*uip.poly_model.ellipsoidClipAabbDebug)[g_renderDepth].size() - 1) g_renderNodeId = 0;
+			if (g_renderMode == 6) {
+				if (g_renderNodeId > (*uip.poly_model.ellipsoidClipAabbDebug)[g_renderDepth].size() - 1) g_renderNodeId = 0;
+			}
 			printf("render node id: %d\n", g_renderNodeId);
 			glutPostRedisplay();
 			break;
@@ -3175,7 +3180,8 @@ void subDebugMenuHandler(int value) {
 		g_renderMode = 6;
 		g_renderDepth = 5;
 		g_renderNodeId = 0;
-		g_renderGId = 1;
+		g_renderGId = 0;
+		break;
 #endif
 	}
 	
