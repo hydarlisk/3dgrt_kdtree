@@ -1558,7 +1558,15 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pEllipsoidInf
 			leaf.push_back(pEllipsoidInfos[i]);
 		}
 		sort(leaf.begin(), leaf.end(), desc);
-		ellipsoidSize = ellipsoidSize - ellipsoidSize / REMOVE_SMALL_PRIM;
+		//ellipsoidSize = ellipsoidSize - ellipsoidSize / REMOVE_SMALL_PRIM;
+		if(ellipsoidSize > 8)
+			ellipsoidSize = ellipsoidSize / 2;
+		else if(ellipsoidSize > 16){
+			ellipsoidSize = ellipsoidSize / 4;
+		}
+		else if (ellipsoidSize > 32) {
+			ellipsoidSize = ellipsoidSize / 8;
+		}
 #endif
 #if DUMP_LEAF_CSV
 		if(ellipsoidSize > 0)
