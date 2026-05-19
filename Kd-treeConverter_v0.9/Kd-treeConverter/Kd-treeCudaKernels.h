@@ -10,7 +10,7 @@ struct CudaClipResult {
 
 // CPU(Kd-treeConstructor.cpp)에서 호출할 메인 인터페이스 함수
 CudaClipResult calculate_clipped_contributions_cuda(
-    const std::vector<const TriangleList*>& active_triangles,
+    const std::vector<const PrimList*>& active_triangles,
     const BoundingBox& left_bbox,
     const BoundingBox& right_bbox
 );

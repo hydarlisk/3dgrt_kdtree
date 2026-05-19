@@ -2427,9 +2427,9 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
     CUDA_CHECK(cudaMalloc(&g_d_kdtree_nodes, node_size));
     CUDA_CHECK(cudaMemcpy(g_d_kdtree_nodes, kdTree->tree, node_size, cudaMemcpyHostToDevice));
     /* prim offset */
-    size_t offset_size = kdTree->tri_offset_count * sizeof(unsigned int);
+    size_t offset_size = kdTree->prim_offset_count * sizeof(unsigned int);
     CUDA_CHECK(cudaMalloc(&g_d_prim_offsets, offset_size));
-    CUDA_CHECK(cudaMemcpy(g_d_prim_offsets, kdTree->tri_offset_list, offset_size, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(g_d_prim_offsets, kdTree->prim_offset_list, offset_size, cudaMemcpyHostToDevice));
     /* gaussians */
     size_t gaussians_bytes = gaussians.size() * sizeof(Gaussian);
     CUDA_CHECK(cudaMalloc(&g_d_gaussians_persistent, gaussians_bytes));
@@ -2567,7 +2567,7 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
 
     CUDA_CHECK(cudaGetDeviceProperties(&deviceProp, deviceId));
 
-    printf("[DEBUG] kdTree->tri_offset_count = %zu\n", kdTree->tri_offset_count);
+    printf("[DEBUG] kdTree->prim_offset_count = %zu\n", kdTree->prim_offset_count);
     printf("[DEBUG] maxTexture1D: %d\n", deviceProp.maxTexture1D);
 
     /* build tri acc */
@@ -2608,9 +2608,9 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
 #if !GLOBAL_DEVICE_VAR
     unsigned int* g_d_prim_offsets = nullptr;
 #endif
-    size_t offset_size = kdTree->tri_offset_count * sizeof(unsigned int);
+    size_t offset_size = kdTree->prim_offset_count * sizeof(unsigned int);
     CUDA_CHECK(cudaMalloc(&g_d_prim_offsets, offset_size));
-    CUDA_CHECK(cudaMemcpy(g_d_prim_offsets, kdTree->tri_offset_list, offset_size, cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(g_d_prim_offsets, kdTree->prim_offset_list, offset_size, cudaMemcpyHostToDevice));
 
 #if WALD_METHOD
     #if !GLOBAL_DEVICE_VAR

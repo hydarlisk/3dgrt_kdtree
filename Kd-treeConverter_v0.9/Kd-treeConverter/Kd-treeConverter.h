@@ -24,7 +24,7 @@
 /* primitive type */
 #define TRI 0
 #define ELLIPSOID 1
-#define PRIMITIVE_TYPE 1
+#define PRIMITIVE_TYPE 0
 
 #define UPLOAD_INV_SCALE 1
 
@@ -476,7 +476,7 @@ typedef struct _TriangleList {
 	int cutAxis;
 	float cutCenter[3];
 	float ejCut, ekCut;
-} TriangleList;
+} PrimList;
 
 #if BSPT
 enum Side { FRONT, BACK, STRADDLE, ON_PLANE };
@@ -492,7 +492,7 @@ struct BSPNode_Build {
 	BSPNode_Build* front = nullptr;
 	BSPNode_Build* back = nullptr;
 
-	std::vector<TriangleList> onPlaneTriangles;
+	std::vector<PrimList> onPlaneTriangles;
 };
 
 //final bspt node
@@ -520,13 +520,15 @@ typedef struct _KdTreeNode {
 typedef struct _KdTree {
 	KdTreeNode *tree;
 	int tree_node_count;
-	unsigned int *tri_offset_list;
-	int tri_offset_count;
+	unsigned int *prim_offset_list;
+	int prim_offset_count;
+#if PRIMITIVE_TYPE == TRI
 	TriAccel *tri_accel_list;
+#endif
 	float AABB[6];
 #if BSPT
 	std::vector<BSPNode> bsptTree;
-	std::vector<TriangleList> bsptTris;
+	std::vector<PrimList> bsptTris;
 #endif
 } KdTree;
 
@@ -542,10 +544,10 @@ typedef struct _CompositeObject {
 	ExtendedVertex *extended_vertices;
 	KdTree *kd_tree;
 #if PRIMITIVE_TYPE == ELLIPSOID
-	std::vector<TriangleList>* ellipsoidAabbDebug;
-	std::vector<std::vector<std::vector<TriangleList>>>* ellipsoidClipAabbDebug;
-	std::vector<std::vector<TriangleList>>* ellipsoidLeafDebug;
-	std::vector<std::vector<std::vector<TriangleList>>>* ellipsoidInternalDebug;
+	std::vector<PrimList>* ellipsoidAabbDebug;
+	std::vector<std::vector<std::vector<PrimList>>>* ellipsoidClipAabbDebug;
+	std::vector<std::vector<PrimList>>* ellipsoidLeafDebug;
+	std::vector<std::vector<std::vector<PrimList>>>* ellipsoidInternalDebug;
 #endif
 } CompositeObject;
 

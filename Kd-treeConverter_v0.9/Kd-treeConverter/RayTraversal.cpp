@@ -98,7 +98,7 @@ void IsectShadowRay( const KdTreeNode *node )
 	const int nObjs		 = OBJECT_SIZE(*node);
 
 	for (i = baseOffset; i < baseOffset+nObjs; i++) {
-		int     triID = g_kd_tree->tri_offset_list[i];
+		int     triID = g_kd_tree->prim_offset_list[i];
 		TriAccel &acc = g_kd_tree->tri_accel_list[triID];
 
 		// ---------------------------------------------------------------
@@ -283,7 +283,7 @@ void IsectRay( const KdTreeNode *node, int nIdx )
 	const int nObjs		 = OBJECT_SIZE(*node);
 
 	for (i = baseOffset; i < baseOffset+nObjs; i++) {
-		int     triID = g_kd_tree->tri_offset_list[i];
+		int     triID = g_kd_tree->prim_offset_list[i];
 		TriAccel &acc = g_kd_tree->tri_accel_list[triID];
 
 		// ---------------------------------------------------------------

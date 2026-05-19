@@ -24,7 +24,7 @@
 typedef struct _BoundEdge {
 	float t;
 	enum { START, END } type;
-	const TriangleList *triangleInfo;
+	const PrimList *triangleInfo;
 	bool isPlanar;
 	bool isNormalPositive;
 } BoundEdge;
@@ -66,32 +66,25 @@ extern KdTreeNode* g_pKdTree_Node_Array;
 extern unsigned int  g_iKdTree_EmptyNode_Count;
 extern unsigned int  g_iKdTree_LeafNode_Count;
 
-#if PRIMITIVE_TYPE == TRI
-extern TriangleList* g_pTriangleInfos;
-extern unsigned int  g_iTriangleSize;
-extern unsigned long long  g_iKdTree_TriOffset_Count;
-extern unsigned long long  g_iKdTree_TriOffset_CountAlloc;
-extern unsigned int *g_pKdTree_TriOffset_Array;
-extern unsigned int  g_iKdTree_MaxTriInLeafNode_Count;
-#elif PRIMITIVE_TYPE == ELLIPSOID
-extern TriangleList* g_pEllipsoidInfos;
-extern unsigned int g_iEllipsoidSize;
-extern unsigned long long g_iKdTreeEllipsoidOffsetCnt;
-extern unsigned long long g_iKdTreeEllipsoidOffsetCnt_Alloc;
-extern unsigned int* g_pKdTreeEllipsoidOffsetArray;
-extern unsigned int g_iKdTreeMaxEllipsoidInLeafNodeCnt;
-extern std::vector<TriangleList> g_ellipsoidAabbDebug;
-extern std::vector<std::vector<std::vector<TriangleList>>> g_ellipsoidClipAabbDebug;
-extern std::vector<std::vector<TriangleList>> g_ellipsoidLeafDebug;
-extern std::vector<std::vector<std::vector<TriangleList>>> g_ellipsoidInternalDebug;
+extern PrimList* g_pPrimInfos;
+extern unsigned int  g_iPrimSize;
+extern unsigned long long  g_iKdTreePrimOffsetCnt;
+extern unsigned long long  g_iKdTreePrimOffsetCnt_Alloc;
+extern unsigned int *g_pKdTreePrimOffsetArray;
+extern unsigned int  g_iKdTreeMaxPrimInLeafNodeCnt;
+#if PRIMITIVE_TYPE == ELLIPSOID
+extern std::vector<PrimList> g_ellipsoidAabbDebug;
+extern std::vector<std::vector<std::vector<PrimList>>> g_ellipsoidClipAabbDebug;
+extern std::vector<std::vector<PrimList>> g_ellipsoidLeafDebug;
+extern std::vector<std::vector<std::vector<PrimList>>> g_ellipsoidInternalDebug;
 #endif
 
 inline void setInnerNode(KdTreeNode* pNode, int _splitAxis, unsigned int _firstChildOffset, float _splitPos);
 void setLeafNode(KdTreeNode* pNode, unsigned int _objectSize, unsigned int _objectListOffset);
 
-void set_bound_edge(const int axis, const TriangleList *pTriangleInfo, const unsigned int n_bEdge, BoundEdge *bEdge);
+void set_bound_edge(const int axis, const PrimList *pTriangleInfo, const unsigned int n_bEdge, BoundEdge *bEdge);
 
-void try_to_split(const int axis, BoundingBox &inBBox, const TriangleList *pTriangles, const int triangleSize, 
+void try_to_split(const int axis, BoundingBox &inBBox, const PrimList *pTriangles, const int triangleSize, 
                         BoundEdge *bEdge,  SplitCost &bestCost
 //shyun added begin
 #if SAH_OPACITY == 1 | SAH_OPACITY == 10 | SAH_OPACITY == 101 | SAH_OPACITY == 1000 | SAH_OPACITY == 1001 | SAH_OPACITY == 201 | SAH_OPACITY == 2010
@@ -111,7 +104,7 @@ void try_to_split(const int axis, BoundingBox &inBBox, const TriangleList *pTria
 bool initialize_kd_tree(CompositeObject *poly_model);
 void uninitialize_kd_tree(void);
 
-void build_kd_tree_recursive(BoundEdge *bEdge, const TriangleList *pTriangleInfos, unsigned int triangleSize,
+void build_kd_tree_recursive(BoundEdge *bEdge, const PrimList *pTriangleInfos, unsigned int triangleSize,
                              BoundingBox &bbox, unsigned int inNodeLevel, KdTreeNode *inNode);
 
 void build_TriAccList(CompositeObject *poly_model, TriAccel*& pTriAcc);
@@ -135,5 +128,5 @@ inline double get_surface_volume(const BoundingBox& box);
 /* binary space partitioning tree */
 #if BSPT
 extern std::vector<BSPNode> g_BSPTNodes;
-extern std::vector<TriangleList> g_BSPTTris;
+extern std::vector<PrimList> g_BSPTTris;
 #endif

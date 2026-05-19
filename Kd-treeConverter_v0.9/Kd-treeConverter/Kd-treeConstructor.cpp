@@ -41,21 +41,15 @@ BoundEdge    *g_bEdge = NULL;
 
 #if PRIMITIVE_TYPE == TRI
 unsigned int v_KD_TREE_MIN_PRIMITIVE = MIN_TRI;
-TriangleList *g_pTriangleInfos = NULL;
-unsigned int  g_iTriangleSize;
-unsigned long long  g_iKdTree_TriOffset_Count;
-unsigned long long  g_iKdTree_TriOffset_CountAlloc;
-unsigned int *g_pKdTree_TriOffset_Array = NULL;
-unsigned int  g_iKdTree_MaxTriInLeafNode_Count;
-#else PRIMITIVE_TYPE == ELLIPSOID
+#elif PRIMITIVE_TYPE == ELLIPSOID
 unsigned int v_KD_TREE_MIN_PRIMITIVE = MIN_ELLIPSOID;
-TriangleList* g_pEllipsoidInfos = nullptr;
-unsigned int g_iEllipsoidSize;
-unsigned long long g_iKdTreeEllipsoidOffsetCnt;
-unsigned long long g_iKdTreeEllipsoidOffsetCnt_Alloc;
-unsigned int* g_pKdTreeEllipsoidOffsetArray = nullptr;
-unsigned int g_iKdTreeMaxEllipsoidInLeafNodeCnt;
 #endif
+PrimList *g_pPrimInfos = nullptr;
+unsigned int  g_iPrimSize;
+unsigned long long  g_iKdTreePrimOffsetCnt;
+unsigned long long  g_iKdTreePrimOffsetCnt_Alloc;
+unsigned int *g_pKdTreePrimOffsetArray = NULL;
+unsigned int  g_iKdTreeMaxPrimInLeafNodeCnt;
 
 unsigned int  g_iKdTree_Level;
 unsigned int  g_iKdTree_Node_Count;
@@ -70,17 +64,19 @@ extern std::vector<bool> g_isValidG;
 extern std::vector<float> g_kScales;
 #endif
 
-std::vector<TriangleList> g_ellipsoidAabbDebug;
-std::vector<std::vector<std::vector<TriangleList>>> g_ellipsoidClipAabbDebug;
-std::vector<std::vector<TriangleList>> g_ellipsoidLeafDebug;
-std::vector<std::vector<std::vector<TriangleList>>> g_ellipsoidInternalDebug;
+#if PRIMITIVE_TYPE == ELLIPSOID
+std::vector<PrimList> g_ellipsoidAabbDebug;
+std::vector<std::vector<std::vector<PrimList>>> g_ellipsoidClipAabbDebug;
+std::vector<std::vector<PrimList>> g_ellipsoidLeafDebug;
+std::vector<std::vector<std::vector<PrimList>>> g_ellipsoidInternalDebug;
+#endif
 
 #include <iostream>
 #include <fstream>
 #include <string>
 
 #if DUMP_LEAF_CSV
-bool exportToCSV(const TriangleList* ellipsoidInfo, const int ellipsoidSize) {
+bool exportToCSV(const PrimList* ellipsoidInfo, const int ellipsoidSize) {
 	static int fileIdx = 0;
 	int dir = 0;
 	if (ellipsoidSize < 32) dir = 32;
@@ -131,7 +127,7 @@ bool exportToCSV(const TriangleList* ellipsoidInfo, const int ellipsoidSize) {
 #include <vector>
 
 vector<BSPNode> g_BSPTNodes;
-vector<TriangleList> g_BSPTTris;
+vector<PrimList> g_BSPTTris;
 
 /* binary space partitioning tree */
 struct Vec3 {
@@ -166,7 +162,7 @@ void PrintNodeTriangles(BSPNode_Build* node) {
 		<< "], d: " << node->d << ") ---" << std::endl;
 
 	for (size_t i = 0; i < node->onPlaneTriangles.size(); ++i) {
-		const TriangleList& tri = node->onPlaneTriangles[i];
+		const PrimList& tri = node->onPlaneTriangles[i];
 		std::cout << "  Triangle " << i << " [Offset: " << tri.offset << "]" << std::endl;
 		for (int j = 0; j < 3; ++j) {
 			std::cout << "    V" << j << ": ("
@@ -207,7 +203,7 @@ inline float CalculateDistanceToPlane(const Vec3 n, const float d, const Extende
 	return Dot(n, GetPos(V)) - d;
 }
 
-Side ClassifyTriangle(const Vec3 n, const float d, const TriangleList& testTri) {
+Side ClassifyTriangle(const Vec3 n, const float d, const PrimList& testTri) {
 	int frontCnt = 0, backCnt = 0;
 
 	for (int i = 0; i < 3; i++) {
@@ -223,7 +219,7 @@ Side ClassifyTriangle(const Vec3 n, const float d, const TriangleList& testTri) 
 
 
 //TODO: valid check of n?
-void getPlaneFromTri(const TriangleList& tri, Vec3& n, float& d) {
+void getPlaneFromTri(const PrimList& tri, Vec3& n, float& d) {
 	//get plane
 	Vec3 p0 = GetPos(tri.point[0]);
 	Vec3 e1 = { tri.point[1].vertex[0] - p0.x, tri.point[1].vertex[1] - p0.y, tri.point[1].vertex[2] - p0.z };
@@ -236,7 +232,7 @@ void getPlaneFromTri(const TriangleList& tri, Vec3& n, float& d) {
 	d = Dot(n, p0);
 }
 
-int PickBestSplitter(const vector<TriangleList>& triangles) {
+int PickBestSplitter(const vector<PrimList>& triangles) {
 	int bestIndex = -1;
 	float bestScore = 1e30f;
 
@@ -244,7 +240,7 @@ int PickBestSplitter(const vector<TriangleList>& triangles) {
 	const float BALANCE_WEIGHT = 1.0f;
 
 	for (int i = 0; i < triangles.size(); ++i) {
-		const TriangleList& candidate = triangles[i];
+		const PrimList& candidate = triangles[i];
 
 		Vec3 n;
 		float d;
@@ -299,7 +295,7 @@ ExtendedVertex GetIntersect(const ExtendedVertex& a, const ExtendedVertex& b, co
 	return res;
 }
 
-void SplitTriangle(const TriangleList& tri, const Vec3 n, const float d, std::vector<TriangleList>& frontPart, std::vector<TriangleList>& backPart) {
+void SplitTriangle(const PrimList& tri, const Vec3 n, const float d, std::vector<PrimList>& frontPart, std::vector<PrimList>& backPart) {
 	std::vector<ExtendedVertex> fPts, bPts;
 
 	for (int i = 0; i < 3; ++i) {
@@ -320,10 +316,10 @@ void SplitTriangle(const TriangleList& tri, const Vec3 n, const float d, std::ve
 		}
 	}
 
-	auto Finalize = [&](std::vector<ExtendedVertex>& pts, std::vector<TriangleList>& target) {
+	auto Finalize = [&](std::vector<ExtendedVertex>& pts, std::vector<PrimList>& target) {
 		if (pts.size() < 3) return;
 		for (size_t i = 1; i < pts.size() - 1; ++i) {
-			TriangleList nt = tri;
+			PrimList nt = tri;
 			nt.point[0] = pts[0];
 			nt.point[1] = pts[i];
 			nt.point[2] = pts[i + 1];
@@ -339,7 +335,7 @@ void SplitTriangle(const TriangleList& tri, const Vec3 n, const float d, std::ve
 //side:
 //		1: front
 //		-1: back
-BoundingBox GetClippedAABB(const TriangleList& tri, const Vec3 n, const float d, int side) {
+BoundingBox GetClippedAABB(const PrimList& tri, const Vec3 n, const float d, int side) {
 	BoundingBox clippedBox;
 	for (int i = 0; i < 3; i++) {
 		clippedBox.min[i] = 1e30f;
@@ -395,7 +391,7 @@ int maxTriInNode = 0;
 int maxTriDepth = 0;
 int maxDepth = 0;
 
-BSPNode_Build* BuildBSPTree(vector<TriangleList>& triangles, int depth) {
+BSPNode_Build* BuildBSPTree(vector<PrimList>& triangles, int depth) {
 	if (triangles.empty()) return nullptr;
 	if (depth > maxDepth) {
 		maxDepth = depth;
@@ -405,8 +401,8 @@ BSPNode_Build* BuildBSPTree(vector<TriangleList>& triangles, int depth) {
 	BSPNode_Build* node = new BSPNode_Build();
 
 	int bestIdx = PickBestSplitter(triangles);
-	TriangleList splitter = triangles[bestIdx];
-	//TriangleList splitter = triangles[0];
+	PrimList splitter = triangles[bestIdx];
+	//PrimList splitter = triangles[0];
 	
 	//get plane
 	Vec3 n;
@@ -418,8 +414,8 @@ BSPNode_Build* BuildBSPTree(vector<TriangleList>& triangles, int depth) {
 	node->n[2] = n.z;
 	node->d = d;
 
-	vector<TriangleList> frontList;
-	vector<TriangleList> backList;
+	vector<PrimList> frontList;
+	vector<PrimList> backList;
 
 	vector<Side> sideList(triangles.size());
 	for (int i = 0; i < triangles.size(); i++) {
@@ -445,7 +441,7 @@ BSPNode_Build* BuildBSPTree(vector<TriangleList>& triangles, int depth) {
 			frontList[frontList.size() - 1].AABB = GetClippedAABB(triangles[i], n, d, 1);
 			backList[backList.size() - 1].AABB = GetClippedAABB(triangles[i], n, d, -1);
 #else
-			vector<TriangleList> frontPart, backPart;
+			vector<PrimList> frontPart, backPart;
 			SplitTriangle(triangles[i], n, d, frontPart, backPart);
 			frontList.insert(frontList.end(), frontPart.begin(), frontPart.end());
 			backList.insert(backList.end(), backPart.begin(), backPart.end());
@@ -484,7 +480,7 @@ void FlattenBSPTree(BSPNode_Build* nodeB, vector<unsigned int>& triOffsets) {
 	tmp.d = nodeB->d;
 	tmp.frontChild = -1;
 	tmp.backChild = -1;
-	tmp.triStart = g_iKdTree_TriOffset_Count + triOffsets.size();
+	tmp.triStart = g_iKdTreePrimOffsetCnt + triOffsets.size();
 	tmp.triCnt = nodeB->onPlaneTriangles.size();
 #if BSPT_DUMP_STATISTICS
 	onPlaneTriangleCnts[onPlaneTriCntsIdx].push_back(tmp.triCnt);
@@ -564,7 +560,7 @@ int compare_bound_edge(const void *elem0, const void *elem1)
 		(obj0->t > obj1->t ? 1 : -1);
 }
 
-void set_bound_edge(const int axis, const TriangleList *pTriangleInfo, const unsigned int n_bEdge, BoundEdge *bEdge)
+void set_bound_edge(const int axis, const PrimList *pTriangleInfo, const unsigned int n_bEdge, BoundEdge *bEdge)
 {
 	int index = 0;
 
@@ -675,7 +671,7 @@ bool isGaussianIntersectingAABB(const float aabbMin[3], const float aabbMax[3], 
 	return d2 <= 9.0f;
 }
 
-void clip_ellipsoid(std::vector<TriangleList>& ellipsoidInfos, const SplitCost& bestCost, int side) {
+void clip_ellipsoid(std::vector<PrimList>& ellipsoidInfos, const SplitCost& bestCost, int side) {
 	int axis = bestCost.axis;
 	float splitPos = bestCost.splitPos;
 
@@ -796,7 +792,7 @@ void clip_ellipsoid(std::vector<TriangleList>& ellipsoidInfos, const SplitCost& 
 	}
 }
 
-void clip_triangle(const int triangleSize, const SplitCost& bestCost, TriangleList* pTriangleInfos, int side)
+void clip_triangle(const int triangleSize, const SplitCost& bestCost, PrimList* pTriangleInfos, int side)
 {
 	int axis = bestCost.axis;
 	float norm[3][3] = { { 1, 0, 0 }, { 0, 1, 0 }, { 0, 0, 1 } };
@@ -921,7 +917,7 @@ void clip_triangle(const int triangleSize, const SplitCost& bestCost, TriangleLi
 }
 
 void push_triangles_to_child(const unsigned n_bEdge, const BoundEdge *bEdge, 
-                             TriangleList *pLeftTriangles, TriangleList *pRightTriangles,
+                             PrimList *pLeftTriangles, PrimList *pRightTriangles,
                              const SplitCost &bestCost )
 {
 	int currLeftIndex = 0, currRightIndex = 0;
@@ -978,7 +974,7 @@ void push_triangles_to_child(const unsigned n_bEdge, const BoundEdge *bEdge,
 }
 //shyun added begin
 void push_triangles_to_child_vector(const unsigned n_bEdge, const BoundEdge* bEdge,
-	std::vector<TriangleList>& pLeftTriangles, std::vector<TriangleList>& pRightTriangles,
+	std::vector<PrimList>& pLeftTriangles, std::vector<PrimList>& pRightTriangles,
 	const SplitCost& bestCost)
 {
 	// NlogN (in RTGPU) 방식
@@ -1011,7 +1007,7 @@ void push_triangles_to_child_vector(const unsigned n_bEdge, const BoundEdge* bEd
 	}
 }
 //shyun added end
-void try_to_split(const int axis, BoundingBox &inBBox, const TriangleList *pTriangles, const int triangleSize, BoundEdge *bEdge,  SplitCost &bestCost
+void try_to_split(const int axis, BoundingBox &inBBox, const PrimList *pTriangles, const int triangleSize, BoundEdge *bEdge,  SplitCost &bestCost
 )
 {
 	const int axis1 = modulo[axis + 1], axis2 = modulo[axis + 2];
@@ -1247,19 +1243,19 @@ uint32_t initEllipsoid(CompositeObject& poly_model) {
 		float sigma = g_gaussians[i].opacity;
 		if (sigma < KERNEL_MIN_RESPONSE || sigma < SIGMA_THRESHOLD_MODE / 255.0f) continue;
 #endif
-		calcEllipsoidAABB(g_gaussians[i], g_pEllipsoidInfos[validEllipsoid].AABB
+		calcEllipsoidAABB(g_gaussians[i], g_pPrimInfos[validEllipsoid].AABB
 #if !QUATERNION
 			,i
 #endif
 		);
-		g_pEllipsoidInfos[validEllipsoid].offset = i;
-		poly_model.AABB[XMIN] = MyMIN(poly_model.AABB[XMIN], g_pEllipsoidInfos[validEllipsoid].AABB.min[0]);
-		poly_model.AABB[YMIN] = MyMIN(poly_model.AABB[YMIN], g_pEllipsoidInfos[validEllipsoid].AABB.min[1]);
-		poly_model.AABB[ZMIN] = MyMIN(poly_model.AABB[ZMIN], g_pEllipsoidInfos[validEllipsoid].AABB.min[2]);
-		poly_model.AABB[XMAX] = MyMAX(poly_model.AABB[XMAX], g_pEllipsoidInfos[validEllipsoid].AABB.max[0]);
-		poly_model.AABB[YMAX] = MyMAX(poly_model.AABB[YMAX], g_pEllipsoidInfos[validEllipsoid].AABB.max[1]);
-		poly_model.AABB[ZMAX] = MyMAX(poly_model.AABB[ZMAX], g_pEllipsoidInfos[validEllipsoid].AABB.max[2]);
-		g_ellipsoidAabbDebug[validEllipsoid] = g_pEllipsoidInfos[validEllipsoid];
+		g_pPrimInfos[validEllipsoid].offset = i;
+		poly_model.AABB[XMIN] = MyMIN(poly_model.AABB[XMIN], g_pPrimInfos[validEllipsoid].AABB.min[0]);
+		poly_model.AABB[YMIN] = MyMIN(poly_model.AABB[YMIN], g_pPrimInfos[validEllipsoid].AABB.min[1]);
+		poly_model.AABB[ZMIN] = MyMIN(poly_model.AABB[ZMIN], g_pPrimInfos[validEllipsoid].AABB.min[2]);
+		poly_model.AABB[XMAX] = MyMAX(poly_model.AABB[XMAX], g_pPrimInfos[validEllipsoid].AABB.max[0]);
+		poly_model.AABB[YMAX] = MyMAX(poly_model.AABB[YMAX], g_pPrimInfos[validEllipsoid].AABB.max[1]);
+		poly_model.AABB[ZMAX] = MyMAX(poly_model.AABB[ZMAX], g_pPrimInfos[validEllipsoid].AABB.max[2]);
+		g_ellipsoidAabbDebug[validEllipsoid] = g_pPrimInfos[validEllipsoid];
 		validEllipsoid++;
 	}
 	g_ellipsoidAabbDebug.resize(validEllipsoid);
@@ -1269,7 +1265,7 @@ uint32_t initEllipsoid(CompositeObject& poly_model) {
 bool initialize_kd_tree(CompositeObject* poly_model) {
 	// Returns 1 if kd-tree data was initialized successfully, or 0 otherwise.
 
-	g_pEllipsoidInfos = new TriangleList[g_gaussians.size()];
+	g_pPrimInfos = new PrimList[g_gaussians.size()];
 #if OCCLUDE_MIN_OPACITY
 	uint32_t ellipsoidCnt = initEllipsoid(*poly_model);
 #else
@@ -1286,11 +1282,11 @@ bool initialize_kd_tree(CompositeObject* poly_model) {
 	g_iKdTree_LeafNode_Count = 0;
 	g_iKdTree_EmptyNode_Count = 0;
 	
-	g_iKdTreeEllipsoidOffsetCnt = 0;
-	g_pKdTreeEllipsoidOffsetArray = nullptr;
-	g_iKdTreeEllipsoidOffsetCnt_Alloc = 64 * 1024 * 1024;
-	g_iKdTreeMaxEllipsoidInLeafNodeCnt = 0;
-	g_iEllipsoidSize = ellipsoidCnt;
+	g_iKdTreePrimOffsetCnt = 0;
+	g_pKdTreePrimOffsetArray = nullptr;
+	g_iKdTreePrimOffsetCnt_Alloc = 64 * 1024 * 1024;
+	g_iKdTreeMaxPrimInLeafNodeCnt = 0;
+	g_iPrimSize = ellipsoidCnt;
 
 	g_root_AABB.min[0] = poly_model->AABB[0];
 	g_root_AABB.min[1] = poly_model->AABB[2];
@@ -1299,12 +1295,12 @@ bool initialize_kd_tree(CompositeObject* poly_model) {
 	g_root_AABB.max[1] = poly_model->AABB[3];
 	g_root_AABB.max[2] = poly_model->AABB[5];
 
-	g_bEdge = new BoundEdge[g_iEllipsoidSize * 2];
+	g_bEdge = new BoundEdge[g_iPrimSize * 2];
 	if (g_bEdge == NULL) {
 		bError |= true;
 	}
 	else {
-		memset(g_bEdge, 0x00, sizeof(BoundEdge) * g_iEllipsoidSize * 2);
+		memset(g_bEdge, 0x00, sizeof(BoundEdge) * g_iPrimSize * 2);
 	}
 
 	g_pKdTree_Node_Array = new KdTreeNode[g_iKdTree_Node_CountAlloc];
@@ -1316,12 +1312,12 @@ bool initialize_kd_tree(CompositeObject* poly_model) {
 		g_iKdTree_Node_Count = 1;
 	}
 
-	g_pKdTreeEllipsoidOffsetArray = new unsigned int[g_iKdTreeEllipsoidOffsetCnt_Alloc];
-	if (g_pKdTreeEllipsoidOffsetArray == NULL) {
+	g_pKdTreePrimOffsetArray = new unsigned int[g_iKdTreePrimOffsetCnt_Alloc];
+	if (g_pKdTreePrimOffsetArray == NULL) {
 		bError |= true;
 	}
 	else {
-		memset(g_pKdTreeEllipsoidOffsetArray, 0x00, sizeof(unsigned int) * g_iKdTreeEllipsoidOffsetCnt_Alloc);
+		memset(g_pKdTreePrimOffsetArray, 0x00, sizeof(unsigned int) * g_iKdTreePrimOffsetCnt_Alloc);
 	}
 
 	if (bError) {
@@ -1338,20 +1334,20 @@ bool initialize_kd_tree(CompositeObject *poly_model) {
 	bool bError = false;
 
 	g_iKdTree_Node_Count      = 0;
-	g_iKdTree_TriOffset_Count = 0;
+	g_iKdTreePrimOffsetCnt = 0;
 	g_pKdTree_Node_Array      = NULL;
-	g_pKdTree_TriOffset_Array = NULL;
+	g_pKdTreePrimOffsetArray = NULL;
 	//g_iKdTree_Node_CountAlloc      =  8 * 1024 * 1024; 
 	g_iKdTree_Node_CountAlloc      =  32 * 1024 * 1024; 
-	//g_iKdTree_TriOffset_CountAlloc = 16 * 1024 * 1024;
-	g_iKdTree_TriOffset_CountAlloc = 64 * 1024 * 1024;
+	//g_iKdTreePrimOffsetCnt_Alloc = 16 * 1024 * 1024;
+	g_iKdTreePrimOffsetCnt_Alloc = 64 * 1024 * 1024;
 
 	g_iKdTree_Level = 0;
 	g_iKdTree_LeafNode_Count  = 0;
 	g_iKdTree_EmptyNode_Count = 0;
-	g_iKdTree_MaxTriInLeafNode_Count  = 0;
+	g_iKdTreeMaxPrimInLeafNodeCnt  = 0;
 
-	g_iTriangleSize = poly_model->n_triangles;
+	g_iPrimSize = poly_model->n_triangles;
 
 	g_root_AABB.min[0] = poly_model->AABB[0];
 	g_root_AABB.min[1] = poly_model->AABB[2];
@@ -1362,32 +1358,32 @@ bool initialize_kd_tree(CompositeObject *poly_model) {
 
 	ExtendedVertex *pVertexList = poly_model->extended_vertices;
 
-	g_pTriangleInfos = new TriangleList[g_iTriangleSize];
-	if( g_pTriangleInfos == NULL ) {
+	g_pPrimInfos = new PrimList[g_iPrimSize];
+	if( g_pPrimInfos == NULL ) {
 		bError |= true;
 	}
 	else {
-		for( int i = 0; i < g_iTriangleSize; i++ ) {
-			g_pTriangleInfos[i].offset = i;
-			g_pTriangleInfos[i].point[0] = pVertexList[3*i];
-			g_pTriangleInfos[i].point[1] = pVertexList[3*i+1];
-			g_pTriangleInfos[i].point[2] = pVertexList[3*i+2];
+		for( int i = 0; i < g_iPrimSize; i++ ) {
+			g_pPrimInfos[i].offset = i;
+			g_pPrimInfos[i].point[0] = pVertexList[3*i];
+			g_pPrimInfos[i].point[1] = pVertexList[3*i+1];
+			g_pPrimInfos[i].point[2] = pVertexList[3*i+2];
 
 			//calc triangle aabb
-			g_pTriangleInfos[i].AABB.min[0] = MyMIN (MyMIN (g_pTriangleInfos[i].point[0].vertex[0], g_pTriangleInfos[i].point[1].vertex[0]), g_pTriangleInfos[i].point[2].vertex[0]);
-			g_pTriangleInfos[i].AABB.min[1] = MyMIN (MyMIN (g_pTriangleInfos[i].point[0].vertex[1], g_pTriangleInfos[i].point[1].vertex[1]), g_pTriangleInfos[i].point[2].vertex[1]);
-			g_pTriangleInfos[i].AABB.min[2] = MyMIN (MyMIN (g_pTriangleInfos[i].point[0].vertex[2], g_pTriangleInfos[i].point[1].vertex[2]), g_pTriangleInfos[i].point[2].vertex[2]);
-			g_pTriangleInfos[i].AABB.max[0] = MyMAX (MyMAX (g_pTriangleInfos[i].point[0].vertex[0], g_pTriangleInfos[i].point[1].vertex[0]), g_pTriangleInfos[i].point[2].vertex[0]);
-			g_pTriangleInfos[i].AABB.max[1] = MyMAX (MyMAX (g_pTriangleInfos[i].point[0].vertex[1], g_pTriangleInfos[i].point[1].vertex[1]), g_pTriangleInfos[i].point[2].vertex[1]);
-			g_pTriangleInfos[i].AABB.max[2] = MyMAX (MyMAX (g_pTriangleInfos[i].point[0].vertex[2], g_pTriangleInfos[i].point[1].vertex[2]), g_pTriangleInfos[i].point[2].vertex[2]);
+			g_pPrimInfos[i].AABB.min[0] = MyMIN (MyMIN (g_pPrimInfos[i].point[0].vertex[0], g_pPrimInfos[i].point[1].vertex[0]), g_pPrimInfos[i].point[2].vertex[0]);
+			g_pPrimInfos[i].AABB.min[1] = MyMIN (MyMIN (g_pPrimInfos[i].point[0].vertex[1], g_pPrimInfos[i].point[1].vertex[1]), g_pPrimInfos[i].point[2].vertex[1]);
+			g_pPrimInfos[i].AABB.min[2] = MyMIN (MyMIN (g_pPrimInfos[i].point[0].vertex[2], g_pPrimInfos[i].point[1].vertex[2]), g_pPrimInfos[i].point[2].vertex[2]);
+			g_pPrimInfos[i].AABB.max[0] = MyMAX (MyMAX (g_pPrimInfos[i].point[0].vertex[0], g_pPrimInfos[i].point[1].vertex[0]), g_pPrimInfos[i].point[2].vertex[0]);
+			g_pPrimInfos[i].AABB.max[1] = MyMAX (MyMAX (g_pPrimInfos[i].point[0].vertex[1], g_pPrimInfos[i].point[1].vertex[1]), g_pPrimInfos[i].point[2].vertex[1]);
+			g_pPrimInfos[i].AABB.max[2] = MyMAX (MyMAX (g_pPrimInfos[i].point[0].vertex[2], g_pPrimInfos[i].point[1].vertex[2]), g_pPrimInfos[i].point[2].vertex[2]);
 		}
 	}
 
-	g_bEdge = new BoundEdge[g_iTriangleSize * 2];
+	g_bEdge = new BoundEdge[g_iPrimSize * 2];
 	if( g_bEdge == NULL ) {
 		bError |= true;
 	} else {
-		memset( g_bEdge, 0x00, sizeof( BoundEdge ) * g_iTriangleSize * 2 );
+		memset( g_bEdge, 0x00, sizeof( BoundEdge ) * g_iPrimSize * 2 );
 	}
 		
 	g_pKdTree_Node_Array = new KdTreeNode[ g_iKdTree_Node_CountAlloc ];
@@ -1398,11 +1394,11 @@ bool initialize_kd_tree(CompositeObject *poly_model) {
 		g_iKdTree_Node_Count = 1; 
 	}
 		
-	g_pKdTree_TriOffset_Array = new unsigned int [ g_iKdTree_TriOffset_CountAlloc ];
-	if( g_pKdTree_TriOffset_Array == NULL )	{
+	g_pKdTreePrimOffsetArray = new unsigned int [ g_iKdTreePrimOffsetCnt_Alloc ];
+	if( g_pKdTreePrimOffsetArray == NULL )	{
 		bError |= true;
 	} else {
-		memset( g_pKdTree_TriOffset_Array, 0x00, sizeof( unsigned int ) * g_iKdTree_TriOffset_CountAlloc );
+		memset( g_pKdTreePrimOffsetArray, 0x00, sizeof( unsigned int ) * g_iKdTreePrimOffsetCnt_Alloc );
 	}
 
 	if (bError) {
@@ -1415,25 +1411,14 @@ bool initialize_kd_tree(CompositeObject *poly_model) {
 #endif
 
 void uninitialize_kd_tree(void) {
-#if PRIMITIVE_TYPE == TRI
-	if( g_pTriangleInfos != nullptr) {
-		delete[] g_pTriangleInfos;
-		g_pTriangleInfos = nullptr;
+	if( g_pPrimInfos != nullptr) {
+		delete[] g_pPrimInfos;
+		g_pPrimInfos = nullptr;
 	}
-	if( g_pKdTree_TriOffset_Array != nullptr) {
-		delete[] g_pKdTree_TriOffset_Array;
-		g_pKdTree_TriOffset_Array = nullptr;
+	if( g_pKdTreePrimOffsetArray != nullptr) {
+		delete[] g_pKdTreePrimOffsetArray;
+		g_pKdTreePrimOffsetArray = nullptr;
 	}
-#elif PRIMITIVE_TYPE ELLIPSOID
-	if (g_pEllipsoidInfos != nullptr) {
-		delete[] g_pEllipsoidInfos;
-		g_pEllipsoidInfos = nullptr;
-	}
-	if (g_pKdTreeEllipsoidOffsetArray != nullptr) {
-		delete[] g_pKdTreeEllipsoidOffsetArray;
-		g_pKdTreeEllipsoidOffsetArray = nullptr;
-	}
-#endif
 	if (g_bEdge != nullptr) {
 		delete[] g_bEdge;
 		g_bEdge = nullptr;
@@ -1482,7 +1467,7 @@ vector<ExtendedVertex> clipWithPlane(const vector<ExtendedVertex>& vertices, int
 	return result;
 }
 
-void clipTriangleToAABB(const TriangleList& inputTri, vector<TriangleList>& outputList) {
+void clipTriangleToAABB(const PrimList& inputTri, vector<PrimList>& outputList) {
 	vector<ExtendedVertex> polygon;
 	for (int i = 0; i < 3; ++i) polygon.push_back(inputTri.point[i]);
 
@@ -1498,7 +1483,7 @@ void clipTriangleToAABB(const TriangleList& inputTri, vector<TriangleList>& outp
 
 	// 결과 다각형(Fan 형태)을 다시 삼각형들로 분할하여 저장
 	for (size_t i = 1; i < polygon.size() - 1; ++i) {
-		TriangleList tri = inputTri; // 기본값 복사 (offset, side 등)
+		PrimList tri = inputTri; // 기본값 복사 (offset, side 등)
 		tri.AABB = targetAABB;       // 클리핑된 결과이므로 타겟 AABB 할당
 		tri.point[0] = polygon[0];
 		tri.point[1] = polygon[i];
@@ -1508,11 +1493,11 @@ void clipTriangleToAABB(const TriangleList& inputTri, vector<TriangleList>& outp
 }
 
 #if PRIMITIVE_TYPE == ELLIPSOID
-bool desc(const TriangleList& a, const TriangleList& b) {
+bool desc(const PrimList& a, const PrimList& b) {
 	return g_gaussians[a.offset].opacity > g_gaussians[b.offset].opacity;
 }
 
-void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pEllipsoidInfos, unsigned int ellipsoidSize, BoundingBox& bbox, unsigned int inNodeLevel, KdTreeNode* inNode){
+void build_kd_tree_recursive(BoundEdge* bEdge, const PrimList* pEllipsoidInfos, unsigned int ellipsoidSize, BoundingBox& bbox, unsigned int inNodeLevel, KdTreeNode* inNode){
 	SplitCost bestCost;
 	g_iKdTree_Level = MyMAX(inNodeLevel, g_iKdTree_Level);
 
@@ -1522,10 +1507,10 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pEllipsoidInf
 	#define MAX_ELLIPSOID_OFFSET_BUDGET 4294967295
 	if (ellipsoidSize > FORCE_SPLIT_THRESHOLD) {
 	#if MAX_ELLIPSOID_OFFSET_BUDGET
-		if (g_iKdTreeEllipsoidOffsetCnt > MAX_ELLIPSOID_OFFSET_BUDGET) {
+		if (g_iKdTreePrimOffsetCnt > MAX_ELLIPSOID_OFFSET_BUDGET) {
 			bestCost.cost = double(ellipsoidSize) * v_KD_TREE_ISECT_COST;
 			fprintf(stdout, "WARNING: Memory budget exceeded (%u refs). Forcing leaf node at level %u with %u tris.\n",
-				g_iKdTreeEllipsoidOffsetCnt, inNodeLevel, ellipsoidSize);
+				g_iKdTreePrimOffsetCnt, inNodeLevel, ellipsoidSize);
 		}
 		else {
 			bestCost.cost = DBL_MAX;
@@ -1554,7 +1539,7 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pEllipsoidInf
 	if (!bestCost.is_valid()) {
 		//leaf node
 #if REMOVE_SMALL_PRIM
-		std::vector<TriangleList> leaf;
+		std::vector<PrimList> leaf;
 		for (int i = 0; i < ellipsoidSize; i++) {
 			leaf.push_back(pEllipsoidInfos[i]);
 		}
@@ -1575,16 +1560,16 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pEllipsoidInf
 #endif
 		unsigned int iEllipsoidOffset;
 		{
-			iEllipsoidOffset = g_iKdTreeEllipsoidOffsetCnt;
-			setLeafNode(inNode, ellipsoidSize, g_iKdTreeEllipsoidOffsetCnt);
-			g_iKdTreeEllipsoidOffsetCnt += ellipsoidSize;
+			iEllipsoidOffset = g_iKdTreePrimOffsetCnt;
+			setLeafNode(inNode, ellipsoidSize, g_iKdTreePrimOffsetCnt);
+			g_iKdTreePrimOffsetCnt += ellipsoidSize;
 
-			if (g_iKdTreeEllipsoidOffsetCnt >= g_iKdTreeEllipsoidOffsetCnt_Alloc) {
-				_reAllocTriangleOffsetList(MyMAX(2 * g_iKdTreeEllipsoidOffsetCnt_Alloc, 512), g_iKdTreeEllipsoidOffsetCnt_Alloc, &g_pKdTreeEllipsoidOffsetArray);
+			if (g_iKdTreePrimOffsetCnt >= g_iKdTreePrimOffsetCnt_Alloc) {
+				_reAllocTriangleOffsetList(MyMAX(2 * g_iKdTreePrimOffsetCnt_Alloc, 512), g_iKdTreePrimOffsetCnt_Alloc, &g_pKdTreePrimOffsetArray);
 			}
 		}
 
-		unsigned* currOffsetList = &g_pKdTreeEllipsoidOffsetArray[iEllipsoidOffset];
+		unsigned* currOffsetList = &g_pKdTreePrimOffsetArray[iEllipsoidOffset];
 		unsigned leafCount = 0;
 		for (unsigned i = 0; i < ellipsoidSize; i++) {
 #if REMOVE_SMALL_PRIM
@@ -1595,7 +1580,7 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pEllipsoidInf
 		}
 #if DEBUG_LEAF_GL
 		if (ellipsoidSize > 0) {
-			std::vector<TriangleList> leafDebug;
+			std::vector<PrimList> leafDebug;
 			leafDebug.push_back(pEllipsoidInfos[0]);
 			leafDebug[0].AABB = bbox;
 			for (int i = 0; i < ellipsoidSize; i++) {
@@ -1611,7 +1596,7 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pEllipsoidInf
 		}
 
 		g_iKdTree_LeafNode_Count++;
-		g_iKdTreeMaxEllipsoidInLeafNodeCnt = MyMAX(g_iKdTreeMaxEllipsoidInLeafNodeCnt, ellipsoidSize);
+		g_iKdTreeMaxPrimInLeafNodeCnt = MyMAX(g_iKdTreeMaxPrimInLeafNodeCnt, ellipsoidSize);
 
 		delete[] pEllipsoidInfos;
 	}
@@ -1633,8 +1618,8 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pEllipsoidInf
 		leftnBounds = bbox;  leftnBounds.max[bestCost.axis] = bestCost.splitPos;
 		rightnBounds = bbox;  rightnBounds.min[bestCost.axis] = bestCost.splitPos;
 
-		std::vector<TriangleList> leftEllipsoids;
-		std::vector<TriangleList> rightEllipsoids;
+		std::vector<PrimList> leftEllipsoids;
+		std::vector<PrimList> rightEllipsoids;
 
 		const unsigned n_bEdge = 2 * ellipsoidSize;
 
@@ -1642,21 +1627,21 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pEllipsoidInf
 
 		push_triangles_to_child_vector(n_bEdge, bEdge, leftEllipsoids, rightEllipsoids, bestCost);
 
-		TriangleList* pLeftEllipsoids = new TriangleList[leftEllipsoids.size()];
-		TriangleList* pRightEllipsoids = new TriangleList[rightEllipsoids.size()];
+		PrimList* pLeftEllipsoids = new PrimList[leftEllipsoids.size()];
+		PrimList* pRightEllipsoids = new PrimList[rightEllipsoids.size()];
 
 		clip_ellipsoid(leftEllipsoids, bestCost, 0);
 		clip_ellipsoid(rightEllipsoids, bestCost, 1);
 
-		memcpy(pLeftEllipsoids, leftEllipsoids.data(), sizeof(TriangleList) * leftEllipsoids.size());
-		memcpy(pRightEllipsoids, rightEllipsoids.data(), sizeof(TriangleList) * rightEllipsoids.size());
+		memcpy(pLeftEllipsoids, leftEllipsoids.data(), sizeof(PrimList) * leftEllipsoids.size());
+		memcpy(pRightEllipsoids, rightEllipsoids.data(), sizeof(PrimList) * rightEllipsoids.size());
 
 #if DEBUG_ELLIPSOID_CLIP_AABB
 		if (ellipsoidSize > 0) {
 			if (inNodeLevel >= g_ellipsoidClipAabbDebug.size()) {
 				g_ellipsoidClipAabbDebug.resize(g_ellipsoidClipAabbDebug.size() + 1);
 			}
-			std::vector<TriangleList> forDebug;
+			std::vector<PrimList> forDebug;
 			for (int i = 0; i < leftEllipsoids.size(); i++) {
 				forDebug.push_back(leftEllipsoids[i]);
 			}
@@ -1671,7 +1656,7 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pEllipsoidInf
 			if (inNodeLevel >= g_ellipsoidInternalDebug.size()) {
 				g_ellipsoidInternalDebug.resize(g_ellipsoidInternalDebug.size() + 1);
 			}
-			vector<TriangleList> forDebug;
+			vector<PrimList> forDebug;
 			forDebug.push_back(pEllipsoidInfos[0]);
 			forDebug[0].AABB = bbox;
 			for (int i = 0; i < ellipsoidSize; i++) {
@@ -1689,7 +1674,7 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pEllipsoidInf
 
 }
 #elif PRIMITIVE_TYPE == TRI
-void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pTriangleInfos, unsigned int triangleSize,
+void build_kd_tree_recursive(BoundEdge* bEdge, const PrimList* pTriangleInfos, unsigned int triangleSize,
 	BoundingBox& bbox, unsigned int inNodeLevel, KdTreeNode* inNode)
 {
 	//printf("[Level %2u, Size %u] Processing node...\n", inNodeLevel, triangleSize);
@@ -1719,17 +1704,17 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pTriangleInfo
 			// 강제 분할 전, 메모리 예산을 초과했는지 확인.
 		#if SOFT_SPLIT_THRESHOLD
 			if ((triangleSize < SOFT_SPLIT_THRESHOLD &&
-				g_iKdTree_TriOffset_Count > MAX_TRIANGLE_OFFSET_BUDGET) ||
+				g_iKdTreePrimOffsetCnt > MAX_TRIANGLE_OFFSET_BUDGET) ||
 				(triangleSize < SOFT_SPLIT_THRESHOLD2 &&
-					g_iKdTree_TriOffset_Count > MAX_TRIANGLE_OFFSET_BUDGET2)) {
+					g_iKdTreePrimOffsetCnt > MAX_TRIANGLE_OFFSET_BUDGET2)) {
 		#else
-			if (g_iKdTree_TriOffset_Count > MAX_TRIANGLE_OFFSET_BUDGET) {
+			if (g_iKdTreePrimOffsetCnt > MAX_TRIANGLE_OFFSET_BUDGET) {
 		#endif
 
 				// 예산 초과 시: 강제 분할(DBL_MAX)을 하지 않고, 
 				// SAH 비용(bestCost.cost)을 그대로 둬서 리프 노드가 되도록 함.
 				fprintf(stdout, "WARNING: Memory budget exceeded (%u refs). Forcing leaf node at level %u with %u tris.\n",
-					g_iKdTree_TriOffset_Count, inNodeLevel, triangleSize);
+					g_iKdTreePrimOffsetCnt, inNodeLevel, triangleSize);
 			}
 			else {
 				// 예산 미초과 시: 원래대로 강제 분할 실행
@@ -1772,10 +1757,10 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pTriangleInfo
 	if (!bestCost.is_valid()) {
 #if BSPT
 		if (triangleSize > 0) {
-			vector<TriangleList> triangles(triangleSize);
+			vector<PrimList> triangles(triangleSize);
 			for (int i = 0; i < triangleSize; i++) {
 	#if CLIP_BEFORE_BSPT
-				vector<TriangleList> clippedTris;
+				vector<PrimList> clippedTris;
 				clipTriangleToAABB(pTriangleInfos[i], clippedTris);
 				triangles.insert(triangles.end(), clippedTris.begin(), clippedTris.end());
 	#else
@@ -1793,13 +1778,13 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pTriangleInfo
 			FlattenBSPTree(root, triOffsets);
 			onPlaneTriCntsIdx++;
 
-			unsigned int iTriOffset = g_iKdTree_TriOffset_Count;
+			unsigned int iTriOffset = g_iKdTreePrimOffsetCnt;
 
-			g_iKdTree_TriOffset_Count += triOffsets.size();
-			if (g_iKdTree_TriOffset_Count >= g_iKdTree_TriOffset_CountAlloc) {
-				_reAllocTriangleOffsetList(MyMAX(2 * g_iKdTree_TriOffset_CountAlloc, 512), g_iKdTree_TriOffset_CountAlloc, &g_pKdTree_TriOffset_Array);
+			g_iKdTreePrimOffsetCnt += triOffsets.size();
+			if (g_iKdTreePrimOffsetCnt >= g_iKdTreePrimOffsetCnt_Alloc) {
+				_reAllocTriangleOffsetList(MyMAX(2 * g_iKdTreePrimOffsetCnt_Alloc, 512), g_iKdTreePrimOffsetCnt_Alloc, &g_pKdTreePrimOffsetArray);
 			}
-			unsigned* currOffsetList = &g_pKdTree_TriOffset_Array[iTriOffset];
+			unsigned* currOffsetList = &g_pKdTreePrimOffsetArray[iTriOffset];
 
 			unsigned leafCount = 0;
 			for (unsigned i = 0; i < triOffsets.size(); i++) {
@@ -1811,20 +1796,20 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pTriangleInfo
 		// Leaf node 생성
 		unsigned int iTriOffset;
 		{
-			iTriOffset = g_iKdTree_TriOffset_Count;
-			setLeafNode(inNode, triangleSize, g_iKdTree_TriOffset_Count);
-			g_iKdTree_TriOffset_Count += triangleSize;
+			iTriOffset = g_iKdTreePrimOffsetCnt;
+			setLeafNode(inNode, triangleSize, g_iKdTreePrimOffsetCnt);
+			g_iKdTreePrimOffsetCnt += triangleSize;
 
 			// 메모리 체크 : Triangle Offset Size
-			if (g_iKdTree_TriOffset_Count >= g_iKdTree_TriOffset_CountAlloc) {
-				_reAllocTriangleOffsetList(MyMAX(2 * g_iKdTree_TriOffset_CountAlloc, 512), g_iKdTree_TriOffset_CountAlloc, &g_pKdTree_TriOffset_Array);
+			if (g_iKdTreePrimOffsetCnt >= g_iKdTreePrimOffsetCnt_Alloc) {
+				_reAllocTriangleOffsetList(MyMAX(2 * g_iKdTreePrimOffsetCnt_Alloc, 512), g_iKdTreePrimOffsetCnt_Alloc, &g_pKdTreePrimOffsetArray);
 			}
 		}
 
 		/**
 		 *	leaf node가 참조하는 triangle의 offset 을 offsetList 마지막에 추가해 넣는다.
 		 */
-		unsigned* currOffsetList = &g_pKdTree_TriOffset_Array[iTriOffset];
+		unsigned* currOffsetList = &g_pKdTreePrimOffsetArray[iTriOffset];
 
 		unsigned leafCount = 0;
 		for (unsigned i = 0; i < triangleSize; i++) {
@@ -1836,7 +1821,7 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pTriangleInfo
 			g_iKdTree_EmptyNode_Count++;
 
 		g_iKdTree_LeafNode_Count++;
-		g_iKdTree_MaxTriInLeafNode_Count = MyMAX(g_iKdTree_MaxTriInLeafNode_Count, triangleSize);
+		g_iKdTreeMaxPrimInLeafNodeCnt = MyMAX(g_iKdTreeMaxPrimInLeafNodeCnt, triangleSize);
 
 		/**
 		 *	더이상 pTriangleInfos 는 필요없으므로 메모리 공간 절약을 위해 없앤다.
@@ -1868,8 +1853,8 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pTriangleInfo
 		rightnBounds = bbox;  rightnBounds.min[bestCost.axis] = bestCost.splitPos;
 
 		// std::vector로 변경하여 메모리 안정성 확보
-		std::vector<TriangleList> leftTriangles;
-		std::vector<TriangleList> rightTriangles;
+		std::vector<PrimList> leftTriangles;
+		std::vector<PrimList> rightTriangles;
 		// 예상 크기만큼 미리 예약하여 성능 저하 최소화
 		leftTriangles.reserve(bestCost.n_left);
 		rightTriangles.reserve(bestCost.n_right);
@@ -1882,10 +1867,10 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pTriangleInfo
 		// bEdge 로 부터 pLeftTriangle, pRightTriangle 을 생성
 		push_triangles_to_child_vector(n_bEdge, bEdge, leftTriangles, rightTriangles, bestCost);
 
-		TriangleList* pLeftTriangles = new TriangleList[leftTriangles.size()];
-		TriangleList* pRightTriangles = new TriangleList[rightTriangles.size()];
-		memcpy(pLeftTriangles, leftTriangles.data(), sizeof(TriangleList)* leftTriangles.size());
-		memcpy(pRightTriangles, rightTriangles.data(), sizeof(TriangleList)* rightTriangles.size());
+		PrimList* pLeftTriangles = new PrimList[leftTriangles.size()];
+		PrimList* pRightTriangles = new PrimList[rightTriangles.size()];
+		memcpy(pLeftTriangles, leftTriangles.data(), sizeof(PrimList)* leftTriangles.size());
+		memcpy(pRightTriangles, rightTriangles.data(), sizeof(PrimList)* rightTriangles.size());
 
 		// 각 child node 에 맞게 삼각형 clipping
 		clip_triangle(leftTriangles.size(), bestCost, pLeftTriangles, 0);
@@ -2103,7 +2088,7 @@ std::vector<LeafNodeInfo> extract_all_leaf_data(CompositeObject* c_object, int& 
 
 	// 전역 변수 대신 c_object에서 직접 데이터 가져오기
 	KdTreeNode* root_node = &c_object->kd_tree->tree[0];
-	unsigned int* tri_offset_list = c_object->kd_tree->tri_offset_list;
+	unsigned int* prim_offset_list = c_object->kd_tree->prim_offset_list;
 
 	struct KdStack {
 		KdTreeNode* node;
@@ -2140,7 +2125,7 @@ std::vector<LeafNodeInfo> extract_all_leaf_data(CompositeObject* c_object, int& 
 			unsigned int num_triangles = OBJECT_SIZE(*current_node);
 
 			for (unsigned int i = 0; i < num_triangles; ++i) {
-				leaf.triangle_indices.push_back(tri_offset_list[offset + i]);
+				leaf.triangle_indices.push_back(prim_offset_list[offset + i]);
 			}
 
 			all_leaf_info.push_back(leaf);

@@ -254,7 +254,7 @@ void renderGaussianMesh(int gId) {
 
 //only works for icosa mesh
 void renderEllipsoidAabb(int gId) {
-	TriangleList& e = (*uip.poly_model.ellipsoidAabbDebug)[gId];
+	PrimList& e = (*uip.poly_model.ellipsoidAabbDebug)[gId];
 	float aabb[6] = {
 		e.AABB.min[0], e.AABB.max[0],
 		e.AABB.min[1], e.AABB.max[1],
@@ -268,7 +268,7 @@ void renderEllipsoidClipAabb(int depth, int nodeId, int idx) {
 	static int prevDepth = -1;
 	static int prevNodeId = -1;
 	static int prevIdx = -1;
-	static std::vector<TriangleList*> renderAabb;
+	static std::vector<PrimList*> renderAabb;
 	if (depth != prevDepth || nodeId != prevNodeId || idx != prevIdx) {
 		renderAabb.clear();
 		prevIdx = idx;
@@ -303,7 +303,7 @@ void renderEllipsoidInternal(int depth, int nodeId, int idx) {
 	static int prevDepth = -1;
 	static int prevNodeId = -1;
 	static int prevIdx = -1;
-	std::vector<TriangleList>& es = (*uip.poly_model.ellipsoidInternalDebug)[depth][nodeId];
+	std::vector<PrimList>& es = (*uip.poly_model.ellipsoidInternalDebug)[depth][nodeId];
 	for (int i = 1; i < es.size(); i++) {
 		renderGaussianMesh(es[i].offset);
 	}
@@ -318,13 +318,13 @@ void renderEllipsoidInternal(int depth, int nodeId, int idx) {
 }
 
 void renderEllipsoidLeaf(int nodeId) {
-	std::vector<TriangleList>& ellipsoidInfos = (*uip.poly_model.ellipsoidLeafDebug)[nodeId];
+	std::vector<PrimList>& ellipsoidInfos = (*uip.poly_model.ellipsoidLeafDebug)[nodeId];
 	
 	printf("\tleaf prim count: %d\n", ellipsoidInfos.size());
 	
 	for (int i = 0; i < ellipsoidInfos.size(); i++) {
 		renderGaussianMesh(ellipsoidInfos[i].offset);
-		//renderGaussianMesh(uip.poly_model.kd_tree->tri_offset_list[ellipsoidInfos[i].offset]);
+		//renderGaussianMesh(uip.poly_model.kd_tree->prim_offset_list[ellipsoidInfos[i].offset]);
 	}
 	for (int i = 0; i < ellipsoidInfos.size(); i++) {
 		float aabb[6] = {
@@ -344,7 +344,7 @@ void renderEllipsoidLeaf(int nodeId) {
 
 
 void renderEllipsoidAabbs() {
-	std::vector<TriangleList>& ellipsoidInfos = *uip.poly_model.ellipsoidAabbDebug;
+	std::vector<PrimList>& ellipsoidInfos = *uip.poly_model.ellipsoidAabbDebug;
 	for (int i = 0; i < ellipsoidInfos.size(); i++) {
 		renderEllipsoidAabb(ellipsoidInfos[i].offset);
 	}
@@ -3300,12 +3300,13 @@ void main_menu_action(int selection) {
 		print_current_time("kdtree build start");
 
 		build_kd_tree_for_composite_object(&uip.poly_model);
-
+#if PRIMITIVE_TYPE == TRI
 		if (uip.poly_model.kd_tree->tri_accel_list == NULL) printf("tri_accel_list NULL\n");
 		else {
 			printf("triangle num: %d\n", uip.poly_model.n_triangles);
 			//printf("tri_accel_list size: %d\n", sizeof(uip.poly_model.kd_tree->tri_accel_list) / sizeof(*(uip.poly_model.kd_tree->tri_accel_list)));
 		}
+#endif
 		print_current_time("kdtree build end");
 		printKdTreeLeafNodeInfo();
 #if LEAF_NODE_DEBUG

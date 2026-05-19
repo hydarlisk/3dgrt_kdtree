@@ -121,7 +121,7 @@ __device__ void clip_triangle_against_AABB_device(
 // ======================================================================
 
 __global__ void clip_triangles_kernel(
-    const TriangleList* d_triangles,
+    const PrimList* d_triangles,
     int num_triangles,
     BoundingBox left_bbox,
     BoundingBox right_bbox,
@@ -131,7 +131,7 @@ __global__ void clip_triangles_kernel(
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (idx < num_triangles) {
-        TriangleList tri = d_triangles[idx];
+        PrimList tri = d_triangles[idx];
 
         ExtendedVertex clipped_poly[MAX_POLY_VERTS];
         int clipped_poly_size = 0;
@@ -161,7 +161,7 @@ __global__ void clip_triangles_kernel(
 // ======================================================================
 
 CudaClipResult calculate_clipped_contributions_cuda(
-    const std::vector<const TriangleList*>& active_triangles,
+    const std::vector<const PrimList*>& active_triangles,
     const BoundingBox& left_bbox,
     const BoundingBox& right_bbox
 ) {
@@ -170,20 +170,20 @@ CudaClipResult calculate_clipped_contributions_cuda(
         return { 0.0, 0.0 };
     }
 
-    std::vector<TriangleList> h_triangles_data;
+    std::vector<PrimList> h_triangles_data;
     h_triangles_data.reserve(num_triangles);
     for (const auto* tri_ptr : active_triangles) {
         h_triangles_data.push_back(*tri_ptr);
     }
 
-    TriangleList* d_triangles;
+    PrimList* d_triangles;
     double* d_contrib_L_results;
     double* d_contrib_R_results;
-    cudaMalloc(&d_triangles, num_triangles * sizeof(TriangleList));
+    cudaMalloc(&d_triangles, num_triangles * sizeof(PrimList));
     cudaMalloc(&d_contrib_L_results, num_triangles * sizeof(double));
     cudaMalloc(&d_contrib_R_results, num_triangles * sizeof(double));
 
-    cudaMemcpy(d_triangles, h_triangles_data.data(), num_triangles * sizeof(TriangleList), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_triangles, h_triangles_data.data(), num_triangles * sizeof(PrimList), cudaMemcpyHostToDevice);
 
     int threads_per_block = 256;
     int blocks_per_grid = (num_triangles + threads_per_block - 1) / threads_per_block;
