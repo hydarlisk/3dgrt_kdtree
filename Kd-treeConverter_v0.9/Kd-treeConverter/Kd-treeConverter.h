@@ -37,6 +37,7 @@
 /////////////**** Debug ****///////////////
 /* Ellipsoid */
 #define DEBUG_ELLIPSOID_CLIP_AABB 1
+#define DEBUG_ELLIPSOID_INTERNAL 1
 #define DEBUG_LEAF_GL 1
 #define DEBUG_LEAF_CUDA 0
 
@@ -66,6 +67,8 @@
 #undef UPLOAD_INVSR_MAT 
 #define UPLOAD_INVSR_MAT 0
 #endif
+
+#define ADAPTIVE_KERNEL_CLAMPING 1
 
 /* BSPT */
 #define BSPT false
@@ -542,6 +545,7 @@ typedef struct _CompositeObject {
 	std::vector<TriangleList>* ellipsoidAabbDebug;
 	std::vector<std::vector<std::vector<TriangleList>>>* ellipsoidClipAabbDebug;
 	std::vector<std::vector<TriangleList>>* ellipsoidLeafDebug;
+	std::vector<std::vector<std::vector<TriangleList>>>* ellipsoidInternalDebug;
 #endif
 } CompositeObject;
 

@@ -3,7 +3,7 @@
 #include <cmath>
 
 
-inline float calcKernelScale(float density, float kernelMinResponse = KERNEL_MIN_RESPONSE, uint32_t opts = 1, float kernelDegree = KERNEL_DEGREE) {
+inline float calcKernelScale(float density, float kernelMinResponse = KERNEL_MIN_RESPONSE, uint32_t opts = ADAPTIVE_KERNEL_CLAMPING, float kernelDegree = KERNEL_DEGREE) {
 	const float responseModulation = (opts & 1 /* MOGRenderAdaptiveKernelClamping */) ? density : 1.0f;
 	const float minResponse = std::min(kernelMinResponse / responseModulation, 0.97f);
 

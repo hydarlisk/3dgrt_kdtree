@@ -143,6 +143,7 @@ int build_kd_tree_for_composite_object(CompositeObject *c_object) {
 	c_object->ellipsoidAabbDebug = &g_ellipsoidAabbDebug;
 	c_object->ellipsoidClipAabbDebug = &g_ellipsoidClipAabbDebug;
 	c_object->ellipsoidLeafDebug = &g_ellipsoidLeafDebug;
+	c_object->ellipsoidInternalDebug = &g_ellipsoidInternalDebug;
 #elif PRIMITIVE_TYPE == TRI
 	c_object->kd_tree->tri_offset_list = g_pKdTree_TriOffset_Array;
 	c_object->kd_tree->tri_offset_count = g_iKdTree_TriOffset_Count;

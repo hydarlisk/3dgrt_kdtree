@@ -110,7 +110,14 @@ void draw_AABB(GLfloat *AABB, int idx) {
 
 	glLineWidth(2.0);
 
-	if(idx == -1)
+#if DEBUG_LEAF_GL
+	if (idx == 0)
+		glColor3f(0.0, 0.0, 1.0);
+	else {
+		glColor3f(0.0f, 1.0f, 0.0f);
+	}
+#else
+	if (idx == -1)
 		glColor3f(0.0, 1.0, 0.0);
 	else {
 		float r = debug_colors[idx % 20][0];
@@ -118,6 +125,8 @@ void draw_AABB(GLfloat *AABB, int idx) {
 		float b = debug_colors[idx % 20][2];
 		glColor3f(r, g, b);
 	}
+#endif
+
 	glBegin(GL_LINE_LOOP);
 	glVertex3f(AABB[XMIN], AABB[YMIN], AABB[ZMIN]);
 	glVertex3f(AABB[XMAX], AABB[YMIN], AABB[ZMIN]);

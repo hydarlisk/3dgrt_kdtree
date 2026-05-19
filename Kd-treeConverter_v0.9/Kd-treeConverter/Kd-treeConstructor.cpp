@@ -73,6 +73,7 @@ extern std::vector<float> g_kScales;
 std::vector<TriangleList> g_ellipsoidAabbDebug;
 std::vector<std::vector<std::vector<TriangleList>>> g_ellipsoidClipAabbDebug;
 std::vector<std::vector<TriangleList>> g_ellipsoidLeafDebug;
+std::vector<std::vector<std::vector<TriangleList>>> g_ellipsoidInternalDebug;
 
 #include <iostream>
 #include <fstream>
@@ -1663,6 +1664,20 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const TriangleList* pEllipsoidInf
 				forDebug.push_back(rightEllipsoids[i]);
 			}
 			g_ellipsoidClipAabbDebug[inNodeLevel].push_back(forDebug);
+		}
+#endif
+#if DEBUG_ELLIPSOID_INTERNAL
+		if (ellipsoidSize > 0) {
+			if (inNodeLevel >= g_ellipsoidInternalDebug.size()) {
+				g_ellipsoidInternalDebug.resize(g_ellipsoidInternalDebug.size() + 1);
+			}
+			vector<TriangleList> forDebug;
+			forDebug.push_back(pEllipsoidInfos[0]);
+			forDebug[0].AABB = bbox;
+			for (int i = 0; i < ellipsoidSize; i++) {
+				forDebug.push_back(pEllipsoidInfos[i]);
+			}
+			g_ellipsoidInternalDebug[inNodeLevel].push_back(forDebug);
 		}
 #endif
 

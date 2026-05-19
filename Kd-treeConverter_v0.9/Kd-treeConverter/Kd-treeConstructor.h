@@ -83,6 +83,7 @@ extern unsigned int g_iKdTreeMaxEllipsoidInLeafNodeCnt;
 extern std::vector<TriangleList> g_ellipsoidAabbDebug;
 extern std::vector<std::vector<std::vector<TriangleList>>> g_ellipsoidClipAabbDebug;
 extern std::vector<std::vector<TriangleList>> g_ellipsoidLeafDebug;
+extern std::vector<std::vector<std::vector<TriangleList>>> g_ellipsoidInternalDebug;
 #endif
 
 inline void setInnerNode(KdTreeNode* pNode, int _splitAxis, unsigned int _firstChildOffset, float _splitPos);

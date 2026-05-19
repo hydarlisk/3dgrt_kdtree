@@ -229,7 +229,9 @@ GLuint buf_obj;
 void renderGaussianMesh(int gId) {
 	ExtendedVertex* v = uip.poly_model.extended_vertices;
 
-	glColor3f(1.0, 0.7, 0.1);
+	//glColor3f(1.0, 0.7, 0.1);
+	glDisable(GL_LIGHTING);
+	glColor3f(g_gaussians[gId].f_dc[0] * SH_C0 + 0.5f, g_gaussians[gId].f_dc[1] * SH_C0 + 0.5f, g_gaussians[gId].f_dc[2] * SH_C0 + 0.5f);
 	glBegin(GL_TRIANGLES);
 	for (int i = 0; i < 20; i++) {
 		glVertex3fv(v[3 * (gId * 20 + i) + 0].vertex);
@@ -237,17 +239,17 @@ void renderGaussianMesh(int gId) {
 		glVertex3fv(v[3 * (gId * 20 + i) + 2].vertex);
 	}
 	glEnd();
-	glColor3f(0.0, 0.4, 1.0);
-	glBegin(GL_LINES);
-	for (int i = 0; i < 20; i++) {
-		glVertex3fv(v[3 * (gId * 20 + i) + 0].vertex);
-		glVertex3fv(v[3 * (gId * 20 + i) + 1].vertex);
-		glVertex3fv(v[3 * (gId * 20 + i) + 1].vertex);
-		glVertex3fv(v[3 * (gId * 20 + i) + 2].vertex);
-		glVertex3fv(v[3 * (gId * 20 + i) + 2].vertex);
-		glVertex3fv(v[3 * (gId * 20 + i) + 0].vertex);
-	}
-	glEnd();
+	//glColor3f(0.0, 0.4, 1.0);
+	//glBegin(GL_LINES);
+	//for (int i = 0; i < 20; i++) {
+	//	glVertex3fv(v[3 * (gId * 20 + i) + 0].vertex);
+	//	glVertex3fv(v[3 * (gId * 20 + i) + 1].vertex);
+	//	glVertex3fv(v[3 * (gId * 20 + i) + 1].vertex);
+	//	glVertex3fv(v[3 * (gId * 20 + i) + 2].vertex);
+	//	glVertex3fv(v[3 * (gId * 20 + i) + 2].vertex);
+	//	glVertex3fv(v[3 * (gId * 20 + i) + 0].vertex);
+	//}
+	//glEnd();
 }
 
 //only works for icosa mesh
@@ -267,7 +269,6 @@ void renderEllipsoidClipAabb(int depth, int nodeId, int idx) {
 	static int prevNodeId = -1;
 	static int prevIdx = -1;
 	static std::vector<TriangleList*> renderAabb;
-	TriangleList& e = (*uip.poly_model.ellipsoidClipAabbDebug)[depth][nodeId][idx];
 	if (depth != prevDepth || nodeId != prevNodeId || idx != prevIdx) {
 		renderAabb.clear();
 		prevIdx = idx;
@@ -294,44 +295,37 @@ void renderEllipsoidClipAabb(int depth, int nodeId, int idx) {
 		glBegin(GL_POINTS);
 			glVertex3fv(g->cutCenter);
 		glEnd();
-
-		//cut plane
-		//glColor4f(0.0f, 0.5f, 1.0f, 0.5f);
-		//glBegin(GL_QUADS);
-		//	float p1[3], p2[3], p3[3], p4[3];
-		//	int i = g->cutAxis;
-		//	int j = (i + 1) % 3;
-		//	int k = (i + 2) % 3;
-
-		//	// 모든 정점의 고정축 좌표는 cutCenter[i]와 동일함
-		//	p1[i] = p2[i] = p3[i] = p4[i] = g->cutCenter[i];
-
-		//	// 보조축 좌표 설정 (ejCut, ekCut 범위를 활용)
-		//	//p1[j] = g->cutCenter[j] - g->ejCut; p1[k] = g->cutCenter[k] - g->ekCut;
-		//	//p2[j] = g->cutCenter[j] + g->ejCut; p2[k] = g->cutCenter[k] - g->ekCut;
-		//	//p3[j] = g->cutCenter[j] + g->ejCut; p3[k] = g->cutCenter[k] + g->ekCut;
-		//	//p4[j] = g->cutCenter[j] - g->ejCut; p4[k] = g->cutCenter[k] + g->ekCut;
-
-		//	p1[j] = g->cutCenter[j] - 0.5; p1[k] = g->cutCenter[k] - 0.5;
-		//	p2[j] = g->cutCenter[j] + 0.5; p2[k] = g->cutCenter[k] - 0.5;
-		//	p3[j] = g->cutCenter[j] + 0.5; p3[k] = g->cutCenter[k] + 0.5;
-		//	p4[j] = g->cutCenter[j] - 0.5; p4[k] = g->cutCenter[k] + 0.5;
-
-		//	glVertex3fv(p1);
-		//	glVertex3fv(p2);
-		//	glVertex3fv(p3);
-		//	glVertex3fv(p4);
-		//glEnd();
 	}
 	renderGaussianMesh(idx);
+}
+
+void renderEllipsoidInternal(int depth, int nodeId, int idx) {
+	static int prevDepth = -1;
+	static int prevNodeId = -1;
+	static int prevIdx = -1;
+	std::vector<TriangleList>& es = (*uip.poly_model.ellipsoidInternalDebug)[depth][nodeId];
+	for (int i = 1; i < es.size(); i++) {
+		renderGaussianMesh(es[i].offset);
+	}
+
+	auto& g = es[0];
+	float aabb[6] = {
+		g.AABB.min[0], g.AABB.max[0],
+		g.AABB.min[1], g.AABB.max[1],
+		g.AABB.min[2], g.AABB.max[2]
+	};
+	draw_AABB(aabb, 0);
 }
 
 void renderEllipsoidLeaf(int nodeId) {
 	std::vector<TriangleList>& ellipsoidInfos = (*uip.poly_model.ellipsoidLeafDebug)[nodeId];
 	
-	//for (int i = 0; i < ellipsoidInfos.size(); i++) {
-	//	renderGaussianMesh(ellipsoidInfos[i].offset);
-	//}
+	printf("\tleaf prim count: %d\n", ellipsoidInfos.size());
+	
+	for (int i = 0; i < ellipsoidInfos.size(); i++) {
+		renderGaussianMesh(ellipsoidInfos[i].offset);
+		//renderGaussianMesh(uip.poly_model.kd_tree->tri_offset_list[ellipsoidInfos[i].offset]);
+	}
 	for (int i = 0; i < ellipsoidInfos.size(); i++) {
 		float aabb[6] = {
 			ellipsoidInfos[i].AABB.min[0], ellipsoidInfos[i].AABB.max[0],
@@ -539,6 +533,10 @@ void display(void) {
 				if (g_renderNodeId >= 0)
 					renderEllipsoidLeaf(g_renderNodeId);
 				break;
+			case 8:
+				if (g_renderNodeId >= 0)
+					renderEllipsoidInternal(g_renderDepth, g_renderNodeId, g_renderGId);
+				break;
 #endif
 			default:
 				renderGaussianMeshes();
@@ -684,6 +682,9 @@ void keyboard(unsigned char key, int x, int y) {
 			else if (g_renderMode == 7) {
 				if (g_renderNodeId < 0) g_renderNodeId = (*uip.poly_model.ellipsoidLeafDebug).size() - 1;
 			}
+			else if (g_renderMode == 8) {
+				if (g_renderNodeId < 0) g_renderNodeId = (*uip.poly_model.ellipsoidInternalDebug)[g_renderDepth].size() - 1;
+			}
 			printf("render node id: %d\n", g_renderNodeId);
 			glutPostRedisplay();
 			break;
@@ -695,20 +696,32 @@ void keyboard(unsigned char key, int x, int y) {
 			else if (g_renderMode == 7) {
 				if (g_renderNodeId > (*uip.poly_model.ellipsoidLeafDebug).size() - 1) g_renderNodeId = 0;
 			}
+			else if (g_renderMode == 8) {
+				if (g_renderNodeId > (*uip.poly_model.ellipsoidInternalDebug)[g_renderDepth].size() - 1) g_renderNodeId = 0;
+			}
 			printf("render node id: %d\n", g_renderNodeId);
 			glutPostRedisplay();
 			break;
 		case ':':
 			g_renderDepth--;
-			//g_renderNodeId = 0;
-			if (g_renderDepth < 0) g_renderDepth = (*uip.poly_model.ellipsoidClipAabbDebug).size() - 1;
+			if (g_renderMode == 7) {
+				if (g_renderDepth < 0) g_renderDepth = (*uip.poly_model.ellipsoidClipAabbDebug).size() - 1;
+			}
+			else if (g_renderMode == 8) {
+				if (g_renderDepth < 0) g_renderDepth = (*uip.poly_model.ellipsoidInternalDebug).size() - 1;
+			}
 			printf("render depth: %d\n", g_renderDepth);
 			glutPostRedisplay();
 			break;
 		case '"':
 			g_renderDepth++;
 			//g_renderNodeId = 0;
-			if (g_renderDepth > (*uip.poly_model.ellipsoidClipAabbDebug).size() - 1) g_renderDepth = 0;
+			if (g_renderMode == 7) {
+				if (g_renderDepth > (*uip.poly_model.ellipsoidClipAabbDebug).size() - 1) g_renderDepth = 0;
+			}
+			else if (g_renderMode == 8) {
+				if (g_renderDepth > (*uip.poly_model.ellipsoidInternalDebug).size() - 1) g_renderDepth = 0;
+			}
 			printf("render depth: %d\n", g_renderDepth);
 			glutPostRedisplay();
 			break;
@@ -1718,21 +1731,20 @@ void create_composite_object_from_gaussians(
 
 #if SIGMA_THRESHOLD_MODE
 		//if (sigma < SIGMA_THRESHOLD) { cnt_sigma++; continue; }
-	#if OCCLUDE_MIN_OPACITY
-		if (sigma < KERNEL_MIN_RESPONSE || sigma < SIGMA_THRESHOLD_MODE / 255.0f) {
-			cnt_sigma++;
-			g_isValidG[i] = 0;
-			continue;
-		}
-	#endif
+	//#if OCCLUDE_MIN_OPACITY
+	//	if (sigma < KERNEL_MIN_RESPONSE || sigma < SIGMA_THRESHOLD_MODE / 255.0f) {
+	//		cnt_sigma++;
+	//		g_isValidG[i] = 0;
+	//		continue;
+	//	}
+	//#endif
 #endif
 
 		float k_iso = 0.0f;
-
 #if USE_KERNEL_SCALE
 		//if (sigma / kernelMinResponse > 1.0f)
 		// kernelScale_final 함수를 호출하여 k_iso 계산
-		k_iso = kernelScale_final(sigma, kernelMinResponse, kernel_degree, 0) * 0.5f * icosaEdge;
+		k_iso = kernelScale_final(sigma, kernelMinResponse,   kernel_degree, ADAPTIVE_KERNEL_CLAMPING) * 0.5f * icosaEdge;
 #else
 		if (sigma / kernelMinResponse > 1.0f) {
 			k_iso = sqrtf(2.0f * logf(sigma / kernelMinResponse)) * unitspherefactor;
@@ -3206,7 +3218,7 @@ void subDebugMenuHandler(int value) {
 #if PRIMITIVE_TYPE == ELLIPSOID
 	case 903:	//debug ellipsoid aabb
 		g_renderMode = 5;
-		g_renderGId = 1;
+		g_renderGId = 0;
 		break;
 	case 904:	//debug ellipsoid clip aabb
 		g_renderMode = 6;
@@ -3217,6 +3229,12 @@ void subDebugMenuHandler(int value) {
 	case 905:	//debug ellipsoid leaf
 		g_renderMode = 7;
 		g_renderNodeId = 0;
+		break;
+	case 906:
+		g_renderMode = 8;
+		g_renderDepth = 5;
+		g_renderNodeId = 0;
+		g_renderGId = 0;
 		break;
 #endif
 	}
@@ -3459,6 +3477,7 @@ void register_callbacks_and_create_menu(void) {
 	glutAddMenuEntry("debug ellipsoid aabb", 903);
 	glutAddMenuEntry("debug ellipsoid clip aabb", 904);
 	glutAddMenuEntry("debug ellipsoid leaf", 905);
+	glutAddMenuEntry("debug ellipsoid Internal", 906);
 
 	uip.main_menu_ID = glutCreateMenu(main_menu_action);
 	glutAddMenuEntry("ChangeMode", 0);
