@@ -365,6 +365,7 @@ void dump_kd_tree_for_composite_object(CompositeObject *c_object,
 	}
 	fclose(fp);
 
+#if PRIMITIVE_TYPE == TRI
 	if ((fp = fopen(filename_igeom, "wb")) == NULL) {
 		fprintf(stderr, "d_k_t_f_c_o: (Error) cannot open the file %s...\n", filename_igeom);
 		exit(-1);
@@ -411,8 +412,9 @@ void dump_kd_tree_for_composite_object(CompositeObject *c_object,
 	fwrite(c_object->AABB, sizeof(float), 6, fp);
 	fwrite(c_object->extended_vertices, sizeof(ExtendedVertex), 3 * c_object->n_triangles, fp);
 	//fwrite(, sizeof(Gaussian), , fp);//TODO gaussian read
-#endif
+#endif	//JS_BIN
 	fclose(fp);
+#endif	//PRIMITIVE_TYPE == TRI
 	fprintf(stdout, "\n> Done!\n\n");
 }
 

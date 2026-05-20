@@ -2798,6 +2798,8 @@ void subMenuHandler(int value) {
 	//const char* sah_mode_str = SAH_MAXIMIZE ? "maximize" : "minimize";
 #if PRIMITIVE_TYPE == ELLIPSOID
 	const char* sah_mode_str = "ellipsoid";
+#elif PRIMITIVE_TYPE == ELLIPSOID_BY_TRI
+	const char* sah_mode_str = "ellipsoid_tri";
 #else
 	const char* sah_mode_str = ADAPTIVE_MESH ? "adaptive" : "icosa";
 #endif
@@ -2885,7 +2887,15 @@ void subMenuHandler(int value) {
 #if BSPT
 	snprintf(suffixDump_JS, sizeof(suffixDump_JS), "%s_%.0f_normal_%d_%d%s_%s_BSPT",
 #else
+	#if PRIMITIVE_TYPE == TRI
+		#if JS_BIN
 	snprintf(suffixDump_JS, sizeof(suffixDump_JS), "%s_%.0f_normal_%d_%d%s_%s_JS",
+		#else
+	snprintf(suffixDump_JS, sizeof(suffixDump_JS), "%s_%.0f_normal_%d_%d%s_%s",
+		#endif
+	#else
+	snprintf(suffixDump_JS, sizeof(suffixDump_JS), "%s_%.0f_normal_%d_%d%s_%s",
+	#endif
 #endif
 		scale_mode_str,
 		ISCET_COST,
@@ -3350,7 +3360,7 @@ void main_menu_action(int selection) {
 			uip.kd_tree_dump_format = KD_TREE_DUMP_IN_BINARY;
 
 			printf("Loading Geometry from: %s\n", full_i_geometry_file_name);
-#if PRIMITIVE_TYPE != ELLIPSOID
+#if PRIMITIVE_TYPE == TRI
 			if (!read_igeom_from_file(&uip.poly_model, full_i_geometry_file_name)) {
 				fprintf(stderr, "Failed to load geometry. Aborting kd-tree load.\n");
 				break;

@@ -38,10 +38,16 @@
 
 /////////////**** Debug ****///////////////
 /* Ellipsoid */
-#define DEBUG_ELLIPSOID_CLIP_AABB 1
-#define DEBUG_ELLIPSOID_INTERNAL 1
-#define DEBUG_LEAF_GL 1
+#define ELLIPSOID_DEBUG 1
 #define DEBUG_LEAF_CUDA 0
+#if PRIMITIVE_TYPE == ELLIPSOID && ELLIPSOID_DEBUG
+	#define DEBUG_ELLIPSOID_CLIP_AABB 1
+	#define DEBUG_ELLIPSOID_INTERNAL 1
+	#define DEBUG_LEAF_GL 0
+	#define DEBUG_LEAF_CUDA 1
+	#undef OCCLUDE_MIN_OPACITY_TRI
+	#define OCCLUDE_MIN_OPACITY_TRI 0
+#endif
 
 /* Triangle */
 #define LEAF_NODE_DEBUG true					// kd-tree leaf node 렌더링
