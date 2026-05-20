@@ -1616,15 +1616,48 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
     } // if (BoundsRayIntersect)
 #if DEBUG_LEAF_CUDA
     /* debug */
-    if (maxLeaf < 32) {
-        accumulated_color = make_float3(0.f, 0.0f, maxLeaf / 32.f);
+    int k;
+    float3 blue = make_float3(0.f, 0.0f, 1.f);
+    float3 green = make_float3(0.f, 1.0f, 0.f);
+    float3 yellow = make_float3(1.f, 1.0f, 1.f);
+    float3 red = make_float3(1.f, 0.0f, 0.f);
+    float3 p = make_float3(1.f, 0.0f, 1.f);
+    float3 white = make_float3(1.0f, 1.0f, 1.0f);
+    float alpha;
+    if (maxLeaf < 8 && maxLeaf > 0) {
+        k = 8;
+        alpha = (maxLeaf - 0) / k;
+        accumulated_color = blue * (1 - alpha) + green * alpha;
     }
-    else if(maxLeaf < 64)
-        accumulated_color = make_float3((maxLeaf - 32) / 32.f, (maxLeaf - 32) / 32.f, 0.f);
-    else if (maxLeaf < 96)
-        accumulated_color = make_float3(0.0f, (maxLeaf - 64) / 32.f, 0.f);
-    else
-        accumulated_color = make_float3((maxLeaf - 96) / 32.0f, 0.f, 0.f);
+    else if (maxLeaf < 16 && maxLeaf > 0) {
+        k = 8;
+        alpha = (maxLeaf - 8) / k;
+        accumulated_color = green * (1 - alpha) + yellow * alpha;
+    }
+    else if (maxLeaf < 32 && maxLeaf > 0){
+        k = 16;
+        alpha = (maxLeaf - 16) / k;
+        accumulated_color = yellow * (1 - alpha) + red * alpha;
+    }
+    else if (maxLeaf < 48 && maxLeaf > 0) {
+        k = 16;
+        alpha = (maxLeaf - 32) / k;
+        accumulated_color = red * (1 - alpha) + p * alpha;
+    }
+    else if(maxLeaf > 0){
+        k = 16;
+        alpha = (maxLeaf - 48) / k;
+        accumulated_color = p * (1 - alpha) + white * alpha;
+    }
+    //if (maxLeaf < 32) {
+    //    accumulated_color = make_float3(0.f, 0.0f, maxLeaf / 32.f);
+    //}
+    //else if(maxLeaf < 64)
+    //    accumulated_color = make_float3((maxLeaf - 32) / 32.f, (maxLeaf - 32) / 32.f, 0.f);
+    //else if (maxLeaf < 96)
+    //    accumulated_color = make_float3(0.0f, (maxLeaf - 64) / 32.f, 0.f);
+    //else
+    //    accumulated_color = make_float3((maxLeaf - 96) / 32.0f, 0.f, 0.f);
 #endif
 }
 #elif PRIMITIVE_TYPE == TRI
