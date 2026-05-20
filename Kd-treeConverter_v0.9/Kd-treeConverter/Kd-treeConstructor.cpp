@@ -1682,6 +1682,11 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const PrimList* pEllipsoidInfos, 
 
 }
 #elif PRIMITIVE_TYPE == TRI || PRIMITIVE_TYPE == ELLIPSOID_BY_TRI
+	#if PRIMITIVE_TYPE == ELLIPSOID_BY_TRI
+static int compLeafCnt = 0;
+static int compCnt = 0;
+static int ampledLeafCnt = 0;
+	#endif
 void build_kd_tree_recursive(BoundEdge* bEdge, const PrimList* pTriangleInfos, unsigned int triangleSize,
 	BoundingBox& bbox, unsigned int inNodeLevel, KdTreeNode* inNode)
 {
@@ -1810,10 +1815,11 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const PrimList* pTriangleInfos, u
 		}
 		leafOffset.insert(leafOffset.end(), gIds.begin(), gIds.end());
 		if (leafOffset.size() < triangleSize) {
-			printf("offset converting less\n");
+			compLeafCnt++;
+			compCnt += triangleSize - leafOffset.size();
 		}
 		else if (leafOffset.size() > triangleSize) {
-			printf("offset converting error\n");
+			ampledLeafCnt++;
 		}
 		triangleSize = leafOffset.size();
 #endif
@@ -1972,6 +1978,13 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const PrimList* pTriangleInfos, u
 	if (DEBUG_FLAG) {
 		fprintf(stdout, "b_k_t_r: (E)triangleSize = %d, inNodeLevel = %d\n", triangleSize, inNodeLevel);
 	}
+#if PRIMITIVE_TYPE == ELLIPSOID_BY_TRI
+	if (inNodeLevel == 0) {
+		printf("compressed by ellipsoid leaf count: %d\n", compLeafCnt);
+		printf("compressed by ellipsoid  count: %d\n", compCnt);
+		printf("ampled by ellipsoid leaf count(error): %d\n", ampledLeafCnt);
+	}
+#endif
 }
 #endif
 
