@@ -1731,7 +1731,7 @@ void create_composite_object_from_gaussians(
 
 #if SIGMA_THRESHOLD_MODE
 		//if (sigma < SIGMA_THRESHOLD) { cnt_sigma++; continue; }
-	#if OCCLUDE_MIN_OPACITY
+	#if OCCLUDE_MIN_OPACITY_TRI
 		if (sigma < KERNEL_MIN_RESPONSE || sigma < SIGMA_THRESHOLD_MODE / 255.0f) {
 			cnt_sigma++;
 			g_isValidG[i] = 0;

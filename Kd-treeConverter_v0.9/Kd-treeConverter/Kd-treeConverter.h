@@ -19,6 +19,7 @@
 
 /* ply read */
 #define OCCLUDE_MIN_OPACITY 1
+#define OCCLUDE_MIN_OPACITY_TRI 1
 #define PROBLEMATIC_THRESHOLD 1	//remove dominant prim from gaussian data
 
 /* primitive type */
