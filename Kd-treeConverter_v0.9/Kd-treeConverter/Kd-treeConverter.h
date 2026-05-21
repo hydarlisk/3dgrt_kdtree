@@ -620,7 +620,8 @@ bool read_igeom_from_file(CompositeObject* c_object, const char* filename);
 void dump_kd_tree_for_composite_object(CompositeObject* c_object,
 	int dump_format,
 	const char* filename,
-	const char* filename_igeom
+	const char* filename_igeom,
+	const char* filename_leafInfo = nullptr
 );
 int read_kd_tree_from_file(CompositeObject *, const char *, int);
 void loadLeafDebug(const char* filename, std::vector<std::vector<PrimList>>& leafDebug);

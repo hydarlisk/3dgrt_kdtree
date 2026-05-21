@@ -41,11 +41,13 @@ using namespace std;
 
 char* ply_file_path;
 char* ply_kdtree_path;
+char* ply_leafInfo_path;
 char* ply_igeom_path;
 char* ply_to_obj;
 char* ply_to_obj_mtl;
 
 char* ply_kdtree_dump_path;
+char* ply_leafInfo_dump_path;
 char* ply_igeom_dump_path;
 char* ply_bspt_dump_path;
 
@@ -2789,10 +2791,12 @@ void subMenuHandler(int value) {
 	// 포인터가 함수 외부에서도 유효해야 하므로 static으로 선언
 	static char final_kdtree_path[512];
 	static char final_igeom_path[512];
+	static char final_leafInfo_path[512];
 	static char final_obj_path[512];
 	static char final_build_path[512];
 
 	static char final_kdtree_dump_path[512];
+	static char final_leafInfo_dump_path[512];
 	static char final_igeom_dump_path[512];
 	static char final_bspt_dump_path[512];
 
@@ -3141,6 +3145,7 @@ void subMenuHandler(int value) {
 
 	std::string s_ply_file_path = root + name + "_3dgrt.ply";
 	std::string s_base_kdtree_str = root + name + "_tree.kdt";
+	std::string s_base_leafInfo_str = root + name + "_leafInfo.bin";
 	std::string s_base_igeom_str = root + name + "_igeom.bin";
 	std::string s_base_bspt_str = root + name + "_bspt.bin";
 	std::string s_base_obj_str = root + name + "_new.obj";
@@ -3149,6 +3154,7 @@ void subMenuHandler(int value) {
 
 	const char* ply_file_path = s_ply_file_path.c_str();
 	const char* base_kdtree_str = s_base_kdtree_str.c_str();
+	const char* base_leafInfo_str = s_base_leafInfo_str.c_str();
 	const char* base_igeom_str = s_base_igeom_str.c_str();
 	const char* base_bspt_str = s_base_bspt_str.c_str();
 
@@ -3163,18 +3169,22 @@ void subMenuHandler(int value) {
 		construct_path(final_igeom_path, sizeof(final_igeom_path), base_igeom_str);
 		construct_path(final_obj_path, sizeof(final_obj_path), base_obj_str);
 		construct_path(final_build_path, sizeof(final_build_path), base_build_str);
+		construct_path(final_leafInfo_path, sizeof(final_leafInfo_path), base_leafInfo_str);
 
 		construct_path_JS(final_kdtree_dump_path, sizeof(final_kdtree_dump_path), base_kdtree_str);
+		construct_path_JS(final_leafInfo_dump_path, sizeof(final_leafInfo_dump_path), base_leafInfo_str);
 		construct_path_JS(final_igeom_dump_path, sizeof(final_igeom_dump_path), base_igeom_str);
 		construct_path_JS(final_bspt_dump_path, sizeof(final_bspt_dump_path), base_bspt_str);
 
 		// 전역 변수에 최종 경로 할당
 		ply_kdtree_path = final_kdtree_path;
 		ply_igeom_path = final_igeom_path;
+		ply_leafInfo_path = final_leafInfo_path;
 		ply_to_obj = final_obj_path;
 		kdtree_build_path = final_build_path;
 
 		ply_kdtree_dump_path = final_kdtree_dump_path;
+		ply_leafInfo_dump_path = final_leafInfo_dump_path;
 		ply_igeom_dump_path = final_igeom_dump_path;
 		ply_bspt_dump_path = final_bspt_dump_path;
 	}
@@ -3380,6 +3390,7 @@ void main_menu_action(int selection) {
 		read_kd_tree_from_file(&uip.poly_model, full_kd_tree_file_name, uip.kd_tree_dump_format);
 		//void loadLeafDebug(const std::string & filename, std::vector<std::vector<PrimList>>*leafDebug)
 		loadLeafDebug(full_leafNode_file_name, g_leafDebug);
+		uip.poly_model.leafDebug = &g_leafDebug;
 
 		//printKdTreeLeafNodeInfo();
 #if LEAF_NODE_DEBUG

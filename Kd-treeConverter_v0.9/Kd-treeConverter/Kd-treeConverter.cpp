@@ -278,16 +278,46 @@ int build_kd_tree_for_composite_object2(CompositeObject* c_object, const char* f
 	fclose(fp);
 	return 1;
 }
+
+void dumpLeafDebug(const std::string& filename, std::vector<std::vector<PrimList>>& leafDebug) {
+	if (leafDebug.empty()) {
+		std::cerr << "Error: leafDebug pointer is null." << std::endl;
+		return;
+	}
+
+	std::ofstream outFile(filename, std::ios::binary);
+	if (!outFile.is_open()) {
+		std::cerr << "Error: Cannot open file for writing: " << filename << std::endl;
+		return;
+	}
+
+	size_t row_size = leafDebug.size();
+	outFile.write(reinterpret_cast<const char*>(&row_size), sizeof(row_size));
+	for (size_t i = 0; i < row_size; ++i) {
+		size_t col_size = leafDebug[i].size();
+		outFile.write(reinterpret_cast<const char*>(&col_size), sizeof(col_size));
+		if (col_size > 0) {
+			outFile.write(reinterpret_cast<const char*>(leafDebug[i].data()),
+				col_size * sizeof(PrimList));
+		}
+	}
+
+	outFile.close();
+	std::cout << "Successfully dumped LeafInfo to " << filename << std::endl;
+}
+
 void dump_kd_tree_for_composite_object(CompositeObject *c_object, 
 	int dump_format,
 	const char* filename,
-	const char *filename_igeom
+	const char *filename_igeom,
+	const char* filename_leaf
 ) {
 	// Dump the kd-tree "c_object->kd_tree" into the file "filename" in "dump_format" type:
 	//    dump_format == KD_TREE_DUMP_IN_ASCII  --> ASCII format
 	//    dump_format == KD_TREE_DUMP_IN_BINARY --> in Binary format	
 	// Dump the indexed geometry "c_object->extended_vertices" into the file "filename_igeom" in binary format
 
+	/*** dump kdtree ***/
 	FILE* fp;
 	int i;
 	fprintf(stdout, "> Dumping kd-tree and i-geometry to file: \n          kd-tree =%s\n          i-geometry = %s\n\n", filename, filename_igeom);
@@ -368,6 +398,12 @@ void dump_kd_tree_for_composite_object(CompositeObject *c_object,
 	}
 	fclose(fp);
 
+	/*** dump leafnode infos ***/
+	if (filename_leaf != nullptr) {
+		dumpLeafDebug(filename_leaf, g_leafDebug);
+	}
+
+	/*** dump triangle ***/
 #if PRIMITIVE_TYPE == TRI
 	if ((fp = fopen(filename_igeom, "wb")) == NULL) {
 		fprintf(stderr, "d_k_t_f_c_o: (Error) cannot open the file %s...\n", filename_igeom);
@@ -559,6 +595,32 @@ int read_kd_tree_from_file(CompositeObject *c_object, const char *filename, int 
 	fprintf(stdout, "Reading Kd-tree is completed.\n");
 
 	return 1;
+}
+
+void loadLeafDebug(const char* filename, std::vector<std::vector<PrimList>>& leafDebug) {
+	std::ifstream inFile(filename, std::ios::binary);
+	if (!inFile.is_open()) {
+		std::cerr << "Error: Cannot open file for reading: " << filename << std::endl;
+		return;
+	}
+	leafDebug.clear();
+
+	size_t row_size = 0;
+	inFile.read(reinterpret_cast<char*>(&row_size), sizeof(row_size));
+	leafDebug.resize(row_size);
+	for (size_t i = 0; i < row_size; ++i) {
+		size_t col_size = 0;
+		inFile.read(reinterpret_cast<char*>(&col_size), sizeof(col_size));
+		leafDebug[i].resize(col_size);
+
+		if (col_size > 0) {
+			inFile.read(reinterpret_cast<char*>(leafDebug[i].data()),
+				col_size * sizeof(PrimList));
+		}
+	}
+
+	inFile.close();
+	std::cout << "Successfully loaded leafInfo from " << filename << std::endl;
 }
 
 // [추가] 바이너리 지오메트리 파일(.bin)을 읽어오는 함수

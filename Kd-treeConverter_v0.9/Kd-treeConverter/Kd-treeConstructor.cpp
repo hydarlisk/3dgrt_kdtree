@@ -2087,47 +2087,6 @@ void build_TriAccList(CompositeObject *poly_model, TriAccel*& pTriAcc)
 	//printf("k(%d): %u\n", 315728, pTriAcc[315728].k);
 }
 
-//from JJH
-std::vector<BoundingBox> extract_leaves_from_kd_tree()
-{
-	KdTreeNode* node = &g_pKdTree_Node_Array[0];
-
-	struct KdStack {
-		KdTreeNode* node;
-		BoundingBox box;
-	};
-
-	std::stack<KdStack> kd_stack;
-	kd_stack.push({ node, g_root_AABB });
-
-	std::vector<BoundingBox> leaf_node_boxes;
-	BoundingBox box{};
-
-	while (!kd_stack.empty()) {
-		KdStack data = kd_stack.top();
-		kd_stack.pop();
-		node = data.node;
-		box = data.box;
-		if (IS_LEAF(*node)) {
-			leaf_node_boxes.push_back(box);
-		}
-		else {
-			const float node_split = SPLIT_POS(*node);
-			const uint32_t dim = SPLIT_AXIS(*node);
-
-			BoundingBox right_box = box;
-			right_box.min[dim] = node_split;
-			kd_stack.push({ &g_pKdTree_Node_Array[SECOND_CHILD_OFFSET(*node)], right_box });
-
-			BoundingBox left_box = box;
-			left_box.max[dim] = node_split;
-			kd_stack.push({ &g_pKdTree_Node_Array[FIRST_CHILD_OFFSET(*node)], left_box });
-		}
-	}
-
-	return leaf_node_boxes;
-}
-
 //for debug
 std::vector<LeafNodeInfo> extract_all_leaf_data(CompositeObject* c_object, int& largest_leaf_index) {
 	// Kd-tree가 없으면 빈 벡터 반환
