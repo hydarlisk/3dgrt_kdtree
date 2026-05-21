@@ -89,8 +89,8 @@ std::vector<float> g_kScales;
 
 int g_renderMode = 0;	//5: ellipsoid aabb debug
 int g_renderGId = -1;
-#if PRIMITIVE_TYPE == ELLIPSOID
 int g_renderNodeId = -1;
+#if PRIMITIVE_TYPE == ELLIPSOID
 int g_renderDepth = -1;
 #endif
 
@@ -225,7 +225,6 @@ KdTree kd_tree;
 
 GLuint buf_obj;
 
-#if PRIMITIVE_TYPE == ELLIPSOID
 void renderGaussianMesh(int gId) {
 	ExtendedVertex* v = uip.poly_model.extended_vertices;
 
@@ -252,6 +251,32 @@ void renderGaussianMesh(int gId) {
 	//glEnd();
 }
 
+void renderLeaf(int nodeId) {
+	std::vector<PrimList>& primInfos = (*uip.poly_model.leafDebug)[nodeId];
+
+	printf("\tleaf prim count: %d\n", primInfos.size());
+
+	for (int i = 0; i < primInfos.size(); i++) {
+		renderGaussianMesh(primInfos[i].offset);
+		//renderGaussianMesh(uip.poly_model.kd_tree->prim_offset_list[ellipsoidInfos[i].offset]);
+	}
+	for (int i = 0; i < primInfos.size(); i++) {
+		float aabb[6] = {
+			primInfos[i].AABB.min[0], primInfos[i].AABB.max[0],
+			primInfos[i].AABB.min[1], primInfos[i].AABB.max[1],
+			primInfos[i].AABB.min[2], primInfos[i].AABB.max[2]
+		};
+		draw_AABB(aabb, i);
+	}
+	//float aabb[6] = {
+	//	primInfos[0].AABB.min[0], primInfos[0].AABB.max[0],
+	//	primInfos[0].AABB.min[1], primInfos[0].AABB.max[1],
+	//	primInfos[0].AABB.min[2], primInfos[0].AABB.max[2]
+	//};
+	//draw_AABB(aabb);
+}
+
+#if PRIMITIVE_TYPE == ELLIPSOID
 //only works for icosa mesh
 void renderEllipsoidAabb(int gId) {
 	PrimList& e = (*uip.poly_model.ellipsoidAabbDebug)[gId];
@@ -316,32 +341,6 @@ void renderEllipsoidInternal(int depth, int nodeId, int idx) {
 	};
 	draw_AABB(aabb, 0);
 }
-
-void renderEllipsoidLeaf(int nodeId) {
-	std::vector<PrimList>& ellipsoidInfos = (*uip.poly_model.ellipsoidLeafDebug)[nodeId];
-	
-	printf("\tleaf prim count: %d\n", ellipsoidInfos.size());
-	
-	for (int i = 0; i < ellipsoidInfos.size(); i++) {
-		renderGaussianMesh(ellipsoidInfos[i].offset);
-		//renderGaussianMesh(uip.poly_model.kd_tree->prim_offset_list[ellipsoidInfos[i].offset]);
-	}
-	for (int i = 0; i < ellipsoidInfos.size(); i++) {
-		float aabb[6] = {
-			ellipsoidInfos[i].AABB.min[0], ellipsoidInfos[i].AABB.max[0],
-			ellipsoidInfos[i].AABB.min[1], ellipsoidInfos[i].AABB.max[1],
-			ellipsoidInfos[i].AABB.min[2], ellipsoidInfos[i].AABB.max[2]
-		};
-		draw_AABB(aabb, i);
-	}
-	//float aabb[6] = {
-	//	ellipsoidInfos[0].AABB.min[0], ellipsoidInfos[0].AABB.max[0],
-	//	ellipsoidInfos[0].AABB.min[1], ellipsoidInfos[0].AABB.max[1],
-	//	ellipsoidInfos[0].AABB.min[2], ellipsoidInfos[0].AABB.max[2]
-	//};
-	//draw_AABB(aabb);
-}
-
 
 void renderEllipsoidAabbs() {
 	std::vector<PrimList>& ellipsoidInfos = *uip.poly_model.ellipsoidAabbDebug;
@@ -519,6 +518,10 @@ void display(void) {
 		draw_axes(100.0);
 		if (uip.composite_object_read == 1) {
 			switch (g_renderMode) {
+			case 7:
+				if (g_renderNodeId >= 0)
+					renderLeaf(g_renderNodeId);
+				break;
 #if PRIMITIVE_TYPE == ELLIPSOID
 			case 5:	//ellipsoid aabb debug
 				if (g_renderGId >= 0)
@@ -529,10 +532,7 @@ void display(void) {
 				if (g_renderGId >= 0)
 					renderEllipsoidClipAabb(g_renderDepth, g_renderNodeId, g_renderGId);
 				break;
-			case 7:
-				if (g_renderNodeId >= 0)
-					renderEllipsoidLeaf(g_renderNodeId);
-				break;
+
 			case 8:
 				if (g_renderNodeId >= 0)
 					renderEllipsoidInternal(g_renderDepth, g_renderNodeId, g_renderGId);
@@ -673,35 +673,39 @@ void keyboard(unsigned char key, int x, int y) {
 			printf("render gaussian id: %d\n", g_renderGId);
 			glutPostRedisplay();
 			break;
-#if PRIMITIVE_TYPE == ELLIPSOID
 		case ';':
 			g_renderNodeId--;
-			if (g_renderMode == 6) {
-				if (g_renderNodeId < 0) g_renderNodeId = (*uip.poly_model.ellipsoidClipAabbDebug)[g_renderDepth].size() - 1;
+			if (g_renderMode == 7) {
+				if (g_renderNodeId < 0) g_renderNodeId = (*uip.poly_model.leafDebug).size() - 1;
 			}
-			else if (g_renderMode == 7) {
-				if (g_renderNodeId < 0) g_renderNodeId = (*uip.poly_model.ellipsoidLeafDebug).size() - 1;
+#if PRIMITIVE_TYPE == ELLIPSOID
+			else if (g_renderMode == 6) {
+				if (g_renderNodeId < 0) g_renderNodeId = (*uip.poly_model.ellipsoidClipAabbDebug)[g_renderDepth].size() - 1;
 			}
 			else if (g_renderMode == 8) {
 				if (g_renderNodeId < 0) g_renderNodeId = (*uip.poly_model.ellipsoidInternalDebug)[g_renderDepth].size() - 1;
 			}
+#endif
 			printf("render node id: %d\n", g_renderNodeId);
 			glutPostRedisplay();
 			break;
 		case '\'':
 			g_renderNodeId++;
-			if (g_renderMode == 6) {
-				if (g_renderNodeId > (*uip.poly_model.ellipsoidClipAabbDebug)[g_renderDepth].size() - 1) g_renderNodeId = 0;
+			if (g_renderMode == 7) {
+				if (g_renderNodeId > (*uip.poly_model.leafDebug).size() - 1) g_renderNodeId = 0;
 			}
-			else if (g_renderMode == 7) {
-				if (g_renderNodeId > (*uip.poly_model.ellipsoidLeafDebug).size() - 1) g_renderNodeId = 0;
+#if PRIMITIVE_TYPE == ELLIPSOID
+			else if (g_renderMode == 6) {
+				if (g_renderNodeId > (*uip.poly_model.ellipsoidClipAabbDebug)[g_renderDepth].size() - 1) g_renderNodeId = 0;
 			}
 			else if (g_renderMode == 8) {
 				if (g_renderNodeId > (*uip.poly_model.ellipsoidInternalDebug)[g_renderDepth].size() - 1) g_renderNodeId = 0;
 			}
+#endif
 			printf("render node id: %d\n", g_renderNodeId);
 			glutPostRedisplay();
 			break;
+#if PRIMITIVE_TYPE == ELLIPSOID
 		case ':':
 			g_renderDepth--;
 			if (g_renderMode == 7) {
@@ -1157,7 +1161,7 @@ void set_kd_tree_leaf_node() {
 	//  '단일 리프 노드 보기' 모드 처리
 	else {
 		const auto& selected_leaf = leaf_nodes[selected_leaf_index];
-		const auto& indices = selected_leaf.triangle_indices;
+		const auto& indices = selected_leaf.primIndices;
 
 		printf("Displaying leaf %d / %zu (%zu triangles)\n",
 			selected_leaf_index, leaf_nodes.size(), indices.size());
@@ -3225,6 +3229,12 @@ void subMenuHandler(int value) {
 
 void subDebugMenuHandler(int value) {
 	switch (value) {
+#if DEBUG_LEAF_GL
+	case 905:	//debug leaf
+		g_renderMode = 7;
+		g_renderNodeId = 0;
+		break;
+#endif
 #if PRIMITIVE_TYPE == ELLIPSOID
 	case 903:	//debug ellipsoid aabb
 		g_renderMode = 5;
@@ -3236,11 +3246,7 @@ void subDebugMenuHandler(int value) {
 		g_renderNodeId = 0;
 		g_renderGId = 0;
 		break;
-	case 905:	//debug ellipsoid leaf
-		g_renderMode = 7;
-		g_renderNodeId = 0;
-		break;
-	case 906:
+	case 906:	//debug internal
 		g_renderMode = 8;
 		g_renderDepth = 5;
 		g_renderNodeId = 0;
@@ -3248,7 +3254,6 @@ void subDebugMenuHandler(int value) {
 		break;
 #endif
 	}
-	
 
 	glutPostRedisplay();
 }
@@ -3256,6 +3261,7 @@ void subDebugMenuHandler(int value) {
 void main_menu_action(int selection) {
 	char full_kd_tree_file_name[512];
 	char full_i_geometry_file_name[512];
+	char full_leafNode_file_name[512];
 	fprintf(stdout, "\n");
 	switch (selection) {
 	case 0:
@@ -3338,6 +3344,7 @@ void main_menu_action(int selection) {
 				KD_TREE_DUMP_IN_BINARY,    // 저장 포맷
 				ply_kdtree_dump_path,         // 저장할 kd-tree
 				ply_igeom_dump_path         // 저장할 geometry
+				,ply_leafInfo_dump_path         // leaf info
 			);
 		}
 		else {
@@ -3357,6 +3364,7 @@ void main_menu_action(int selection) {
 		if (render_gaussian) {
 			strcpy(full_kd_tree_file_name, ply_kdtree_path);
 			strcpy(full_i_geometry_file_name, ply_igeom_path); // geometry 경로 복사
+			strcpy(full_leafNode_file_name, ply_leafInfo_path); // geometry 경로 복사
 			uip.kd_tree_dump_format = KD_TREE_DUMP_IN_BINARY;
 
 			printf("Loading Geometry from: %s\n", full_i_geometry_file_name);
@@ -3370,6 +3378,8 @@ void main_menu_action(int selection) {
 		}
 		printf("full_kd_tree_file_name:%s\n", full_kd_tree_file_name);
 		read_kd_tree_from_file(&uip.poly_model, full_kd_tree_file_name, uip.kd_tree_dump_format);
+		//void loadLeafDebug(const std::string & filename, std::vector<std::vector<PrimList>>*leafDebug)
+		loadLeafDebug(full_leafNode_file_name, g_leafDebug);
 
 		//printKdTreeLeafNodeInfo();
 #if LEAF_NODE_DEBUG
@@ -3484,10 +3494,14 @@ void register_callbacks_and_create_menu(void) {
 	glutAddMenuEntry("stump", 112);
 
 	int subDebugMenu = glutCreateMenu(subDebugMenuHandler);
+#if DEBUG_LEAF_GL
+	glutAddMenuEntry("debug leaf", 905);
+#endif
+#if PRIMITIVE_TYPE == ELLIPSOID
 	glutAddMenuEntry("debug ellipsoid aabb", 903);
 	glutAddMenuEntry("debug ellipsoid clip aabb", 904);
-	glutAddMenuEntry("debug ellipsoid leaf", 905);
 	glutAddMenuEntry("debug ellipsoid Internal", 906);
+#endif
 
 	uip.main_menu_ID = glutCreateMenu(main_menu_action);
 	glutAddMenuEntry("ChangeMode", 0);

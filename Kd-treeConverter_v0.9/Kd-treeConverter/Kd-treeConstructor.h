@@ -72,10 +72,11 @@ extern unsigned long long  g_iKdTreePrimOffsetCnt;
 extern unsigned long long  g_iKdTreePrimOffsetCnt_Alloc;
 extern unsigned int *g_pKdTreePrimOffsetArray;
 extern unsigned int  g_iKdTreeMaxPrimInLeafNodeCnt;
+
+extern std::vector<std::vector<PrimList>> g_leafDebug;
 #if PRIMITIVE_TYPE == ELLIPSOID
 extern std::vector<PrimList> g_ellipsoidAabbDebug;
 extern std::vector<std::vector<std::vector<PrimList>>> g_ellipsoidClipAabbDebug;
-extern std::vector<std::vector<PrimList>> g_ellipsoidLeafDebug;
 extern std::vector<std::vector<std::vector<PrimList>>> g_ellipsoidInternalDebug;
 #endif
 
@@ -112,10 +113,10 @@ void build_TriAccList(CompositeObject *poly_model, TriAccel*& pTriAcc);
 //shyun added begin
 struct LeafNodeInfo {
 	BoundingBox aabb;
-	std::vector<unsigned int> triangle_indices;
+	std::vector<unsigned int> primIndices;
 	
 	bool operator<(const LeafNodeInfo& other) const {
-		return triangle_indices.size() < other.triangle_indices.size();
+		return primIndices.size() < other.primIndices.size();
 	}
 };
 std::vector<BoundingBox> extract_leaves_from_kd_tree();

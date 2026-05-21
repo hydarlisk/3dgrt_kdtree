@@ -68,10 +68,10 @@ extern std::vector<bool> g_isValidG;
 extern std::vector<float> g_kScales;
 #endif
 
+std::vector<std::vector<PrimList>> g_leafDebug;
 #if PRIMITIVE_TYPE == ELLIPSOID
 std::vector<PrimList> g_ellipsoidAabbDebug;
 std::vector<std::vector<std::vector<PrimList>>> g_ellipsoidClipAabbDebug;
-std::vector<std::vector<PrimList>> g_ellipsoidLeafDebug;
 std::vector<std::vector<std::vector<PrimList>>> g_ellipsoidInternalDebug;
 #endif
 
@@ -611,7 +611,7 @@ bool intersect_edge_plane(float *p0, float *p1, float *planePoint, float *planeN
 
 	return true;
 }
-
+#if PRIMITIVE_TYPE == ELLIPSOID
 bool isGaussianIntersectingAABB(const BoundingBox& currBBox, const float pos[3], const MyMat33& covInv) {
 	float x_coords[2] = { currBBox.min[0], currBBox.max[0] };
 	float y_coords[2] = { currBBox.min[1], currBBox.max[1] };
@@ -795,7 +795,7 @@ void clip_ellipsoid(std::vector<PrimList>& ellipsoidInfos, const SplitCost& best
 		}
 	}
 }
-
+#else
 void clip_triangle(const int triangleSize, const SplitCost& bestCost, PrimList* pTriangleInfos, int side)
 {
 	int axis = bestCost.axis;
@@ -919,7 +919,7 @@ void clip_triangle(const int triangleSize, const SplitCost& bestCost, PrimList* 
 		}
 	}
 }
-
+#endif
 void push_triangles_to_child(const unsigned n_bEdge, const BoundEdge *bEdge, 
                              PrimList *pLeftTriangles, PrimList *pRightTriangles,
                              const SplitCost &bestCost )
@@ -1595,7 +1595,7 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const PrimList* pEllipsoidInfos, 
 				leafDebug.push_back(pEllipsoidInfos[i]);
 				//leafDebug[i].AABB = bbox;
 			}
-			g_ellipsoidLeafDebug.push_back(leafDebug);
+			g_leafDebug.push_back(leafDebug);
 		}
 #endif
 
@@ -1807,6 +1807,18 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const PrimList* pTriangleInfos, u
 		setLeafNodeBSPT(inNode, g_BSPTNodes.size());
 #else
 		// Leaf node 생성
+
+#if DEBUG_LEAF_GL
+		if (triangleSize > 0) {
+			std::vector<PrimList> leafDebug;
+			leafDebug.push_back(pTriangleInfos[0]);
+			leafDebug[0].AABB = bbox;
+			for (int i = 0; i < triangleSize; i++) {
+				leafDebug.push_back(pTriangleInfos[i]);
+			}
+			g_leafDebug.push_back(leafDebug);
+		}
+#endif
 #if PRIMITIVE_TYPE == ELLIPSOID_BY_TRI
 		std::vector<int> leafOffset;
 		std::set<int> gIds;
@@ -2163,9 +2175,10 @@ std::vector<LeafNodeInfo> extract_all_leaf_data(CompositeObject* c_object, int& 
 
 			unsigned int offset = OBJECTLIST_OFFSET(*current_node);
 			unsigned int num_triangles = OBJECT_SIZE(*current_node);
+			if (num_triangles <= 0) continue;
 
 			for (unsigned int i = 0; i < num_triangles; ++i) {
-				leaf.triangle_indices.push_back(prim_offset_list[offset + i]);
+				leaf.primIndices.push_back(prim_offset_list[offset + i]);
 			}
 
 			all_leaf_info.push_back(leaf);

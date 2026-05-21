@@ -19,7 +19,7 @@
 
 /* ply read */
 #define OCCLUDE_MIN_OPACITY 1
-#define OCCLUDE_MIN_OPACITY_TRI 1
+#define OCCLUDE_MIN_OPACITY_TRI 0
 #define PROBLEMATIC_THRESHOLD 1	//remove dominant prim from gaussian data
 
 /* primitive type */
@@ -40,10 +40,10 @@
 /* Ellipsoid */
 #define ELLIPSOID_DEBUG 1
 #define DEBUG_LEAF_CUDA 0
+#define DEBUG_LEAF_GL 1
 #if PRIMITIVE_TYPE == ELLIPSOID && ELLIPSOID_DEBUG
 	#define DEBUG_ELLIPSOID_CLIP_AABB 1
 	#define DEBUG_ELLIPSOID_INTERNAL 1
-	#define DEBUG_LEAF_GL 0
 	#define DEBUG_LEAF_CUDA 1
 	#undef OCCLUDE_MIN_OPACITY_TRI
 	#define OCCLUDE_MIN_OPACITY_TRI 0
@@ -475,15 +475,16 @@ typedef struct _BoundingBox {
 	};
 } BoundingBox;
 
-typedef struct _TriangleList {
+typedef struct _PrimList {
 	int offset;
 	BoundingBox AABB;				//	split 되었을때의 가상의 bounding box
-	//GTriangleWrapper *pTriangleWrapper;
 	ExtendedVertex point[3];
 	int side;
+#if PRIMITIVE_TYPE == ELLIPSOID
 	int cutAxis;
 	float cutCenter[3];
 	float ejCut, ekCut;
+#endif
 } PrimList;
 
 #if BSPT
@@ -551,10 +552,11 @@ typedef struct _CompositeObject {
 	float AABB[6];	//macro: XMIN, XMAX, YMIN, YMAX, ZMIN, ZMAX
 	ExtendedVertex *extended_vertices;
 	KdTree *kd_tree;
+
+	std::vector<std::vector<PrimList>>* leafDebug;
 #if PRIMITIVE_TYPE == ELLIPSOID
 	std::vector<PrimList>* ellipsoidAabbDebug;
 	std::vector<std::vector<std::vector<PrimList>>>* ellipsoidClipAabbDebug;
-	std::vector<std::vector<PrimList>>* ellipsoidLeafDebug;
 	std::vector<std::vector<std::vector<PrimList>>>* ellipsoidInternalDebug;
 #endif
 } CompositeObject;
@@ -621,6 +623,7 @@ void dump_kd_tree_for_composite_object(CompositeObject* c_object,
 	const char* filename_igeom
 );
 int read_kd_tree_from_file(CompositeObject *, const char *, int);
+void loadLeafDebug(const char* filename, std::vector<std::vector<PrimList>>& leafDebug);
 
 
 #if 0

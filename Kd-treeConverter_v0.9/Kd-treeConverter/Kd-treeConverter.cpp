@@ -16,6 +16,9 @@
 //#include "RayTraversal.h"
 #include "MyMathUtility.h"
 
+#include <iostream>
+#include <fstream>
+
 int build_kd_tree_for_composite_object(CompositeObject *c_object) {
 	// Returns 1 if a kd-tree was constructed successfully, or 0 otherwise.
 	// Input: "c_object->n_triangles" & "c_object->extended_vertices"
@@ -132,10 +135,10 @@ int build_kd_tree_for_composite_object(CompositeObject *c_object) {
 
 	c_object->kd_tree->prim_offset_list = g_pKdTreePrimOffsetArray;
 	c_object->kd_tree->prim_offset_count = g_iKdTreePrimOffsetCnt;
+	c_object->leafDebug = &g_leafDebug;
 #if PRIMITIVE_TYPE == ELLIPSOID
 	c_object->ellipsoidAabbDebug = &g_ellipsoidAabbDebug;
 	c_object->ellipsoidClipAabbDebug = &g_ellipsoidClipAabbDebug;
-	c_object->ellipsoidLeafDebug = &g_ellipsoidLeafDebug;
 	c_object->ellipsoidInternalDebug = &g_ellipsoidInternalDebug;
 #elif PRIMITIVE_TYPE == TRI
 	c_object->kd_tree->tri_accel_list = pTriAcc;
