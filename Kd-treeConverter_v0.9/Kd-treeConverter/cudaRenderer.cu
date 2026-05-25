@@ -1540,6 +1540,10 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
 #endif
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+#if DEBUG_LEAF_CUDA
+    int maxLeaf = 0 ;
+#endif
     //int prevGaussianID = -1; // 이전 ID 기억
     // 광선의 유효 범위 설정
     float t_scene_near = RAY_START_EPSILON, t_scene_far = FLT_MAX;
@@ -1585,6 +1589,13 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
                 // 수집: 이 리프 노드 내의 모든 충돌을 임시 로컬 배열에 저장
             HitRecord local_hits[MAX_HITS];
             int local_hit_count = 0;
+
+#if DEBUG_LEAF_CUDA
+            if (OBJECT_SIZE(node) > maxLeaf) {
+                maxLeaf = OBJECT_SIZE(node);
+            }
+#endif
+
 #if HIT_AND_NODE_COUNT_DEBUG
             leaf_visits++;
 #endif
@@ -1682,7 +1693,12 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
                     float33 particleRotation;
                     quaternionWXYZToMatrixTranspose(particleQquaternion, particleRotation);
                     // 광선을 가우시안의 로컬 좌표계로 변환 (회전 및 스케일링)
-                    const float3 giscl = make_float3(1 / particleScale.x, 1 / particleScale.y, 1 / particleScale.z);
+#if UPLOAD_INV_SCALE
+                    const float3 giscl = particleScale;
+#else
+                    const float3 giscl = make_float3(1 / particleScale.x, 1 / 
+                        particleScale.y, 1 / particleScale.z);
+#endif
                     const float3 gposc = (currRay.pos - particlePosition);
                     const float3 gposcr = (gposc * particleRotation);
                     const float3 gro = giscl * gposcr;
@@ -1752,6 +1768,52 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
         } // while(true) == while(accumulated_opacity < OPACITY_THRESHOLD)
         if (x == g_SceneInfo.resX / 2 && y == g_SceneInfo.resY) printf("\n");
     } // if (BoundsRayIntersect)
+
+#if DEBUG_LEAF_CUDA
+/* debug */
+    float k;
+    float3 blue = make_float3(0.f, 0.0f, 1.f);
+    float3 green = make_float3(0.f, 1.0f, 0.f);
+    float3 yellow = make_float3(1.f, 1.0f, 0.f);
+    float3 red = make_float3(1.f, 0.0f, 0.f);
+    float3 p = make_float3(1.f, 0.0f, 1.f);
+    float3 white = make_float3(1.0f, 1.0f, 1.0f);
+    float alpha;
+    if (maxLeaf < 8 && maxLeaf > 0) {
+        k = 8;
+        alpha = (maxLeaf - 0) / k;
+        accumulated_color = blue * (1 - alpha) + green * alpha;
+    }
+    else if (maxLeaf < 16 && maxLeaf > 0) {
+        k = 8;
+        alpha = (maxLeaf - 8) / k;
+        accumulated_color = green * (1 - alpha) + yellow * alpha;
+    }
+    else if (maxLeaf < 32 && maxLeaf > 0) {
+        k = 16;
+        alpha = (maxLeaf - 16) / k;
+        accumulated_color = yellow * (1 - alpha) + red * alpha;
+    }
+    else if (maxLeaf < 48 && maxLeaf > 0) {
+        k = 16;
+        alpha = (maxLeaf - 32) / k;
+        accumulated_color = red * (1 - alpha) + p * alpha;
+    }
+    else if (maxLeaf > 0) {
+        k = 16;
+        alpha = (maxLeaf - 48) / k;
+        accumulated_color = p * (1 - alpha) + white * alpha;
+    }
+    //if (maxLeaf < 32) {
+    //    accumulated_color = make_float3(0.f, 0.0f, maxLeaf / 32.f);
+    //}
+    //else if(maxLeaf < 64)
+    //    accumulated_color = make_float3((maxLeaf - 32) / 32.f, (maxLeaf - 32) / 32.f, 0.f);
+    //else if (maxLeaf < 96)
+    //    accumulated_color = make_float3(0.0f, (maxLeaf - 64) / 32.f, 0.f);
+    //else
+    //    accumulated_color = make_float3((maxLeaf - 96) / 32.0f, 0.f, 0.f);
+#endif
 }
 
 #elif USE_STACK == HYBRID_STACK
