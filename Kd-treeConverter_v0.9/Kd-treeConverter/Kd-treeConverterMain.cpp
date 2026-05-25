@@ -3207,7 +3207,9 @@ void subMenuHandler(int value) {
 	}
 	g_isValidG.assign(g_gaussians.size(), 1);
 	create_composite_object_from_gaussians(g_gaussians);
+#if PROBLEMATIC_THRESHOLD != 1
 	removeProblematicGaussian(g_gaussians);
+#endif
 #if ROTATION
 	//printf("%s\n%s\n%s\n", ply_kdtree_path, ply_igeom_path, ply_to_obj);
 	rotate_composite_object(g_gaussians, 45.0f, 1.0f, 1.0f, 1.0f);
