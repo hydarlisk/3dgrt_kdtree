@@ -250,8 +250,6 @@
 #define KERNEL_MIN_RESPONSE 0.0113f
 #define KERNEL_DEGREE 4.0f
 
-#define ROTATION false							// R(45degree,1,1,1)
-
 #define OPACITY_THRESHOLD 0.95f					// 충족할때까지 kd-tree 탐색
 //#define OPACITY_THRESHOLD 0.9961f					// 충족할때까지 kd-tree 탐색
 

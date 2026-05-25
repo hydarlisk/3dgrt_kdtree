@@ -2112,105 +2112,6 @@ void fMyQuatInv(float* q) {
 	q[3] *= -1;
 }
 
-// CompositeObject의 모든 정점을 축 기준으로 회전시키는 함수
-void rotate_composite_object(std::vector<Gaussian>& gaussians, float angle_degrees, float axis_x, float axis_y, float axis_z) {
-	// 회전축 벡터 정규화
-	float axis_vec[3] = { axis_x, axis_y, axis_z };
-	fMyVecNormalize(axis_vec);
-	float ux = axis_vec[0];
-	float uy = axis_vec[1];
-	float uz = axis_vec[2];
-
-	// 회전 행렬 계산을 위한 값들 준비
-	float angle_rad = angle_degrees * M_PI / 180.0f;
-	float cos_theta = cosf(angle_rad);
-	float sin_theta = sinf(angle_rad);
-	float one_minus_cos = 1.0f - cos_theta;
-
-#if QUATERNION
-	// 가우시안 방향(rot) 회전을 위한 쿼터니언 생성
-	float rot_quat[4];
-	fMyQuatFromAngleAxis(rot_quat, angle_rad, axis_vec);
-#else
-	// 임의 축 회전 행렬 (Row-major)
-	float R[3][3];
-	R[0][0] = cos_theta + ux * ux * one_minus_cos;
-	R[0][1] = ux * uy * one_minus_cos - uz * sin_theta;
-	R[0][2] = ux * uz * one_minus_cos + uy * sin_theta;
-
-	R[1][0] = uy * ux * one_minus_cos + uz * sin_theta;
-	R[1][1] = cos_theta + uy * uy * one_minus_cos;
-	R[1][2] = uy * uz * one_minus_cos - ux * sin_theta;
-
-	R[2][0] = uz * ux * one_minus_cos - uy * sin_theta;
-	R[2][1] = uz * uy * one_minus_cos + ux * sin_theta;
-	R[2][2] = cos_theta + uz * uz * one_minus_cos;
-	float3x3 R_T;
-	for (int i = 0; i < 3; ++i) {
-		for (int j = 0; j < 3; ++j) {
-			R_T.m[i][j] = R[j][i];
-		}
-	}
-#endif
-	// --- 원본 가우시안 데이터 회전 ---
-	for (size_t i = 0; i < gaussians.size(); ++i) {
-#if QUATERNION
-		// 가우시안 위치 회전
-		rotate_vector_by_quaternion(gaussians[i].pos, gaussians[i].pos, rot_quat);
-
-		// 가우시안 방향(쿼터니언) 회전
-		float current_rot[4];
-		memcpy(current_rot, gaussians[i].rot, sizeof(float) * 4);
-
-		float new_rot[4];
-		fMyQuatMul(new_rot, rot_quat, current_rot);
-		memcpy(gaussians[i].rot, new_rot, sizeof(float) * 4);
-		fMyVecNormalize4D(gaussians[i].rot);
-#else
-		// 가우시안 위치 회전
-		float* pos = gaussians[i].pos;
-		float ox = pos[0], oy = pos[1], oz = pos[2];
-		pos[0] = ox * R[0][0] + oy * R[0][1] + oz * R[0][2];
-		pos[1] = ox * R[1][0] + oy * R[1][1] + oz * R[1][2];
-		pos[2] = ox * R[2][0] + oy * R[2][1] + oz * R[2][2];
-
-		float3x3 old_matrix = gaussians[i].rotMat;
-		matrix_multiply(gaussians[i].rotMat, old_matrix, R_T);
-#endif
-	}
-
-	// 모든 정점을 순회하며 회전 변환 적용
-	int total_vertices = uip.poly_model.n_triangles * 3;
-	for (int i = 0; i < total_vertices; ++i) {
-		float* v = uip.poly_model.extended_vertices[i].vertex;
-#if QUATERNION
-		rotate_vector_by_quaternion(v, v, rot_quat);
-#else
-		float ox = v[0], oy = v[1], oz = v[2]; // 원본 좌표
-
-		v[0] = ox * R[0][0] + oy * R[0][1] + oz * R[0][2];
-		v[1] = ox * R[1][0] + oy * R[1][1] + oz * R[1][2];
-		v[2] = ox * R[2][0] + oy * R[2][1] + oz * R[2][2];
-#endif
-	}
-
-	// AABB 다시 계산
-	uip.poly_model.AABB[XMIN] = uip.poly_model.AABB[YMIN] = uip.poly_model.AABB[ZMIN] = FLT_MAX;
-	uip.poly_model.AABB[XMAX] = uip.poly_model.AABB[YMAX] = uip.poly_model.AABB[ZMAX] = -FLT_MAX;
-	for (int i = 0; i < total_vertices; ++i) {
-		float* v = uip.poly_model.extended_vertices[i].vertex;
-		uip.poly_model.AABB[XMIN] = fminf(uip.poly_model.AABB[XMIN], v[0]);
-		uip.poly_model.AABB[XMAX] = fmaxf(uip.poly_model.AABB[XMAX], v[0]);
-		uip.poly_model.AABB[YMIN] = fminf(uip.poly_model.AABB[YMIN], v[1]);
-		uip.poly_model.AABB[YMAX] = fmaxf(uip.poly_model.AABB[YMAX], v[1]);
-		uip.poly_model.AABB[ZMIN] = fminf(uip.poly_model.AABB[ZMIN], v[2]);
-		uip.poly_model.AABB[ZMAX] = fmaxf(uip.poly_model.AABB[ZMAX], v[2]);
-	}
-
-	printf("CompositeObject rotated by %.1f degrees around axis (%.2f, %.2f, %.2f).\n",
-		angle_degrees, ux, uy, uz);
-}
-
 bool read_OBJ_geom_file(const char* filename, MeshGeom* mesh_geom) {
 	std::ifstream file(filename);
 	if (!file.is_open()) {
@@ -2825,11 +2726,7 @@ void subMenuHandler(int value) {
 #elif SIGMA_THRESHOLD_MODE==5
 	char* clip_mode_str = "_smT5";
 #endif
-#if ROTATION
-	const char* scale_mode_str = USE_KERNEL_SCALE ? "_rot_kernelScale" : "_rot";
-#else
 	const char* scale_mode_str = USE_KERNEL_SCALE ? "_ks" : "";
-#endif
 	// SAH_OPACITY 값에 따라 "_opacity<N>..." 형식으로 생성
 #if SAH_OPACITY >= 1000 && TRANSPARENCY
 	snprintf(suffix, sizeof(suffix), "%s_%.0f_transparency%d(%d)_%d_%d%s_%s",
@@ -3190,10 +3087,6 @@ void subMenuHandler(int value) {
 	create_composite_object_from_gaussians(g_gaussians);
 #if PROBLEMATIC_THRESHOLD != 1
 	removeProblematicGaussian(g_gaussians);
-#endif
-#if ROTATION
-	//printf("%s\n%s\n%s\n", ply_kdtree_path, ply_igeom_path, ply_to_obj);
-	rotate_composite_object(g_gaussians, 45.0f, 1.0f, 1.0f, 1.0f);
 #endif
 	uip.composite_object_read = 1;
 #if LEAF_NODE_DEBUG
