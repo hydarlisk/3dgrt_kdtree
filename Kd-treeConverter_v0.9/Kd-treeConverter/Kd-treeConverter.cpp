@@ -86,26 +86,6 @@ int build_kd_tree_for_composite_object(CompositeObject *c_object) {
 	build_kd_tree_recursive(g_bEdge, g_pPrimInfos, g_iPrimSize, g_root_AABB, 0, &(g_pKdTree_Node_Array[0]));
 
 	printf("after build_kd_tree_recursive\n");
-#if BSPT
-	#if !BSPT_NO_SPLIT
-	/* copy vertices to original vertex */
-	c_object->n_triangles = g_BSPTTris.size();
-	if (c_object->extended_vertices != NULL) {
-		free(c_object->extended_vertices);
-	}
-	size_t total_vertices = 3 * c_object->n_triangles;
-	c_object->extended_vertices = (ExtendedVertex*)malloc(total_vertices * sizeof(ExtendedVertex));
-	if (c_object->extended_vertices == NULL) {
-		fprintf(stderr, "Error: Memory allocation failed for i-geometry after build_kd_tree.\n");
-		exit(-1);
-	}
-	for (int i = 0; i < g_BSPTTris.size(); i++) {
-		for (int j = 0; j < 3; j++) {
-			c_object->extended_vertices[3 * i + j] = g_BSPTTris[i].point[j];
-		}
-	}
-	#endif
-#endif
 
 	fprintf(stdout, "  - Done!\n\n");
 	fprintf(stdout, "   * Tree Level: %d\n", g_iKdTree_Level);
@@ -142,10 +122,6 @@ int build_kd_tree_for_composite_object(CompositeObject *c_object) {
 	c_object->ellipsoidInternalDebug = &g_ellipsoidInternalDebug;
 #elif PRIMITIVE_TYPE == TRI
 	c_object->kd_tree->tri_accel_list = pTriAcc;
-	#if BSPT
-	c_object->kd_tree->bsptTree = g_BSPTNodes;
-	c_object->kd_tree->bsptTris = g_BSPTTris;
-	#endif
 #endif
 
 	fprintf(stdout, "\n> Done!\n\n");
@@ -352,12 +328,6 @@ void dump_kd_tree_for_composite_object(CompositeObject *c_object,
 		int nTriOffCount = c_object->kd_tree->prim_offset_count;
 		fwrite(&nTriOffCount, 4, 1, fp);
 	 	fwrite(c_object->kd_tree->prim_offset_list, 4, nTriOffCount, fp);
-#if BSPT
-		// Dump bspt node info
-		int nBSPTNodeCnt = c_object->kd_tree->bsptTree.size();
-		fwrite(&nBSPTNodeCnt, 4, 1, fp);
-		fwrite(c_object->kd_tree->bsptTree.data(), 32, nBSPTNodeCnt, fp);
-#endif
 	}
 	else {
 		fprintf(stdout, "   * Kd-tree format: ASCII\n");
@@ -501,13 +471,6 @@ int read_kd_tree_from_file(CompositeObject *c_object, const char *filename, int 
 		g_pKdTreePrimOffsetArray = new unsigned int[g_iKdTreePrimOffsetCnt_Alloc];
 		fread(g_pKdTreePrimOffsetArray, 4, nPrimOffCount, fp);
 #if PRIMITIVE_TYPE == TRI
-	#if BSPT
-		// Load BSPT info
-		int nBSPTNodeCnt = 0;
-		fread(&nBSPTNodeCnt, 4, 1, fp);
-		g_BSPTNodes.resize(nBSPTNodeCnt);
-		fread(g_BSPTNodes.data(), 32, nBSPTNodeCnt, fp);
-	#endif
 #endif
 
 		printf("KD_Tree_Node size %d * 8 = %d B\n", nTreeNodeCount, nTreeNodeCount * 8);
@@ -585,9 +548,6 @@ int read_kd_tree_from_file(CompositeObject *c_object, const char *filename, int 
 	}
 
 	c_object->kd_tree->tri_accel_list = pTriAcc;
-	#if BSPT
-	c_object->kd_tree->bsptTree = g_BSPTNodes;
-	#endif
 	fprintf(stdout, "->n_triangles: %d\n", c_object->n_triangles);
 	if (pTriAcc == NULL) fprintf(stdout, "triaccNULL\n");
 #endif

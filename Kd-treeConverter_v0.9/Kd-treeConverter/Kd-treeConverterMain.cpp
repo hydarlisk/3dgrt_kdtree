@@ -49,7 +49,6 @@ char* ply_to_obj_mtl;
 char* ply_kdtree_dump_path;
 char* ply_leafInfo_dump_path;
 char* ply_igeom_dump_path;
-char* ply_bspt_dump_path;
 
 //cudaEvent_t start_ev, stop_ev;
 char* kdtree_build_path;
@@ -2798,7 +2797,6 @@ void subMenuHandler(int value) {
 	static char final_kdtree_dump_path[512];
 	static char final_leafInfo_dump_path[512];
 	static char final_igeom_dump_path[512];
-	static char final_bspt_dump_path[512];
 
 	// Kd-treeConverter.h의 매크로를 기반으로 동적 접미사 생성
 	char suffix[256];
@@ -2881,20 +2879,13 @@ void subMenuHandler(int value) {
 		sah_mode_str);
 #else
 	// SAH_OPACITY가 0이면 "_normal..." 형식으로 생성
-#if BSPT
-	snprintf(suffix, sizeof(suffix), "%s_%.0f_normal_%d_%d%s_%s_BSPT",
-#else
 	snprintf(suffix, sizeof(suffix), "%s_%.0f_normal_%d_%d%s_%s",
-#endif
 		scale_mode_str,
 		ISCET_COST,
 		MIN_TRI,
 		FORCE_SPLIT_THRESHOLD,
 		clip_mode_str,
 		sah_mode_str);
-#if BSPT
-	snprintf(suffixDump_JS, sizeof(suffixDump_JS), "%s_%.0f_normal_%d_%d%s_%s_BSPT",
-#else
 	#if PRIMITIVE_TYPE == TRI
 		#if JS_BIN
 	snprintf(suffixDump_JS, sizeof(suffixDump_JS), "%s_%.0f_normal_%d_%d%s_%s_JS",
@@ -2904,7 +2895,6 @@ void subMenuHandler(int value) {
 	#else
 	snprintf(suffixDump_JS, sizeof(suffixDump_JS), "%s_%.0f_normal_%d_%d%s_%s",
 	#endif
-#endif
 		scale_mode_str,
 		ISCET_COST,
 		MIN_TRI,
@@ -3147,7 +3137,6 @@ void subMenuHandler(int value) {
 	std::string s_base_kdtree_str = root + name + "_tree.kdt";
 	std::string s_base_leafInfo_str = root + name + "_leafInfo.bin";
 	std::string s_base_igeom_str = root + name + "_igeom.bin";
-	std::string s_base_bspt_str = root + name + "_bspt.bin";
 	std::string s_base_obj_str = root + name + "_new.obj";
 	std::string s_base_build_str = root + name + "_kdt.txt";
 	std::string s_ply_to_obj_mtl = name + "_3dgrt.mtl";
@@ -3156,7 +3145,6 @@ void subMenuHandler(int value) {
 	const char* base_kdtree_str = s_base_kdtree_str.c_str();
 	const char* base_leafInfo_str = s_base_leafInfo_str.c_str();
 	const char* base_igeom_str = s_base_igeom_str.c_str();
-	const char* base_bspt_str = s_base_bspt_str.c_str();
 
 	const char* base_obj_str = s_base_obj_str.c_str();
 	const char* base_build_str = s_base_build_str.c_str();
@@ -3174,7 +3162,6 @@ void subMenuHandler(int value) {
 		construct_path_JS(final_kdtree_dump_path, sizeof(final_kdtree_dump_path), base_kdtree_str);
 		construct_path_JS(final_leafInfo_dump_path, sizeof(final_leafInfo_dump_path), base_leafInfo_str);
 		construct_path_JS(final_igeom_dump_path, sizeof(final_igeom_dump_path), base_igeom_str);
-		construct_path_JS(final_bspt_dump_path, sizeof(final_bspt_dump_path), base_bspt_str);
 
 		// 전역 변수에 최종 경로 할당
 		ply_kdtree_path = final_kdtree_path;
@@ -3186,7 +3173,6 @@ void subMenuHandler(int value) {
 		ply_kdtree_dump_path = final_kdtree_dump_path;
 		ply_leafInfo_dump_path = final_leafInfo_dump_path;
 		ply_igeom_dump_path = final_igeom_dump_path;
-		ply_bspt_dump_path = final_bspt_dump_path;
 	}
 
 	printf("%s\n%s\n%s\n%s\n%s\n", ply_file_path,
@@ -3194,12 +3180,7 @@ void subMenuHandler(int value) {
 		ply_igeom_path,
 		ply_to_obj,
 		kdtree_build_path);
-#if BSPT
-	printf("dump path :\n\t%s\n\t%s\n\t%s\n", ply_kdtree_dump_path, ply_igeom_dump_path, ply_bspt_dump_path);
-#else
 	printf("dump path :\n\t%s\n\t%s\n", ply_kdtree_dump_path, ply_igeom_dump_path);
-#endif
-
 	// 3DGS 학습 결과물을 로드
 	if (!loadGaussiansFromPly(ply_file_path, g_gaussians)) {
 		fprintf(stderr, "Failed to load ply file\n");

@@ -125,9 +125,3 @@ std::vector<LeafNodeInfo> extract_all_leaf_data(CompositeObject* c_object, int& 
 inline double get_surface_area(const BoundingBox& box);
 inline double get_surface_volume(const BoundingBox& box);
 //shyun added end
-
-/* binary space partitioning tree */
-#if BSPT
-extern std::vector<BSPNode> g_BSPTNodes;
-extern std::vector<PrimList> g_BSPTTris;
-#endif

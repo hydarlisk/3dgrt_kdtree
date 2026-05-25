@@ -44,7 +44,7 @@
 #if PRIMITIVE_TYPE == ELLIPSOID && ELLIPSOID_DEBUG
 	#define DEBUG_ELLIPSOID_CLIP_AABB 1
 	#define DEBUG_ELLIPSOID_INTERNAL 1
-	#define DEBUG_LEAF_CUDA 1
+	#define DEBUG_LEAF_CUDA 0
 	#undef OCCLUDE_MIN_OPACITY_TRI
 	#define OCCLUDE_MIN_OPACITY_TRI 0
 #endif
@@ -78,16 +78,8 @@
 
 #define ADAPTIVE_KERNEL_CLAMPING 1
 
-/* BSPT */
-#define BSPT false
-#define BSPT_MAX_STACK_DEPTH 64
-#define BSPT_MAX_HITS 95
-#define BSPT_NO_SPLIT false
-#define BSPT_DUMP_STATISTICS false
-#define CLIP_BEFORE_BSPT false
-
-#define FORCE_SPLIT_THRESHOLD 64				// kd-tree 강제분할
-//#define FORCE_SPLIT_THRESHOLD 256				// kd-tree 강제분할
+//#define FORCE_SPLIT_THRESHOLD 64				// kd-tree 강제분할
+#define FORCE_SPLIT_THRESHOLD 256				// kd-tree 강제분할
 //#define FORCE_SPLIT_THRESHOLD 256				// kd-tree 강제분할
 //#define SOFT_SPLIT_THRESHOLD 128				// kd-tree 강제분할(완화)
 #define SOFT_SPLIT_THRESHOLD2 256				// kd-tree 강제분할(완화)
@@ -107,13 +99,6 @@
 #if PRIMITIVE_TYPE == ELLIPSOID
 	#undef ISCET_COST
 	#define ISCET_COST 20.0
-	#undef BSPT
-	#define BSPT 0
-#endif
-
-#if BSPT
-#undef JS_BIN
-#define JS_BIN false
 #endif
 
 #define BLEND_SELECT false
@@ -487,40 +472,6 @@ typedef struct _PrimList {
 #endif
 } PrimList;
 
-#if BSPT
-enum Side { FRONT, BACK, STRADDLE, ON_PLANE };
-
-//bspt node for build
-struct BSPNode_Build {
-	float n[3];
-	float d;
-
-	//TODO
-	//float x;	//x >> 3 : front child, x >> 3 + 1 : back child
-				//IS_LEAF(node) node.x & 7 == 3
-	BSPNode_Build* front = nullptr;
-	BSPNode_Build* back = nullptr;
-
-	std::vector<PrimList> onPlaneTriangles;
-};
-
-//final bspt node
-struct BSPNode {
-	float n[3];
-	float d;
-
-	//TODO
-	//float x;	//x >> 3 : front child, x >> 3 + 1 : back child
-				//IS_LEAF(node) node.x & 7 == 3
-	int frontChild;
-	int backChild;
-
-	unsigned int triStart;
-	unsigned int triCnt;
-};
-
-#endif
-
 typedef struct _KdTreeNode {
 	// 8 bytes
 	unsigned int x; unsigned int y;
@@ -535,10 +486,6 @@ typedef struct _KdTree {
 	TriAccel *tri_accel_list;
 #endif
 	float AABB[6];
-#if BSPT
-	std::vector<BSPNode> bsptTree;
-	std::vector<PrimList> bsptTris;
-#endif
 } KdTree;
 
 typedef struct LeafForDump {
@@ -655,28 +602,3 @@ void loadLeafDebug(const char* filename, std::vector<std::vector<PrimList>>& lea
 #define OBJECT_SIZE(node)			( (node).x >> 3)
 #define OBJECTLIST_OFFSET(node)		( (node).y)
 #endif
-
-#if BSPT
-#define BSPT_OFFSET(node) ((node).y)
-#endif
-
-//int HS;
-//#define TABLE(i, j) table[(i)*(HS+1)+(j)]
-//
-//void build_DP_table(int* a, int* table, int n) {
-//	for (int i = 0; i <= n; i++) TABLE(i, 0) = 1;
-//	for (int j = 0; j <= n; j++) TABLE(0, j) = 1;
-//
-//	for (int i = 1; i <= n; i++) {
-//		for (int j = 1; j <= HS; j++) {
-//			if ( < Part_B > )
-//				TABLE(i, j) = 1;
-//			else {
-//				if ((a[i] <= j) && ( < Part_C > ))
-//					TABLE(i, j) = 1;
-//				else
-//					TABLE(i, j) = 0;
-//			}
-//		}
-//	}
-//}
