@@ -28,6 +28,7 @@
 
 #if PRIMITIVE_TYPE == ELLIPSOID_BY_TRI
 #include <set>
+#include <unordered_map>
 #endif
 
 using namespace std;
@@ -660,7 +661,18 @@ void try_to_split(const int axis, BoundingBox &inBBox, const PrimList *pTriangle
 	// ===========================================================
 	// nlogn 방식처럼 정렬하지 않음, edge 의 type 은 고려하지 않고 순수히 위치로만 정렬함
 	const unsigned n_bEdge = triangleSize * 2;
-	set_bound_edge( axis, pTriangles, n_bEdge, bEdge );
+	set_bound_edge(axis, pTriangles, n_bEdge, bEdge);
+
+#if COUNT_BY_GID
+	std::unordered_map<int, int> total_ends;
+	for (unsigned int k = 0; k < n_bEdge; k++) {
+		if (bEdge[k].type == BoundEdge::END) {
+			total_ends[bEdge[k].triangleInfo->offset]++;
+		}
+	}
+	std::set<int> seen_starts;
+	std::unordered_map<int, int> seen_ends;
+#endif
 
 	for (unsigned int i = 0; i < n_bEdge; i++) {
 		BoundEdge curr_bEdge = bEdge[i];
@@ -689,17 +701,37 @@ void try_to_split(const int axis, BoundingBox &inBBox, const PrimList *pTriangle
 					is_left = (tmp_bEdge.type == BoundEdge::START),
 					is_planar = tmp_bEdge.isPlanar,
 					is_normalPositive = tmp_bEdge.isNormalPositive;
-				//카운팅
-				if (!is_planar) {
-					local_open += is_left ? 1 : 0; //!< box 의 왼쪽은 local_open 을 증가
-					local_close += is_left ? 0 : 1; //!< box 의 오른쪽은 local_close 를 증가
+
+				bool shouldCount = true;
+#if COUNT_BY_GID
+				int gId = tmp_bEdge.triangleInfo->offset;
+				shouldCount = false;
+
+				if (is_left) {
+					if (seen_starts.insert(gId).second) {
+						shouldCount = true;
+					}
 				}
 				else {
-					//플라나하다면 따로 카운팅
-					num_planars += is_left ? 1 : 0;	// only count it once
-					num_normalPositive += is_normalPositive ? 1 : 0;
-
+					seen_ends[gId]++;
+					if (seen_ends[gId] == total_ends[gId]) {
+						shouldCount = true;
+					}
 				}
+#endif
+				if (shouldCount) {
+					//카운팅
+					if (!is_planar) {
+						local_open += is_left ? 1 : 0; //!< box 의 왼쪽은 local_open 을 증가
+						local_close += is_left ? 0 : 1; //!< box 의 오른쪽은 local_close 를 증가
+					}
+					else {
+						//플라나하다면 따로 카운팅
+						num_planars += is_left ? 1 : 0;	// only count it once
+						num_normalPositive += is_normalPositive ? 1 : 0;
+					}
+				}
+
 				curr_bEdge = tmp_bEdge;
 				i = j;
 			}
@@ -723,7 +755,11 @@ void try_to_split(const int axis, BoundingBox &inBBox, const PrimList *pTriangle
 			const int
 				n_leftOnly = close + local_close,  // close 가 된다면 그 삼각형은 오른쪽에 있지도 않게 됨 (겹치지도 않음)
 				n_cross = open - n_leftOnly,   // open = n_leftOnly + n_cross (현재 local_open 은 포함하지 않음)
+#if COUNT_BY_GID
+				n_rightOnly = total_ends.size() - (n_leftOnly + n_cross + num_planars);
+#else
 				n_rightOnly = triangleSize - (n_leftOnly + n_cross + num_planars);
+#endif
 
 			// planar  는 local_open 에 해당하는 것만 카운팅함.
 			// n_cross 는 local_open 은 고려하지 않음. 즉, planar 도 고려하지 않음.
@@ -1315,7 +1351,15 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const PrimList* pTriangleInfos, u
 	}
 
 	// Calculate cost function (in case of no partition)
+#if COUNT_BY_GID
+	std::set<int> gIdsTris;
+	for (int i = 0; i < triangleSize; i++) {
+		gIdsTris.insert(pTriangleInfos[i].offset);
+	}
+	bestCost.cost = double(gIdsTris.size()) * v_KD_TREE_ISECT_COST;
+#else
 	bestCost.cost = double(triangleSize) * v_KD_TREE_ISECT_COST;
+#endif
 
 #if FORCE_SPLIT_THRESHOLD
 	//#define MAX_TRIANGLE_OFFSET_BUDGET 18446744073709551615

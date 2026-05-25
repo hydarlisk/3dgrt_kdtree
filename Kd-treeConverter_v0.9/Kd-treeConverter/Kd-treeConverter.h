@@ -36,6 +36,14 @@
 	#define DIRECT_ROT_CALC 1
 	#define STORE_GRAYDIST 0
 
+/*** ellipsoid_by_tri ***/
+
+#define COUNT_BY_GID 1
+//////////////////////////
+#if PRIMITIVE_TYPE == TRI
+#undef COUNT_BY_GID
+#define COUNT_BY_GID 0
+#endif
 /////////////**** Debug ****///////////////
 /* Ellipsoid */
 #define ELLIPSOID_DEBUG 1

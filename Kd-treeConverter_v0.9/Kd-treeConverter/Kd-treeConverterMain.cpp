@@ -1749,7 +1749,7 @@ void create_composite_object_from_gaussians(
 #if USE_KERNEL_SCALE
 		//if (sigma / kernelMinResponse > 1.0f)
 		// kernelScale_final 함수를 호출하여 k_iso 계산
-		k_iso = kernelScale_final(sigma, kernelMinResponse,   kernel_degree, ADAPTIVE_KERNEL_CLAMPING) * 0.5f * icosaEdge;
+		k_iso = kernelScale_final(sigma, kernelMinResponse, kernel_degree, ADAPTIVE_KERNEL_CLAMPING) * 0.5f * icosaEdge;
 #else
 		if (sigma / kernelMinResponse > 1.0f) {
 			k_iso = sqrtf(2.0f * logf(sigma / kernelMinResponse)) * unitspherefactor;
@@ -2757,11 +2757,12 @@ void subMenuHandler(int value) {
 	char suffixDumpTri[256];
 	char suffixDumpKdt[256];
 
+	char* sahMode = ((PRIMITIVE_TYPE == ELLIPSOID_BY_TRI) && COUNT_BY_GID) ? "_sah1" : "";
 	char* versionExt = KDT_VERSION ? "__v1" : "";
 
 	// 일반 파일 접미사 조립
 	// 형태: [scale]_[iscet]_[opacity]_[mintri]_[split][maxlevel][clip]_[sah]
-	snprintf(suffix, sizeof(suffix), "%s_%d_%s_%d_%d%s%s_%s%s",
+	snprintf(suffix, sizeof(suffix), "%s_%d_%s_%d_%d%s%s_%s%s%s",
 		scale_mode_str,
 		static_cast<int>(ISCET_COST),
 		opacity_part,
@@ -2770,6 +2771,7 @@ void subMenuHandler(int value) {
 		max_level_part,
 		clip_mode_str,
 		primitiveType,
+		sahMode,
 		versionExt
 	);
 
