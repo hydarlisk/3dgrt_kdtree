@@ -13,13 +13,12 @@
 #define CAM_MOVE_SHIFT 0.01
 
 /* data format */
-#define JS_BIN false
-#define COMPACT_VERTEX true
-#define KDT_VERSION 0
+#define JS_BIN true
+#define KDT_VERSION 1
 
 /* ply read */
 #define OCCLUDE_MIN_OPACITY 1
-#define OCCLUDE_MIN_OPACITY_TRI 0
+#define OCCLUDE_MIN_OPACITY_TRI 1
 #define PROBLEMATIC_THRESHOLD 1	//remove dominant prim from gaussian data
 
 /* primitive type */

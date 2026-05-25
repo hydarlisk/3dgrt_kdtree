@@ -383,7 +383,7 @@ void dump_kd_tree_for_composite_object(CompositeObject *c_object,
 #if JS_BIN
 	printf("aabb min : %f %f %f\n", c_object->AABB[0], c_object->AABB[1], c_object->AABB[2]);
 	printf("aabb max : %f %f %f\n", c_object->AABB[3], c_object->AABB[4], c_object->AABB[5]);
-	#if COMPACT_VERTEX
+	#if KDT_VERSION
 	// vertex array length (4byte) (16byte * n_triangles * 3)
 	// vertex array data
 	struct CompactVertex {
