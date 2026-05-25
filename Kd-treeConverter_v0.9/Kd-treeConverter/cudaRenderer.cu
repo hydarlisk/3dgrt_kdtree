@@ -1468,10 +1468,10 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
     } // if (BoundsRayIntersect)
 #if DEBUG_LEAF_CUDA
     /* debug */
-    int k;
+    float k;
     float3 blue = make_float3(0.f, 0.0f, 1.f);
     float3 green = make_float3(0.f, 1.0f, 0.f);
-    float3 yellow = make_float3(1.f, 1.0f, 1.f);
+    float3 yellow = make_float3(1.f, 1.0f, 0.f);
     float3 red = make_float3(1.f, 0.0f, 0.f);
     float3 p = make_float3(1.f, 0.0f, 1.f);
     float3 white = make_float3(1.0f, 1.0f, 1.0f);
