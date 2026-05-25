@@ -2699,22 +2699,19 @@ void subMenuHandler(int value) {
 	static char final_leafInfo_dump_path[512];
 	static char final_igeom_dump_path[512];
 
-	// Kd-treeConverter.h의 매크로를 기반으로 동적 접미사 생성
-	char suffix[256];
-	char suffixDump_JS[256];
-	//const char* sah_mode_str = SAH_MAXIMIZE ? "maximize" : "minimize";
-#if PRIMITIVE_TYPE == ELLIPSOID
-	const char* sah_mode_str = "ellipsoid";
-#elif PRIMITIVE_TYPE == ELLIPSOID_BY_TRI
-	const char* sah_mode_str = "ellipsoid_tri";
-#else
-	const char* sah_mode_str = ADAPTIVE_MESH ? "adaptive" : "icosa";
-#endif
-	//const char* clip_mode_str = EXPORTED ? "_exported" : "";
-
 	printf("SIGMA_THRESHOLD_MODE: %f\n", static_cast<float>(SIGMA_THRESHOLD_MODE));
 	printf("SIGMA_THRESHOLD: %f\n", SIGMA_THRESHOLD_MODE / 255.0f);
 	printf("%f %f %f %f %f\n", 1.0f / 255.0f, 2.0f / 255.0f, 3.0f / 255.0f, 4.0f / 255.0f, 5.0f / 255.0f);
+
+	//const char* primitiveType = SAH_MAXIMIZE ? "maximize" : "minimize";
+#if PRIMITIVE_TYPE == ELLIPSOID
+	const char* primitiveType = "ellipsoid";
+#elif PRIMITIVE_TYPE == ELLIPSOID_BY_TRI
+	const char* primitiveType = "ellipsoid_tri";
+#else
+	const char* primitiveType = ADAPTIVE_MESH ? "adaptive" : "icosa";
+#endif
+	//const char* clip_mode_str = EXPORTED ? "_exported" : "";
 #if SIGMA_THRESHOLD_MODE==true || SIGMA_THRESHOLD_MODE==false
 	char* clip_mode_str = SIGMA_THRESHOLD_MODE ? "_smT" : "";
 #elif SIGMA_THRESHOLD_MODE==2
@@ -2726,124 +2723,56 @@ void subMenuHandler(int value) {
 #elif SIGMA_THRESHOLD_MODE==5
 	char* clip_mode_str = "_smT5";
 #endif
-	const char* scale_mode_str = USE_KERNEL_SCALE ? "_ks" : "";
-	// SAH_OPACITY 값에 따라 "_opacity<N>..." 형식으로 생성
-#if SAH_OPACITY >= 1000 && TRANSPARENCY
-	snprintf(suffix, sizeof(suffix), "%s_%.0f_transparency%d(%d)_%d_%d%s_%s",
-		scale_mode_str,
-		ISCET_COST,
-		SAH_OPACITY,
-	#if SAH_OPACITY == 1000 || SAH_OPACITY == 2000 || SAH_OPACITY == 2010
-		HYBRID_SAH_DEPTH_THRESHOLD,
-	#elif SAH_OPACITY == 1001
-		HYBRID_SAH_TRIANGLE_THRESHOLD,
-	#endif
-		MIN_TRI,
-		FORCE_SPLIT_THRESHOLD,
-		clip_mode_str,
-		sah_mode_str);
-#elif SAH_OPACITY >= 1000
-	snprintf(suffix, sizeof(suffix), "%s_%.0f_opacity%d(%d)_%d_%d%s_%s",
-		scale_mode_str,
-		ISCET_COST,
-		SAH_OPACITY,
-	#if SAH_OPACITY == 1000 || SAH_OPACITY == 2000 || SAH_OPACITY == 2010
-		HYBRID_SAH_DEPTH_THRESHOLD,
-	#elif SAH_OPACITY == 1001
-		HYBRID_SAH_TRIANGLE_THRESHOLD,
-	#endif
-		MIN_TRI,
-		FORCE_SPLIT_THRESHOLD,
-		clip_mode_str,
-		sah_mode_str);
-#elif SAH_OPACITY > 0 && TRANSPARENCY
-	snprintf(suffix, sizeof(suffix), "%s_%.0f_transparency%d_%d_%d%s_%s",
-		scale_mode_str,
-		ISCET_COST,
-		SAH_OPACITY,
-		MIN_TRI,
-		FORCE_SPLIT_THRESHOLD,
-		clip_mode_str,
-		sah_mode_str);
-#elif SAH_OPACITY > 0
-	snprintf(suffix, sizeof(suffix), "%s_%.0f_opacity%d_%d_%d%s_%s",
-		scale_mode_str,
-		ISCET_COST,
-		SAH_OPACITY,
-		MIN_TRI,
-		FORCE_SPLIT_THRESHOLD,
-		clip_mode_str,
-		sah_mode_str);
-#else
-	// SAH_OPACITY가 0이면 "_normal..." 형식으로 생성
-	snprintf(suffix, sizeof(suffix), "%s_%.0f_normal_%d_%d%s_%s",
-		scale_mode_str,
-		ISCET_COST,
-		MIN_TRI,
-		FORCE_SPLIT_THRESHOLD,
-		clip_mode_str,
-		sah_mode_str);
-	#if PRIMITIVE_TYPE == TRI
-		#if JS_BIN
-	snprintf(suffixDump_JS, sizeof(suffixDump_JS), "%s_%.0f_normal_%d_%d%s_%s_JS",
-		#else
-	snprintf(suffixDump_JS, sizeof(suffixDump_JS), "%s_%.0f_normal_%d_%d%s_%s",
-		#endif
-	#else
-	snprintf(suffixDump_JS, sizeof(suffixDump_JS), "%s_%.0f_normal_%d_%d%s_%s",
-	#endif
-		scale_mode_str,
-		ISCET_COST,
-		MIN_TRI,
-		FORCE_SPLIT_THRESHOLD,
-		clip_mode_str,
-		sah_mode_str);
-	#if MAX_LEVEL != 128
-	snprintf(suffix, sizeof(suffix), "%s_%.0f_normal_%d_%d_%d%s_%s",
-		scale_mode_str,
-		ISCET_COST,
-		MIN_TRI,
-		FORCE_SPLIT_THRESHOLD,
-		MAX_LEVEL,
-		clip_mode_str,
-		sah_mode_str);
-	snprintf(suffixDump_JS, sizeof(suffixDump_JS), "%s_%.0f_normal_%d_%d_%d%s_%s_JS",
-		scale_mode_str,
-		ISCET_COST,
-		MIN_TRI,
-		FORCE_SPLIT_THRESHOLD,
-		MAX_LEVEL,
-		clip_mode_str,
-		sah_mode_str);
-	#endif
-#endif
-	// 동적으로 완전한 파일 경로를 만드는 헬퍼 람다 함수
-	auto construct_path = [&](char* buffer, size_t buffer_size, const char* base_path) {
-		const char* extension = strrchr(base_path, '.');
-		if (extension) {
-			int base_len = extension - base_path;
-			// snprintf를 사용하여 "기반경로 + 접미사 + 확장자" 형식으로 조합
-			snprintf(buffer, buffer_size, "%.*s%s%s", base_len, base_path, suffix, extension);
-		}
-		else {
-			// 확장자가 없는 경우 (만약을 대비)
-			snprintf(buffer, buffer_size, "%s%s", base_path, suffix);
-		}
-	};
 
-	// 동적으로 완전한 파일 경로를 만드는 헬퍼 람다 함수 (dump용)
-	auto construct_path_JS = [&](char* buffer, size_t buffer_size, const char* base_path) {
-		const char* extension = strrchr(base_path, '.');
-		if (extension) {
-			int base_len = extension - base_path;
-			// snprintf를 사용하여 "기반경로 + 접미사 + 확장자" 형식으로 조합
-			snprintf(buffer, buffer_size, "%.*s%s%s", base_len, base_path, suffixDump_JS, extension);
-		}
-		else {
-			// 확장자가 없는 경우 (만약을 대비)
-			snprintf(buffer, buffer_size, "%s%s", base_path, suffixDump_JS);
-		}
-		};
+	const char* scale_mode_str = USE_KERNEL_SCALE ? "_ks" : "";
+
+	// scaleMode_IscetCost
+	std::string base_suffix = std::string(scale_mode_str) + "_" + std::to_string(static_cast<int>(ISCET_COST)) + "_";
+
+	// Opacity 파트 처리 (복잡한 괄호 조건 등을 하나의 문자열로 정리)
+	char opacity_part[64] = "normal";
+#if SAH_OPACITY > 0
+	const char* type_str = TRANSPARENCY ? "transparency" : "opacity";
+#if SAH_OPACITY >= 1000
+#if SAH_OPACITY == 1000 || SAH_OPACITY == 2000 || SAH_OPACITY == 2010
+	snprintf(opacity_part, sizeof(opacity_part), "%s%d(%d)", type_str, SAH_OPACITY, HYBRID_SAH_DEPTH_THRESHOLD);
+#elif SAH_OPACITY == 1001
+	snprintf(opacity_part, sizeof(opacity_part), "%s%d(%d)", type_str, SAH_OPACITY, HYBRID_SAH_TRIANGLE_THRESHOLD);
+#else
+	snprintf(opacity_part, sizeof(opacity_part), "%s%d", type_str, SAH_OPACITY);
+#endif
+#else
+	snprintf(opacity_part, sizeof(opacity_part), "%s%d", type_str, SAH_OPACITY);
+#endif
+#endif
+
+	// Max Level 파트 처리
+	char max_level_part[32] = "";
+#if SAH_OPACITY == 0 && MAX_LEVEL != 128
+	snprintf(max_level_part, sizeof(max_level_part), "_%d", MAX_LEVEL);
+#endif
+
+
+	char suffix[256];
+	char suffixDumpTri[256];
+	char suffixDumpKdt[256];
+
+	char* versionExt = KDT_VERSION ? "__v1" : "";
+
+	// 일반 파일 접미사 조립
+	// 형태: [scale]_[iscet]_[opacity]_[mintri]_[split][maxlevel][clip]_[sah]
+	snprintf(suffix, sizeof(suffix), "%s_%d_%s_%d_%d%s%s_%s%s",
+		scale_mode_str,
+		static_cast<int>(ISCET_COST),
+		opacity_part,
+		MIN_TRI,
+		FORCE_SPLIT_THRESHOLD,
+		max_level_part,
+		clip_mode_str,
+		primitiveType,
+		versionExt
+	);
+
 	std::string assetName{};
 	switch (value) {
 	case 101: printf("Hotdog selected\n");
@@ -3049,16 +2978,27 @@ void subMenuHandler(int value) {
 
 	//printCameraInfo();
 
-	if (!assetName.empty()) {
-		construct_path(final_kdtree_path, sizeof(final_kdtree_path), base_kdtree_str);
-		construct_path(final_igeom_path, sizeof(final_igeom_path), base_igeom_str);
-		construct_path(final_obj_path, sizeof(final_obj_path), base_obj_str);
-		construct_path(final_build_path, sizeof(final_build_path), base_build_str);
-		construct_path(final_leafInfo_path, sizeof(final_leafInfo_path), base_leafInfo_str);
+	auto construct_path = [](char* buffer, size_t buffer_size, const char* base_path, const char* current_suffix) {
+		const char* extension = strrchr(base_path, '.');
+		if (extension) {
+			int base_len = extension - base_path;
+			snprintf(buffer, buffer_size, "%.*s%s%s", base_len, base_path, current_suffix, extension);
+		}
+		else {
+			snprintf(buffer, buffer_size, "%s%s", base_path, current_suffix);
+		}
+	};
 
-		construct_path_JS(final_kdtree_dump_path, sizeof(final_kdtree_dump_path), base_kdtree_str);
-		construct_path_JS(final_leafInfo_dump_path, sizeof(final_leafInfo_dump_path), base_leafInfo_str);
-		construct_path_JS(final_igeom_dump_path, sizeof(final_igeom_dump_path), base_igeom_str);
+	if (!assetName.empty()) {
+		construct_path(final_kdtree_path, sizeof(final_kdtree_path), base_kdtree_str, suffix);
+		construct_path(final_igeom_path, sizeof(final_igeom_path), base_igeom_str, suffix);
+		construct_path(final_leafInfo_path, sizeof(final_leafInfo_path), base_leafInfo_str, suffix);
+		construct_path(final_obj_path, sizeof(final_obj_path), base_obj_str, suffix);
+		construct_path(final_build_path, sizeof(final_build_path), base_build_str, suffix);
+
+		construct_path(final_kdtree_dump_path, sizeof(final_kdtree_dump_path), base_kdtree_str, suffix);
+		construct_path(final_leafInfo_dump_path, sizeof(final_leafInfo_dump_path), base_leafInfo_str, suffix);
+		construct_path(final_igeom_dump_path, sizeof(final_igeom_dump_path), base_igeom_str, suffix);
 
 		// 전역 변수에 최종 경로 할당
 		ply_kdtree_path = final_kdtree_path;

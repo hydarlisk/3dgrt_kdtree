@@ -93,8 +93,6 @@
 	#define QUATERNION true
 	#undef ISCET_COST
 	#define ISCET_COST 5.0
-	#undef KDT_VERSION
-	#define KDT_VERSION 0
 #endif
 #if PRIMITIVE_TYPE == ELLIPSOID
 	#undef ISCET_COST

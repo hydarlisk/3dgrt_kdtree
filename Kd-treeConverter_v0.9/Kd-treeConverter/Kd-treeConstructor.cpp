@@ -1641,7 +1641,7 @@ std::vector<LeafNodeInfo> extract_all_leaf_data(CompositeObject* c_object, int& 
 
 	std::vector<LeafNodeInfo> all_leaf_info;
 
-	unsigned int max_triangles_found = 0;
+	unsigned int max_prims_found = 0;
 	largest_leaf_index = -1;
 
 	while (!kd_stack.empty()) {
@@ -1664,8 +1664,8 @@ std::vector<LeafNodeInfo> extract_all_leaf_data(CompositeObject* c_object, int& 
 
 			all_leaf_info.push_back(leaf);
 			// --------------------
-			if (num_triangles > max_triangles_found) {
-				max_triangles_found = num_triangles;
+			if (num_triangles > max_prims_found) {
+				max_prims_found = num_triangles;
 				largest_leaf_index = all_leaf_info.size() - 1;
 			}
 		}
@@ -1683,8 +1683,8 @@ std::vector<LeafNodeInfo> extract_all_leaf_data(CompositeObject* c_object, int& 
 		}
 	}
 	if (largest_leaf_index != -1) {
-		printf("[INFO] Largest leaf found at index %d with %u triangles.\n",
-			largest_leaf_index, max_triangles_found);
+		printf("[INFO] Largest leaf found at index %d with %u primitives.\n",
+			largest_leaf_index, max_prims_found);
 	}
 	largest_leaf_index = all_leaf_info.size() - 1;
 	std::sort(all_leaf_info.begin(), all_leaf_info.end());

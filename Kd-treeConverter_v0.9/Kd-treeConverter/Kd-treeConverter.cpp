@@ -560,7 +560,7 @@ int read_kd_tree_from_file(CompositeObject *c_object, const char *filename, int 
 void loadLeafDebug(const char* filename, std::vector<std::vector<PrimList>>& leafDebug) {
 	std::ifstream inFile(filename, std::ios::binary);
 	if (!inFile.is_open()) {
-		std::cerr << "Error: Cannot open file for reading: " << filename << std::endl;
+		std::cerr << "Error: Cannot open leafinfo file for reading: " << filename << std::endl;
 		return;
 	}
 	leafDebug.clear();
