@@ -3206,9 +3206,11 @@ void main_menu_action(int selection) {
 		}
 		printf("full_kd_tree_file_name:%s\n", full_kd_tree_file_name);
 		read_kd_tree_from_file(&uip.poly_model, full_kd_tree_file_name, uip.kd_tree_dump_format);
-		//void loadLeafDebug(const std::string & filename, std::vector<std::vector<PrimList>>*leafDebug)
+
+#if DEBUG_LEAF_GL		
 		loadLeafDebug(full_leafNode_file_name, g_leafDebug);
 		uip.poly_model.leafDebug = &g_leafDebug;
+#endif
 
 		//printKdTreeLeafNodeInfo();
 #if LEAF_NODE_DEBUG

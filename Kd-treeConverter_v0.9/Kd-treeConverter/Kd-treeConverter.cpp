@@ -368,10 +368,12 @@ void dump_kd_tree_for_composite_object(CompositeObject *c_object,
 	}
 	fclose(fp);
 
+#if DEBUG_LEAF_GL
 	/*** dump leafnode infos ***/
 	if (filename_leaf != nullptr) {
 		dumpLeafDebug(filename_leaf, g_leafDebug);
 	}
+#endif
 
 	/*** dump triangle ***/
 #if PRIMITIVE_TYPE == TRI
@@ -591,6 +593,27 @@ bool read_igeom_from_file(CompositeObject* c_object, const char* filename) {
 		return false;
 	}
 
+#if KDT_VERSION
+	struct CompactVertex {
+		float pos[3];
+		int material_ID;
+	};
+
+	int tmpSize;
+	fread(&tmpSize, sizeof(int), 1, fp);
+	c_object->n_triangles = tmpSize / 3 / (sizeof(CompactVertex) / sizeof(float));
+	size_t total_vertices = 3 * c_object->n_triangles;
+	c_object->extended_vertices = (ExtendedVertex*)malloc(total_vertices * sizeof(ExtendedVertex));
+	std::vector<CompactVertex> tmp(total_vertices);
+	fread(tmp.data(), sizeof(CompactVertex), total_vertices, fp);
+	for (int i = 0; i < total_vertices; i++) {
+		c_object->extended_vertices[i].material_ID = tmp[i].material_ID;
+		c_object->extended_vertices[i].vertex[0] = tmp[i].pos[0];
+		c_object->extended_vertices[i].vertex[1] = tmp[i].pos[1];
+		c_object->extended_vertices[i].vertex[2] = tmp[i].pos[2];
+	}
+	tmp.clear();
+#else
 	// 1. 삼각형 개수 읽기
 	fread(&(c_object->n_triangles), sizeof(int), 1, fp);
 
@@ -610,8 +633,8 @@ bool read_igeom_from_file(CompositeObject* c_object, const char* filename) {
 		fclose(fp);
 		return false;
 	}
-
 	fread(c_object->extended_vertices, sizeof(ExtendedVertex), total_vertices, fp);
+#endif
 
 	fclose(fp);
 	fprintf(stdout, "Loaded i-geometry: %d triangles from %s\n", c_object->n_triangles, filename);
