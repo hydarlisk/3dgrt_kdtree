@@ -43,6 +43,8 @@ char* ply_file_path;
 char* ply_kdtree_path;
 char* ply_leafInfo_path;
 char* ply_igeom_path;
+char* ply_kdtInfo_path;
+
 char* ply_to_obj;
 char* ply_to_obj_mtl;
 
@@ -2683,21 +2685,145 @@ void printCameraInfo() {
 	printCameraConfigStyle(&camera);
 }
 
+void dumpKdtreeInfo(char* filename) {
+	if (!uip.poly_model.kd_tree) {
+		printf("Kd-tree is not available.\n");
+		return;
+	}
+
+	std::ofstream outFile(filename);
+	if (!outFile.is_open()) {
+		std::cerr << "Error: Cannot open file for writing: " << filename << std::endl;
+		return;
+	}
+
+	outFile << "  * # of Primitives: " << uip.poly_model.kd_tree->prim_offset_count << "\n\n";
+
+	outFile << "  * AABB: [";
+	outFile.precision(2); outFile << std::fixed;
+	outFile.width(7); outFile << uip.poly_model.AABB[0] << ", ";
+	outFile.width(7); outFile << uip.poly_model.AABB[1] << "] x [";
+	outFile.width(7); outFile << uip.poly_model.AABB[2] << ", ";
+	outFile.width(7); outFile << uip.poly_model.AABB[3] << "] x [";
+	outFile.width(7); outFile << uip.poly_model.AABB[4] << ", ";
+	outFile.width(7); outFile << uip.poly_model.AABB[5] << "]\n\n";
+
+	outFile.precision(3);
+	outFile << "  * Empty Bonus: " << std::setw(7) << v_KD_TREE_EMTPY_BONUS << "\n";
+	outFile << "  * Travel Cost: " << std::setw(7) << v_KD_TREE_TRAVL_COST << "\n";
+	outFile << "  * Intersection Cost: " << std::setw(7) << v_KD_TREE_ISECT_COST << "\n";
+	outFile << "  * Max Tree Level: " << v_KD_TREE_MAX_LEVEL << "\n";
+	outFile << "  * Min # of Triangles per Leaf: " << v_KD_TREE_MIN_PRIMITIVE << "\n";
+
+#if FORCE_SPLIT_THRESHOLD
+	outFile << "  * Max # of Triangles per Leaf: " << FORCE_SPLIT_THRESHOLD << "\n";
+#else
+	outFile << "  * Max # of Triangles per Leaf: none\n";
+#endif
+
+	outFile << "  * SAH_MAXIMIZE Mode: " << (SAH_MAXIMIZE ? "maximize" : "minimize") << "\n";
+	outFile << "  * CLIP_AREA " << (CLIP_AREA ? "clip" : "none") << "\n";
+	outFile << "  * SAH_OPACITY Mode: [" << SAH_OPACITY << "] P_s * N_s\n";
+	outFile << "  * Adaptive Mesh Mode: " << (ADAPTIVE_MESH ? "Adaptive" : "Icosa") << "\n";
+	outFile << "  * Kernel Scale Mode: " << (USE_KERNEL_SCALE ? "KernelScale" : "Paper") << "\n";
+
+	outFile << "  - Done!\n\n";
+	outFile << "   * Tree Level: " << g_iKdTree_Level << "\n";
+
+	// 노드 카운트 출력 (%5d 및 소수점 1자리 %%.1f)
+	outFile << "   * Node Count (All,Leaf,Empty) : ";
+	outFile << std::setw(5) << g_iKdTree_Node_Count << ", ";
+	outFile << std::setw(5) << g_iKdTree_LeafNode_Count << ", ";
+	outFile << std::setw(5) << g_iKdTree_EmptyNode_Count << "(";
+	outFile.precision(1);
+	outFile << (100.0f * g_iKdTree_EmptyNode_Count / g_iKdTree_Node_Count) << "%)\n";
+
+	outFile << "   * Maximum Prim# in LeafNode: " << g_iKdTreeMaxPrimInLeafNodeCnt << "\n";
+
+	// 모든 리프 노드의 삼각형 개수 수집
+	std::vector<unsigned long long> primCnts;
+	unsigned int max_level = 0;
+	unsigned int total_level = 0;
+	collectTriangleCounts_recursive(uip.poly_model.kd_tree, 0, primCnts, 0, max_level, total_level);
+
+	if (primCnts.empty()) {
+		outFile << "\n--- Analyzing triangles per leaf node ---\n";
+		outFile << " -> No leaf nodes found in the tree.\n";
+		outFile << "-------------------------------------------\n\n";
+		outFile.close();
+		return;
+	}
+
+	// 기본 통계 계산
+	const unsigned int leaf_count = primCnts.size();
+	const unsigned long long total_triangles = std::accumulate(primCnts.begin(), primCnts.end(), 0ULL);
+	const auto minmax = std::minmax_element(primCnts.begin(), primCnts.end());
+	const unsigned int min_val = *minmax.first;
+	const unsigned int max_val = *minmax.second;
+	const float avg_triangles = (float)total_triangles / leaf_count;
+	const float avg_level = (float)total_level / leaf_count;
+
+	// 기존 printf를 outFile << 형태로 변경 (포맷팅 유지)
+	outFile << "\n--- Analyzing triangles per leaf node ---\n";
+	outFile << " -> Total Leaf Nodes Found: " << leaf_count << "\n";
+	outFile << " -> Max tree level (depth): " << max_level << "\n";
+
+	// 소수점 2자리 출력을 위한 스트림 설정 변환 대신 정밀도 지정 가능
+	outFile.precision(2);
+	outFile << std::fixed;
+	outFile << " -> Avg tree level (depth): " << avg_level << "\n";
+	outFile << " -> Max triangles in a leaf: " << max_val << "\n";
+	outFile << " -> Min triangles in a leaf: " << min_val << "\n";
+	outFile << " -> Avg triangles per leaf: " << avg_triangles << "\n";
+	outFile << "\n--- Histogram of Triangles per Leaf ---\n";
+
+	// 히스토그램 생성
+	const int num_bins = 20;
+	std::vector<unsigned int> bins(num_bins, 0);
+
+	const float range = static_cast<float>(max_val - min_val);
+	const float bin_size = (range > 0) ? (range / num_bins) : 1.0f;
+
+	for (unsigned int count : primCnts) {
+		int bin_index = (range > 0) ? static_cast<int>((count - min_val) / bin_size) : 0;
+		if (bin_index >= num_bins) bin_index = num_bins - 1;
+		bins[bin_index]++;
+	}
+
+	// 히스토그램 출력
+	const unsigned int max_bin_count = *std::max_element(bins.begin(), bins.end());
+	const int max_bar_width = 50;
+
+	for (int i = 0; i < num_bins; ++i) {
+		unsigned int bin_start = min_val + static_cast<unsigned int>(i * bin_size);
+		unsigned int bin_end = min_val + static_cast<unsigned int>((i + 1) * bin_size) - 1;
+		if (i == num_bins - 1) bin_end = max_val;
+
+		// C++ 스트림 포맷팅(너비 자릿수 맞춤)을 이용해 기존 %5u, %-7u 규칙 재현
+		outFile << " [";
+		outFile.width(5); outFile << bin_start << " - ";
+		outFile.width(5); outFile << bin_end << "] | ";
+		outFile.width(7); outFile << std::left << bins[i] << std::right << " | ";
+
+		int bar_width = 0;
+		if (max_bin_count > 0) {
+			bar_width = static_cast<int>(((float)bins[i] / max_bin_count) * max_bar_width);
+		}
+
+		for (int j = 0; j < bar_width; ++j) {
+			outFile << "*";
+		}
+		outFile << "\n";
+	}
+	outFile << "-------------------------------------------\n\n";
+
+	outFile.close(); // 파일 닫기
+	std::cout << "Kd-Tree Leaf Node Info successfully saved to " << filename << std::endl;
+}
+
 void subMenuHandler(int value) {
 	render_gaussian = true;
 	g_gaussians.clear();
-
-	// 생성된 파일 경로를 저장하기 위한 static 버퍼
-	// 포인터가 함수 외부에서도 유효해야 하므로 static으로 선언
-	static char final_kdtree_path[512];
-	static char final_igeom_path[512];
-	static char final_leafInfo_path[512];
-	static char final_obj_path[512];
-	static char final_build_path[512];
-
-	static char final_kdtree_dump_path[512];
-	static char final_leafInfo_dump_path[512];
-	static char final_igeom_dump_path[512];
 
 	printf("SIGMA_THRESHOLD_MODE: %f\n", static_cast<float>(SIGMA_THRESHOLD_MODE));
 	printf("SIGMA_THRESHOLD: %f\n", SIGMA_THRESHOLD_MODE / 255.0f);
@@ -2965,6 +3091,8 @@ void subMenuHandler(int value) {
 	std::string s_base_kdtree_str = root + name + "_tree.kdt";
 	std::string s_base_leafInfo_str = root + name + "_leafInfo.bin";
 	std::string s_base_igeom_str = root + name + "_igeom.bin";
+	std::string s_base_kdtInfo_str = root + name + "_kdtInfo.txt";
+
 	std::string s_base_obj_str = root + name + "_new.obj";
 	std::string s_base_build_str = root + name + "_kdt.txt";
 	std::string s_ply_to_obj_mtl = name + "_3dgrt.mtl";
@@ -2973,6 +3101,7 @@ void subMenuHandler(int value) {
 	const char* base_kdtree_str = s_base_kdtree_str.c_str();
 	const char* base_leafInfo_str = s_base_leafInfo_str.c_str();
 	const char* base_igeom_str = s_base_igeom_str.c_str();
+	const char* base_kdtInfo_str = s_base_kdtInfo_str.c_str();
 
 	const char* base_obj_str = s_base_obj_str.c_str();
 	const char* base_build_str = s_base_build_str.c_str();
@@ -2991,10 +3120,25 @@ void subMenuHandler(int value) {
 		}
 	};
 
+	// 생성된 파일 경로를 저장하기 위한 static 버퍼
+	// 포인터가 함수 외부에서도 유효해야 하므로 static으로 선언
+	static char final_kdtree_path[512];
+	static char final_igeom_path[512];
+	static char final_leafInfo_path[512];
+	static char final_kdtInfo_path[512];
+
+	static char final_obj_path[512];
+	static char final_build_path[512];
+
+	static char final_kdtree_dump_path[512];
+	static char final_leafInfo_dump_path[512];
+	static char final_igeom_dump_path[512];
+
 	if (!assetName.empty()) {
 		construct_path(final_kdtree_path, sizeof(final_kdtree_path), base_kdtree_str, suffix);
 		construct_path(final_igeom_path, sizeof(final_igeom_path), base_igeom_str, suffix);
 		construct_path(final_leafInfo_path, sizeof(final_leafInfo_path), base_leafInfo_str, suffix);
+		construct_path(final_kdtInfo_path, sizeof(final_kdtInfo_path), base_kdtInfo_str, suffix);
 		construct_path(final_obj_path, sizeof(final_obj_path), base_obj_str, suffix);
 		construct_path(final_build_path, sizeof(final_build_path), base_build_str, suffix);
 
@@ -3006,6 +3150,7 @@ void subMenuHandler(int value) {
 		ply_kdtree_path = final_kdtree_path;
 		ply_igeom_path = final_igeom_path;
 		ply_leafInfo_path = final_leafInfo_path;
+		ply_kdtInfo_path = final_kdtInfo_path;
 		ply_to_obj = final_obj_path;
 		kdtree_build_path = final_build_path;
 
@@ -3171,16 +3316,16 @@ void main_menu_action(int selection) {
 				&uip.poly_model,
 				KD_TREE_DUMP_IN_BINARY,    // 저장 포맷
 				ply_kdtree_dump_path,         // 저장할 kd-tree
-				ply_igeom_dump_path         // 저장할 geometry
-				,ply_leafInfo_dump_path         // leaf info
+				ply_igeom_dump_path,         // 저장할 geometry
+				ply_leafInfo_dump_path         // leaf info
 			);
 		}
 		else {
 			dump_kd_tree_for_composite_object(&uip.poly_model, uip.kd_tree_dump_format,
 				full_kd_tree_file_name,
-				full_i_geometry_file_name
-);
+				full_i_geometry_file_name);
 		}
+		dumpKdtreeInfo(ply_kdtInfo_path);
 		fprintf(stdout, "Done!\n");
 		break;
 	case 500: // load kd-tree
