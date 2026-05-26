@@ -1323,7 +1323,24 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
     cuRay& currRay,
     float3& accumulated_color,
     float& accumulated_opacity
+#if HIT_AND_NODE_COUNT_DEBUG
+    , int& node_visits
+    , int& leaf_visits
+    , int& intersection_tests
+    , int& hits_found
+    , int& blend_ops
+    , int& max_sort_size
+#endif
 ) {
+#if HIT_AND_NODE_COUNT_DEBUG
+    node_visits = 0;
+    leaf_visits = 0;
+    intersection_tests = 0;
+    hits_found = 0;
+    blend_ops = 0;
+    max_sort_size = 0;
+#endif
+
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
 #if DEBUG_LEAF_CUDA
@@ -1355,6 +1372,9 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
                     cache.push(childOffset + (sign ^ 1), t_far);
                     t_far = t_split;
                 }
+#if HIT_AND_NODE_COUNT_DEBUG
+                node_visits++;
+#endif
                 node = tex1Dfetch<kdtreeNode>(inKdTreeNodeTex, idx);
             }
 
@@ -1372,14 +1392,25 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
             HitRecord local_hits[MAX_HITS];
             int local_hit_count = 0;
 
+#if HIT_AND_NODE_COUNT_DEBUG
+            leaf_visits++;
+#endif
+
             for (; baseOffset < objectSize; baseOffset++) {
 #if OFFSET_TEXTURE
                 const unsigned primIdx = tex1Dfetch<unsigned int>(inObjectOffsetListTex, baseOffset);
 #else
                 const unsigned primIdx = g_d_tri_offsets_dev[baseOffset];
 #endif
-                rayPrimIntersect(currRay, primIdx, t_near, t_far, local_hits, local_hit_count); 
+                rayPrimIntersect(currRay, primIdx, t_near, t_far, local_hits, local_hit_count);
             }
+
+#if HIT_AND_NODE_COUNT_DEBUG
+            intersection_tests += OBJECT_SIZE(node);
+            hits_found += local_hit_count;
+            max_sort_size = MyMAX(max_sort_size, local_hit_count);
+#endif
+
             if (local_hit_count > 0) {
                 sortHits(local_hits, local_hit_count);
 
@@ -1450,6 +1481,9 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
                     accumulated_color += sample_color * sample_opacity * (1.0f - accumulated_opacity);
                     accumulated_opacity += sample_opacity * (1.0f - accumulated_opacity);
 
+#if HIT_AND_NODE_COUNT_DEBUG
+                    blend_ops++;
+#endif
                     if (accumulated_opacity > OPACITY_THRESHOLD) {
                         break;
                     }
@@ -1634,16 +1668,15 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
 #else
                 singlePassIntersectRoutineGaussian_sortNode(currRay, tri_idx, t_near, t_far, local_hits, local_hit_count);
 #endif
-
-#if HIT_AND_NODE_COUNT_DEBUG
-                if (tmp != local_hit_count) hits_found++;
-#endif
             }
 #if HIT_AND_NODE_COUNT_DEBUG
             max_sort_size = MyMAX(max_sort_size, local_hit_count);
 #endif
 
             if (local_hit_count > 0) {
+#if HIT_AND_NODE_COUNT_DEBUG
+                hits_found+= local_hit_count;
+#endif
                 // 정렬: 이 리프 노드 내의 충돌만 정렬
 #if BLEND_SELECT
                 if(blend_ops <= 25)

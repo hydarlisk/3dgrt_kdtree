@@ -302,7 +302,7 @@
 #define DEBUG_SCALE_HISTOGRAM 0 				// gaussian의 sigma들의 histogram 출력
 #define DEBUG_TRILEN_HISTOGRAM 0 				// gaussian의 sigma들의 histogram 출력
 #define WARP_OCCUPANCY false   					// warp occupancy 출력
-#define HIT_AND_NODE_COUNT_DEBUG false			// Ray 마다 hitcount, node count, ... 확인
+#define HIT_AND_NODE_COUNT_DEBUG true			// Ray 마다 hitcount, node count, ... 확인
 												// kd-tree hitmap 확인 가능
 
 #define MEASURE_START_FRAME 500
