@@ -1022,10 +1022,16 @@ __device__ inline void rayPrimIntersect(const cuRay& currRay, const unsigned id
         k_scale = calculateKernelScale(g.opacity);
     #endif
 #endif
+
 #if UPLOAD_INV_SCALE
-    giscl = giscl / k_scale;
+    giscl = giscl;
 #else
-    giscl = 1 / giscl / k_scale;
+    giscl = 1 / giscl;
+#endif
+#if UPLOAD_INV_KSCALE
+    giscl = giscl * k_scale;
+#else
+    giscl = giscl / k_scale;
 #endif
     const float3 gposc = (currRay.pos - particlePosition);
 #if QUATERNION || !DIRECT_ROT_CALC

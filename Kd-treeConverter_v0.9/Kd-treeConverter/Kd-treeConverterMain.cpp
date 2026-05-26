@@ -3375,6 +3375,9 @@ void main_menu_action(int selection) {
 				g.scale[1] = 1 / g.scale[1];
 				g.scale[2] = 1 / g.scale[2];
 #endif
+#if PRE_CALC_KSCALE && UPLOAD_INV_KSCALE
+				g.k_scale = 1 / g.k_scale;
+#endif
 #if UPLOAD_INVSR_MAT
 				for (int i = 0; i < 3; i++) {
 					g.rotMat.m[i][0] *= g.scale[0];
