@@ -692,6 +692,13 @@ void try_to_split(const int axis, BoundingBox &inBBox, const PrimList *pTriangle
 		// Split plane candidate 와 같은 위치의 edge 들에 대한 처리
 		// ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ -- ~~ --
 		{
+#if COUNT_BY_GID
+			// 현재 위치(cur_position)에서의 gId별 상태를 추적합니다.
+			// 1: START만 있음, 2: END만 있음, 3: START와 END가 동시에 있음 (즉, Planar)
+			std::unordered_map<int, int> gId_status;
+			std::unordered_map<int, bool> gId_normal; // 평면일 경우 법선 방향 저장용
+#endif
+
 			//똑같은게 여러개 있을 때는 제일 오른쪽에서만 SAH 계산을 한다.
 			for (unsigned int j = i; j < n_bEdge; j++) {
 				BoundEdge tmp_bEdge = bEdge[j];
@@ -702,39 +709,62 @@ void try_to_split(const int axis, BoundingBox &inBBox, const PrimList *pTriangle
 					is_planar = tmp_bEdge.isPlanar,
 					is_normalPositive = tmp_bEdge.isNormalPositive;
 
-				bool shouldCount = true;
 #if COUNT_BY_GID
 				int gId = tmp_bEdge.triangleInfo->offset;
-				shouldCount = false;
 
 				if (is_left) {
 					if (seen_starts.insert(gId).second) {
-						shouldCount = true;
+						gId_status[gId] |= 1; // 비트 연산으로 START(1) 상태 추가
 					}
 				}
 				else {
 					seen_ends[gId]++;
 					if (seen_ends[gId] == total_ends[gId]) {
-						shouldCount = true;
-					}
-				}
-#endif
-				if (shouldCount) {
-					//카운팅
-					if (!is_planar) {
-						local_open += is_left ? 1 : 0; //!< box 의 왼쪽은 local_open 을 증가
-						local_close += is_left ? 0 : 1; //!< box 의 오른쪽은 local_close 를 증가
-					}
-					else {
-						//플라나하다면 따로 카운팅
-						num_planars += is_left ? 1 : 0;	// only count it once
-						num_normalPositive += is_normalPositive ? 1 : 0;
+						gId_status[gId] |= 2; // 비트 연산으로 END(2) 상태 추가
 					}
 				}
 
+				// 혹시 내부 서브 삼각형 중에 평면이 있다면 그 법선을 임시로 저장해 둡니다.
+				if (is_planar) {
+					gId_normal[gId] = is_normalPositive;
+				}
+#else
+				//카운팅
+				if (!is_planar) {
+					local_open += is_left ? 1 : 0; //!< box 의 왼쪽은 local_open 을 증가
+					local_close += is_left ? 0 : 1; //!< box 의 오른쪽은 local_close 를 증가
+				}
+				else {
+					//플라나하다면 따로 카운팅
+					num_planars += is_left ? 1 : 0;	// only count it once
+					num_normalPositive += is_normalPositive ? 1 : 0;
+				}
+#endif
 				curr_bEdge = tmp_bEdge;
 				i = j;
 			}
+
+#if COUNT_BY_GID
+			for (const auto& pair : gId_status) {
+				int status = pair.second;
+				int gId = pair.first;
+
+				if (status == 3) {
+					// 한 위치(cur_position)에서 START와 END가 모두 발생!
+					// -> 전체 Primitive 기준으로 이 물체는 이 축에서 완벽한 평면(Planar)입니다.
+					num_planars += 1;
+					num_normalPositive += gId_normal[gId] ? 1 : 0;
+				}
+				else if (status == 1) {
+					// 이 위치에서 시작만 함
+					local_open += 1;
+				}
+				else if (status == 2) {
+					// 이 위치에서 끝나기만 함
+					local_close += 1;
+				}
+			}
+#endif
 		}
 
 		// Numerical error 

@@ -27,6 +27,10 @@
 #define ELLIPSOID_BY_TRI 2
 #define PRIMITIVE_TYPE 2
 
+/*** ellipsoid_by_tri ***/
+#define COUNT_BY_GID 0
+//////////////////////////
+
 #define UPLOAD_INV_SCALE 1
 
 #define QUATERNION true
@@ -35,19 +39,16 @@
 	#define DIRECT_ROT_CALC 1
 	#define STORE_GRAYDIST 0
 
-/*** ellipsoid_by_tri ***/
-
-#define COUNT_BY_GID 1
-//////////////////////////
 #if PRIMITIVE_TYPE == TRI
 #undef COUNT_BY_GID
 #define COUNT_BY_GID 0
 #endif
+
 /////////////**** Debug ****///////////////
 /* Ellipsoid */
 #define ELLIPSOID_DEBUG 1
 #define DEBUG_LEAF_CUDA 0
-#define DEBUG_LEAF_GL 1
+#define DEBUG_LEAF_GL 0
 #if PRIMITIVE_TYPE == ELLIPSOID && ELLIPSOID_DEBUG
 	#define DEBUG_ELLIPSOID_CLIP_AABB 1
 	#define DEBUG_ELLIPSOID_INTERNAL 1
@@ -57,7 +58,7 @@
 #endif
 
 /* Triangle */
-#define LEAF_NODE_DEBUG true					// kd-tree leaf node 렌더링
+#define LEAF_NODE_DEBUG false					// kd-tree leaf node 렌더링
 
 #define DUMP_LEAF_CSV 0
 ////////////////////////////////////////////
@@ -155,13 +156,16 @@
 		#define ADAPTIVE_MESH false
 	#else
 		#undef USE_KERNEL_SCALE
-		#define USE_KERNEL_SCALE true
+		//#define USE_KERNEL_SCALE true
+		#define USE_KERNEL_SCALE false
 		#undef FORCE_SPLIT_THRESHOLD
-		#define FORCE_SPLIT_THRESHOLD 128
+		//#define FORCE_SPLIT_THRESHOLD 128
+		#define FORCE_SPLIT_THRESHOLD 256
 		#undef SIGMA_THRESHOLD_MODE
 		#define SIGMA_THRESHOLD_MODE 1
 		#undef ADAPTIVE_MESH
-		#define ADAPTIVE_MESH true
+		//#define ADAPTIVE_MESH true
+		#define ADAPTIVE_MESH false
 	#endif
 #elif ASSET == ROOM
 	#if ORIGINAL
