@@ -2883,7 +2883,7 @@ void subMenuHandler(int value) {
 	char suffixDumpTri[256];
 	char suffixDumpKdt[256];
 
-	char* sahMode = ((PRIMITIVE_TYPE == ELLIPSOID_BY_TRI) && COUNT_BY_GID) ? "_sah1" : "";
+	char* sahMode = ((PRIMITIVE_TYPE == ELLIPSOID_BY_TRI) && COUNT_BY_GID) ? "_sah1FixMin" : "";
 	char* versionExt = KDT_VERSION ? "__v1" : "";
 
 	// 일반 파일 접미사 조립

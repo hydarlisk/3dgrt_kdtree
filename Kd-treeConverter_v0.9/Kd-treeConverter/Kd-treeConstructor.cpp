@@ -1432,7 +1432,11 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const PrimList* pTriangleInfos, u
 #endif
 
 	// Calculate cost function (in case of trying to partition)
+#if COUNT_BY_GID
+	if (inNodeLevel < v_KD_TREE_MAX_LEVEL && gIdsTris.size() > v_KD_TREE_MIN_PRIMITIVE) {
+#else
 	if (inNodeLevel < v_KD_TREE_MAX_LEVEL && triangleSize > v_KD_TREE_MIN_PRIMITIVE) {
+#endif
 		SplitCost axisCosts[3] = { bestCost, bestCost, bestCost }; // 각 축의 결과를 저장할 배열
 		#pragma omp parallel for
 		// (모든 축에 대해 수행)
