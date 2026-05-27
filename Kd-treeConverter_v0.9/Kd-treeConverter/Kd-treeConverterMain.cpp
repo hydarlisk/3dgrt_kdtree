@@ -90,6 +90,7 @@ std::vector<bool> g_isValidG;
 std::vector<float> g_kScales;
 #endif
 
+bool g_glGaussianColorMode = true;
 int g_renderMode = 0;	//5: ellipsoid aabb debug
 int g_renderGId = -1;
 int g_renderNodeId = -1;
@@ -231,8 +232,14 @@ GLuint buf_obj;
 void renderGaussianMesh(int gId) {
 	ExtendedVertex* v = uip.poly_model.extended_vertices;
 
-	//glColor3f(1.0, 0.7, 0.1);
-	glDisable(GL_LIGHTING);
+	if (g_glGaussianColorMode) {
+		glDisable(GL_LIGHTING);
+	}
+	else {
+		glEnable(GL_LIGHTING);
+		glColor3f(1.0, 0.7, 0.1);
+	}
+	
 	glColor3f(g_gaussians[gId].f_dc[0] * SH_C0 + 0.5f, g_gaussians[gId].f_dc[1] * SH_C0 + 0.5f, g_gaussians[gId].f_dc[2] * SH_C0 + 0.5f);
 	glBegin(GL_TRIANGLES);
 	for (int i = 0; i < 20; i++) {
@@ -360,14 +367,24 @@ void renderGaussianMeshes() {
 		draw_AABB(uip.poly_model.AABB);
 
 	// use an old way of drawing
-	glColor3f(1.0, 0.7, 0.1);
-
+	if (g_glGaussianColorMode) {
+		glDisable(GL_LIGHTING);
+	}
+	else {
+		glEnable(GL_LIGHTING);
+		glColor3f(1.0, 0.7, 0.1);
+	}
+	
 	ptr_ev = uip.poly_model.extended_vertices;
 	glBegin(GL_TRIANGLES);
 	for (i = 0; i < uip.poly_model.n_triangles; i++) {
 		if (g_isValidG[ptr_ev->material_ID] == 0) {
 			ptr_ev += 3;
 			continue;
+		}
+		if (g_glGaussianColorMode) {
+			int gId = ptr_ev->material_ID;
+			glColor3f(g_gaussians[gId].f_dc[0] * SH_C0 + 0.5f, g_gaussians[gId].f_dc[1] * SH_C0 + 0.5f, g_gaussians[gId].f_dc[2] * SH_C0 + 0.5f);
 		}
 		glVertex3fv(ptr_ev->vertex);
 		ptr_ev++;
@@ -612,6 +629,9 @@ void keyboard(unsigned char key, int x, int y) {
 			if (bf_culling = 1 - bf_culling)  glEnable(GL_CULL_FACE);
 			else glDisable(GL_CULL_FACE);
 			glutPostRedisplay();
+			break;
+		case 'C':
+			g_glGaussianColorMode = !g_glGaussianColorMode;
 			break;
 		case 'p':
 			if (uip.OpenGL_polygon_mode == FILL) {
@@ -2883,12 +2903,19 @@ void subMenuHandler(int value) {
 	char suffixDumpTri[256];
 	char suffixDumpKdt[256];
 
-	char* sahMode = ((PRIMITIVE_TYPE == ELLIPSOID_BY_TRI) && COUNT_BY_GID) ? "_sah1FixMin" : "";
+	char* countG = ((PRIMITIVE_TYPE == ELLIPSOID_BY_TRI) && COUNT_BY_GID) ? "_CountG" : "";
+
+#if SAH_MODE == 0
+	const char* sahMode = "";
+#else
+	string sahMode_str = string("_sahMode") + to_string(SAH_MODE);
+	const char* sahMode = sahMode_str.c_str();
+#endif
 	char* versionExt = KDT_VERSION ? "__v1" : "";
 
 	// 일반 파일 접미사 조립
 	// 형태: [scale]_[iscet]_[opacity]_[mintri]_[split][maxlevel][clip]_[sah]
-	snprintf(suffix, sizeof(suffix), "%s_%d_%s_%d_%d%s%s_%s%s%s",
+	snprintf(suffix, sizeof(suffix), "%s_%d_%s_%d_%d%s%s_%s%s%s%s",
 		scale_mode_str,
 		static_cast<int>(ISCET_COST),
 		opacity_part,
@@ -2897,6 +2924,7 @@ void subMenuHandler(int value) {
 		max_level_part,
 		clip_mode_str,
 		primitiveType,
+		countG,
 		sahMode,
 		versionExt
 	);

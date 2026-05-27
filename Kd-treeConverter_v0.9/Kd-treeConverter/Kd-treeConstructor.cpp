@@ -834,12 +834,53 @@ void try_to_split(const int axis, BoundingBox &inBBox, const PrimList *pTriangle
 					(tri_num_left[0] == 0 || tri_num_right[0] == 0) ? v_KD_TREE_EMTPY_BONUS : 1.0f,
 					(tri_num_left[1] == 0 || tri_num_right[1] == 0) ? v_KD_TREE_EMTPY_BONUS : 1.0f };
 
+#if SAH_MODE == 2
+				auto get_batched_count = [](int n) -> int {
+					if (n == 0) return 0;
+					return (n + 7) & ~7;
+					};
+				const int eff_num_left[2] = {
+					get_batched_count(tri_num_left[0]),
+					get_batched_count(tri_num_left[1])
+				};
+				const int eff_num_right[2] = {
+					get_batched_count(tri_num_right[0]),
+					get_batched_count(tri_num_right[1])
+				};
+#endif
+
 				double SAH[2];
 				for (int side_idx = 0; side_idx < 2; side_idx++) {
+#if SAH_MODE == 0
 					SAH[side_idx] = v_KD_TREE_TRAVL_COST + v_KD_TREE_ISECT_COST * (
 						double(tri_num_left[side_idx])* prob_l +
 						double(tri_num_right[side_idx]) * prob_r
 						)* emptyBonus[side_idx];
+#elif SAH_MODE == 1	//balanced
+					const double N_total = double(tri_num_left[side_idx] + tri_num_right[side_idx]);
+					const double diff = std::abs(double(tri_num_left[side_idx]) - double(tri_num_right[side_idx]));
+
+					const double balanceRatio = (N_total > 0.0) ? (diff / N_total) : 0.0;
+
+					// 2. 밸런스를 얼마나 강제할지 결정하는 가중치 (튜닝 파라미터)
+					// 보통 0.05 ~ 0.2 사이의 작은 값을 사용합니다. 값이 클수록 밸런스를 강하게 맞춥니다.
+					const double BALANCE_WEIGHT = 0.1;
+					const double balancePenalty = 1.0 + (balanceRatio * BALANCE_WEIGHT);
+					SAH[side_idx] = v_KD_TREE_TRAVL_COST + v_KD_TREE_ISECT_COST * (
+						double(tri_num_left[side_idx]) * prob_l +
+						double(tri_num_right[side_idx]) * prob_r
+						) * emptyBonus[side_idx];
+#elif SAH_MODE == 2
+					SAH[side_idx] = v_KD_TREE_TRAVL_COST + v_KD_TREE_ISECT_COST * (
+						double(eff_num_left[side_idx]) * prob_l +
+						double(eff_num_right[side_idx]) * prob_r
+						) * emptyBonus[side_idx];
+#elif SAH_MODE == 3
+					SAH[side_idx] = v_KD_TREE_TRAVL_COST + v_KD_TREE_ISECT_COST * (
+						double(sqrt(tri_num_left[side_idx])) * prob_l +
+						double(sqrt(tri_num_right[side_idx])) * prob_r
+						) * emptyBonus[side_idx];
+#endif
 				}
 #if SAH_MAXIMIZE
 				if (SAH[0] >= SAH[1]) {
