@@ -2744,6 +2744,21 @@ void dumpKdtreeInfo(char* filename) {
 	outFile << "  * SAH_MAXIMIZE Mode: " << (SAH_MAXIMIZE ? "maximize" : "minimize") << "\n";
 	outFile << "  * CLIP_AREA " << (CLIP_AREA ? "clip" : "none") << "\n";
 	outFile << "  * SAH_OPACITY Mode: [" << SAH_OPACITY << "] P_s * N_s\n";
+
+#if SAH_MODE == 0
+	outFile << "  * SAH_MODE: [" << SAH_MODE << "] P_s * N_s\n";
+#elif SAH_MODE == 1
+	outFile << "  * SAH_MODE: [" << SAH_MODE << "] ballance\n";
+#elif SAH_MODE == 2
+	outFile << "  * SAH_MODE: [" << SAH_MODE << "] prefer leaf count\n";
+#elif SAH_MODE == 3
+	outFile << "  * SAH_MODE: [" << SAH_MODE << "] sqrt(N_s)\n";
+#elif SAH_MODE == 4
+	outFile << "  * SAH_MODE: [" << SAH_MODE << "] x * ((x/T)^k)\n";
+#elif SAH_MODE == 5
+	outFile << "  * SAH_MODE: [" << SAH_MODE << "] x + a * x * (x - T)\n";
+#endif
+	
 	outFile << "  * Adaptive Mesh Mode: " << (ADAPTIVE_MESH ? "Adaptive" : "Icosa") << "\n";
 	outFile << "  * Kernel Scale Mode: " << (USE_KERNEL_SCALE ? "KernelScale" : "Paper") << "\n";
 

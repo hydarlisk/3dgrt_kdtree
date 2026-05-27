@@ -862,8 +862,7 @@ void try_to_split(const int axis, BoundingBox &inBBox, const PrimList *pTriangle
 
 					const double balanceRatio = (N_total > 0.0) ? (diff / N_total) : 0.0;
 
-					// 2. 밸런스를 얼마나 강제할지 결정하는 가중치 (튜닝 파라미터)
-					// 보통 0.05 ~ 0.2 사이의 작은 값을 사용합니다. 값이 클수록 밸런스를 강하게 맞춥니다.
+					// 0.05 ~ 0.2
 					const double BALANCE_WEIGHT = 0.1;
 					const double balancePenalty = 1.0 + (balanceRatio * BALANCE_WEIGHT);
 					SAH[side_idx] = v_KD_TREE_TRAVL_COST + v_KD_TREE_ISECT_COST * (
@@ -879,6 +878,30 @@ void try_to_split(const int axis, BoundingBox &inBBox, const PrimList *pTriangle
 					SAH[side_idx] = v_KD_TREE_TRAVL_COST + v_KD_TREE_ISECT_COST * (
 						double(sqrt(tri_num_left[side_idx])) * prob_l +
 						double(sqrt(tri_num_right[side_idx])) * prob_r
+						) * emptyBonus[side_idx];
+#elif SAH_MODE == 4
+					auto scale_count_power = [](int n) -> double {
+						if (n == 0) return 0.0; // 빈 공간 보존
+						const double T = 16.0;  // 기준점
+						const double k = 0.5;   // 휘어지는 정도 (0.1 ~ 1.0)
+						double x = double(n);
+						return x * std::pow(x / T, k);
+						};
+					SAH[side_idx] = v_KD_TREE_TRAVL_COST + v_KD_TREE_ISECT_COST * (
+						scale_count_power(tri_num_left[side_idx]) * prob_l +
+						scale_count_power(tri_num_right[side_idx]) * prob_r
+						) * emptyBonus[side_idx];
+#elif SAH_MODE == 5
+					auto scale_count_quad = [](int n) -> double {
+						if (n == 0) return 0.0; // 빈 공간 보존
+						const double T = 16.0;  // 기준점
+						const double alpha = 0.05;// 가파름 조정 (0.01 ~ 0.1)
+						double x = double(n);
+						return std::max(0.0, x + alpha * x * (x - T)); // 음수 방지
+						};
+					SAH[side_idx] = v_KD_TREE_TRAVL_COST + v_KD_TREE_ISECT_COST * (
+						scale_count_quad(tri_num_left[side_idx]) * prob_l +
+						scale_count_quad(tri_num_right[side_idx]) * prob_r
 						) * emptyBonus[side_idx];
 #endif
 				}
