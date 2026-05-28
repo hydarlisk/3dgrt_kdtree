@@ -1426,11 +1426,53 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const PrimList* pEllipsoidInfos, 
 
 }
 #elif PRIMITIVE_TYPE == TRI || PRIMITIVE_TYPE == ELLIPSOID_BY_TRI
+typedef struct InternalRet {
+	PrimList* pLeftTriangles;
+	PrimList* pRightTriangles;
+	unsigned int leftSize;
+	unsigned int rightSize;
+	BoundingBox leftnBounds;
+	BoundingBox rightnBounds;
+};
+
+void processInternalNode(SplitCost& bestCost, BoundingBox& bbox, unsigned int& triangleSize, const PrimList*& pTriangleInfos, BoundEdge*& bEdge, InternalRet& ret) {
+	ret.leftnBounds = bbox;  ret.leftnBounds.max[bestCost.axis] = bestCost.splitPos;
+	ret.rightnBounds = bbox;  ret.rightnBounds.min[bestCost.axis] = bestCost.splitPos;
+
+	// std::vector로 변경하여 메모리 안정성 확보
+	std::vector<PrimList> leftTriangles;
+	std::vector<PrimList> rightTriangles;
+	// 예상 크기만큼 미리 예약하여 성능 저하 최소화
+	leftTriangles.reserve(bestCost.n_left);
+	rightTriangles.reserve(bestCost.n_right);
+
+	const unsigned n_bEdge = 2 * triangleSize;
+
+	// TriangleInfo 부터 bEdge 를 생성 및 정렬
+	set_bound_edge(bestCost.axis, pTriangleInfos, n_bEdge, bEdge);
+
+	// bEdge 로 부터 pLeftTriangle, pRightTriangle 을 생성
+	push_triangles_to_child_vector(n_bEdge, bEdge, leftTriangles, rightTriangles, bestCost);
+
+	ret.pLeftTriangles = new PrimList[leftTriangles.size()];
+	ret.pRightTriangles = new PrimList[rightTriangles.size()];
+	ret.leftSize = leftTriangles.size();
+	ret.rightSize = rightTriangles.size();
+	memcpy(ret.pLeftTriangles, leftTriangles.data(), sizeof(PrimList) * leftTriangles.size());
+	memcpy(ret.pRightTriangles, rightTriangles.data(), sizeof(PrimList) * rightTriangles.size());
+	leftTriangles.clear();
+	rightTriangles.clear();
+
+	clip_triangle(ret.leftSize, bestCost, ret.pLeftTriangles, 0);
+	clip_triangle(ret.rightSize, bestCost, ret.pRightTriangles, 1);
+}
+
 	#if PRIMITIVE_TYPE == ELLIPSOID_BY_TRI
 static int compLeafCnt = 0;
 static int compCnt = 0;
 static int ampledLeafCnt = 0;
 	#endif
+
 void build_kd_tree_recursive(BoundEdge* bEdge, const PrimList* pTriangleInfos, unsigned int triangleSize,
 	BoundingBox& bbox, unsigned int inNodeLevel, KdTreeNode* inNode)
 {
@@ -1609,46 +1651,11 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const PrimList* pTriangleInfos, u
 				_reAllocKdtreeNodes(MyMAX(2 * g_iKdTree_Node_CountAlloc, 512), g_iKdTree_Node_CountAlloc, &g_pKdTree_Node_Array);
 			}
 		}
-
-		BoundingBox leftnBounds, rightnBounds;
-		leftnBounds = bbox;  leftnBounds.max[bestCost.axis] = bestCost.splitPos;
-		rightnBounds = bbox;  rightnBounds.min[bestCost.axis] = bestCost.splitPos;
-
-		// std::vector로 변경하여 메모리 안정성 확보
-		std::vector<PrimList> leftTriangles;
-		std::vector<PrimList> rightTriangles;
-		// 예상 크기만큼 미리 예약하여 성능 저하 최소화
-		leftTriangles.reserve(bestCost.n_left);
-		rightTriangles.reserve(bestCost.n_right);
-
-		const unsigned n_bEdge = 2 * triangleSize;
-
-		// TriangleInfo 부터 bEdge 를 생성 및 정렬
-		set_bound_edge(bestCost.axis, pTriangleInfos, n_bEdge, bEdge);
-
-		// bEdge 로 부터 pLeftTriangle, pRightTriangle 을 생성
-		push_triangles_to_child_vector(n_bEdge, bEdge, leftTriangles, rightTriangles, bestCost);
-
-		PrimList* pLeftTriangles = new PrimList[leftTriangles.size()];
-		PrimList* pRightTriangles = new PrimList[rightTriangles.size()];
-		memcpy(pLeftTriangles, leftTriangles.data(), sizeof(PrimList)* leftTriangles.size());
-		memcpy(pRightTriangles, rightTriangles.data(), sizeof(PrimList)* rightTriangles.size());
-
-		// 각 child node 에 맞게 삼각형 clipping
-		clip_triangle(leftTriangles.size(), bestCost, pLeftTriangles, 0);
-		clip_triangle(rightTriangles.size(), bestCost, pRightTriangles, 1);
-
-		/**
-		 *	더이상 pTriangleInfos 는 필요없으므로 메모리 공간 절약을 위해 없앤다.
-		 *	반드시 pushChildTriangles 를 수행한 이후에 없애야 한다.
-		 */
+		InternalRet ret;
+		processInternalNode(bestCost, bbox, triangleSize, pTriangleInfos, bEdge, ret);
 		delete[] pTriangleInfos;
-		/**
-		 *	Left, Right 재귀 탐색.
-		 *	pLeftTriangles, pRightTriangles 는 build_kd_tree_recursive 함수 안에서 사용하고 바로 없앤다.
-		 */
-		build_kd_tree_recursive(bEdge, pLeftTriangles, leftTriangles.size(), leftnBounds, inNodeLevel + 1, &g_pKdTree_Node_Array[nodeNum]);
-		build_kd_tree_recursive(bEdge, pRightTriangles, rightTriangles.size(), rightnBounds, inNodeLevel + 1, &g_pKdTree_Node_Array[nodeNum + 1]);
+		build_kd_tree_recursive(bEdge, ret.pLeftTriangles, ret.leftSize, ret.leftnBounds, inNodeLevel + 1, &g_pKdTree_Node_Array[nodeNum]);
+		build_kd_tree_recursive(bEdge, ret.pRightTriangles, ret.rightSize, ret.rightnBounds, inNodeLevel + 1, &g_pKdTree_Node_Array[nodeNum + 1]);
 	}
 
 	if (DEBUG_FLAG) {
