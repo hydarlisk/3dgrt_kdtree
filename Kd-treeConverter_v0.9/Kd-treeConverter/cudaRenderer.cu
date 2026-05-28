@@ -50,6 +50,11 @@ static __device__ inline float3 operator*(const float3& p, const float33& m) {
     return make_float3(dot(m[0], p), dot(m[1], p), dot(m[2], p));
 }
 
+static __device__ inline float3 safe_normalize(float3 v) {
+    const float l = v.x * v.x + v.y * v.y + v.z * v.z;
+    return l > 0.0f ? (v * rsqrtf(l)) : v;
+}
+
 #if !QUATERNION
 // vec * mat
 static __device__ inline float3 multiplyMatrixVector(const float3& p, const float3x3& m) {
@@ -1007,7 +1012,79 @@ __device__ inline float calculateKernelScale(float density, float kernelMinRespo
     // r = (ln(minResponse) / a)^(1/b)
     return pow(log(minResponse) / a, 1.0f / b);
 }
+#if VOLUME_ISECT
+__device__ inline void rayPrimIntersect(const cuRay& currRay, const unsigned id
+    , const float t_near, const float t_far
+    , HitRecord* local_hits, int& local_hit_count) {
+    //fetch gaussian
+    Gaussian g;
+    float4* g_as_float4 = reinterpret_cast<float4*>(&g);
+    const int num_float4s = sizeof(Gaussian) / sizeof(float4);
+    int base_idx = id * num_float4s;
+#pragma unroll
+#if QUATERNION
+    for (int i = 0; i < 3; ++i) {
+#else
+    for (int i = 0; i < 4; i++) {
+#endif
+        g_as_float4[i] = tex1Dfetch<float4>(inGaussianTex, base_idx + i);
+    }
 
+    const float3 particlePosition = make_float3(g.pos[0], g.pos[1], g.pos[2]);
+#if UPLOAD_INV_SCALE
+    float3 giscl = make_float3(g.scale[0], g.scale[1], g.scale[2]);
+    float3 particleScale = 1 / giscl;
+#else
+    float3 particleScale = make_float3(g.scale[0], g.scale[1], g.scale[2]);
+    float3 giscl = 1 / particleScale;
+#endif
+    float33 particleRotation;
+#if QUATERNION
+    float4 particleQquaternion = make_float4(g.rot[0], g.rot[1], g.rot[2], g.rot[3]);
+    quaternionWXYZToMatrixTranspose(particleQquaternion, particleRotation);
+#else
+    #if !DIRECT_ROT_CALC
+    particleRotation[0] = make_float3(g.rotMat.m[0][0], g.rotMat.m[1][0], g.rotMat.m[2][0]);
+    particleRotation[1] = make_float3(g.rotMat.m[0][1], g.rotMat.m[1][1], g.rotMat.m[2][1]);
+    particleRotation[2] = make_float3(g.rotMat.m[0][2], g.rotMat.m[1][2], g.rotMat.m[2][2]);
+    #endif
+#endif
+
+    const float3 gposc = (currRay.pos - particlePosition);
+#if QUATERNION || !DIRECT_ROT_CALC
+    const float3 gposcr = (gposc * particleRotation);
+    const float3 gro = giscl * gposcr;
+    const float3 rayDirR = currRay.dir * particleRotation;
+    const float3 grdu = rayDirR * giscl;
+#else
+    #if UPLOAD_INVSR_MAT
+    const float3 gro = multMatrixTransposeVector(gposc, g.rotMat);
+    const float3 grdu = multMatrixTransposeVector(currRay.dir, g.rotMat);
+    #else
+    const float3 gposcr = multMatrixTransposeVector(gposc, g.rotMat);
+    const float3 gro = giscl * gposcr;
+    const float3 rayDirR = multMatrixTransposeVector(currRay.dir, g.rotMat);
+    const float3 grdu = rayDirR * giscl;
+    #endif
+#endif
+    const float3 grd = safe_normalize(grdu);
+    const float grp = -dot(grd, gro);
+    const float3 grds = particleScale * grd * grp;
+    float t = (grp < 0.f ? -1.f : 1.f) * sqrtf(dot(grds, grds));
+    if (t < t_near || t > t_far) return;
+    const float3 gcrod = cross(grd, gro);
+    const float grayDist = dot(gcrod, gcrod);
+    if (grayDist < 8.f) {
+        local_hits[local_hit_count].t = t;
+        local_hits[local_hit_count].primIndex = id;
+#if STORE_GRAYDIST
+        local_hits[local_hit_count].grayDist = grayDist;
+#endif
+        local_hit_count++;
+    }
+    return;
+}
+#else   //VOLUME_ISECT
 __device__ inline void rayPrimIntersect(const cuRay& currRay, const unsigned id
     , const float t_near, const float t_far
     , HitRecord* local_hits, int& local_hit_count) {
@@ -1089,6 +1166,7 @@ __device__ inline void rayPrimIntersect(const cuRay& currRay, const unsigned id
     local_hits[local_hit_count].primIndex = id;
     local_hit_count++;
 }
+#endif //VOLUME_ISECT
 #elif PRIMITIVE_TYPE == TRI
 __device__ inline void rayPrimIntersect(const cuRay& ray, const int id,
     const float t_near, const float t_far
