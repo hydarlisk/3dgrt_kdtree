@@ -37,6 +37,7 @@
 /* rendering */
 #define UPLOAD_INV_SCALE 1
 #define UPLOAD_INV_KSCALE 1
+#define VOLUME_ISECT 1
 
 #define QUATERNION true
 	#define PRE_CALC_KSCALE 1
