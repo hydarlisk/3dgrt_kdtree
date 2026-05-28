@@ -17,9 +17,10 @@
 #define KDT_VERSION 1
 
 /* ply read */
-#define ADD_PLY_FILE_NAME "_instances_edit"
+//#define ADD_PLY_FILE_NAME "_instances_edit"
+#define ADD_PLY_FILE_NAME ""
 #define OCCLUDE_MIN_OPACITY 1
-#define OCCLUDE_MIN_OPACITY_TRI 1
+#define OCCLUDE_MIN_OPACITY_TRI 0
 #define PROBLEMATIC_THRESHOLD 1	//remove dominant prim from gaussian data
 
 /* primitive type */
@@ -30,9 +31,10 @@
 
 /*** ellipsoid_by_tri ***/
 #define COUNT_BY_GID 1
-#define SAH_MODE 0
+#define SAH_MODE 4
 //////////////////////////
 
+/* rendering */
 #define UPLOAD_INV_SCALE 1
 #define UPLOAD_INV_KSCALE 1
 
@@ -76,6 +78,7 @@
 //#define IGNORE_THRESHOLD 0.0001
 #define IGNORE_THRESHOLD 0
 #define REMOVE_SMALL_PRIM 0
+#define FORCE_BINARY_SPLIT 1	//fs
 
 #define MIN_TRI 16
 #define MIN_ELLIPSOID 16

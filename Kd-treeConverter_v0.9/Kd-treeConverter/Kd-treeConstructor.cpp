@@ -626,7 +626,11 @@ void push_triangles_to_child_vector(const unsigned n_bEdge, const BoundEdge* bEd
 	}
 }
 //shyun added end
+#if FORCE_BINARY_SPLIT
+void try_to_split(const int axis, BoundingBox &inBBox, const PrimList *pTriangles, const int triangleSize, BoundEdge *bEdge,  SplitCost &bestCost, SplitCost& forceSplit
+#else
 void try_to_split(const int axis, BoundingBox &inBBox, const PrimList *pTriangles, const int triangleSize, BoundEdge *bEdge,  SplitCost &bestCost
+#endif
 )
 {
 	const int axis1 = modulo[axis + 1], axis2 = modulo[axis + 2];
@@ -799,6 +803,13 @@ void try_to_split(const int axis, BoundingBox &inBBox, const PrimList *pTriangle
 			int nTri_left, nTri_right;
 			int planar_side;
 
+#if FORCE_BINARY_SPLIT
+			double expectForceCost;
+			double forceSplitCost[2];
+			int forcePlanarSide;
+			int fs_leftTriCnt, fs_rightTriCnt;
+#endif
+
 			// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 			// The best spliting position search algorithm as decribed in 
 			//  "On building fast kd-Trees for Ray Tracing, and on doing that in O(N log N)"
@@ -850,7 +861,16 @@ void try_to_split(const int axis, BoundingBox &inBBox, const PrimList *pTriangle
 #endif
 
 				double SAH[2];
+				float splitW = 0.5;
 				for (int side_idx = 0; side_idx < 2; side_idx++) {
+#if FORCE_BINARY_SPLIT
+					forceSplitCost[side_idx] = (tri_num_left[side_idx] == 0 || tri_num_right[side_idx] == 0)
+						? DBL_MAX
+						//: abs(tri_num_left[side_idx] - tri_num_right[side_idx]);
+						: max(tri_num_left[side_idx], tri_num_right[side_idx]);
+						//: tri_num_left[side_idx] * tri_num_left[side_idx] + tri_num_right[side_idx] * tri_num_right[side_idx];
+						//: abs(tri_num_left[side_idx] - tri_num_right[side_idx]) + splitW * tri_num_left[side_idx] + tri_num_right[side_idx];
+#endif
 #if SAH_MODE == 0
 					SAH[side_idx] = v_KD_TREE_TRAVL_COST + v_KD_TREE_ISECT_COST * (
 						double(tri_num_left[side_idx])* prob_l +
@@ -921,6 +941,20 @@ void try_to_split(const int axis, BoundingBox &inBBox, const PrimList *pTriangle
 					nTri_left = tri_num_left[1];
 					nTri_right = tri_num_right[1];
 				}
+#if FORCE_BINARY_SPLIT
+				if (forceSplitCost[0] < forceSplitCost[1]) {
+					expectForceCost = forceSplitCost[0];
+					fs_leftTriCnt = tri_num_left[0];
+					fs_rightTriCnt = tri_num_right[0];
+					forcePlanarSide = BoundEdge::START;
+				}
+				else {
+					expectForceCost = forceSplitCost[1];
+					forcePlanarSide = BoundEdge::END;
+					fs_leftTriCnt = tri_num_left[1];
+					fs_rightTriCnt = tri_num_right[1];
+				}
+#endif
 			}
 
 			if (ExpectedCost < bestCost.cost) {
@@ -937,7 +971,22 @@ void try_to_split(const int axis, BoundingBox &inBBox, const PrimList *pTriangle
 
 				bestCost.planar_side = planar_side;
 			}
+#if FORCE_BINARY_SPLIT
+			if (expectForceCost < forceSplit.cost) {
+				forceSplit.cost = expectForceCost;
+				forceSplit.splitPos = cur_position;
+				forceSplit.axis = axis;
 
+				forceSplit.n_onlyLeft = n_leftOnly;
+				forceSplit.n_onlyRight = n_rightOnly;
+				forceSplit.n_cross = n_cross;
+				forceSplit.n_planar = num_planars;
+				forceSplit.n_left = fs_leftTriCnt;
+				forceSplit.n_right = fs_rightTriCnt;
+
+				forceSplit.planar_side = forcePlanarSide;
+			}
+#endif
 		} // scoring
 	}
 }
@@ -1471,14 +1520,24 @@ void processInternalNode(SplitCost& bestCost, BoundingBox& bbox, unsigned int& t
 static int compLeafCnt = 0;
 static int compCnt = 0;
 static int ampledLeafCnt = 0;
+#if FORCE_BINARY_SPLIT
+static int forceBinarySplitCnt = 0;
+#endif
 	#endif
 
 void build_kd_tree_recursive(BoundEdge* bEdge, const PrimList* pTriangleInfos, unsigned int triangleSize,
-	BoundingBox& bbox, unsigned int inNodeLevel, KdTreeNode* inNode)
+	BoundingBox& bbox, unsigned int inNodeLevel, KdTreeNode* inNode
+#if FORCE_BINARY_SPLIT
+	,bool forceSplit
+#endif
+)
 {
 	//printf("[Level %2u, Size %u] Processing node...\n", inNodeLevel, triangleSize);
 
 	SplitCost bestCost;
+#if FORCE_BINARY_SPLIT
+	SplitCost bestForceSplitCost;
+#endif
 	g_iKdTree_Level = MyMAX(inNodeLevel, g_iKdTree_Level);
 	//printf("innodeLevel %d\n", g_iKdTree_Level);
 
@@ -1495,6 +1554,15 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const PrimList* pTriangleInfos, u
 	bestCost.cost = double(gIdsTris.size()) * v_KD_TREE_ISECT_COST;
 #else
 	bestCost.cost = double(triangleSize) * v_KD_TREE_ISECT_COST;
+#endif
+#if FORCE_BINARY_SPLIT
+	#if COUNT_BY_GID
+	//bestForceSplitCost.cost = gIdsTris.size();
+	bestForceSplitCost.cost = DBL_MAX;
+	#else
+	bestForceSplitCost.cost = DBL_MAX;
+	#endif
+	if (forceSplit) goto processLeaf;
 #endif
 
 #if FORCE_SPLIT_THRESHOLD
@@ -1544,12 +1612,19 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const PrimList* pTriangleInfos, u
 	if (inNodeLevel < v_KD_TREE_MAX_LEVEL && triangleSize > v_KD_TREE_MIN_PRIMITIVE) {
 #endif
 		SplitCost axisCosts[3] = { bestCost, bestCost, bestCost }; // 각 축의 결과를 저장할 배열
+#if FORCE_BINARY_SPLIT
+		SplitCost forceSplitCosts[3] = { bestForceSplitCost, bestForceSplitCost, bestForceSplitCost };
+#endif
 		#pragma omp parallel for
 		// (모든 축에 대해 수행)
 		for (int axis = 0; axis < 3; axis++) {
 			BoundEdge* local_bEdge = new BoundEdge[triangleSize * 2];
 			//try_to_split(axis, bbox, pTriangleInfos, triangleSize, bEdge, bestCost
+#if FORCE_BINARY_SPLIT
+			try_to_split(axis, bbox, pTriangleInfos, triangleSize, local_bEdge, axisCosts[axis], forceSplitCosts[axis]);
+#else
 			try_to_split(axis, bbox, pTriangleInfos, triangleSize, local_bEdge, axisCosts[axis]);
+#endif
 			delete[] local_bEdge;
 		}
 
@@ -1562,12 +1637,47 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const PrimList* pTriangleInfos, u
 #endif
 				bestCost = axisCosts[axis];
 			}
+#if FORCE_BINARY_SPLIT
+			if (forceSplitCosts[axis].cost < bestForceSplitCost.cost) {
+				bestForceSplitCost = forceSplitCosts[axis];
+			}
+#endif
 		}
 	}
 	
-	if (!bestCost.is_valid()) {
-		// Leaf node 생성
 
+#if FORCE_BINARY_SPLIT
+	#if COUNT_BY_GID
+	if (!bestCost.is_valid() && bestForceSplitCost.is_valid() && gIdsTris.size() > FORCE_SPLIT_THRESHOLD / 2 && gIdsTris.size() < FORCE_SPLIT_THRESHOLD) {
+	#else
+	if (bestCost.is_valid() && triangleSize > FORCE_SPLIT_THRESHOLD / 2 && triangleSize < FORCE_SPLIT_THRESHOLD) {
+	#endif
+		forceBinarySplitCnt++;
+		//cout << "gIdsTris.size: " << gIdsTris.size() << "\tforce binary split : " << forceBinarySplitCnt << "\n";
+		unsigned int nodeNum;
+		{
+			nodeNum = g_iKdTree_Node_Count;
+			setInnerNode(inNode, bestForceSplitCost.axis, g_iKdTree_Node_Count, bestForceSplitCost.splitPos);
+
+			g_iKdTree_Node_Count += 2;
+
+			if (g_iKdTree_Node_Count >= g_iKdTree_Node_CountAlloc) {
+				_reAllocKdtreeNodes(MyMAX(2 * g_iKdTree_Node_CountAlloc, 512), g_iKdTree_Node_CountAlloc, &g_pKdTree_Node_Array);
+			}
+		}
+		InternalRet ret;
+		processInternalNode(bestForceSplitCost, bbox, triangleSize, pTriangleInfos, bEdge, ret);
+		delete[] pTriangleInfos;
+		//cout << "left: " << ret.leftSize << "\tright: " << ret.rightSize << "\n";
+		build_kd_tree_recursive(bEdge, ret.pLeftTriangles, ret.leftSize, ret.leftnBounds, inNodeLevel + 1, &g_pKdTree_Node_Array[nodeNum],true);
+		build_kd_tree_recursive(bEdge, ret.pRightTriangles, ret.rightSize, ret.rightnBounds, inNodeLevel + 1, &g_pKdTree_Node_Array[nodeNum + 1], true);
+	}
+	else if(!bestCost.is_valid()){
+#else
+	if (!bestCost.is_valid()) {
+#endif
+		// Leaf node 생성
+		processLeaf:
 #if DEBUG_LEAF_GL
 		if (triangleSize > 0) {
 			std::vector<PrimList> leafDebug;

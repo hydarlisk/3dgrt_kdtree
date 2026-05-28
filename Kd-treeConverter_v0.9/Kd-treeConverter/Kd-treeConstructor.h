@@ -85,28 +85,35 @@ void setLeafNode(KdTreeNode* pNode, unsigned int _objectSize, unsigned int _obje
 
 void set_bound_edge(const int axis, const PrimList *pTriangleInfo, const unsigned int n_bEdge, BoundEdge *bEdge);
 
-void try_to_split(const int axis, BoundingBox &inBBox, const PrimList *pTriangles, const int triangleSize, 
-                        BoundEdge *bEdge,  SplitCost &bestCost
-//shyun added begin
-#if SAH_OPACITY == 1 | SAH_OPACITY == 10 | SAH_OPACITY == 101 | SAH_OPACITY == 1000 | SAH_OPACITY == 1001 | SAH_OPACITY == 201 | SAH_OPACITY == 2010
+#if FORCE_BINARY_SPLIT
+void try_to_split(const int axis, BoundingBox& inBBox, const PrimList* pTriangles, const int triangleSize, BoundEdge* bEdge, SplitCost& bestCost, SplitCost& forceSplitCost
+#else
+void try_to_split(const int axis, BoundingBox &inBBox, const PrimList *pTriangles, const int triangleSize, BoundEdge *bEdge,  SplitCost &bestCost
+	//shyun added begin
+	#if SAH_OPACITY == 1 | SAH_OPACITY == 10 | SAH_OPACITY == 101 | SAH_OPACITY == 1000 | SAH_OPACITY == 1001 | SAH_OPACITY == 201 | SAH_OPACITY == 2010
 	, const double total_opacity_in_node
-#elif SAH_OPACITY >= 2 & SAH_OPACITY != 20 & SAH_OPACITY != 2000
+	#elif SAH_OPACITY >= 2 & SAH_OPACITY != 20 & SAH_OPACITY != 2000
 	, const double total_contribution_in_node
-#endif
-#if SAH_OPACITY >= 4 & SAH_OPACITY < 6
+	#endif
+	#if SAH_OPACITY >= 4 & SAH_OPACITY < 6
 	, const float max_area_in_node
-#endif
-#if SAH_OPACITY == 1000 | SAH_OPACITY == 2000 | SAH_OPACITY == 2010
+	#endif
+	#if SAH_OPACITY == 1000 | SAH_OPACITY == 2000 | SAH_OPACITY == 2010
 	, unsigned int inNodeLevel
+	#endif
 #endif
-//shyun added end
+	
 );
 
 bool initialize_kd_tree(CompositeObject *poly_model);
 void uninitialize_kd_tree(void);
 
-void build_kd_tree_recursive(BoundEdge *bEdge, const PrimList *pTriangleInfos, unsigned int triangleSize,
-                             BoundingBox &bbox, unsigned int inNodeLevel, KdTreeNode *inNode);
+void build_kd_tree_recursive(BoundEdge *bEdge, const PrimList *pTriangleInfos, unsigned int triangleSize,BoundingBox &bbox, unsigned int inNodeLevel, KdTreeNode *inNode
+#if FORCE_BINARY_SPLIT
+	, bool forceSplit = false
+#endif
+);
+
 
 void build_TriAccList(CompositeObject *poly_model, TriAccel*& pTriAcc);
 

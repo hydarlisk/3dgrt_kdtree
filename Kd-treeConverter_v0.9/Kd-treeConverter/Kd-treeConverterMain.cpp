@@ -2919,6 +2919,7 @@ void subMenuHandler(int value) {
 	char suffixDumpKdt[256];
 
 	char* countG = ((PRIMITIVE_TYPE == ELLIPSOID_BY_TRI) && COUNT_BY_GID) ? "_CountG" : "";
+	char* forceBinarySplit = ((PRIMITIVE_TYPE == ELLIPSOID_BY_TRI) && FORCE_BINARY_SPLIT) ? "_fs" : "";
 
 #if SAH_MODE == 0
 	const char* sahMode = "";
@@ -2930,7 +2931,7 @@ void subMenuHandler(int value) {
 
 	// 일반 파일 접미사 조립
 	// 형태: [scale]_[iscet]_[opacity]_[mintri]_[split][maxlevel][clip]_[sah]
-	snprintf(suffix, sizeof(suffix), "%s_%d_%s_%d_%d%s%s_%s%s%s%s",
+	snprintf(suffix, sizeof(suffix), "%s_%d_%s_%d_%d%s%s_%s%s%s%s%s",
 		scale_mode_str,
 		static_cast<int>(ISCET_COST),
 		opacity_part,
@@ -2940,6 +2941,7 @@ void subMenuHandler(int value) {
 		clip_mode_str,
 		primitiveType,
 		countG,
+		forceBinarySplit,
 		sahMode,
 		versionExt
 	);
