@@ -627,7 +627,7 @@ void push_triangles_to_child_vector(const unsigned n_bEdge, const BoundEdge* bEd
 }
 //shyun added end
 #if FORCE_BINARY_SPLIT
-void try_to_split(const int axis, BoundingBox &inBBox, const PrimList *pTriangles, const int triangleSize, BoundEdge *bEdge,  SplitCost &bestCost, SplitCost& forceSplit
+void try_to_split(const int axis, BoundingBox &inBBox, const PrimList *pTriangles, const int triangleSize, BoundEdge *bEdge,  SplitCost &bestCost, SplitCost& bestForceSplit
 #else
 void try_to_split(const int axis, BoundingBox &inBBox, const PrimList *pTriangles, const int triangleSize, BoundEdge *bEdge,  SplitCost &bestCost
 #endif
@@ -972,19 +972,19 @@ void try_to_split(const int axis, BoundingBox &inBBox, const PrimList *pTriangle
 				bestCost.planar_side = planar_side;
 			}
 #if FORCE_BINARY_SPLIT
-			if (expectForceCost < forceSplit.cost) {
-				forceSplit.cost = expectForceCost;
-				forceSplit.splitPos = cur_position;
-				forceSplit.axis = axis;
+			if (expectForceCost < bestForceSplit.cost) {
+				bestForceSplit.cost = expectForceCost;
+				bestForceSplit.splitPos = cur_position;
+				bestForceSplit.axis = axis;
 
-				forceSplit.n_onlyLeft = n_leftOnly;
-				forceSplit.n_onlyRight = n_rightOnly;
-				forceSplit.n_cross = n_cross;
-				forceSplit.n_planar = num_planars;
-				forceSplit.n_left = fs_leftTriCnt;
-				forceSplit.n_right = fs_rightTriCnt;
+				bestForceSplit.n_onlyLeft = n_leftOnly;
+				bestForceSplit.n_onlyRight = n_rightOnly;
+				bestForceSplit.n_cross = n_cross;
+				bestForceSplit.n_planar = num_planars;
+				bestForceSplit.n_left = fs_leftTriCnt;
+				bestForceSplit.n_right = fs_rightTriCnt;
 
-				forceSplit.planar_side = forcePlanarSide;
+				bestForceSplit.planar_side = forcePlanarSide;
 			}
 #endif
 		} // scoring
@@ -1528,7 +1528,7 @@ static int forceBinarySplitCnt = 0;
 void build_kd_tree_recursive(BoundEdge* bEdge, const PrimList* pTriangleInfos, unsigned int triangleSize,
 	BoundingBox& bbox, unsigned int inNodeLevel, KdTreeNode* inNode
 #if FORCE_BINARY_SPLIT
-	,bool forceSplit
+	,bool bestForceSplit
 #endif
 )
 {
@@ -1562,7 +1562,7 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const PrimList* pTriangleInfos, u
 	#else
 	bestForceSplitCost.cost = DBL_MAX;
 	#endif
-	if (forceSplit) goto processLeaf;
+	if (bestForceSplit) goto processLeaf;
 #endif
 
 #if FORCE_SPLIT_THRESHOLD
