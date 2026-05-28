@@ -968,9 +968,32 @@ __device__ inline float ellipsoidIntersect(const float3& ocn, const float3& rdn)
     float c = dot(ocn, ocn);
     float h = b * b - a * (c - 1.0);
     //if (h < 0.0) return -1.0;
+
+    //if (h < -EPSILON4) return -1.0;
+    //h = sqrt(h) + EPSILON3;
+    //return (-b-h) / a;
+
+    float t1, t2;
     if (h < -EPSILON4) return -1.0;
-    h = sqrt(h) + EPSILON3;
-    return (-b-h) / a;
+    //else if (h == 0) return -0.5 * b / a;
+    else {
+        //float q = (b > 0) ? -(b + sqrt(h)) : -(b - sqrt(h));
+        //t1 = q / a;
+        //t2 = (c-1.0) / q;
+
+        if (b > 0) {
+            float q = -(b + sqrt(h));
+            //t1 = c / q;
+            t2 = q / a;
+        }
+        else {
+            float q = -(b - sqrt(h));
+            //t1 = q / a;
+            t2 = (c-1) / q;
+        }
+    }
+    //return (t1 <  t2) ? t1 : t2;
+    return t2;
 }
 
 __device__ inline float calculateKernelScale(float density, float kernelMinResponse = KERNEL_MIN_RESPONSE, uint32_t opts = 1, float kernelDegree = KERNEL_DEGREE) {
