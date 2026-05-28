@@ -17,6 +17,7 @@
 #define KDT_VERSION 1
 
 /* ply read */
+#define ADD_PLY_FILE_NAME "_instances_edit"
 #define OCCLUDE_MIN_OPACITY 1
 #define OCCLUDE_MIN_OPACITY_TRI 1
 #define PROBLEMATIC_THRESHOLD 1	//remove dominant prim from gaussian data

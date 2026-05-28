@@ -3129,12 +3129,12 @@ void subMenuHandler(int value) {
 
 	std::string name = assetName;
 	std::string root = "../../Data/ply/" + name + "/";
-
-	std::string s_ply_file_path = root + name + "_3dgrt.ply";
-	std::string s_base_kdtree_str = root + name + "_tree.kdt";
-	std::string s_base_leafInfo_str = root + name + "_leafInfo.bin";
-	std::string s_base_igeom_str = root + name + "_igeom.bin";
-	std::string s_base_kdtInfo_str = root + name + "_kdtInfo.txt";
+	
+	std::string s_ply_file_path = root + name + "_3dgrt" + ADD_PLY_FILE_NAME + ".ply";
+	std::string s_base_kdtree_str = root + name + ADD_PLY_FILE_NAME + "_tree.kdt";
+	std::string s_base_leafInfo_str = root + name + ADD_PLY_FILE_NAME + "_leafInfo.bin";
+	std::string s_base_igeom_str = root + name + ADD_PLY_FILE_NAME + "_igeom.bin";
+	std::string s_base_kdtInfo_str = root + name + ADD_PLY_FILE_NAME + "_kdtInfo.txt";
 
 	std::string s_base_obj_str = root + name + "_new.obj";
 	std::string s_base_build_str = root + name + "_kdt.txt";
