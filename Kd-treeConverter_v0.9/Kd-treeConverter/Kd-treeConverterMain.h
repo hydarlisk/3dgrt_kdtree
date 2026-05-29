@@ -46,6 +46,9 @@ typedef struct _UIParameters {
 
 
 	CompositeObject poly_model;
+#if ELLIPSOID_DEBUG
+	std::vector<ExtendedVertex> allGaussianmesh;
+#endif
 
 	int composite_object_read;
 } UIParameters;

@@ -91,6 +91,7 @@ std::vector<float> g_kScales;
 #endif
 
 bool g_glGaussianColorMode = true;
+bool g_glOnlyBoxMode = false;
 int g_renderMode = 0;	//5: ellipsoid aabb debug
 int g_renderGId = -1;
 int g_renderNodeId = -1;
@@ -230,7 +231,7 @@ KdTree kd_tree;
 GLuint buf_obj;
 
 void renderGaussianMesh(int gId) {
-	ExtendedVertex* v = uip.poly_model.extended_vertices;
+	ExtendedVertex* v = &uip.allGaussianmesh[gId];
 
 	if (g_glGaussianColorMode) {
 		glDisable(GL_LIGHTING);
@@ -285,6 +286,21 @@ void renderLeaf(int nodeId) {
 	//};
 	//draw_AABB(aabb);
 }
+
+#if LEAF_NODE_DEBUG
+void renderLeafOriginal(int nodeId) {
+	LeafNodeInfo& leaf = leaf_nodes[nodeId];
+	for (int i = 0; i < leaf.primIndices.size(); i++) {
+		renderGaussianMesh(leaf.primIndices[i]);
+	}
+	float aabb[6] = {
+		leaf.aabb.min[0], leaf.aabb.max[0],
+		leaf.aabb.min[1], leaf.aabb.max[1],
+		leaf.aabb.min[2], leaf.aabb.max[2]
+	};
+	draw_AABB(aabb);
+}
+#endif
 
 #if PRIMITIVE_TYPE == ELLIPSOID
 //only works for icosa mesh
@@ -365,7 +381,7 @@ void renderGaussianMeshes() {
 	ExtendedVertex* ptr_ev;
 	if (uip.bounding_box_display_mode)
 		draw_AABB(uip.poly_model.AABB);
-
+	if (g_glOnlyBoxMode) return;
 	// use an old way of drawing
 	if (g_glGaussianColorMode) {
 		glDisable(GL_LIGHTING);
@@ -538,6 +554,12 @@ void display(void) {
 		draw_axes(100.0);
 		if (uip.composite_object_read == 1) {
 			switch (g_renderMode) {
+#if LEAF_NODE_DEBUG
+			case 1:
+				if (g_renderNodeId >= 0)
+					renderLeafOriginal(g_renderNodeId);
+				break;
+#endif
 			case 7:
 				if (g_renderNodeId >= 0)
 					renderLeaf(g_renderNodeId);
@@ -631,7 +653,12 @@ void keyboard(unsigned char key, int x, int y) {
 			glutPostRedisplay();
 			break;
 		case 'C':
+			g_camera_dirty;
 			g_glGaussianColorMode = !g_glGaussianColorMode;
+			break;
+		case 'B': //render only aabb
+			g_camera_dirty;
+			g_glOnlyBoxMode = !g_glOnlyBoxMode;
 			break;
 		case 'p':
 			if (uip.OpenGL_polygon_mode == FILL) {
@@ -1197,6 +1224,19 @@ void set_kd_tree_leaf_node() {
 		uip.poly_model.AABB[ZMAX] = selected_leaf.aabb.max[2];
 
 		if (!indices.empty()) {
+#if ELLIPSOID_DEBUG
+			int num_leaf_vertices = indices.size() * 3 * 20;
+			leaf_display_vertices = new ExtendedVertex[num_leaf_vertices];
+			for (size_t i = 0; i < indices.size(); ++i) {
+				unsigned int gid = indices[i];
+				size_t dst_idx = i * 60;
+				size_t src_idx = gid * 60;
+
+				// 정점 60개 분량을 한 번에 복사
+				memcpy(&leaf_display_vertices[dst_idx], &original_vertices[src_idx], sizeof(ExtendedVertex) * 60);
+			}
+			
+#else
 			// 선택된 리프의 삼각형들을 담을 임시 버퍼를 새로 할당
 			int num_leaf_vertices = indices.size() * 3;
 			leaf_display_vertices = new ExtendedVertex[num_leaf_vertices];
@@ -1207,6 +1247,7 @@ void set_kd_tree_leaf_node() {
 				// tri_idx번째 삼각형(정점 3개)을 통째로 복사
 				memcpy(&leaf_display_vertices[i * 3], &original_vertices[tri_idx * 3], sizeof(ExtendedVertex) * 3);
 			}
+#endif
 
 			// display() 함수가 임시 버퍼를 그리도록 포인터를 교체
 			uip.poly_model.extended_vertices = leaf_display_vertices;
@@ -2059,6 +2100,62 @@ void create_composite_object_from_gaussians(
 		uip.poly_model.AABB[XMIN], uip.poly_model.AABB[XMAX],
 		uip.poly_model.AABB[YMIN], uip.poly_model.AABB[YMAX],
 		uip.poly_model.AABB[ZMIN], uip.poly_model.AABB[ZMAX]);
+}
+
+void create_composite_object_from_gaussians_all(
+	std::vector<Gaussian>& gaussians,
+	float kernelMinResponse = KERNEL_MIN_RESPONSE,
+	float kernel_degree = KERNEL_DEGREE
+) {
+	if (gaussians.empty()) {
+		printf("Gaussian list is empty. Nothing to create.\n");
+		return;
+	}
+
+	uip.allGaussianmesh.clear();
+
+	// 메모리 할당
+	long num_gaussians = gaussians.size();
+
+	//const float ICOSA_VRT_SCALE = 0.5f * icosaEdge;
+	int cnt_sigma = 0;
+	float k_iso_max = 0;
+
+	// 초기 데이터 생성 *************************
+	for (long i = 0; i < num_gaussians; ++i) {
+		Gaussian& g = gaussians[i];
+		const float sigma = g.opacity;
+
+		float k_iso = 0.0f;
+#if USE_KERNEL_SCALE
+		//if (sigma / kernelMinResponse > 1.0f)
+		// kernelScale_final 함수를 호출하여 k_iso 계산
+		k_iso = kernelScale_final(sigma, kernelMinResponse, kernel_degree, ADAPTIVE_KERNEL_CLAMPING) * 0.5f * icosaEdge;
+#else
+		if (sigma / kernelMinResponse > 1.0f) {
+			k_iso = sqrtf(2.0f * logf(sigma / kernelMinResponse)) * unitspherefactor;
+		}
+#endif
+		float final_scale[3] = {
+			g.scale[0] * k_iso,
+			g.scale[1] * k_iso,
+			g.scale[2] * k_iso
+		};
+
+		float max_final_scale = fmaxf(fmaxf(final_scale[0], final_scale[1]), final_scale[2]);
+		float min_final_scale = fminf(fminf(final_scale[0], final_scale[1]), final_scale[2]);
+		k_iso_max = fmaxf(k_iso_max, k_iso);
+
+		int triangles_added = 0;
+		std::vector<ExtendedVertex> tmpVert(20 * 3);
+		ExtendedVertex* vPtr = tmpVert.data();
+
+		generate_gaussian_mesh(i, vPtr, uip.poly_model.AABB, g, final_scale, g_IcoVertices, g_IcoFaces);
+		triangles_added = g_IcoFaces.size();
+		for (int j = 0; j < tmpVert.size(); j++) {
+			uip.allGaussianmesh.push_back(tmpVert[j]);
+		}
+	}
 }
 
 void removeProblematicGaussian(std::vector<Gaussian>& gaussians) {
@@ -3217,11 +3314,16 @@ void subMenuHandler(int value) {
 	}
 	g_isValidG.assign(g_gaussians.size(), 1);
 	create_composite_object_from_gaussians(g_gaussians);
+	create_composite_object_from_gaussians_all(g_gaussians);
 #if PROBLEMATIC_THRESHOLD != 1
 	removeProblematicGaussian(g_gaussians);
 #endif
 	uip.composite_object_read = 1;
 #if LEAF_NODE_DEBUG
+	uip.poly_model.n_triangles = uip.allGaussianmesh.size() / 3;
+	free(uip.poly_model.extended_vertices);
+	uip.poly_model.extended_vertices = (ExtendedVertex*)malloc(sizeof(ExtendedVertex) * uip.allGaussianmesh.size());
+	memcpy(uip.poly_model.extended_vertices, uip.allGaussianmesh.data(), uip.allGaussianmesh.size() * sizeof(ExtendedVertex));
 	if (original_vertices != nullptr) {
 		delete[] original_vertices;
 		original_vertices = nullptr;
@@ -3252,6 +3354,11 @@ void subDebugMenuHandler(int value) {
 		g_renderMode = 7;
 		g_renderNodeId = 0;
 		break;
+#endif
+#if LEAF_NODE_DEBUG
+	case 901:	//debug leaf original
+		g_renderMode = 1;
+		g_renderNodeId = 0;
 #endif
 #if PRIMITIVE_TYPE == ELLIPSOID
 	case 903:	//debug ellipsoid aabb
@@ -3518,6 +3625,9 @@ void register_callbacks_and_create_menu(void) {
 	glutAddMenuEntry("stump", 112);
 
 	int subDebugMenu = glutCreateMenu(subDebugMenuHandler);
+#if LEAF_NODE_DEBUG
+	glutAddMenuEntry("debug leaf original", 901);
+#endif
 #if DEBUG_LEAF_GL
 	glutAddMenuEntry("debug leaf", 905);
 #endif
