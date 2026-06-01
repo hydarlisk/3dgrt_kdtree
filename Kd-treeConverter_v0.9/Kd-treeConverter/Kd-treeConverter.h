@@ -5,28 +5,19 @@
  **************************************************************/
 
 #pragma once
+
+#include "DefineConst.h"
+#include "UnusedMacros.h"
+
 #include <vector>
 
-/* camera */
-#define CAM_MOVE_SPEED 0.5
-#define CAM_ROT_SPEED 0.1
-#define CAM_MOVE_SHIFT 0.01
-
-/* data format */
-#define JS_BIN true
-#define KDT_VERSION 1
 
 /* ply read */
-//#define ADD_PLY_FILE_NAME "_instances_edit"
+#define ASSET HOTDOG
 #define ADD_PLY_FILE_NAME ""
-#define OCCLUDE_MIN_OPACITY 1
-#define OCCLUDE_MIN_OPACITY_TRI 1
-#define PROBLEMATIC_THRESHOLD 1	//remove dominant prim from gaussian data
 
-/* primitive type */
-#define TRI 0
-#define ELLIPSOID 1
-#define ELLIPSOID_BY_TRI 2
+
+#define PROBLEMATIC_THRESHOLD 1	//remove dominant prim from gaussian data
 #define PRIMITIVE_TYPE 2
 
 /*** ellipsoid_by_tri ***/
@@ -34,10 +25,20 @@
 #define SAH_MODE 4
 //////////////////////////
 
-/* rendering */
-#define UPLOAD_INV_SCALE 1
-#define UPLOAD_INV_KSCALE 1
-#define VOLUME_ISECT 1
+#define USE_KERNEL_SCALE true					// 기존의 OptiX 방식 kernelScale 사용
+
+/* kd tree build */
+#define TRAVL_COST 1.0
+#define ISCET_COST 5.0
+#define MAX_LEVEL 128
+#define EMTPY_BONUS 0.9
+//#define IGNORE_THRESHOLD 0.0001
+#define IGNORE_THRESHOLD 0
+#define REMOVE_SMALL_PRIM 0
+#define FORCE_BINARY_SPLIT 1	//fs
+
+#define MIN_TRI 16
+#define MIN_ELLIPSOID 16
 
 #define QUATERNION true
 	#define PRE_CALC_KSCALE 1
@@ -65,24 +66,7 @@
 
 /* Triangle */
 #define LEAF_NODE_DEBUG false					// kd-tree leaf node 렌더링
-
-#define DUMP_LEAF_CSV 0
 ////////////////////////////////////////////
-
-#define EPSILON 0.00001f
-
-/* kd tree build */
-#define TRAVL_COST 1.0
-#define ISCET_COST 20.0
-#define MAX_LEVEL 128
-#define EMTPY_BONUS 0.9
-//#define IGNORE_THRESHOLD 0.0001
-#define IGNORE_THRESHOLD 0
-#define REMOVE_SMALL_PRIM 0
-#define FORCE_BINARY_SPLIT 1	//fs
-
-#define MIN_TRI 16
-#define MIN_ELLIPSOID 16
 
 #if QUATERNION
 #undef PRE_CALC_KSCALE
@@ -93,42 +77,15 @@
 
 #define ADAPTIVE_KERNEL_CLAMPING 1
 
-//#define FORCE_SPLIT_THRESHOLD 64				// kd-tree 강제분할
 #define FORCE_SPLIT_THRESHOLD 256				// kd-tree 강제분할
-//#define FORCE_SPLIT_THRESHOLD 256				// kd-tree 강제분할
 //#define SOFT_SPLIT_THRESHOLD 128				// kd-tree 강제분할(완화)
 #define SOFT_SPLIT_THRESHOLD2 256				// kd-tree 강제분할(완화)
 
-#define SIGMA_THRESHOLD_MODE 1
-#define ADAPTIVE_MESH false
-#define USE_KERNEL_SCALE true					// 기존의 OptiX 방식 kernelScale 사용
 
-#if PRIMITIVE_TYPE == TRI	|| PRIMITIVE_TYPE == ELLIPSOID_BY_TRI
-	#undef QUATERNION
-	#define QUATERNION true
-	#undef ISCET_COST
-	#define ISCET_COST 5.0
-#endif
-#if PRIMITIVE_TYPE == ELLIPSOID
-	#undef ISCET_COST
-	#define ISCET_COST 20.0
-#endif
 
-#define BLEND_SELECT false
 #define EXPORTED false
 
 //#define LESS_TRI false
-
-/********* for fast asset setting **********/
-#define HOTDOG 0
-#define BICYCLE 1
-#define ROOM 2
-#define LEGO 3
-
-///////////// change this part /////////////
-#define ASSET HOTDOG
-#define ORIGINAL false
-////////////////////////////////////////////
 
 #if PRIMITIVE_TYPE == TRI || PRIMITIVE_TYPE == ELLIPSOID_BY_TRI
 #if ASSET == HOTDOG
@@ -218,50 +175,7 @@
 #endif // PRIMITIVE_TYPE == TRI
 
 
-#define SAH_OPACITY 0
-#define CLIP_AREA false							// 부모 노드의 AABB로 삼각형 면적 clip
-#define SAH_MAXIMIZE false
-//0 - P_s * N_s																									//235
-//1 - P_s * SUM(sigma)																							//227
-#define TRANSPARENCY false
-//2 - P_s * SUM(sigma(i) * area(i))																				//187
-//2 - P_s * SUM(sigma(i) * area_clip_parent(i))																	//154
-//21 - P_s * SUM(sigma(i) * area(i) * OPACITY_PENALTY)															//182
-//21 - P_s * SUM(sigma(i) * area_clip_parent(i) * OPACITY_PENALTY)												//71
-#define OPACITY_PENALTY 10.0f					//for SAH 21
-//22 - P_s * ( SUM(sigma(i) * area(i)) + HYBRID_BETA * N_s)														//196
-//22 - P_s * ( SUM(sigma(i) * area_clip_parent(i)) + HYBRID_BETA * N_s)											//
-#define HYBRID_BETA 0.3f						//for SAH 22, 23
-//23 - P_s * ( (1-HYBRID_BETA) * SUM(sigma(i) * area(i))_normalize + HYBRID_BETA * N_s_normalize)				//194
-//23 - P_s * ( (1-HYBRID_BETA) * SUM(sigma(i) * area_clip_parent(i))_normalize + HYBRID_BETA * N_s_normalize)	//
-//3 - P_s * SUM(sigma(i) * area(i) / MAX(area(V_s))																//4
-//3 - P_s * SUM(sigma(i) * area_clip_parent(i) / MAX(area(V_s))													//
-//4 - P_s * SUM(sigma(i) * area(i) / MAX(area(V))																//208
-//4 - P_s * SUM(sigma(i) * area_clip_parent(i) / MAX(area(V))													//
-//5 - SUM(sigma(i) * area(i) / MAX(area(V))																		//
-//5 - SUM(sigma(i) * area_clip_parent(i) / MAX(area_clip_parent_in_V))											//
-//6 - P_s * SUM(sigma(i) * area(i_real)): (실패)
-//7 - P_s * SUM(sigma(i) * (A_tri_leaf_AABB/A_leaf_AABB)): (실패)
-//8 - P_s * SUM(sigma(i) * (A_tri_clip_parent_AABB/A_parent_AABB))												//
-//81 - P_s * SUM(sigma(i) * area(i) * (A_tri_clip_parent_AABB/A_parent_AABB)): TODO								//
-//81 - P_s * SUM(sigma(i) * area_clip_parent(i) * (A_tri_clip_parent_AABB/A_parent_AABB)): TODO					//
-//9 - P_s * SUM(sigma(i) * (A_tri_clip_parent_AABB/A_tri_origin_AABB)): TODO
-//91 - P_s * SUM(sigma(i) * area(i) * (A_tri_clip_parent_AABB/A_tri_origin_AABB)): TODO
-//91 - P_s * SUM(sigma(i) * area_clip_parent(i) * (A_tri_clip_parent_AABB/A_tri_origin_AABB)): TODO
-//10 - P_s * ( SUM(sigma(i)) / Volume(leaf_AABB) ): (실패)
-//101 - ( SUM(sigma(i)) / Volume(leaf_AABB) ): (실패)
-//1000 - 일정 레벨까지 1, 이후 0
-#define HYBRID_SAH_DEPTH_THRESHOLD 5			//for SAH 1000, 2000
-//1001 - 일정 갯수까지 1, 이후 0
-#define HYBRID_SAH_TRIANGLE_THRESHOLD 10000		//for SAH 1001, 2001
-//20 - 4V_s/S_s * N_s
-//201 - 4V_s/S_s * ( SUM(sigma(i)) )
-//in 20, 201 P_s * ()
-#define MUL_PROP false
-//2000 - 일정 레벨까지 20, 이후 0
-//2001 - 일정 갯수까지 20, 이후 0
-//2010 - 일정 레벨까지 201, 이후 0
-//2011 - 일정 갯수까지 201, 이후 0
+
 
 #define KERNEL_MIN_RESPONSE 0.0113f
 #define KERNEL_DEGREE 4.0f
@@ -274,9 +188,6 @@
 #define DIM_X 32
 #define DIM_Y 8
 
-#define SHORT_STACK 0
-#define HYBRID_STACK 1
-#define GLOBAL_STACK 2
 #define USE_STACK SHORT_STACK					// SHORT_STACK	(0): ShortStack만 사용
 												// HYBRID_STACK	(1): GlobalStack 같이 사용
 												// GLOBAL_STACK	(2): GlobalStack만 사용
@@ -286,13 +197,10 @@
 #define SHORT_STACK_DEPTH 12 					// for kernel sh.mem
 #endif
 
-#define MAX_GLOBAL_STACK_DEPTH 64
-
 #define SPH_EVAL_DEGREE 3
 #define GAUSSIAN_DEGREE 4
 #define WALD_METHOD true
 #define MAIL_BOX false
-#define SIGMA_THRESHOLD 0//.03   					// sigma(density) 작은 가우시안 제거
 
 #define GLOBAL_DEVICE_VAR true
 #define GAUSSIAN_TEXTURE true

@@ -71,6 +71,12 @@
     <ClInclude Include="Gaussian.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="DefineConst.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="UnusedMacros.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cudaRenderer.cu">

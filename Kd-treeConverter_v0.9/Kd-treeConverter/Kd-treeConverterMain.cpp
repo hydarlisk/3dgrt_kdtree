@@ -1798,7 +1798,6 @@ void create_composite_object_from_gaussians(
 #endif
 
 #if SIGMA_THRESHOLD_MODE
-		//if (sigma < SIGMA_THRESHOLD) { cnt_sigma++; continue; }
 	#if OCCLUDE_MIN_OPACITY_TRI
 		if (sigma < KERNEL_MIN_RESPONSE || sigma < SIGMA_THRESHOLD_MODE / 255.0f) {
 			cnt_sigma++;
@@ -2969,7 +2968,6 @@ void subMenuHandler(int value) {
 #else
 	const char* primitiveType = ADAPTIVE_MESH ? "adaptive" : "icosa";
 #endif
-	//const char* clip_mode_str = EXPORTED ? "_exported" : "";
 #if SIGMA_THRESHOLD_MODE==true || SIGMA_THRESHOLD_MODE==false
 	char* clip_mode_str = SIGMA_THRESHOLD_MODE ? "_smT" : "";
 #elif SIGMA_THRESHOLD_MODE==2
@@ -3091,11 +3089,7 @@ void subMenuHandler(int value) {
 		std::cout << "need name handling about macros\n";
 		system("pause");
 		assetName = "bonsai";
-#if EXPORTED
-		ply_file_path = "../../Data/ply/bonsai/bonsai_exported.ply";
-#else
 		ply_file_path = "../../Data/ply/bonsai/bonsai.ply";
-#endif
 		setCameraLookAt(-0.3701975643634796, -0.67806476354599, 1.5000991821289063,
 			0.421955406665802, 0.8475437164306641, -0.3219059407711029,
 			0.10673734545707703, -0.3990341126918793, -0.9107025265693665);
@@ -3122,11 +3116,7 @@ void subMenuHandler(int value) {
 		std::cout << "need name handling about macros\n";
 		system("pause");
 		assetName = "bicycle";
-#if EXPORTED
-		ply_file_path = "../../Data/ply/bicycle/bicycle_exported.ply";
-#else
 		ply_file_path = "../../Data/ply/bicycle/bicycle.ply";
-#endif
 		setCameraLookAt(-1.8810417652130128, 0.18281030654907227, 0.9657841324806213,
 			0.9618207216262817, 0.27256786823272707, -0.024726202711462976,
 			0.24284449219703675, -0.8916060328483582, -0.382185161113739);
