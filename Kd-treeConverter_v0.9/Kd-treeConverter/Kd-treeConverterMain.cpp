@@ -2985,15 +2985,7 @@ void dumpKdtreeInfo(char* filename) {
 	std::cout << "Kd-Tree Leaf Node Info successfully saved to " << filename << std::endl;
 }
 
-void subMenuHandler(int value) {
-	render_gaussian = true;
-	g_gaussians.clear();
-
-	printf("SIGMA_THRESHOLD_MODE: %f\n", static_cast<float>(SIGMA_THRESHOLD_MODE));
-	printf("SIGMA_THRESHOLD: %f\n", SIGMA_THRESHOLD_MODE / 255.0f);
-	printf("%f %f %f %f %f\n", 1.0f / 255.0f, 2.0f / 255.0f, 3.0f / 255.0f, 4.0f / 255.0f, 5.0f / 255.0f);
-
-	//const char* primitiveType = SAH_MAXIMIZE ? "maximize" : "minimize";
+std::string generateSuffix() {
 #if PRIMITIVE_TYPE == ELLIPSOID
 	const char* primitiveType = "ellipsoid";
 #elif PRIMITIVE_TYPE == ELLIPSOID_BY_TRI
@@ -3001,24 +2993,23 @@ void subMenuHandler(int value) {
 #else
 	const char* primitiveType = ADAPTIVE_MESH ? "adaptive" : "icosa";
 #endif
+
+	// 2. Clip Mode 결정
 #if SIGMA_THRESHOLD_MODE==true || SIGMA_THRESHOLD_MODE==false
-	char* clip_mode_str = SIGMA_THRESHOLD_MODE ? "_smT" : "";
+	const char* clip_mode_str = SIGMA_THRESHOLD_MODE ? "_smT" : "";
 #elif SIGMA_THRESHOLD_MODE==2
-	char* clip_mode_str = "_smT2";
+	const char* clip_mode_str = "_smT2";
 #elif SIGMA_THRESHOLD_MODE==3
-	char* clip_mode_str = "_smT3";
+	const char* clip_mode_str = "_smT3";
 #elif SIGMA_THRESHOLD_MODE==4
-	char* clip_mode_str = "_smT4";
+	const char* clip_mode_str = "_smT4";
 #elif SIGMA_THRESHOLD_MODE==5
-	char* clip_mode_str = "_smT5";
+	const char* clip_mode_str = "_smT5";
 #endif
 
 	const char* scale_mode_str = USE_KERNEL_SCALE ? "_ks" : "";
 
-	// scaleMode_IscetCost
-	std::string base_suffix = std::string(scale_mode_str) + "_" + std::to_string(static_cast<int>(ISCET_COST)) + "_";
-
-	// Opacity 파트 처리 (복잡한 괄호 조건 등을 하나의 문자열로 정리)
+	// 3. Opacity 파트 처리
 	char opacity_part[64] = "normal";
 #if SAH_OPACITY > 0
 	const char* type_str = TRANSPARENCY ? "transparency" : "opacity";
@@ -3035,39 +3026,26 @@ void subMenuHandler(int value) {
 #endif
 #endif
 
-	// Max Level 파트 처리
+	// 4. Max Level 파트 처리
 	char max_level_part[32] = "";
 #if SAH_OPACITY == 0
-	if(MAX_LEVEL != 128)
+	if (MAX_LEVEL != 128)
 		snprintf(max_level_part, sizeof(max_level_part), "_%d", MAX_LEVEL);
 #endif
 
+	// 5. 기타 플래그 및 SAH Mode 처리
+	const char* countG = ((PRIMITIVE_TYPE == ELLIPSOID_BY_TRI) && COUNT_BY_GID) ? "_CountG" : "";
+	const char* forceBinarySplit = ((PRIMITIVE_TYPE == ELLIPSOID_BY_TRI) && FORCE_BINARY_SPLIT) ? "_fs" : "";
+	const char* versionExt = KDT_VERSION ? "__v1" : "";
 
-	char suffix[256];
-	char suffixDumpTri[256];
-	char suffixDumpKdt[256];
-
-	char* countG = ((PRIMITIVE_TYPE == ELLIPSOID_BY_TRI) && COUNT_BY_GID) ? "_CountG" : "";
-	char* forceBinarySplit = ((PRIMITIVE_TYPE == ELLIPSOID_BY_TRI) && FORCE_BINARY_SPLIT) ? "_fs" : "";
-
-	std::string sahMode;
-	if(SAH_MODE == 0)
-		sahMode = "";
-	else {
-		string sahMode_str = string("_sahMode") + to_string(SAH_MODE);
-		sahMode = sahMode_str.c_str();
+	// 🌟 메모리 버그 수정: std::string으로 값 복사가 안전하게 일어나도록 유지
+	std::string sahMode = "";
+	if (SAH_MODE != 0) {
+		sahMode = "_sahMode" + std::to_string(SAH_MODE);
 	}
 
-//#if SAH_MODE == 0
-//	const char* sahMode = "";
-//#else
-//	string sahMode_str = string("_sahMode") + to_string(SAH_MODE);
-//	const char* sahMode = sahMode_str.c_str();
-//#endif
-	char* versionExt = KDT_VERSION ? "__v1" : "";
-
-	// 일반 파일 접미사 조립
-	// 형태: [scale]_[iscet]_[opacity]_[mintri]_[split][maxlevel][clip]_[sah]
+	// 6. 버퍼 조립
+	char suffix[256];
 	snprintf(suffix, sizeof(suffix), "%s_%d_%s_%d_%d%s%s_%s%s%s%s%s",
 		scale_mode_str,
 		static_cast<int>(ISCET_COST),
@@ -3079,9 +3057,98 @@ void subMenuHandler(int value) {
 		primitiveType,
 		countG,
 		forceBinarySplit,
-		sahMode,
+		sahMode.c_str(), // .c_str()은 snprintf 안에서 즉시 쓰이므로 안전합니다.
 		versionExt
 	);
+	return std::string(suffix);
+}
+
+void initAssetPaths(const std::string& assetName, const char* suffix) {
+	if (assetName.empty()) return;
+
+	// 1. 기초 문자열 조합 (std::string이 살아있는 동안만 유효하므로 함수 로컬로 선언)
+	std::string root = "../../Data/ply/" + assetName + "/";
+
+	// ⚠️ 주의: 이 문자열들은 함수가 끝날 때 소멸하므로, c_str()을 전역 포인터에 바로 대입하면 안 됩니다.
+	// 따라서 접미사가 안 붙는 고정 파일명들은 아래에서 static 버퍼에 안전하게 복사합니다.
+	std::string s_ply_file_path = root + assetName + "_3dgrt" + ADD_PLY_FILE_NAME + ".ply";
+	std::string s_base_kdtree_str = root + assetName + ADD_PLY_FILE_NAME + "_tree.kdt";
+	std::string s_base_leafInfo_str = root + assetName + ADD_PLY_FILE_NAME + "_leafInfo.bin";
+	std::string s_base_igeom_str = root + assetName + ADD_PLY_FILE_NAME + "_igeom.bin";
+	std::string s_base_kdtInfo_str = root + assetName + ADD_PLY_FILE_NAME + "_kdtInfo.txt";
+	std::string s_base_obj_str = root + assetName + "_new.obj";
+	std::string s_base_build_str = root + assetName + "_kdt.txt";
+	std::string s_ply_to_obj_mtl = assetName + "_3dgrt.mtl";
+
+	// 2. 경로 조립용 내부 람다 함수
+	auto construct_path = [](char* buffer, size_t buffer_size, const char* base_path, const char* current_suffix) {
+		const char* extension = strrchr(base_path, '.');
+		if (extension) {
+			int base_len = extension - base_path;
+			snprintf(buffer, buffer_size, "%.*s%s%s", base_len, base_path, current_suffix, extension);
+		}
+		else {
+			snprintf(buffer, buffer_size, "%s%s", base_path, current_suffix);
+		}
+		};
+
+	// 3. 포인터 수명 유지를 위한 static 메모리 버퍼 확보
+	static char final_ply_path[512];
+	static char final_mtl_path[512];
+
+	static char final_kdtree_path[512];
+	static char final_igeom_path[512];
+	static char final_leafInfo_path[512];
+	static char final_kdtInfo_path[512];
+	static char final_obj_path[512];
+	static char final_build_path[512];
+
+	static char final_kdtree_dump_path[512];
+	static char final_leafInfo_dump_path[512];
+	static char final_igeom_dump_path[512];
+
+	// 4. 고정 경로 복사 (Suffix가 붙지 않는 오리지널 파트)
+	strncpy_s(final_ply_path, sizeof(final_ply_path), s_ply_file_path.c_str(), _TRUNCATE);
+	strncpy_s(final_mtl_path, sizeof(final_mtl_path), s_ply_to_obj_mtl.c_str(), _TRUNCATE);
+	ply_file_path = final_ply_path;
+	ply_to_obj_mtl = final_mtl_path;
+
+	// 5. Suffix 결합 및 최종 경로 빌드
+	construct_path(final_kdtree_path, sizeof(final_kdtree_path), s_base_kdtree_str.c_str(), suffix);
+	construct_path(final_igeom_path, sizeof(final_igeom_path), s_base_igeom_str.c_str(), suffix);
+	construct_path(final_leafInfo_path, sizeof(final_leafInfo_path), s_base_leafInfo_str.c_str(), suffix);
+	construct_path(final_kdtInfo_path, sizeof(final_kdtInfo_path), s_base_kdtInfo_str.c_str(), suffix);
+	construct_path(final_obj_path, sizeof(final_obj_path), s_base_obj_str.c_str(), suffix);
+	construct_path(final_build_path, sizeof(final_build_path), s_base_build_str.c_str(), suffix);
+
+	construct_path(final_kdtree_dump_path, sizeof(final_kdtree_dump_path), s_base_kdtree_str.c_str(), suffix);
+	construct_path(final_leafInfo_dump_path, sizeof(final_leafInfo_dump_path), s_base_leafInfo_str.c_str(), suffix);
+	construct_path(final_igeom_dump_path, sizeof(final_igeom_dump_path), s_base_igeom_str.c_str(), suffix);
+
+	// 6. 전역 변수에 최종 완성된 안전한 static 포인터 주소 할당
+	ply_kdtree_path = final_kdtree_path;
+	ply_igeom_path = final_igeom_path;
+	ply_leafInfo_path = final_leafInfo_path;
+	ply_kdtInfo_path = final_kdtInfo_path;
+	ply_to_obj = final_obj_path;
+	kdtree_build_path = final_build_path;
+
+	ply_kdtree_dump_path = final_kdtree_dump_path;
+	ply_leafInfo_dump_path = final_leafInfo_dump_path;
+	ply_igeom_dump_path = final_igeom_dump_path;
+}
+
+void subMenuHandler(int value) {
+	render_gaussian = true;
+	g_gaussians.clear();
+
+	printf("SIGMA_THRESHOLD_MODE: %f\n", static_cast<float>(SIGMA_THRESHOLD_MODE));
+	printf("SIGMA_THRESHOLD: %f\n", SIGMA_THRESHOLD_MODE / 255.0f);
+	printf("%f %f %f %f %f\n", 1.0f / 255.0f, 2.0f / 255.0f, 3.0f / 255.0f, 4.0f / 255.0f, 5.0f / 255.0f);
+
+	char suffix[256];
+	std::string suffixStr = generateSuffix();
+	strncpy_s(suffix, sizeof(suffix), suffixStr.c_str(), _TRUNCATE);
 
 	std::string assetName{};
 	switch (value) {
@@ -3258,80 +3325,7 @@ void subMenuHandler(int value) {
 		break;
 	}
 
-	std::string name = assetName;
-	std::string root = "../../Data/ply/" + name + "/";
-	
-	std::string s_ply_file_path = root + name + "_3dgrt" + ADD_PLY_FILE_NAME + ".ply";
-	std::string s_base_kdtree_str = root + name + ADD_PLY_FILE_NAME + "_tree.kdt";
-	std::string s_base_leafInfo_str = root + name + ADD_PLY_FILE_NAME + "_leafInfo.bin";
-	std::string s_base_igeom_str = root + name + ADD_PLY_FILE_NAME + "_igeom.bin";
-	std::string s_base_kdtInfo_str = root + name + ADD_PLY_FILE_NAME + "_kdtInfo.txt";
-
-	std::string s_base_obj_str = root + name + "_new.obj";
-	std::string s_base_build_str = root + name + "_kdt.txt";
-	std::string s_ply_to_obj_mtl = name + "_3dgrt.mtl";
-
-	const char* ply_file_path = s_ply_file_path.c_str();
-	const char* base_kdtree_str = s_base_kdtree_str.c_str();
-	const char* base_leafInfo_str = s_base_leafInfo_str.c_str();
-	const char* base_igeom_str = s_base_igeom_str.c_str();
-	const char* base_kdtInfo_str = s_base_kdtInfo_str.c_str();
-
-	const char* base_obj_str = s_base_obj_str.c_str();
-	const char* base_build_str = s_base_build_str.c_str();
-	const char* ply_to_obj_mtl = s_ply_to_obj_mtl.c_str();
-
-	//printCameraInfo();
-
-	auto construct_path = [](char* buffer, size_t buffer_size, const char* base_path, const char* current_suffix) {
-		const char* extension = strrchr(base_path, '.');
-		if (extension) {
-			int base_len = extension - base_path;
-			snprintf(buffer, buffer_size, "%.*s%s%s", base_len, base_path, current_suffix, extension);
-		}
-		else {
-			snprintf(buffer, buffer_size, "%s%s", base_path, current_suffix);
-		}
-	};
-
-	// 생성된 파일 경로를 저장하기 위한 static 버퍼
-	// 포인터가 함수 외부에서도 유효해야 하므로 static으로 선언
-	static char final_kdtree_path[512];
-	static char final_igeom_path[512];
-	static char final_leafInfo_path[512];
-	static char final_kdtInfo_path[512];
-
-	static char final_obj_path[512];
-	static char final_build_path[512];
-
-	static char final_kdtree_dump_path[512];
-	static char final_leafInfo_dump_path[512];
-	static char final_igeom_dump_path[512];
-
-	if (!assetName.empty()) {
-		construct_path(final_kdtree_path, sizeof(final_kdtree_path), base_kdtree_str, suffix);
-		construct_path(final_igeom_path, sizeof(final_igeom_path), base_igeom_str, suffix);
-		construct_path(final_leafInfo_path, sizeof(final_leafInfo_path), base_leafInfo_str, suffix);
-		construct_path(final_kdtInfo_path, sizeof(final_kdtInfo_path), base_kdtInfo_str, suffix);
-		construct_path(final_obj_path, sizeof(final_obj_path), base_obj_str, suffix);
-		construct_path(final_build_path, sizeof(final_build_path), base_build_str, suffix);
-
-		construct_path(final_kdtree_dump_path, sizeof(final_kdtree_dump_path), base_kdtree_str, suffix);
-		construct_path(final_leafInfo_dump_path, sizeof(final_leafInfo_dump_path), base_leafInfo_str, suffix);
-		construct_path(final_igeom_dump_path, sizeof(final_igeom_dump_path), base_igeom_str, suffix);
-
-		// 전역 변수에 최종 경로 할당
-		ply_kdtree_path = final_kdtree_path;
-		ply_igeom_path = final_igeom_path;
-		ply_leafInfo_path = final_leafInfo_path;
-		ply_kdtInfo_path = final_kdtInfo_path;
-		ply_to_obj = final_obj_path;
-		kdtree_build_path = final_build_path;
-
-		ply_kdtree_dump_path = final_kdtree_dump_path;
-		ply_leafInfo_dump_path = final_leafInfo_dump_path;
-		ply_igeom_dump_path = final_igeom_dump_path;
-	}
+	initAssetPaths(assetName, suffix);
 
 	printf("%s\n%s\n%s\n%s\n%s\n", ply_file_path,
 		ply_kdtree_path,
