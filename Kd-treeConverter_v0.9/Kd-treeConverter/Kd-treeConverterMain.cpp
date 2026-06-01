@@ -41,6 +41,8 @@ float ISCET_COST = 5.0f;
 int MAX_LEVEL = 128;
 int FORCE_SPLIT_THRESHOLD = 64;				// kd-tree 강제분할
 int SAH_MODE = 4;
+std::string ASSET_NAME = "hotdog2";
+int testMode = 0;
 
 using namespace std;
 
@@ -3936,19 +3938,53 @@ void handleArguments(int argc, char* argv[]) {
 		else if (arg == "-s" && i + 1 < argc) {
 			SAH_MODE = std::stoi(argv[++i]);
 		}
+		else if (arg == "-a" && i + 1 < argc) {
+			ASSET_NAME = std::string(argv[++i]);
+		}
+		else if (arg == "-t") {
+			testMode = 1;
+		}
 	}
 
-	std::cout << "[Options] "
-		<< "-i (ISCET_COST): " << ISCET_COST
-		<< ", -m (MAX_LEVEL): " << MAX_LEVEL
-		<< ", -f (FORCE_SPLIT): " << FORCE_SPLIT_THRESHOLD
-		<< ", -s (SAH_MODE): " << SAH_MODE << std::endl;
+	std::cout << "[Options]\n"
+		<< "\n\t-a (ASSET_NAME): " << ASSET_NAME
+		<< "\n\t-i (ISCET_COST): " << ISCET_COST
+		<< "\n\t-m (MAX_LEVEL): " << MAX_LEVEL
+		<< "\n\t-f (FORCE_SPLIT): " << FORCE_SPLIT_THRESHOLD
+		<< "\n\t-s (SAH_MODE): " << SAH_MODE << std::endl;
 }
 
 void main(int argc, char **argv) {
 	handleArguments(argc, argv);
 	init_KDT_system();
 	init_mesh_data();//shyun
+	if (testMode) {
+		//1. load ply
+		char suffix[256];
+		std::string suffixStr = generateSuffix();
+		strncpy_s(suffix, sizeof(suffix), suffixStr.c_str(), _TRUNCATE);
+		initAssetPaths(ASSET_NAME, suffix);
+		loadGaussiansFromPly(ply_file_path, g_gaussians);
+		printf("dump path :\n\t%s\n\t%s\n", ply_kdtree_dump_path, ply_igeom_dump_path);
+		g_isValidG.assign(g_gaussians.size(), 1);
+		create_composite_object_from_gaussians(g_gaussians);
+		//2. build kdtree
+		print_current_time("kdtree build start");
+		build_kd_tree_for_composite_object(&uip.poly_model);
+		print_current_time("kdtree build end");
+		printKdTreeLeafNodeInfo();
+		//3. dump kdtree
+		dump_kd_tree_for_composite_object(
+			&uip.poly_model,
+			KD_TREE_DUMP_IN_BINARY,    // 저장 포맷
+			ply_kdtree_dump_path,         // 저장할 kd-tree
+			ply_igeom_dump_path,         // 저장할 geometry
+			ply_leafInfo_dump_path         // leaf info
+		);
+		dumpKdtreeInfo(ply_kdtInfo_path);
+		return;
+	}
+
 	glutInit (&argc, argv); 
 	glutInitDisplayMode(GLUT_RGB | GLUT_DEPTH | GLUT_DOUBLE);   
 	glutInitWindowSize(MAIN_WINDOW_WIDTH, MAIN_WINDOW_HEIGHT);

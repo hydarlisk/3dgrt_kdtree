@@ -7,5 +7,6 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LocalDebuggerEnvironment>PATH=C:\usr\CSE4170\dll\x64;%PATH%;</LocalDebuggerEnvironment>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <LocalDebuggerCommandArguments>-a hotdog2 -i 5 -m 128 -f 64 -s 4</LocalDebuggerCommandArguments>
   </PropertyGroup>
 </Project>
