@@ -28,7 +28,7 @@ for combo in all_combinations:
     ic, ml, fs, sm = combo
     
     # 🌟 cwd를 바꿀 때는 실행 파일의 전체 경로(EXE_PATH)를 다 넣어주어야 합니다.
-    cmd = [EXE_PATH, "-i", ic, "-m", ml]
+    cmd = [EXE_PATH, "-i", ic, "-m", ml, "-f", fs, "-s", sm]
     
     print(f"-> 실행 중: {cmd[1:]}")
     subprocess.run(cmd, cwd=ASSET_BASE_DIR)
