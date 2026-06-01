@@ -16,8 +16,8 @@
 #define ASSET HOTDOG
 #define ADD_PLY_FILE_NAME ""
 
-
 #define PROBLEMATIC_THRESHOLD 1	//remove dominant prim from gaussian data
+
 #define PRIMITIVE_TYPE 2
 
 /*** ellipsoid_by_tri ***/
@@ -25,26 +25,28 @@
 #define SAH_MODE 4
 //////////////////////////
 
-#define USE_KERNEL_SCALE true					// 기존의 OptiX 방식 kernelScale 사용
-
 /* kd tree build */
 #define TRAVL_COST 1.0
-#define ISCET_COST 5.0
-#define MAX_LEVEL 128
 #define EMTPY_BONUS 0.9
-//#define IGNORE_THRESHOLD 0.0001
+#define MAX_LEVEL 128
+#define ISCET_COST 5.0
+#define FORCE_SPLIT_THRESHOLD 64				// kd-tree 강제분할
+
+/* js add */
+#define FORCE_BINARY_SPLIT 1	//fs
+#define USE_KERNEL_SCALE false					// 기존의 OptiX 방식 kernelScale 사용
+
 #define IGNORE_THRESHOLD 0
 #define REMOVE_SMALL_PRIM 0
-#define FORCE_BINARY_SPLIT 1	//fs
-
-#define MIN_TRI 16
-#define MIN_ELLIPSOID 16
 
 #define QUATERNION true
 	#define PRE_CALC_KSCALE 1
 	#define UPLOAD_INVSR_MAT 0
 	#define DIRECT_ROT_CALC 1
 	#define STORE_GRAYDIST 0
+
+#define MIN_TRI 16
+#define MIN_ELLIPSOID 16
 
 #if PRIMITIVE_TYPE == TRI
 #undef COUNT_BY_GID
@@ -75,119 +77,6 @@
 #define UPLOAD_INVSR_MAT 0
 #endif
 
-#define ADAPTIVE_KERNEL_CLAMPING 1
-
-#define FORCE_SPLIT_THRESHOLD 256				// kd-tree 강제분할
-//#define SOFT_SPLIT_THRESHOLD 128				// kd-tree 강제분할(완화)
-#define SOFT_SPLIT_THRESHOLD2 256				// kd-tree 강제분할(완화)
-
-
-
-#define EXPORTED false
-
-//#define LESS_TRI false
-
-#if PRIMITIVE_TYPE == TRI || PRIMITIVE_TYPE == ELLIPSOID_BY_TRI
-#if ASSET == HOTDOG
-	#if ORIGINAL
-		#undef USE_KERNEL_SCALE
-		#define USE_KERNEL_SCALE false
-		#undef FORCE_SPLIT_THRESHOLD
-		#define FORCE_SPLIT_THRESHOLD 0
-		#undef SIGMA_THRESHOLD_MODE
-		#define SIGMA_THRESHOLD_MODE 0
-		#undef ADAPTIVE_MESH
-		#define ADAPTIVE_MESH false
-	#else
-		#undef USE_KERNEL_SCALE
-		#define USE_KERNEL_SCALE false
-		#undef FORCE_SPLIT_THRESHOLD
-		#define FORCE_SPLIT_THRESHOLD 64
-		#undef SIGMA_THRESHOLD_MODE
-		#define SIGMA_THRESHOLD_MODE 1
-		#undef ADAPTIVE_MESH
-		#define ADAPTIVE_MESH false
-	#endif
-#elif ASSET == BICYCLE
-	#if ORIGINAL
-		#undef USE_KERNEL_SCALE
-		#define USE_KERNEL_SCALE false
-		#undef FORCE_SPLIT_THRESHOLD
-		#define FORCE_SPLIT_THRESHOLD 0
-		#undef SIGMA_THRESHOLD_MODE
-		#define SIGMA_THRESHOLD_MODE 0
-		#undef ADAPTIVE_MESH
-		#define ADAPTIVE_MESH false
-	#else
-		#undef USE_KERNEL_SCALE
-		//#define USE_KERNEL_SCALE true
-		#define USE_KERNEL_SCALE false
-		#undef FORCE_SPLIT_THRESHOLD
-		//#define FORCE_SPLIT_THRESHOLD 128
-		#define FORCE_SPLIT_THRESHOLD 256
-		#undef SIGMA_THRESHOLD_MODE
-		#define SIGMA_THRESHOLD_MODE 1
-		#undef ADAPTIVE_MESH
-		//#define ADAPTIVE_MESH true
-		#define ADAPTIVE_MESH false
-	#endif
-#elif ASSET == ROOM
-	#if ORIGINAL
-		#undef USE_KERNEL_SCALE
-		#define USE_KERNEL_SCALE false
-		#undef FORCE_SPLIT_THRESHOLD
-		#define FORCE_SPLIT_THRESHOLD 0
-		#undef SIGMA_THRESHOLD_MODE
-		#define SIGMA_THRESHOLD_MODE 0
-		#undef ADAPTIVE_MESH
-		#define ADAPTIVE_MESH false
-	#else
-		#undef USE_KERNEL_SCALE
-		#define USE_KERNEL_SCALE true
-		#undef FORCE_SPLIT_THRESHOLD
-		#define FORCE_SPLIT_THRESHOLD 256
-		#undef SIGMA_THRESHOLD_MODE
-		#define SIGMA_THRESHOLD_MODE 1
-		#undef ADAPTIVE_MESH
-		#define ADAPTIVE_MESH true
-	#endif
-#elif ASSET == LEGO
-	#if ORIGINAL
-		#undef USE_KERNEL_SCALE
-		#define USE_KERNEL_SCALE false
-		#undef FORCE_SPLIT_THRESHOLD
-		#define FORCE_SPLIT_THRESHOLD 0
-		#undef SIGMA_THRESHOLD_MODE
-		#define SIGMA_THRESHOLD_MODE 0
-		#undef ADAPTIVE_MESH
-		#define ADAPTIVE_MESH false
-	#else
-		#undef USE_KERNEL_SCALE
-		#define USE_KERNEL_SCALE false
-		#undef FORCE_SPLIT_THRESHOLD
-		#define FORCE_SPLIT_THRESHOLD 64
-		#undef SIGMA_THRESHOLD_MODE
-		#define SIGMA_THRESHOLD_MODE 1
-		#undef ADAPTIVE_MESH
-		#define ADAPTIVE_MESH false
-	#endif
-#endif
-#endif // PRIMITIVE_TYPE == TRI
-
-
-
-
-#define KERNEL_MIN_RESPONSE 0.0113f
-#define KERNEL_DEGREE 4.0f
-
-#define OPACITY_THRESHOLD 0.95f					// 충족할때까지 kd-tree 탐색
-//#define OPACITY_THRESHOLD 0.9961f					// 충족할때까지 kd-tree 탐색
-
-#define MAX_HITS 256								// leaf node에서 blending을 위한 최대 sort 크기
-
-#define DIM_X 32
-#define DIM_Y 8
-
 #define USE_STACK SHORT_STACK					// SHORT_STACK	(0): ShortStack만 사용
 												// HYBRID_STACK	(1): GlobalStack 같이 사용
 												// GLOBAL_STACK	(2): GlobalStack만 사용
@@ -197,8 +86,6 @@
 #define SHORT_STACK_DEPTH 12 					// for kernel sh.mem
 #endif
 
-#define SPH_EVAL_DEGREE 3
-#define GAUSSIAN_DEGREE 4
 #define WALD_METHOD true
 #define MAIL_BOX false
 
@@ -222,12 +109,11 @@
 #define MEASURE_START_FRAME 500
 #define MEASURE_END_FRAME 1000
 
-#define TID_X (blockDim.x * blockIdx.x + threadIdx.x)
-#define TID_Y (blockDim.y * blockIdx.y + threadIdx.y)
+#define DIM_X 32
+#define DIM_Y 8
+
 //================================================================================================
 
-//#define MAIN_WINDOW_WIDTH 800
-//#define MAIN_WINDOW_HEIGHT 800
 #define RESOLUTION 4
 #if RESOLUTION == 0		// FHD
 #define MAIN_WINDOW_WIDTH 1920
@@ -253,54 +139,6 @@
 #define MAIN_WINDOW_WIDTH 1080
 #define MAIN_WINDOW_HEIGHT 2102
 #define FOV_Y 96.0f
-#endif
- /*
- * List of resolutions
- *
- *		  width		*		height
- * 8K	: 7680		*		4320
- * 4K	: 3840		*		2160
- * QHD	: 2560		*		1440
- * FHD	: 1920		*		1080
- */
-
-/* Camera */
-//#define RENDERING_WIDTH 800
-//#define RENDERING_HEIGHT 800
-//#define RENDERING_WIDTH 960
-//#define RENDERING_HEIGHT 640
-//#define RENDERING_WIDTH 1920
-//#define RENDERING_HEIGHT 1080
-
-#define NEAR_PLANE 0.005f
-#define FAR_PLANE 20.00f
-
-#define SCENE_NUM 1								// obj 로드할때만 0으로 변경
-
-#if SCENE_NUM == 0
-#define MODEL_PATH "../../Data/Obj/hotdog_3dgrt.obj"
-#define KDTREE_PATH "../../Data/Obj/hotdog_tree.kdt"
-#define IGEOM_PATH "../../Data/Obj/hotdog_igeom.bin"
-#elif SCENE_NUM == 1
-#define MODEL_PATH "../../Data/ply/hotdog/hotdog_3dgrt.ply"
-#define KDTREE_PATH "../../Data/ply/hotdog/hotdog_tree.kdt"
-#define IGEOM_PATH "../../Data/ply/hotdog/hotdog_igeom.bin"
-#elif SCENE_NUM == 2
-#define MODEL_PATH "../../Data/ply/lego/lego_3dgrt.ply"
-#define KDTREE_PATH "../../Data/ply/lego/lego_tree.kdt"
-#define IGEOM_PATH "../../Data/ply/lego/lego_igeom.bin"
-#elif SCENE_NUM == 3
-#define MODEL_PATH "../../Data/ply/bonsai/bonsai.ply"
-#define KDTREE_PATH "../../Data/ply/bonsai/bonsai_tree.kdt"
-#define IGEOM_PATH "../../Data/ply/bonsai/bonsai_igeom.bin"
-#elif SCENE_NUM == 4
-#define MODEL_PATH "../../Data/ply/chair/chair_3dgrt.ply"
-#define KDTREE_PATH "../../Data/ply/chair/chair_tree.kdt"
-#define IGEOM_PATH "../../Data/ply/chair/chair_igeom.bin"
-#elif SCENE_NUM == 5
-#define MODEL_PATH "../../Data/ply/flowers/flowers.ply"
-#define KDTREE_PATH "../../Data/ply/flowers/flowers_tree.kdt"
-#define IGEOM_PATH "../../Data/ply/flowers/flowers_igeom.bin"
 #endif
 
 struct float3x3 {

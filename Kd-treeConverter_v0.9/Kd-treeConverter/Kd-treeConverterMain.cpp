@@ -3408,25 +3408,25 @@ void main_menu_action(int selection) {
 		glutPostRedisplay();
 		break;
 
-	case 200: { // obj loader
-		render_gaussian = true;
-		const char* file_path = MODEL_PATH;  // obj 경로
-		if (!read_OBJ_file(file_path)) {
-			fprintf(stderr, "Failed to load obj file\n");
-			return;
-		}
-		ply_file_path = MODEL_PATH;
-		ply_kdtree_path = KDTREE_PATH;
-		ply_igeom_path = IGEOM_PATH;
-		ply_to_obj = "../../Data/obj/hotdog_3dgrt_new.obj";
+	//case 200: { // obj loader
+	//	render_gaussian = true;
+	//	const char* file_path = MODEL_PATH;  // obj 경로
+	//	if (!read_OBJ_file(file_path)) {
+	//		fprintf(stderr, "Failed to load obj file\n");
+	//		return;
+	//	}
+	//	ply_file_path = MODEL_PATH;
+	//	ply_kdtree_path = KDTREE_PATH;
+	//	ply_igeom_path = IGEOM_PATH;
+	//	ply_to_obj = "../../Data/obj/hotdog_3dgrt_new.obj";
 
-		uip.composite_object_read = 1;
+	//	uip.composite_object_read = 1;
 
-		g_cuda_rendering_done = false;
-		glutPostRedisplay();
-		printf("draw DONE\n");
-		break;
-	}
+	//	g_cuda_rendering_done = false;
+	//	glutPostRedisplay();
+	//	printf("draw DONE\n");
+	//	break;
+	//}
 	case 300: // construct kd-tree
 		print_current_time("kdtree build start");
 
@@ -3630,7 +3630,7 @@ void register_callbacks_and_create_menu(void) {
 	uip.main_menu_ID = glutCreateMenu(main_menu_action);
 	glutAddMenuEntry("ChangeMode", 0);
 	glutAddMenuEntry("1. Read SL_KDT_Config File and Prepair I-Geometry", 100);
-	glutAddMenuEntry("2. Read .obj File and Prepair I-Geometry", 200);
+	//glutAddMenuEntry("2. Read .obj File and Prepair I-Geometry", 200);
 	//glutAddMenuEntry("2. Read .ply File and Prepair I-Geometry", 200);
 	glutAddSubMenu("2. Read .ply File and Prepair I-Geometry", submenu);
 	glutAddMenuEntry("3. Construct Kd-tree from I-Geometry", 300);  
@@ -3795,10 +3795,10 @@ void idle() {
 		cudaStreamWaitEvent(compute_stream, map_complete_event, 0);
 
 		// CUDA 렌더링 실행 (기존 렌더링 함수 재사용)
-#if SCENE_NUM < 1
-		renderObjWithCuda(uip.poly_model, camera, g_render_width, g_render_height, d_pbo_ptr, g_cuda_rendering_done);
-#else
-		//renderGaussianWithCuda(uip.poly_model, g_gaussians, camera, g_render_width, g_render_height, d_pbo_ptr, g_cuda_rendering_done);
+//#if SCENE_NUM < 1
+//		renderObjWithCuda(uip.poly_model, camera, g_render_width, g_render_height, d_pbo_ptr, g_cuda_rendering_done);
+//#else
+
 	#if DUMMY_RUN
 		warmUp(d_pbo_ptr, compute_stream);
 	#endif
@@ -3810,7 +3810,6 @@ void idle() {
 			printCameraInfo();
 			printed = !printed;
 		}
-
 
 		//cudaEventRecord(start_real, current_stream); // 시작 기록
 		// [계산 stream] 커널 실행
@@ -3866,7 +3865,7 @@ void idle() {
 			}
 		}
 	#endif
-#endif
+//#endif
 
 		// PBO의 내용을 텍스처로 복사
 		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo);
