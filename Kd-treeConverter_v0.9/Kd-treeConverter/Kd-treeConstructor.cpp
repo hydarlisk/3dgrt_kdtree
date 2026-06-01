@@ -1147,6 +1147,8 @@ bool initialize_kd_tree(CompositeObject *poly_model) {
 
 	bool bError = false;
 
+	v_KD_TREE_ISECT_COST = ISCET_COST;
+	v_KD_TREE_MAX_LEVEL = MAX_LEVEL;
 	g_iKdTree_Node_Count      = 0;
 	g_iKdTreePrimOffsetCnt = 0;
 	g_pKdTree_Node_Array      = NULL;
@@ -1578,26 +1580,22 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const PrimList* pTriangleInfos, u
 	if (bestForceSplit) goto processLeaf;
 #endif
 
-#if FORCE_SPLIT_THRESHOLD
-	//#define MAX_TRIANGLE_OFFSET_BUDGET 18446744073709551615
-	//#define MAX_TRIANGLE_OFFSET_BUDGET 9223372036854775807
-	//#define MAX_TRIANGLE_OFFSET_BUDGET 17179869184
-	//#define MAX_TRIANGLE_OFFSET_BUDGET 8589934592
-	#define MAX_TRIANGLE_OFFSET_BUDGET2 4294967295
-	//#define MAX_TRIANGLE_OFFSET_BUDGET 2147483647
-	//#define MAX_TRIANGLE_OFFSET_BUDGET 1073741824
-	//if (triangleSize > FORCE_SPLIT_THRESHOLD) bestCost.cost = DBL_MAX; //shyun added
-	if (triangleSize > FORCE_SPLIT_THRESHOLD) {
-	#if MAX_TRIANGLE_OFFSET_BUDGET
+	if (FORCE_SPLIT_THRESHOLD) {
+#define MAX_TRIANGLE_OFFSET_BUDGET2 4294967295
+		//#define MAX_TRIANGLE_OFFSET_BUDGET 2147483647
+		//#define MAX_TRIANGLE_OFFSET_BUDGET 1073741824
+		//if (triangleSize > FORCE_SPLIT_THRESHOLD) bestCost.cost = DBL_MAX; //shyun added
+		if (triangleSize > FORCE_SPLIT_THRESHOLD) {
+#if MAX_TRIANGLE_OFFSET_BUDGET
 			// 강제 분할 전, 메모리 예산을 초과했는지 확인.
-		#if SOFT_SPLIT_THRESHOLD
+#if SOFT_SPLIT_THRESHOLD
 			if ((triangleSize < SOFT_SPLIT_THRESHOLD &&
 				g_iKdTreePrimOffsetCnt > MAX_TRIANGLE_OFFSET_BUDGET) ||
 				(triangleSize < SOFT_SPLIT_THRESHOLD2 &&
 					g_iKdTreePrimOffsetCnt > MAX_TRIANGLE_OFFSET_BUDGET2)) {
-		#else
+#else
 			if (g_iKdTreePrimOffsetCnt > MAX_TRIANGLE_OFFSET_BUDGET) {
-		#endif
+#endif
 
 				// 예산 초과 시: 강제 분할(DBL_MAX)을 하지 않고, 
 				// SAH 비용(bestCost.cost)을 그대로 둬서 리프 노드가 되도록 함.
@@ -1608,11 +1606,47 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const PrimList* pTriangleInfos, u
 				// 예산 미초과 시: 원래대로 강제 분할 실행
 				bestCost.cost = DBL_MAX;
 			}
-	#else
+#else
 			bestCost.cost = DBL_MAX;
-	#endif
-	}
 #endif
+		}
+	}
+
+//#if FORCE_SPLIT_THRESHOLD
+//	//#define MAX_TRIANGLE_OFFSET_BUDGET 18446744073709551615
+//	//#define MAX_TRIANGLE_OFFSET_BUDGET 9223372036854775807
+//	//#define MAX_TRIANGLE_OFFSET_BUDGET 17179869184
+//	//#define MAX_TRIANGLE_OFFSET_BUDGET 8589934592
+//	#define MAX_TRIANGLE_OFFSET_BUDGET2 4294967295
+//	//#define MAX_TRIANGLE_OFFSET_BUDGET 2147483647
+//	//#define MAX_TRIANGLE_OFFSET_BUDGET 1073741824
+//	//if (triangleSize > FORCE_SPLIT_THRESHOLD) bestCost.cost = DBL_MAX; //shyun added
+//	if (triangleSize > FORCE_SPLIT_THRESHOLD) {
+//	#if MAX_TRIANGLE_OFFSET_BUDGET
+//			// 강제 분할 전, 메모리 예산을 초과했는지 확인.
+//		#if SOFT_SPLIT_THRESHOLD
+//			if ((triangleSize < SOFT_SPLIT_THRESHOLD &&
+//				g_iKdTreePrimOffsetCnt > MAX_TRIANGLE_OFFSET_BUDGET) ||
+//				(triangleSize < SOFT_SPLIT_THRESHOLD2 &&
+//					g_iKdTreePrimOffsetCnt > MAX_TRIANGLE_OFFSET_BUDGET2)) {
+//		#else
+//			if (g_iKdTreePrimOffsetCnt > MAX_TRIANGLE_OFFSET_BUDGET) {
+//		#endif
+//
+//				// 예산 초과 시: 강제 분할(DBL_MAX)을 하지 않고, 
+//				// SAH 비용(bestCost.cost)을 그대로 둬서 리프 노드가 되도록 함.
+//				fprintf(stdout, "WARNING: Memory budget exceeded (%u refs). Forcing leaf node at level %u with %u tris.\n",
+//					g_iKdTreePrimOffsetCnt, inNodeLevel, triangleSize);
+//			}
+//			else {
+//				// 예산 미초과 시: 원래대로 강제 분할 실행
+//				bestCost.cost = DBL_MAX;
+//			}
+//	#else
+//			bestCost.cost = DBL_MAX;
+//	#endif
+//	}
+//#endif
 
 #if SAH_MAXIMIZE
 	bestCost.cost = -1.0;

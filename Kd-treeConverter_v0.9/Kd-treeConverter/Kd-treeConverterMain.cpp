@@ -40,7 +40,7 @@
 float ISCET_COST = 5.0f;
 int MAX_LEVEL = 128;
 int FORCE_SPLIT_THRESHOLD = 64;				// kd-tree 강제분할
-int SAH_MODE = 0;
+int SAH_MODE = 4;
 
 using namespace std;
 
@@ -61,17 +61,17 @@ char* ply_igeom_dump_path;
 char* kdtree_build_path;
 //int submenu[5] = { 101,1012,102,104,105 };
 #if FORCE_SPLIT_THRESHOLD == 64
-#define P_MODEL_COUNT 6
-int submenu[P_MODEL_COUNT] = { 101,102,103,104,1032,1033 };
-//int submenu[P_MODEL_COUNT] = { 101,102,103,104,105 };
+	#define P_MODEL_COUNT 6
+	int submenu[P_MODEL_COUNT] = { 101,102,103,104,1032,1033 };
+	//int submenu[P_MODEL_COUNT] = { 101,102,103,104,105 };
 #elif FORCE_SPLIT_THRESHOLD == 256
-#define P_MODEL_COUNT 2
-//int submenu[P_MODEL_COUNT] = { 106,107,108,109,110,111,112 };
-//int submenu[P_MODEL_COUNT] = { 106,107,109,110,112 };
-int submenu[P_MODEL_COUNT] = { 106,110 };
+	#define P_MODEL_COUNT 2
+	//int submenu[P_MODEL_COUNT] = { 106,107,108,109,110,111,112 };
+	//int submenu[P_MODEL_COUNT] = { 106,107,109,110,112 };
+	int submenu[P_MODEL_COUNT] = { 106,110 };
 #else
-#define P_MODEL_COUNT 12
-int submenu[P_MODEL_COUNT] = { 101,102,103,104,105,106,107,108,109,110,111,112 };
+	#define P_MODEL_COUNT 12
+	int submenu[P_MODEL_COUNT] = { 101,102,103,104,105,106,107,108,109,110,111,112 };
 #endif
 
 bool is_w_pressed = false;
@@ -2834,13 +2834,19 @@ void dumpKdtreeInfo(char* filename) {
 	outFile << "  * Travel Cost: " << std::setw(7) << v_KD_TREE_TRAVL_COST << "\n";
 	outFile << "  * Intersection Cost: " << std::setw(7) << v_KD_TREE_ISECT_COST << "\n";
 	outFile << "  * Max Tree Level: " << v_KD_TREE_MAX_LEVEL << "\n";
-	outFile << "  * Min # of Triangles per Leaf: " << v_KD_TREE_MIN_PRIMITIVE << "\n";
+	outFile << "  * Min # of Primitives per Leaf: " << v_KD_TREE_MIN_PRIMITIVE << "\n";
 
-#if FORCE_SPLIT_THRESHOLD
-	outFile << "  * Max # of Triangles per Leaf: " << FORCE_SPLIT_THRESHOLD << "\n";
-#else
-	outFile << "  * Max # of Triangles per Leaf: none\n";
-#endif
+	if (FORCE_SPLIT_THRESHOLD) {
+		outFile << "  * Max # of Primitives per Leaf: " << FORCE_SPLIT_THRESHOLD << "\n";
+	}
+	else{
+		outFile << "  * Max # of Primitives per Leaf: none\n";
+	}
+//#if FORCE_SPLIT_THRESHOLD
+//	outFile << "  * Max # of Primitives per Leaf: " << FORCE_SPLIT_THRESHOLD << "\n";
+//#else
+//	outFile << "  * Max # of Primitives per Leaf: none\n";
+//#endif
 
 	outFile << "  * SAH_MAXIMIZE Mode: " << (SAH_MAXIMIZE ? "maximize" : "minimize") << "\n";
 	outFile << "  * CLIP_AREA " << (CLIP_AREA ? "clip" : "none") << "\n";
@@ -2867,6 +2873,7 @@ void dumpKdtreeInfo(char* filename) {
 		sahPrint = "] x + a * x * (x - T)\n";
 		break;
 	}
+	outFile << "  * SAH_MODE: [" << SAH_MODE << sahPrint;
 //#if SAH_MODE == 0
 //	outFile << "  * SAH_MODE: [" << SAH_MODE << "] P_s * N_s\n";
 //#elif SAH_MODE == 1

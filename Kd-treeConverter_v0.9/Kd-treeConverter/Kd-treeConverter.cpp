@@ -31,11 +31,17 @@ int build_kd_tree_for_composite_object(CompositeObject *c_object) {
 	fprintf(stdout, "\n  * Empty Bonus: %7.3f\n  * Travel Cost: %7.3f\n  * Intersection Cost: %7.3f\n  * Max Tree Level: %d\n  * Min # of Triangles per Leaf: %d\n",
 			v_KD_TREE_EMTPY_BONUS, v_KD_TREE_TRAVL_COST, v_KD_TREE_ISECT_COST, v_KD_TREE_MAX_LEVEL, v_KD_TREE_MIN_PRIMITIVE );
 //shyun added begin
-#if FORCE_SPLIT_THRESHOLD
-	fprintf(stdout, "  * Max # of Triangles per Leaf: %d\n", FORCE_SPLIT_THRESHOLD);
-#else
-	fprintf(stdout, "  * Max # of Triangles per Leaf: none\n");
-#endif
+	if (FORCE_SPLIT_THRESHOLD) {
+		fprintf(stdout, "  * Max # of Primitives per Leaf: %d\n", FORCE_SPLIT_THRESHOLD);
+	}
+	else {
+		fprintf(stdout, "  * Max # of Primitives per Leaf: none\n");
+	}
+//#if FORCE_SPLIT_THRESHOLD
+//	fprintf(stdout, "  * Max # of Primitives per Leaf: %d\n", FORCE_SPLIT_THRESHOLD);
+//#else
+//	fprintf(stdout, "  * Max # of Primitives per Leaf: none\n");
+//#endif
 
 	fprintf(stdout, "  * SAH_MAXIMIZE Mode: %s\n", SAH_MAXIMIZE ? "maximize" : "minimize");
 	fprintf(stdout, "  * CLIP_AREA %s\n", CLIP_AREA ? "clip" : "none");
@@ -170,11 +176,17 @@ int build_kd_tree_for_composite_object2(CompositeObject* c_object, const char* f
 
 
 //shyun added begin
-#if FORCE_SPLIT_THRESHOLD
-	fprintf(fp, "  * Max # of Triangles per Leaf: %d\n", FORCE_SPLIT_THRESHOLD);
-#else
-	fprintf(fp, "  * Max # of Triangles per Leaf: none\n");
-#endif
+	if (FORCE_SPLIT_THRESHOLD) {
+		fprintf(fp, "  * Max # of Primitives per Leaf: %d\n", FORCE_SPLIT_THRESHOLD);
+	}
+	else {
+		fprintf(fp, "  * Max # of Primitives per Leaf: none\n");
+	}
+//#if FORCE_SPLIT_THRESHOLD
+//	fprintf(fp, "  * Max # of Primitives per Leaf: %d\n", FORCE_SPLIT_THRESHOLD);
+//#else
+//	fprintf(fp, "  * Max # of Primitives per Leaf: none\n");
+//#endif
 
 	fprintf(fp, "  * SAH_OPACITY Mode: [%d] ", SAH_OPACITY);
 	//0 - P * N
