@@ -42,6 +42,7 @@ int MAX_LEVEL = 128;
 int FORCE_SPLIT_THRESHOLD = 64;				// kd-tree 강제분할
 int SAH_MODE = 4;
 std::string ASSET_NAME = "hotdog2";
+std::string ADD_NAME = "";
 int testMode = 0;
 
 using namespace std;
@@ -3070,17 +3071,17 @@ void initAssetPaths(const std::string& assetName, const char* suffix) {
 
 	// 1. 기초 문자열 조합 (std::string이 살아있는 동안만 유효하므로 함수 로컬로 선언)
 	std::string root = "../../Data/ply/" + assetName + "/";
-
+	const std::string fullName = assetName + ADD_NAME;
 	// ⚠️ 주의: 이 문자열들은 함수가 끝날 때 소멸하므로, c_str()을 전역 포인터에 바로 대입하면 안 됩니다.
 	// 따라서 접미사가 안 붙는 고정 파일명들은 아래에서 static 버퍼에 안전하게 복사합니다.
-	std::string s_ply_file_path = root + assetName + "_3dgrt" + ADD_PLY_FILE_NAME + ".ply";
-	std::string s_base_kdtree_str = root + assetName + ADD_PLY_FILE_NAME + "_tree.kdt";
-	std::string s_base_leafInfo_str = root + assetName + ADD_PLY_FILE_NAME + "_leafInfo.bin";
-	std::string s_base_igeom_str = root + assetName + ADD_PLY_FILE_NAME + "_igeom.bin";
-	std::string s_base_kdtInfo_str = root + assetName + ADD_PLY_FILE_NAME + "_kdtInfo.txt";
-	std::string s_base_obj_str = root + assetName + "_new.obj";
-	std::string s_base_build_str = root + assetName + "_kdt.txt";
-	std::string s_ply_to_obj_mtl = assetName + "_3dgrt.mtl";
+	std::string s_ply_file_path = root + fullName + "_3dgrt" + ADD_PLY_FILE_NAME + ".ply";
+	std::string s_base_kdtree_str = root + fullName + ADD_PLY_FILE_NAME + "_tree.kdt";
+	std::string s_base_leafInfo_str = root + fullName + ADD_PLY_FILE_NAME + "_leafInfo.bin";
+	std::string s_base_igeom_str = root + fullName + ADD_PLY_FILE_NAME + "_igeom.bin";
+	std::string s_base_kdtInfo_str = root + fullName + ADD_PLY_FILE_NAME + "_kdtInfo.txt";
+	std::string s_base_obj_str = root + fullName + "_new.obj";
+	std::string s_base_build_str = root + fullName + "_kdt.txt";
+	std::string s_ply_to_obj_mtl = fullName + "_3dgrt.mtl";
 
 	// 2. 경로 조립용 내부 람다 함수
 	auto construct_path = [](char* buffer, size_t buffer_size, const char* base_path, const char* current_suffix) {
@@ -3940,6 +3941,9 @@ void handleArguments(int argc, char* argv[]) {
 		}
 		else if (arg == "-a" && i + 1 < argc) {
 			ASSET_NAME = std::string(argv[++i]);
+		}
+		else if (arg == "-ap" && i + 1 < argc) {
+			ADD_NAME = std::string(argv[++i]);
 		}
 		else if (arg == "-t") {
 			testMode = 1;
