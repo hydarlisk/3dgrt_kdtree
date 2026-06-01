@@ -22,15 +22,21 @@
 
 /*** ellipsoid_by_tri ***/
 #define COUNT_BY_GID 1
-#define SAH_MODE 4
+//#define SAH_MODE 4
 //////////////////////////
 
 /* kd tree build */
 #define TRAVL_COST 1.0
 #define EMTPY_BONUS 0.9
-#define MAX_LEVEL 128
-#define ISCET_COST 5.0
-#define FORCE_SPLIT_THRESHOLD 64				// kd-tree 강제분할
+
+//#define MAX_LEVEL 128
+//#define ISCET_COST 5.0
+//#define FORCE_SPLIT_THRESHOLD 64				// kd-tree 강제분할
+
+extern int MAX_LEVEL;
+extern float ISCET_COST;
+extern int FORCE_SPLIT_THRESHOLD;				// kd-tree 강제분할
+extern int SAH_MODE;
 
 /* js add */
 #define FORCE_BINARY_SPLIT 1	//fs

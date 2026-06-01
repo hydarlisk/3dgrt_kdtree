@@ -37,6 +37,11 @@
 #include "cudaRenderer.h"
 //#include "SGRTx2Lib/cuda_math.h"
 
+float ISCET_COST = 5.0f;
+int MAX_LEVEL = 128;
+int FORCE_SPLIT_THRESHOLD = 64;				// kd-tree 강제분할
+int SAH_MODE = 0;
+
 using namespace std;
 
 char* ply_file_path;
@@ -2841,19 +2846,40 @@ void dumpKdtreeInfo(char* filename) {
 	outFile << "  * CLIP_AREA " << (CLIP_AREA ? "clip" : "none") << "\n";
 	outFile << "  * SAH_OPACITY Mode: [" << SAH_OPACITY << "] P_s * N_s\n";
 
-#if SAH_MODE == 0
-	outFile << "  * SAH_MODE: [" << SAH_MODE << "] P_s * N_s\n";
-#elif SAH_MODE == 1
-	outFile << "  * SAH_MODE: [" << SAH_MODE << "] ballance\n";
-#elif SAH_MODE == 2
-	outFile << "  * SAH_MODE: [" << SAH_MODE << "] prefer leaf count\n";
-#elif SAH_MODE == 3
-	outFile << "  * SAH_MODE: [" << SAH_MODE << "] sqrt(N_s)\n";
-#elif SAH_MODE == 4
-	outFile << "  * SAH_MODE: [" << SAH_MODE << "] x * ((x/T)^k)\n";
-#elif SAH_MODE == 5
-	outFile << "  * SAH_MODE: [" << SAH_MODE << "] x + a * x * (x - T)\n";
-#endif
+	string sahPrint;
+	switch (SAH_MODE) {
+	case 0:
+		sahPrint = "] P_s * N_s\n";
+		break;
+	case 1:
+		sahPrint = "] ballance\n";
+		break;
+	case 2:
+		sahPrint = "] prefer leaf count\n";
+		break;
+	case 3:
+		sahPrint = "] sqrt(N_s)\n";
+		break;
+	case 4:
+		sahPrint = "] x * ((x/T)^k)\n";
+		break;
+	case 5:
+		sahPrint = "] x + a * x * (x - T)\n";
+		break;
+	}
+//#if SAH_MODE == 0
+//	outFile << "  * SAH_MODE: [" << SAH_MODE << "] P_s * N_s\n";
+//#elif SAH_MODE == 1
+//	outFile << "  * SAH_MODE: [" << SAH_MODE << "] ballance\n";
+//#elif SAH_MODE == 2
+//	outFile << "  * SAH_MODE: [" << SAH_MODE << "] prefer leaf count\n";
+//#elif SAH_MODE == 3
+//	outFile << "  * SAH_MODE: [" << SAH_MODE << "] sqrt(N_s)\n";
+//#elif SAH_MODE == 4
+//	outFile << "  * SAH_MODE: [" << SAH_MODE << "] x * ((x/T)^k)\n";
+//#elif SAH_MODE == 5
+//	outFile << "  * SAH_MODE: [" << SAH_MODE << "] x + a * x * (x - T)\n";
+//#endif
 	
 	outFile << "  * Adaptive Mesh Mode: " << (ADAPTIVE_MESH ? "Adaptive" : "Icosa") << "\n";
 	outFile << "  * Kernel Scale Mode: " << (USE_KERNEL_SCALE ? "KernelScale" : "Paper") << "\n";
@@ -3004,8 +3030,9 @@ void subMenuHandler(int value) {
 
 	// Max Level 파트 처리
 	char max_level_part[32] = "";
-#if SAH_OPACITY == 0 && MAX_LEVEL != 128
-	snprintf(max_level_part, sizeof(max_level_part), "_%d", MAX_LEVEL);
+#if SAH_OPACITY == 0
+	if(MAX_LEVEL != 128)
+		snprintf(max_level_part, sizeof(max_level_part), "_%d", MAX_LEVEL);
 #endif
 
 
@@ -3016,12 +3043,20 @@ void subMenuHandler(int value) {
 	char* countG = ((PRIMITIVE_TYPE == ELLIPSOID_BY_TRI) && COUNT_BY_GID) ? "_CountG" : "";
 	char* forceBinarySplit = ((PRIMITIVE_TYPE == ELLIPSOID_BY_TRI) && FORCE_BINARY_SPLIT) ? "_fs" : "";
 
-#if SAH_MODE == 0
-	const char* sahMode = "";
-#else
-	string sahMode_str = string("_sahMode") + to_string(SAH_MODE);
-	const char* sahMode = sahMode_str.c_str();
-#endif
+	std::string sahMode;
+	if(SAH_MODE == 0)
+		sahMode = "";
+	else {
+		string sahMode_str = string("_sahMode") + to_string(SAH_MODE);
+		sahMode = sahMode_str.c_str();
+	}
+
+//#if SAH_MODE == 0
+//	const char* sahMode = "";
+//#else
+//	string sahMode_str = string("_sahMode") + to_string(SAH_MODE);
+//	const char* sahMode = sahMode_str.c_str();
+//#endif
 	char* versionExt = KDT_VERSION ? "__v1" : "";
 
 	// 일반 파일 접미사 조립
@@ -3883,7 +3918,34 @@ void idle() {
 	}
 }
 
+void handleArguments(int argc, char* argv[]) {
+	for (int i = 1; i < argc; i++) {
+		std::string arg = argv[i];
+
+		// 마지막 인자가 플래그면 다음에 읽을 값이 없으므로 안전장치 체크 (i + 1 < argc)
+		if (arg == "-i" && i + 1 < argc) {
+			ISCET_COST = std::stof(argv[++i]); // 다음 인자를 읽고 인덱스 증가
+		}
+		else if (arg == "-m" && i + 1 < argc) {
+			MAX_LEVEL = std::stoi(argv[++i]);
+		}
+		else if (arg == "-f" && i + 1 < argc) {
+			FORCE_SPLIT_THRESHOLD = std::stoi(argv[++i]);
+		}
+		else if (arg == "-s" && i + 1 < argc) {
+			SAH_MODE = std::stoi(argv[++i]);
+		}
+	}
+
+	std::cout << "[Options] "
+		<< "-i (ISCET_COST): " << ISCET_COST
+		<< ", -m (MAX_LEVEL): " << MAX_LEVEL
+		<< ", -f (FORCE_SPLIT): " << FORCE_SPLIT_THRESHOLD
+		<< ", -s (SAH_MODE): " << SAH_MODE << std::endl;
+}
+
 void main(int argc, char **argv) {
+	handleArguments(argc, argv);
 	init_KDT_system();
 	init_mesh_data();//shyun
 	glutInit (&argc, argv); 
