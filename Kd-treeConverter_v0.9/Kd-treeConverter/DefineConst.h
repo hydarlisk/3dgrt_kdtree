@@ -5,7 +5,7 @@
 #define KERNEL_DEGREE 4.0f
 #define SPH_EVAL_DEGREE 3
 #define GAUSSIAN_DEGREE 4
-#define OPACITY_THRESHOLD 0.95f					// 충족할때까지 kd-tree 탐색
+#define OPACITY_THRESHOLD 0.99f					// 충족할때까지 kd-tree 탐색
 #define MAX_HITS 256								// leaf node에서 blending을 위한 최대 sort 크기
 
 #define ADAPTIVE_KERNEL_CLAMPING 1

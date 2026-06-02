@@ -39,11 +39,14 @@
 
 float ISCET_COST = 5.0f;
 int MAX_LEVEL = 128;
-int FORCE_SPLIT_THRESHOLD = 64;				// kd-tree 강제분할
-int SAH_MODE = 4;
 std::string ASSET_NAME = "hotdog2";
+int FORCE_SPLIT_THRESHOLD = 64;				// kd-tree 강제분할
+int SAH_MODE = 0;
+//std::string ADD_NAME = "_0.5";
 std::string ADD_NAME = "";
+
 int testMode = 0;
+int renderTestMode = 0;
 
 using namespace std;
 
@@ -3199,9 +3202,9 @@ void subMenuHandler(int value) {
 		break;
 	case 105: printf("Bonsai selected\n");
 		std::cout << "need name handling about macros\n";
-		system("pause");
+		//system("pause");
 		assetName = "bonsai";
-		ply_file_path = "../../Data/ply/bonsai/bonsai.ply";
+		//ply_file_path = "../../Data/ply/bonsai/bonsai.ply";
 		setCameraLookAt(-0.3701975643634796, -0.67806476354599, 1.5000991821289063,
 			0.421955406665802, 0.8475437164306641, -0.3219059407711029,
 			0.10673734545707703, -0.3990341126918793, -0.9107025265693665);
@@ -3225,10 +3228,10 @@ void subMenuHandler(int value) {
 #endif
 		break;
 	case 106: printf("bicycle selected\n");
-		std::cout << "need name handling about macros\n";
-		system("pause");
+		//std::cout << "need name handling about macros\n";
+		//system("pause");
 		assetName = "bicycle";
-		ply_file_path = "../../Data/ply/bicycle/bicycle.ply";
+		//ply_file_path = "../../Data/ply/bicycle/bicycle.ply";
 		setCameraLookAt(-1.8810417652130128, 0.18281030654907227, 0.9657841324806213,
 			0.9618207216262817, 0.27256786823272707, -0.024726202711462976,
 			0.24284449219703675, -0.8916060328483582, -0.382185161113739);
@@ -3277,7 +3280,7 @@ void subMenuHandler(int value) {
 		break;
 	case 108: printf("garden selected\n");
 		std::cout << "need name handling about macros\n";
-		system("pause");
+		//system("pause");
 		assetName = "garden";
 		adaptive_mesh = ADAPTIVE_MESH;
 		setCameraLookAt(-2.023807, -0.754826, -0.456976,
@@ -3948,6 +3951,9 @@ void handleArguments(int argc, char* argv[]) {
 		else if (arg == "-t") {
 			testMode = 1;
 		}
+		else if (arg == "-tr") {
+			renderTestMode = 1;
+		}
 	}
 
 	std::cout << "[Options]\n"
@@ -3969,6 +3975,7 @@ void main(int argc, char **argv) {
 		strncpy_s(suffix, sizeof(suffix), suffixStr.c_str(), _TRUNCATE);
 		initAssetPaths(ASSET_NAME, suffix);
 		loadGaussiansFromPly(ply_file_path, g_gaussians);
+		if (g_gaussians.size() <= 0) return;
 		printf("dump path :\n\t%s\n\t%s\n", ply_kdtree_dump_path, ply_igeom_dump_path);
 		g_isValidG.assign(g_gaussians.size(), 1);
 		create_composite_object_from_gaussians(g_gaussians);
@@ -3987,6 +3994,21 @@ void main(int argc, char **argv) {
 		);
 		dumpKdtreeInfo(ply_kdtInfo_path);
 		return;
+	}
+	if (renderTestMode) {
+		//1. load ply
+		char suffix[256];
+		std::string suffixStr = generateSuffix();
+		strncpy_s(suffix, sizeof(suffix), suffixStr.c_str(), _TRUNCATE);
+		initAssetPaths(ASSET_NAME, suffix);
+		loadGaussiansFromPly(ply_file_path, g_gaussians);
+		if (g_gaussians.size() <= 0) return;
+		printf("dump path :\n\t%s\n\t%s\n", ply_kdtree_dump_path, ply_igeom_dump_path);
+		g_isValidG.assign(g_gaussians.size(), 1);
+		create_composite_object_from_gaussians(g_gaussians);
+		//2. read kdtree
+		uip.kd_tree_dump_format = KD_TREE_DUMP_IN_BINARY;
+		read_kd_tree_from_file(&uip.poly_model, ply_kdtree_path, uip.kd_tree_dump_format);
 	}
 
 	glutInit (&argc, argv); 
