@@ -203,6 +203,7 @@
     <ClCompile Include="SLMeshDataIO.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\external\json.hpp" />
     <ClInclude Include="..\external\stb_image_write.h" />
     <ClInclude Include="cudaRenderer.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -213,6 +214,7 @@
     <ClInclude Include="Kd-treeConstructor.h" />
     <ClInclude Include="Kd-treeConverter.h" />
     <ClInclude Include="Kd-treeConverterMain.h" />
+    <ClInclude Include="LoadCamera.hpp" />
     <ClInclude Include="MyMathUtility.h" />
     <ClInclude Include="OpenGLStuffs.h" />
     <ClInclude Include="UnusedMacros.h" />

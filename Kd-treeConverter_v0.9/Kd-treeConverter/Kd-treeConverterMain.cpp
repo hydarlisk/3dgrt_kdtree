@@ -24,6 +24,7 @@
 #include "OpenGLStuffs.h"
 #include "MyMathUtility.h"
 #include "Gaussian.h"
+#include "LoadCamera.hpp"
 
 //shyun added begin
 #include <map>
@@ -51,6 +52,7 @@ int renderTestMode = 0;
 using namespace std;
 
 char* ply_file_path;
+char* ply_camera_path;
 char* ply_kdtree_path;
 char* ply_leafInfo_path;
 char* ply_igeom_path;
@@ -236,8 +238,13 @@ void timer_callback(int value) {
 //shyun added end
 
 UIParameters uip;
-Camera camera;
+
 KdTree kd_tree;
+
+Camera camera;
+std::vector<Camera> cameras;
+int camIdx = 0;
+bool cameraMoved = false;
 
 GLuint buf_obj;
 
@@ -875,6 +882,21 @@ void keyboard(unsigned char key, int x, int y) {
 			glutPostRedisplay();
 			break;
 #endif
+		case '-':
+			camIdx--;
+			if (camIdx < 0) camIdx = cameras.size() - 1;
+			printf("\t\tcam idx: %d\n", camIdx);
+			camera = cameras[camIdx];
+			cameraMoved = true;
+			glutPostRedisplay();
+			break;
+		case '=':
+			camIdx = (camIdx + 1) % cameras.size();
+			printf("\t\tcam idx: %d\n", camIdx);
+			camera = cameras[camIdx];
+			cameraMoved = true;
+			glutPostRedisplay();
+			break;
 		case 'o':
 			printf("=== Camera Check ===\n");
 			printf("Eye (Pos) : %.6f, %.6f, %.6f\n",
@@ -3078,6 +3100,7 @@ void initAssetPaths(const std::string& assetName, const char* suffix) {
 	// ⚠️ 주의: 이 문자열들은 함수가 끝날 때 소멸하므로, c_str()을 전역 포인터에 바로 대입하면 안 됩니다.
 	// 따라서 접미사가 안 붙는 고정 파일명들은 아래에서 static 버퍼에 안전하게 복사합니다.
 	std::string s_ply_file_path = root + fullName + "_3dgrt" + ADD_PLY_FILE_NAME + ".ply";
+	std::string s_ply_camera_path = root + CAMERA_FILE_NAME + ".json";
 	std::string s_base_kdtree_str = root + fullName + ADD_PLY_FILE_NAME + "_tree.kdt";
 	std::string s_base_leafInfo_str = root + fullName + ADD_PLY_FILE_NAME + "_leafInfo.bin";
 	std::string s_base_igeom_str = root + fullName + ADD_PLY_FILE_NAME + "_igeom.bin";
@@ -3100,6 +3123,7 @@ void initAssetPaths(const std::string& assetName, const char* suffix) {
 
 	// 3. 포인터 수명 유지를 위한 static 메모리 버퍼 확보
 	static char final_ply_path[512];
+	static char final_camera_path[512];
 	static char final_mtl_path[512];
 
 	static char final_kdtree_path[512];
@@ -3115,9 +3139,12 @@ void initAssetPaths(const std::string& assetName, const char* suffix) {
 
 	// 4. 고정 경로 복사 (Suffix가 붙지 않는 오리지널 파트)
 	strncpy_s(final_ply_path, sizeof(final_ply_path), s_ply_file_path.c_str(), _TRUNCATE);
+	strncpy_s(final_camera_path, sizeof(final_camera_path), s_ply_camera_path.c_str(), _TRUNCATE);
 	strncpy_s(final_mtl_path, sizeof(final_mtl_path), s_ply_to_obj_mtl.c_str(), _TRUNCATE);
 	ply_file_path = final_ply_path;
+	ply_camera_path = final_camera_path;
 	ply_to_obj_mtl = final_mtl_path;
+	cout << "camera json path: " << ply_camera_path << "\n";
 
 	// 5. Suffix 결합 및 최종 경로 빌드
 	construct_path(final_kdtree_path, sizeof(final_kdtree_path), s_base_kdtree_str.c_str(), suffix);
@@ -3344,6 +3371,7 @@ void subMenuHandler(int value) {
 		fprintf(stderr, "Failed to load ply file\n");
 		return;
 	}
+	loadCameraJson(cameras, string(ply_camera_path), camera);
 	g_isValidG.assign(g_gaussians.size(), 1);
 	create_composite_object_from_gaussians(g_gaussians);
 	create_composite_object_from_gaussians_all(g_gaussians);
@@ -3810,7 +3838,8 @@ void idle() {
 		camera_moved = true;
 	}
 
-	if (camera_moved) {
+	if (camera_moved || cameraMoved) {
+		cameraMoved = false;
 		g_camera_dirty = true; // CUDA 렌더링을 위해 플래그 설정
 
 		// OpenGL 뷰 매트릭스도 업데이트 (mousemove와 동일하게)

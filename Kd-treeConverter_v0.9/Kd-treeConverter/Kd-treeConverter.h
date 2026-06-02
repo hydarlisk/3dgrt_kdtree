@@ -15,6 +15,7 @@
 /* ply read */
 #define ASSET HOTDOG
 #define ADD_PLY_FILE_NAME ""
+#define CAMERA_FILE_NAME "transforms_val"
 
 #define PROBLEMATIC_THRESHOLD 1	//remove dominant prim from gaussian data
 
@@ -39,7 +40,7 @@ extern int FORCE_SPLIT_THRESHOLD;				// kd-tree 강제분할
 extern int SAH_MODE;
 
 /* js add */
-#define FORCE_BINARY_SPLIT 1	//fs
+#define FORCE_BINARY_SPLIT 0	//fs
 #define USE_KERNEL_SCALE false					// 기존의 OptiX 방식 kernelScale 사용
 
 #define IGNORE_THRESHOLD 0

@@ -77,6 +77,12 @@
     <ClInclude Include="UnusedMacros.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="LoadCamera.hpp">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="..\external\json.hpp">
+      <Filter>external</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cudaRenderer.cu">
