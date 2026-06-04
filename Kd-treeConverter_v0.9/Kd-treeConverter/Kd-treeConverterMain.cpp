@@ -43,6 +43,7 @@ int MAX_LEVEL = 128;
 std::string ASSET_NAME = "hotdog2";
 int FORCE_SPLIT_THRESHOLD = 64;				// kd-tree 강제분할
 int SAH_MODE = 0;
+int OFFSET_MAX = 2;
 //std::string ADD_NAME = "_0.5";
 std::string ADD_NAME = "";
 
@@ -3074,9 +3075,9 @@ std::string generateSuffix() {
 
 	// 6. 버퍼 조립
 	char suffix[256];
-	snprintf(suffix, sizeof(suffix), "%s_%d_%s_%d_%d%s%s_%s%s%s%s%s",
+	snprintf(suffix, sizeof(suffix), "%s_%g_%s_%d_%d%s%s_%s%s%s%s%s",
 		scale_mode_str,
-		static_cast<int>(ISCET_COST),
+		ISCET_COST,
 		opacity_part,
 		MIN_TRI,
 		FORCE_SPLIT_THRESHOLD,
@@ -3097,11 +3098,20 @@ void initAssetPaths(const std::string& assetName, const char* suffix) {
 	// 1. 기초 문자열 조합 (std::string이 살아있는 동안만 유효하므로 함수 로컬로 선언)
 	std::string root = "../../Data/ply/" + assetName + "/";
 	const std::string fullName = assetName + ADD_NAME;
+	std::string folder;
+	if (USE_KERNEL_SCALE) {
+		if (FORCE_BINARY_SPLIT) folder = "ks_fs/";
+		else folder = "ks/";
+	}
+	else {
+		if (FORCE_BINARY_SPLIT) folder = "fs/";
+		else folder = "none/";
+	}
 	// ⚠️ 주의: 이 문자열들은 함수가 끝날 때 소멸하므로, c_str()을 전역 포인터에 바로 대입하면 안 됩니다.
 	// 따라서 접미사가 안 붙는 고정 파일명들은 아래에서 static 버퍼에 안전하게 복사합니다.
 	std::string s_ply_file_path = root + fullName + "_3dgrt" + ADD_PLY_FILE_NAME + ".ply";
 	std::string s_ply_camera_path = root + CAMERA_FILE_NAME + ".json";
-	std::string s_base_kdtree_str = root + fullName + ADD_PLY_FILE_NAME + "_tree.kdt";
+	std::string s_base_kdtree_str = root + folder + fullName + ADD_PLY_FILE_NAME + "_tree.kdt";
 	std::string s_base_leafInfo_str = root + fullName + ADD_PLY_FILE_NAME + "_leafInfo.bin";
 	std::string s_base_igeom_str = root + fullName + ADD_PLY_FILE_NAME + "_igeom.bin";
 	std::string s_base_kdtInfo_str = root + fullName + ADD_PLY_FILE_NAME + "_kdtInfo.txt";
@@ -3983,9 +3993,13 @@ void handleArguments(int argc, char* argv[]) {
 		else if (arg == "-tr") {
 			renderTestMode = 1;
 		}
+		else if (arg == "-om") {
+			OFFSET_MAX = std::stoi(argv[++i]);
+		}
 	}
 
 	std::cout << "[Options]\n"
+		<< "\n\t-om (OFFSET_MAX): " << OFFSET_MAX
 		<< "\n\t-a (ASSET_NAME): " << ASSET_NAME
 		<< "\n\t-i (ISCET_COST): " << ISCET_COST
 		<< "\n\t-m (MAX_LEVEL): " << MAX_LEVEL
@@ -4067,6 +4081,10 @@ void main(int argc, char **argv) {
 
 	//glutTimerFunc(16, timer_callback, 0);
 	glutTimerFunc(0, timer_callback, 0);
+
+	if (renderTestMode) {
+		loadCameraJson(cameras, string(ply_camera_path), camera);
+	}
 
 	glutMainLoop ();
 }

@@ -38,6 +38,7 @@ extern int MAX_LEVEL;
 extern float ISCET_COST;
 extern int FORCE_SPLIT_THRESHOLD;				// kd-tree 강제분할
 extern int SAH_MODE;
+extern int OFFSET_MAX;
 
 /* js add */
 #define FORCE_BINARY_SPLIT 0	//fs
@@ -121,7 +122,7 @@ extern int SAH_MODE;
 
 //================================================================================================
 
-#define RESOLUTION 4
+#define RESOLUTION 5
 #if RESOLUTION == 0		// FHD
 #define MAIN_WINDOW_WIDTH 1920
 #define MAIN_WINDOW_HEIGHT 1080
@@ -143,8 +144,8 @@ extern int SAH_MODE;
 #define MAIN_WINDOW_HEIGHT 1540
 #define FOV_Y 96.0f
 #elif RESOLUTION ==	5	// sgmrt
-#define MAIN_WINDOW_WIDTH 1080
-#define MAIN_WINDOW_HEIGHT 2102
+#define MAIN_WINDOW_WIDTH 2249
+#define MAIN_WINDOW_HEIGHT 1080
 #define FOV_Y 96.0f
 #endif
 

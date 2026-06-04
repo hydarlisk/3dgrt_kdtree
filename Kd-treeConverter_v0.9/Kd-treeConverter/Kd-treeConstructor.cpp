@@ -1758,10 +1758,12 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const PrimList* pTriangleInfos, u
 			setLeafNode(inNode, triangleSize, g_iKdTreePrimOffsetCnt);
 			g_iKdTreePrimOffsetCnt += triangleSize;
 
+
 			// 메모리 체크 : Triangle Offset Size
 			if (g_iKdTreePrimOffsetCnt >= g_iKdTreePrimOffsetCnt_Alloc) {
 				_reAllocTriangleOffsetList(MyMAX(2 * g_iKdTreePrimOffsetCnt_Alloc, 512), g_iKdTreePrimOffsetCnt_Alloc, &g_pKdTreePrimOffsetArray);
 			}
+			if (g_iKdTreePrimOffsetCnt_Alloc > 1 << (26 + OFFSET_MAX));
 		}
 
 		/**

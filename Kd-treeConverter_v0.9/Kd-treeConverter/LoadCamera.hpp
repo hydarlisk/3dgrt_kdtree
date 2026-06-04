@@ -13,7 +13,7 @@ using nlohmann::json;
 json loadJsonFromFile(const std::string& jsonPath) {
     std::ifstream fin(jsonPath);
     if (!fin.is_open()) {
-        printf("Failed to open file : ", jsonPath.c_str());
+        printf("Failed to open file : %s", jsonPath.c_str());
         exit(-1);
     }
     json j;

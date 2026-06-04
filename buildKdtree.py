@@ -10,12 +10,15 @@ EXE_PATH = r"./Kd-treeConverter_v0.9/x64/Release/Kd-treeConverter.exe"
 ASSET_BASE_DIR = r"./Kd-treeConverter_v0.9/Kd-treeConverter"
 
 # 실험 조건 세팅
-asset_name = ["bicycle", "room"]
+testMode = "-t"
+# testMode = "-tr"
+offset_max = "3"
+asset_name = ["drums", "mic"]
 add_name = [""]
-iscet_cost_choices   = ["5.0", "10.0"]
+iscet_cost_choices   = ["5.0"]
 max_level_choices     = ["128"]
-force_split_choices   = ["256"]
-sah_mode_choices      = ["0", "4"]
+force_split_choices   = ["64"]
+sah_mode_choices      = ["0", "1", "4"]
 
 all_combinations = itertools.product(
     asset_name,
@@ -32,7 +35,7 @@ for combo in all_combinations:
     an, adn, ic, ml, fs, sm = combo
     
     # 🌟 cwd를 바꿀 때는 실행 파일의 전체 경로(EXE_PATH)를 다 넣어주어야 합니다.
-    cmd = [EXE_PATH, "-t", "-a", an, "-ap", adn, "-i", ic, "-m", ml, "-f", fs, "-s", sm]
+    cmd = [EXE_PATH, testMode, "-om", offset_max, "-a", an, "-ap", adn, "-i", ic, "-m", ml, "-f", fs, "-s", sm]
     
     print(f"-> 실행 중: {cmd[1:]}")
     subprocess.run(cmd, cwd=ASSET_BASE_DIR)
