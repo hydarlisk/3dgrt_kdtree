@@ -1763,7 +1763,8 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const PrimList* pTriangleInfos, u
 			if (g_iKdTreePrimOffsetCnt >= g_iKdTreePrimOffsetCnt_Alloc) {
 				_reAllocTriangleOffsetList(MyMAX(2 * g_iKdTreePrimOffsetCnt_Alloc, 512), g_iKdTreePrimOffsetCnt_Alloc, &g_pKdTreePrimOffsetArray);
 			}
-			if (g_iKdTreePrimOffsetCnt_Alloc > 1 << (26 + OFFSET_MAX));
+			if (g_iKdTreePrimOffsetCnt_Alloc > 1ULL << (26 + OFFSET_MAX))
+				exit(1);
 		}
 
 		/**
