@@ -4018,7 +4018,7 @@ int main(int argc, char **argv) {
 		strncpy_s(suffix, sizeof(suffix), suffixStr.c_str(), _TRUNCATE);
 		initAssetPaths(ASSET_NAME, suffix);
 		loadGaussiansFromPly(ply_file_path, g_gaussians);
-		if (g_gaussians.size() <= 0) return;
+		if (g_gaussians.size() <= 0) return 1;
 		printf("dump path :\n\t%s\n\t%s\n", ply_kdtree_dump_path, ply_igeom_dump_path);
 		g_isValidG.assign(g_gaussians.size(), 1);
 		create_composite_object_from_gaussians(g_gaussians);
@@ -4045,7 +4045,7 @@ int main(int argc, char **argv) {
 		strncpy_s(suffix, sizeof(suffix), suffixStr.c_str(), _TRUNCATE);
 		initAssetPaths(ASSET_NAME, suffix);
 		loadGaussiansFromPly(ply_file_path, g_gaussians);
-		if (g_gaussians.size() <= 0) return;
+		if (g_gaussians.size() <= 0) return 1;
 		printf("dump path :\n\t%s\n\t%s\n", ply_kdtree_dump_path, ply_igeom_dump_path);
 		g_isValidG.assign(g_gaussians.size(), 1);
 		create_composite_object_from_gaussians(g_gaussians);
