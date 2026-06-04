@@ -4007,7 +4007,7 @@ void handleArguments(int argc, char* argv[]) {
 		<< "\n\t-s (SAH_MODE): " << SAH_MODE << std::endl;
 }
 
-void main(int argc, char **argv) {
+int main(int argc, char **argv) {
 	handleArguments(argc, argv);
 	init_KDT_system();
 	init_mesh_data();//shyun
@@ -4036,7 +4036,7 @@ void main(int argc, char **argv) {
 			ply_leafInfo_dump_path         // leaf info
 		);
 		dumpKdtreeInfo(ply_kdtInfo_path);
-		return;
+		return 0;
 	}
 	if (renderTestMode) {
 		//1. load ply
@@ -4087,6 +4087,7 @@ void main(int argc, char **argv) {
 	}
 
 	glutMainLoop ();
+	return 0;
 }
 
 
