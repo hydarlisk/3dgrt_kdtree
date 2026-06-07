@@ -46,6 +46,8 @@ int SAH_MODE = 0;
 int OFFSET_MAX = 2;
 //std::string ADD_NAME = "_0.5";
 std::string ADD_NAME = "";
+std::vector<int> testCams = { 0, 1, 2 };
+//std::vector<int> testCams = { 0, 12, 22 };
 
 int testMode = 0;
 int renderTestMode = 0;
@@ -3964,6 +3966,64 @@ void idle() {
 	}
 }
 
+void renderingTestInit() {
+	//1. load ply
+	char suffix[256];
+	std::string suffixStr = generateSuffix();
+	strncpy_s(suffix, sizeof(suffix), suffixStr.c_str(), _TRUNCATE);
+	initAssetPaths(ASSET_NAME, suffix);
+	loadGaussiansFromPly(ply_file_path, g_gaussians);
+	if (g_gaussians.size() <= 0) exit(1);
+	printf("dump path :\n\t%s\n\t%s\n", ply_kdtree_dump_path, ply_igeom_dump_path);
+	g_isValidG.assign(g_gaussians.size(), 1);
+	create_composite_object_from_gaussians(g_gaussians);
+	//2. read kdtree
+	uip.kd_tree_dump_format = KD_TREE_DUMP_IN_BINARY;
+	read_kd_tree_from_file(&uip.poly_model, ply_kdtree_path, uip.kd_tree_dump_format);
+
+	/* cuda setting */
+	cudaEventCreate(&start_real);
+	cudaEventCreate(&stop_real);
+	for (Gaussian& g : g_gaussians) {
+#if UPLOAD_INV_SCALE
+		g.scale[0] = 1 / g.scale[0];
+		g.scale[1] = 1 / g.scale[1];
+		g.scale[2] = 1 / g.scale[2];
+#endif
+#if PRE_CALC_KSCALE && UPLOAD_INV_KSCALE
+		g.k_scale = 1 / g.k_scale;
+#endif
+#if UPLOAD_INVSR_MAT
+		for (int i = 0; i < 3; i++) {
+			g.rotMat.m[i][0] *= g.scale[0];
+			g.rotMat.m[i][1] *= g.scale[1];
+			g.rotMat.m[i][2] *= g.scale[2];
+		}
+#endif
+	}
+	renderGaussianWithCudaSetup(uip.poly_model, g_gaussians
+#if !QUATERNION
+		, g_kScales
+#endif
+	);
+	g_camera_dirty = true; // 모드를 켜는 즉시 한 번 렌더링하도록 설정
+	printf("CUDA Interactive Mode: ON\n");
+}
+
+float renderingTestRender() {
+	cudaGraphicsMapResources(1, &pbo_cuda_resource, transfer_stream);
+	cudaEventRecord(map_complete_event, transfer_stream);
+	float* d_pbo_ptr;
+	size_t num_bytes;
+	cudaGraphicsResourceGetMappedPointer((void**)&d_pbo_ptr, &num_bytes, pbo_cuda_resource);
+
+	cudaStreamWaitEvent(compute_stream, map_complete_event, 0);
+	g_fps = renderGaussianWithCudaFrame(camera, g_render_width, g_render_height, d_pbo_ptr, compute_stream);
+	cudaGraphicsUnmapResources(1, &pbo_cuda_resource, transfer_stream);
+
+	return g_fps;
+}
+
 void handleArguments(int argc, char* argv[]) {
 	for (int i = 1; i < argc; i++) {
 		std::string arg = argv[i];
@@ -4038,21 +4098,6 @@ int main(int argc, char **argv) {
 		dumpKdtreeInfo(ply_kdtInfo_path);
 		return 0;
 	}
-	if (renderTestMode) {
-		//1. load ply
-		char suffix[256];
-		std::string suffixStr = generateSuffix();
-		strncpy_s(suffix, sizeof(suffix), suffixStr.c_str(), _TRUNCATE);
-		initAssetPaths(ASSET_NAME, suffix);
-		loadGaussiansFromPly(ply_file_path, g_gaussians);
-		if (g_gaussians.size() <= 0) return 1;
-		printf("dump path :\n\t%s\n\t%s\n", ply_kdtree_dump_path, ply_igeom_dump_path);
-		g_isValidG.assign(g_gaussians.size(), 1);
-		create_composite_object_from_gaussians(g_gaussians);
-		//2. read kdtree
-		uip.kd_tree_dump_format = KD_TREE_DUMP_IN_BINARY;
-		read_kd_tree_from_file(&uip.poly_model, ply_kdtree_path, uip.kd_tree_dump_format);
-	}
 
 	glutInit (&argc, argv); 
 	glutInitDisplayMode(GLUT_RGB | GLUT_DEPTH | GLUT_DOUBLE);   
@@ -4083,7 +4128,22 @@ int main(int argc, char **argv) {
 	glutTimerFunc(0, timer_callback, 0);
 
 	if (renderTestMode) {
+		renderingTestInit();
 		loadCameraJson(cameras, string(ply_camera_path), camera);
+		for (int i = 0; i < testCams.size(); i++) {
+			float avgFps = 0;
+			camera = cameras[testCams[i]];
+			for (int j = 0; j < MEASURE_END_FRAME; j++) {
+				float fps = renderingTestRender();
+				if (j >= MEASURE_START_FRAME) {
+					avgFps += fps;
+				}
+			}
+			avgFps /= (MEASURE_END_FRAME - MEASURE_START_FRAME - 1);
+			cout << "cam, average fps: " << i << " " << avgFps << "\n";
+		}
+		
+		system("pause");
 	}
 
 	glutMainLoop ();

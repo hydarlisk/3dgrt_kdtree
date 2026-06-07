@@ -2939,6 +2939,39 @@ void save_histograms_to_csv(const std::string& filename,
     std::cout << "Histogram saved to " << filename << std::endl;
 }
 
+//void saveDeviceFramebufferToPNG(float* d_framebuffer, int width, int height, int channels = 3) {
+//    static int call = 0;
+//
+//    char filename[256];
+//    snprintf(filename, sizeof(filename), "output%d.png", call);
+//    call++;
+//    size_t num_float_bytes = width * height * channels * sizeof(float);
+//
+//    float* h_float_pixels = (float*)malloc(num_float_bytes);
+//
+//    cudaError_t err = cudaMemcpy(h_float_pixels, d_framebuffer, num_float_bytes, cudaMemcpyDeviceToHost);
+//    if (err != cudaSuccess) {
+//        printf("CUDA Memcpy 실패: %s\n", cudaGetErrorString(err));
+//        free(h_float_pixels);
+//        return;
+//    }
+//    unsigned char* h_byte_pixels = (unsigned char*)malloc(width * height * channels);
+//
+//    for (int i = 0; i < width * height * channels; ++i) {
+//        float val = std::max(0.0f, std::min(1.0f, h_float_pixels[i]));
+//        h_byte_pixels[i] = (unsigned char)(val * 255.0f);
+//    }
+//
+//    stbi_flip_vertically_on_write(1);
+//
+//    stbi_write_png(filename, width, height, channels, h_byte_pixels, width * channels);
+//
+//    free(h_float_pixels);
+//    free(h_byte_pixels);
+//
+//    printf("이미지 저장 성공: %s\n", filename);
+//}
+
 float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, float* d_framebuffer, cudaStream_t stream
 #if HIT_AND_NODE_COUNT_DEBUG
     , float3*& h_debug_buffer1, float3*& h_debug_buffer2
@@ -3155,6 +3188,8 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
     CUDA_CHECK(cudaEventRecord(stop_ev, stream)); // 종료 기록
     CUDA_CHECK(cudaEventSynchronize(stop_ev)); // GPU 작업 완료까지 대기
 #endif
+
+    //saveDeviceFramebufferToPNG(d_framebuffer, width, height);
 
 #if WARP_OCCUPANCY
     std::cout << "\n========= GPU Device Properties =========" << std::endl;
