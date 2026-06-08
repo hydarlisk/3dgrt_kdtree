@@ -10,13 +10,15 @@ EXE_PATH = r"./Kd-treeConverter_v0.9/x64/Release/Kd-treeConverter.exe"
 ASSET_BASE_DIR = r"./Kd-treeConverter_v0.9/Kd-treeConverter"
 
 # 실험 조건 세팅
-testMode = "-t"
-# testMode = "-tr"
+#testMode = "-t"
+testMode = "-tr"
+testCams = [0, 12, 22]
+
 offset_max = "6"
-asset_name = ["bicycle", "bonsai", "room", "counter", "garden"]
-add_name = [""]
+asset_name = ["bicycle"]
+add_name = ["None"]
 iscet_cost_choices   = ["5.0"]
-max_level_choices     = ["256"]
+max_level_choices     = ["128", "256"]
 force_split_choices   = ["256"]
 sah_mode_choices      = ["0", "1", "4"]
 
@@ -28,7 +30,7 @@ all_combinations = itertools.product(
     force_split_choices, 
     sah_mode_choices
 )
-
+str_array = [str(x) for x in testCams]
 print(f"🚀 기본 경로를 [{ASSET_BASE_DIR}]로 설정하여 실험 시작...")
 
 results = []
@@ -36,7 +38,7 @@ results = []
 for combo in all_combinations:
     an, adn, ic, ml, fs, sm = combo
 
-    cmd = [EXE_PATH, testMode, "-om", offset_max, "-a", an, "-ap", adn, "-i", ic, "-m", ml, "-f", fs, "-s", sm]
+    cmd = [EXE_PATH, testMode, "-om", offset_max, "-a", an, "-adn", adn, "-i", ic, "-m", ml, "-f", fs, "-s", sm, "-cams"] + str_array
     
     print(f"-> 실행 중: {cmd[1:]}")
     res = subprocess.run(cmd, cwd=ASSET_BASE_DIR)

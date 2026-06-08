@@ -3116,7 +3116,7 @@ void initAssetPaths(const std::string& assetName, const char* suffix) {
 	std::string s_base_kdtree_str = root + folder + fullName + ADD_PLY_FILE_NAME + "_tree.kdt";
 	std::string s_base_leafInfo_str = root + fullName + ADD_PLY_FILE_NAME + "_leafInfo.bin";
 	std::string s_base_igeom_str = root + fullName + ADD_PLY_FILE_NAME + "_igeom.bin";
-	std::string s_base_kdtInfo_str = root + fullName + ADD_PLY_FILE_NAME + "_kdtInfo.txt";
+	std::string s_base_kdtInfo_str = root + folder + fullName + ADD_PLY_FILE_NAME + "_kdtInfo.txt";
 	std::string s_base_obj_str = root + fullName + "_new.obj";
 	std::string s_base_build_str = root + fullName + "_kdt.txt";
 	std::string s_ply_to_obj_mtl = fullName + "_3dgrt.mtl";
@@ -4044,8 +4044,11 @@ void handleArguments(int argc, char* argv[]) {
 		else if (arg == "-a" && i + 1 < argc) {
 			ASSET_NAME = std::string(argv[++i]);
 		}
-		else if (arg == "-ap" && i + 1 < argc) {
+		else if (arg == "-adn" && i + 1 < argc) {
 			ADD_NAME = std::string(argv[++i]);
+			if (ADD_NAME == "None") {
+				ADD_NAME = "";
+			}
 		}
 		else if (arg == "-t") {
 			testMode = 1;
@@ -4055,6 +4058,13 @@ void handleArguments(int argc, char* argv[]) {
 		}
 		else if (arg == "-om") {
 			OFFSET_MAX = std::stoi(argv[++i]);
+		}
+		else if (arg == "-cams") {
+			testCams.clear();
+			while (i + 1 < argc && argv[i + 1][0] != '-') {
+				i++;
+				testCams.push_back(std::stoi(argv[i]));
+			}
 		}
 	}
 
@@ -4129,21 +4139,39 @@ int main(int argc, char **argv) {
 
 	if (renderTestMode) {
 		renderingTestInit();
-		loadCameraJson(cameras, string(ply_camera_path), camera);
-		for (int i = 0; i < testCams.size(); i++) {
-			float avgFps = 0;
-			camera = cameras[testCams[i]];
-			for (int j = 0; j < MEASURE_END_FRAME; j++) {
-				float fps = renderingTestRender();
-				if (j >= MEASURE_START_FRAME) {
-					avgFps += fps;
-				}
+		std::string filename = ply_kdtInfo_path;
+		std::string newExt = ".csv";
+		filename.replace(filename.size() - 4, 4, newExt);
+		std::ofstream csvFile(filename, std::ios::app);
+		if (csvFile.is_open()) {
+			csvFile.seekp(0, std::ios::end);
+			if (csvFile.tellp() == 0) {
+				csvFile << "Camera_ID,Average_FPS\n";
 			}
-			avgFps /= (MEASURE_END_FRAME - MEASURE_START_FRAME - 1);
-			cout << "cam, average fps: " << i << " " << avgFps << "\n";
+
+
+			loadCameraJson(cameras, string(ply_camera_path), camera);
+			for (int i = 0; i < testCams.size(); i++) {
+				float avgFps = 0;
+				camera = cameras[testCams[i]];
+				for (int j = 0; j < MEASURE_END_FRAME; j++) {
+					float fps = renderingTestRender();
+					if (j >= MEASURE_START_FRAME) {
+						avgFps += fps;
+					}
+				}
+				avgFps /= (MEASURE_END_FRAME - MEASURE_START_FRAME);
+				cout << "cam, average fps: " << testCams[i] << " " << avgFps << "\n";
+				csvFile << testCams[i] << "," << avgFps << "\n";
+			}
+			csvFile.close();
+		}
+		else {
+			std::cerr << "cannot open csv file: " << filename << std::endl;
+			exit(1);
 		}
 		
-		system("pause");
+		return 0;
 	}
 
 	glutMainLoop ();
