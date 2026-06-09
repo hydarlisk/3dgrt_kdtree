@@ -38,6 +38,9 @@
 #include "cudaRenderer.h"
 //#include "SGRTx2Lib/cuda_math.h"
 
+#include <direct.h>
+#include <io.h>
+
 float ISCET_COST = 5.0f;
 int MAX_LEVEL = 128;
 std::string ASSET_NAME = "hotdog2";
@@ -3094,6 +3097,23 @@ std::string generateSuffix() {
 	return std::string(suffix);
 }
 
+void make_directories_c14(const std::string& path) {
+	std::string current_level = "";
+
+	// 경로의 슬래시(/)나 역슬래시(\)를 하나씩 찾아가며 폴더를 점진적으로 생성
+	for (size_t i = 0; i < path.size(); ++i) {
+		current_level += path[i];
+		if (path[i] == '/' || path[i] == '\\' || i == path.size() - 1) {
+			if (current_level.empty() || current_level == ".." || current_level == ".") continue;
+
+			// 폴더가 이미 존재하는지 체크 (_access가 0을 반환하면 존재함)
+			if (_access(current_level.c_str(), 0) != 0) {
+				// 폴더가 없으면 생성
+				_mkdir(current_level.c_str());
+			}
+		}
+	}
+}
 void initAssetPaths(const std::string& assetName, const char* suffix) {
 	if (assetName.empty()) return;
 
@@ -3101,14 +3121,22 @@ void initAssetPaths(const std::string& assetName, const char* suffix) {
 	std::string root = "../../Data/ply/" + assetName + "/";
 	const std::string fullName = assetName + ADD_NAME;
 	std::string folder;
-	if (USE_KERNEL_SCALE) {
-		if (FORCE_BINARY_SPLIT) folder = "ks_fs/";
-		else folder = "ks/";
+	if (ADD_PLY_FILE_NAME == "") {
+		folder = "";
 	}
 	else {
-		if (FORCE_BINARY_SPLIT) folder = "fs/";
-		else folder = "none/";
+		folder = ADD_PLY_FILE_NAME + string("/");
 	}
+	if (USE_KERNEL_SCALE) {
+		if (FORCE_BINARY_SPLIT) folder += "ks_fs/";
+		else folder += "ks/";
+	}
+	else {
+		if (FORCE_BINARY_SPLIT) folder += "fs/";
+		else folder += "none/";
+	}
+	std::string final_folder_path = root + folder;
+	make_directories_c14(final_folder_path);
 	// ⚠️ 주의: 이 문자열들은 함수가 끝날 때 소멸하므로, c_str()을 전역 포인터에 바로 대입하면 안 됩니다.
 	// 따라서 접미사가 안 붙는 고정 파일명들은 아래에서 static 버퍼에 안전하게 복사합니다.
 	std::string s_ply_file_path = root + fullName + "_3dgrt" + ADD_PLY_FILE_NAME + ".ply";
@@ -3976,7 +4004,7 @@ void renderingTestInit() {
 	if (g_gaussians.size() <= 0) exit(1);
 	printf("dump path :\n\t%s\n\t%s\n", ply_kdtree_dump_path, ply_igeom_dump_path);
 	g_isValidG.assign(g_gaussians.size(), 1);
-	create_composite_object_from_gaussians(g_gaussians);
+	//create_composite_object_from_gaussians(g_gaussians);
 	//2. read kdtree
 	uip.kd_tree_dump_format = KD_TREE_DUMP_IN_BINARY;
 	read_kd_tree_from_file(&uip.poly_model, ply_kdtree_path, uip.kd_tree_dump_format);

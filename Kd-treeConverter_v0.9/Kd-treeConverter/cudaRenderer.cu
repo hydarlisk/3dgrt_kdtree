@@ -2488,10 +2488,10 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
     printf("Setting up static data for CUDA rendering...\n");
 
     KdTree* kdTree = object.kd_tree;
-    if (!kdTree || object.n_triangles == 0) {
-        std::cerr << "[CUDA Error] Object or Kd-tree is empty." << std::endl;
-        return;
-    }
+    //if (!kdTree || object.n_triangles == 0) {
+    //    std::cerr << "[CUDA Error] Object or Kd-tree is empty." << std::endl;
+    //    return;
+    //}
     if (!kdTree || gaussians.empty()) {
         std::cerr << "[CUDA Error] Kd-tree or Gaussian data is empty." << std::endl;
         return;
