@@ -306,7 +306,6 @@ void clip_ellipsoid(std::vector<PrimList>& ellipsoidInfos, const SplitCost& best
 			int j = (axis + 1) % 3;
 			int k = (axis + 2) % 3;
 
-			//z축 극점
 			float jMax = g.pos[i] + cov[i][j] / e[j];
 			float jMin = g.pos[i] - cov[i][j] / e[j];
 			float kMax = g.pos[i] + cov[i][k] / e[k];
@@ -726,7 +725,7 @@ void try_to_split(const int axis, BoundingBox &inBBox, const PrimList *pTriangle
 		if (cur_position <= cell_min + KD_TREE_EPSILON) continue;
 		if (cur_position >= cell_max - KD_TREE_EPSILON) break;
 
-
+		
 		// ==================================================
 		// Scoring
 		// ==================================================
@@ -887,60 +886,33 @@ void try_to_split(const int axis, BoundingBox &inBBox, const PrimList *pTriangle
 							) * emptyBonus[side_idx];
 						break;
 					}
+					case 6: {
+						SAH[side_idx] = v_KD_TREE_TRAVL_COST
+							+ v_KD_TREE_ISECT_COST * (
+							double(tri_num_left[side_idx]) * prob_l +
+							double(tri_num_right[side_idx]) * prob_r) * emptyBonus[side_idx]
+							+ SORT_COST * (
+							tri_num_left[side_idx] * log2(tri_num_left[side_idx] * prob_l) + tri_num_right[side_idx] * log2(tri_num_right[side_idx] * prob_r));
+						break;
 					}
-//#if SAH_MODE == 0
-//					SAH[side_idx] = v_KD_TREE_TRAVL_COST + v_KD_TREE_ISECT_COST * (
-//						double(tri_num_left[side_idx])* prob_l +
-//						double(tri_num_right[side_idx]) * prob_r
-//						)* emptyBonus[side_idx];
-//#elif SAH_MODE == 1	//balanced
-//					const double N_total = double(tri_num_left[side_idx] + tri_num_right[side_idx]);
-//					const double diff = std::abs(double(tri_num_left[side_idx]) - double(tri_num_right[side_idx]));
-//
-//					const double balanceRatio = (N_total > 0.0) ? (diff / N_total) : 0.0;
-//
-//					// 0.05 ~ 0.2
-//					const double BALANCE_WEIGHT = 0.1;
-//					const double balancePenalty = 1.0 + (balanceRatio * BALANCE_WEIGHT);
-//					SAH[side_idx] = v_KD_TREE_TRAVL_COST + v_KD_TREE_ISECT_COST * (
-//						double(tri_num_left[side_idx]) * prob_l +
-//						double(tri_num_right[side_idx]) * prob_r
-//						) * emptyBonus[side_idx];
-//#elif SAH_MODE == 2
-//					SAH[side_idx] = v_KD_TREE_TRAVL_COST + v_KD_TREE_ISECT_COST * (
-//						double(eff_num_left[side_idx]) * prob_l +
-//						double(eff_num_right[side_idx]) * prob_r
-//						) * emptyBonus[side_idx];
-//#elif SAH_MODE == 3
-//					SAH[side_idx] = v_KD_TREE_TRAVL_COST + v_KD_TREE_ISECT_COST * (
-//						double(sqrt(tri_num_left[side_idx])) * prob_l +
-//						double(sqrt(tri_num_right[side_idx])) * prob_r
-//						) * emptyBonus[side_idx];
-//#elif SAH_MODE == 4
-//					auto scale_count_power = [](int n) -> double {
-//						if (n == 0) return 0.0; // 빈 공간 보존
-//						const double T = 16.0;  // 기준점
-//						const double k = 0.5;   // 휘어지는 정도 (0.1 ~ 1.0)
-//						double x = double(n);
-//						return x * std::pow(x / T, k);
-//						};
-//					SAH[side_idx] = v_KD_TREE_TRAVL_COST + v_KD_TREE_ISECT_COST * (
-//						scale_count_power(tri_num_left[side_idx]) * prob_l +
-//						scale_count_power(tri_num_right[side_idx]) * prob_r
-//						) * emptyBonus[side_idx];
-//#elif SAH_MODE == 5
-//					auto scale_count_quad = [](int n) -> double {
-//						if (n == 0) return 0.0; // 빈 공간 보존
-//						const double T = 16.0;  // 기준점
-//						const double alpha = 0.05;// 가파름 조정 (0.01 ~ 0.1)
-//						double x = double(n);
-//						return std::max(0.0, x + alpha * x * (x - T)); // 음수 방지
-//						};
-//					SAH[side_idx] = v_KD_TREE_TRAVL_COST + v_KD_TREE_ISECT_COST * (
-//						scale_count_quad(tri_num_left[side_idx]) * prob_l +
-//						scale_count_quad(tri_num_right[side_idx]) * prob_r
-//						) * emptyBonus[side_idx];
-//#endif
+					case 7: {
+						SAH[side_idx] = v_KD_TREE_TRAVL_COST
+							+ v_KD_TREE_ISECT_COST * (
+								double(tri_num_left[side_idx]) * prob_l +
+								double(tri_num_right[side_idx]) * prob_r) * emptyBonus[side_idx]
+							+ SORT_COST * (
+								double(tri_num_left[side_idx]) * double(tri_num_left[side_idx]) * prob_l + double(tri_num_right[side_idx]) * double(tri_num_right[side_idx] * prob_r));
+							break;
+						break;
+					}
+					case 8: {
+						SAH[side_idx] = v_KD_TREE_TRAVL_COST + v_KD_TREE_ISECT_COST * (
+							double(tri_num_left[side_idx]) * prob_l +
+							double(tri_num_right[side_idx]) * prob_r
+							) * emptyBonus[side_idx] * ((double(tri_num_left[side_idx]) + double(tri_num_right[side_idx])) / double(total_ends.size()));
+						break;
+					}
+					}
 				}
 #if SAH_MAXIMIZE
 				if (SAH[0] >= SAH[1]) {
@@ -1567,6 +1539,12 @@ void build_kd_tree_recursive(BoundEdge* bEdge, const PrimList* pTriangleInfos, u
 		gIdsTris.insert(pTriangleInfos[i].offset);
 	}
 	bestCost.cost = double(gIdsTris.size()) * v_KD_TREE_ISECT_COST;
+	if (SAH_MODE == 6) {
+		bestCost.cost = bestCost.cost + SORT_COST * gIdsTris.size() * log2(gIdsTris.size());
+	}
+	else if (SAH_MODE == 7) {
+		bestCost.cost = bestCost.cost + SORT_COST * gIdsTris.size() * gIdsTris.size();
+	}
 #else
 	bestCost.cost = double(triangleSize) * v_KD_TREE_ISECT_COST;
 #endif

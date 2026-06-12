@@ -39,6 +39,7 @@ extern float ISCET_COST;
 extern int FORCE_SPLIT_THRESHOLD;				// kd-tree 강제분할
 extern int SAH_MODE;
 extern int OFFSET_MAX;
+extern float SORT_COST;
 
 /* js add */
 #define FORCE_BINARY_SPLIT 0	//fs

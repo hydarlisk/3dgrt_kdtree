@@ -45,12 +45,14 @@ float ISCET_COST = 5.0f;
 int MAX_LEVEL = 128;
 std::string ASSET_NAME = "hotdog2";
 int FORCE_SPLIT_THRESHOLD = 64;				// kd-tree 강제분할
-int SAH_MODE = 0;
+int SAH_MODE = 7;
 int OFFSET_MAX = 2;
 //std::string ADD_NAME = "_0.5";
 std::string ADD_NAME = "";
 std::vector<int> testCams = { 0, 1, 2 };
 //std::vector<int> testCams = { 0, 12, 22 };
+
+float SORT_COST = 0.5f;
 
 int testMode = 0;
 int renderTestMode = 0;
@@ -3080,20 +3082,40 @@ std::string generateSuffix() {
 
 	// 6. 버퍼 조립
 	char suffix[256];
-	snprintf(suffix, sizeof(suffix), "%s_%g_%s_%d_%d%s%s_%s%s%s%s%s",
-		scale_mode_str,
-		ISCET_COST,
-		opacity_part,
-		MIN_TRI,
-		FORCE_SPLIT_THRESHOLD,
-		max_level_part,
-		clip_mode_str,
-		primitiveType,
-		countG,
-		forceBinarySplit,
-		sahMode.c_str(), // .c_str()은 snprintf 안에서 즉시 쓰이므로 안전합니다.
-		versionExt
-	);
+	if (SAH_MODE == 6 || SAH_MODE == 7) {
+		snprintf(suffix, sizeof(suffix), "%s_%g_%s_%d_%d%s%s_%s%s%s%s_%g%s",
+			scale_mode_str,
+			ISCET_COST,
+			opacity_part,	
+			MIN_TRI,
+			FORCE_SPLIT_THRESHOLD,
+			max_level_part,
+			clip_mode_str,
+			primitiveType,
+			countG,
+			forceBinarySplit,
+			sahMode.c_str(), // .c_str()은 snprintf 안에서 즉시 쓰이므로 안전합니다.
+			SORT_COST,
+			versionExt
+		);
+	}
+	else {
+		snprintf(suffix, sizeof(suffix), "%s_%g_%s_%d_%d%s%s_%s%s%s%s%s",
+			scale_mode_str,
+			ISCET_COST,
+			opacity_part,
+			MIN_TRI,
+			FORCE_SPLIT_THRESHOLD,
+			max_level_part,
+			clip_mode_str,
+			primitiveType,
+			countG,
+			forceBinarySplit,
+			sahMode.c_str(), // .c_str()은 snprintf 안에서 즉시 쓰이므로 안전합니다.
+			versionExt
+		);
+	}
+	
 	return std::string(suffix);
 }
 
@@ -4077,6 +4099,9 @@ void handleArguments(int argc, char* argv[]) {
 			if (ADD_NAME == "None") {
 				ADD_NAME = "";
 			}
+		}
+		else if (arg == "-sc" && i + 1 < argc) {
+			SORT_COST = std::stof(argv[++i]);
 		}
 		else if (arg == "-t") {
 			testMode = 1;
