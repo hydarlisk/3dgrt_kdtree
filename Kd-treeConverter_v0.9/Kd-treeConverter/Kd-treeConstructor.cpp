@@ -892,7 +892,7 @@ void try_to_split(const int axis, BoundingBox &inBBox, const PrimList *pTriangle
 							double(tri_num_left[side_idx]) * prob_l +
 							double(tri_num_right[side_idx]) * prob_r) * emptyBonus[side_idx]
 							+ SORT_COST * (
-							tri_num_left[side_idx] * log2(tri_num_left[side_idx] * prob_l) + tri_num_right[side_idx] * log2(tri_num_right[side_idx] * prob_r));
+							tri_num_left[side_idx] * log2(tri_num_left[side_idx]) * prob_l + tri_num_right[side_idx] * log2(tri_num_right[side_idx]) * prob_r);
 						break;
 					}
 					case 7: {
