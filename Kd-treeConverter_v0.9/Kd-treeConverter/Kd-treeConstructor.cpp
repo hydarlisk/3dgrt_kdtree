@@ -841,7 +841,7 @@ void try_to_split(const int axis, BoundingBox &inBBox, const PrimList *pTriangle
 						SAH[side_idx] = v_KD_TREE_TRAVL_COST + v_KD_TREE_ISECT_COST * (
 							double(tri_num_left[side_idx]) * prob_l +
 							double(tri_num_right[side_idx]) * prob_r
-							) * emptyBonus[side_idx];
+							) * emptyBonus[side_idx] * balancePenalty;
 						break;
 					}
 					case 2: {
