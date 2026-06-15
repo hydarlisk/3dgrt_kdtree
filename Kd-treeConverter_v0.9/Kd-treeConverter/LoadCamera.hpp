@@ -29,6 +29,11 @@ void loadCameraJson(vector<Camera>& cameras, string jsonPath, Camera& camera) {
     camera.near_c = 0.005;
     camera.far_c = 20.0;
 
+    //float fovx = j["camera_angle_x"].get<float>();
+    //float fy = 0.5f * MAIN_WINDOW_WIDTH / tan(0.5f * fovx);
+    //camera.fovy = 2.0f * atan((0.5f * MAIN_WINDOW_HEIGHT) / fy);
+    //camera.fovy *= 57.2957795131;
+    printf("\t\tloaded camera fovy in degree: %f\n", camera.fovy);
     int i = 0;
     for (const auto& frame : j["frames"]) {
         const auto& matrix = frame["transform_matrix"];

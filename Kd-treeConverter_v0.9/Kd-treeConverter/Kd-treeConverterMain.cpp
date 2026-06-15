@@ -45,7 +45,7 @@ float ISCET_COST = 5.0f;
 int MAX_LEVEL = 128;
 std::string ASSET_NAME = "hotdog2";
 int FORCE_SPLIT_THRESHOLD = 64;				// kd-tree 강제분할
-int SAH_MODE = 7;
+int SAH_MODE = 0;
 int OFFSET_MAX = 2;
 //std::string ADD_NAME = "_0.5";
 std::string ADD_NAME = "";
@@ -2769,6 +2769,7 @@ void setCameraLookAt(float eyeX, float eyeY, float eyeZ,
 	float centerX, float centerY, float centerZ,
 	float upX, float upY, float upZ)
 {
+	return;
 	// 1. 위치 설정
 	camera.pos[0] = eyeX;
 	camera.pos[1] = eyeY;
@@ -3434,6 +3435,9 @@ void subMenuHandler(int value) {
 		return;
 	}
 	loadCameraJson(cameras, string(ply_camera_path), camera);
+	camIdx = 0;
+	camera = cameras[camIdx];
+	cameraMoved = true;
 	g_isValidG.assign(g_gaussians.size(), 1);
 	create_composite_object_from_gaussians(g_gaussians);
 	create_composite_object_from_gaussians_all(g_gaussians);
@@ -3730,21 +3734,20 @@ void register_callbacks_and_create_menu(void) {
 
 	int submenu = glutCreateMenu(subMenuHandler);
 	glutAddMenuEntry("hotdog", 101);
-	//glutAddMenuEntry("hotdog2", 1012);
-	glutAddMenuEntry("lego", 102);
-	glutAddMenuEntry("chair", 103);
-	glutAddMenuEntry("ship", 1031);
-	glutAddMenuEntry("drums", 1032);
 	glutAddMenuEntry("mic", 1033);
-	glutAddMenuEntry("flowers", 104);
+	glutAddMenuEntry("ship", 1031);
+	glutAddMenuEntry("lego", 102);
+	glutAddMenuEntry("drums", 1032);
+	glutAddMenuEntry("chair", 103);
+	//glutAddMenuEntry("flowers", 104);
+	glutAddMenuEntry("room", 110);
+	glutAddMenuEntry("counter", 109);
+	glutAddMenuEntry("kitchen", 107);
 	glutAddMenuEntry("bonsai", 105);
 	glutAddMenuEntry("bicycle", 106);
-	glutAddMenuEntry("kitchen", 107);
 	glutAddMenuEntry("garden", 108);
-	glutAddMenuEntry("counter", 109);
-	glutAddMenuEntry("room", 110);
-	glutAddMenuEntry("truck", 111);
 	glutAddMenuEntry("stump", 112);
+	glutAddMenuEntry("truck", 111);
 
 	int subDebugMenu = glutCreateMenu(subDebugMenuHandler);
 #if LEAF_NODE_DEBUG
@@ -4068,7 +4071,9 @@ float renderingTestRender() {
 	cudaGraphicsResourceGetMappedPointer((void**)&d_pbo_ptr, &num_bytes, pbo_cuda_resource);
 
 	cudaStreamWaitEvent(compute_stream, map_complete_event, 0);
+#if !HIT_AND_NODE_COUNT_DEBUG
 	g_fps = renderGaussianWithCudaFrame(camera, g_render_width, g_render_height, d_pbo_ptr, compute_stream);
+#endif
 	cudaGraphicsUnmapResources(1, &pbo_cuda_resource, transfer_stream);
 
 	return g_fps;

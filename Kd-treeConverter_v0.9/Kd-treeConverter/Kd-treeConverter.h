@@ -63,6 +63,7 @@ extern float SORT_COST;
 #endif
 
 /////////////**** Debug ****///////////////
+#define DUMP_RENDER_IMAGE 0
 /* Ellipsoid */
 #define ELLIPSOID_DEBUG 1
 #define DEBUG_LEAF_CUDA 0
@@ -145,8 +146,32 @@ extern float SORT_COST;
 #define MAIN_WINDOW_HEIGHT 1540
 #define FOV_Y 96.0f
 #elif RESOLUTION ==	5	// sgmrt
-#define MAIN_WINDOW_WIDTH 2249
+#define MAIN_WINDOW_WIDTH 2340
 #define MAIN_WINDOW_HEIGHT 1080
+#define FOV_Y 96.0f
+#elif RESOLUTION == 6	//eval
+// nerf synthtic
+#define MAIN_WINDOW_WIDTH 800
+#define MAIN_WINDOW_HEIGHT 800
+//room
+//#define MAIN_WINDOW_WIDTH 1557
+//#define MAIN_WINDOW_HEIGHT 1038
+//counter
+//#define MAIN_WINDOW_WIDTH 1558
+//#define MAIN_WINDOW_HEIGHT 1038
+//kitchen
+//#define MAIN_WINDOW_WIDTH 1558
+//#define MAIN_WINDOW_HEIGHT 1039
+//bonsai
+//#define MAIN_WINDOW_WIDTH 1559
+//#define MAIN_WINDOW_HEIGHT 1039
+//bicycle
+//#define MAIN_WINDOW_WIDTH 1237
+//#define MAIN_WINDOW_HEIGHT 822
+//garden
+//#define MAIN_WINDOW_WIDTH 1297
+//#define MAIN_WINDOW_HEIGHT 840
+
 #define FOV_Y 96.0f
 #endif
 

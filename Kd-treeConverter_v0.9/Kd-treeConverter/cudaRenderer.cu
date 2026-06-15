@@ -2939,38 +2939,39 @@ void save_histograms_to_csv(const std::string& filename,
     std::cout << "Histogram saved to " << filename << std::endl;
 }
 
-//void saveDeviceFramebufferToPNG(float* d_framebuffer, int width, int height, int channels = 3) {
-//    static int call = 0;
-//
-//    char filename[256];
-//    snprintf(filename, sizeof(filename), "output%d.png", call);
-//    call++;
-//    size_t num_float_bytes = width * height * channels * sizeof(float);
-//
-//    float* h_float_pixels = (float*)malloc(num_float_bytes);
-//
-//    cudaError_t err = cudaMemcpy(h_float_pixels, d_framebuffer, num_float_bytes, cudaMemcpyDeviceToHost);
-//    if (err != cudaSuccess) {
-//        printf("CUDA Memcpy 실패: %s\n", cudaGetErrorString(err));
-//        free(h_float_pixels);
-//        return;
-//    }
-//    unsigned char* h_byte_pixels = (unsigned char*)malloc(width * height * channels);
-//
-//    for (int i = 0; i < width * height * channels; ++i) {
-//        float val = std::max(0.0f, std::min(1.0f, h_float_pixels[i]));
-//        h_byte_pixels[i] = (unsigned char)(val * 255.0f);
-//    }
-//
-//    stbi_flip_vertically_on_write(1);
-//
-//    stbi_write_png(filename, width, height, channels, h_byte_pixels, width * channels);
-//
-//    free(h_float_pixels);
-//    free(h_byte_pixels);
-//
-//    printf("이미지 저장 성공: %s\n", filename);
-//}
+#if DUMP_RENDER_IMAGE
+void saveDeviceFramebufferToPNG(float* d_framebuffer, int width, int height, int channels = 3) {
+    static int call = 0;
+    char filename[256];
+    snprintf(filename, sizeof(filename), "../../output/eval/r_%d.png", call);
+    call++;
+    size_t num_float_bytes = width * height * channels * sizeof(float);
+
+    float* h_float_pixels = (float*)malloc(num_float_bytes);
+
+    cudaError_t err = cudaMemcpy(h_float_pixels, d_framebuffer, num_float_bytes, cudaMemcpyDeviceToHost);
+    if (err != cudaSuccess) {
+        printf("CUDA Memcpy fail: %s\n", cudaGetErrorString(err));
+        free(h_float_pixels);
+        return;
+    }
+    unsigned char* h_byte_pixels = (unsigned char*)malloc(width * height * channels);
+
+    for (int i = 0; i < width * height * channels; ++i) {
+        float val = std::max(0.0f, std::min(1.0f, h_float_pixels[i]));
+        h_byte_pixels[i] = (unsigned char)(val * 255.0f);
+    }
+
+    stbi_flip_vertically_on_write(1);
+
+    stbi_write_png(filename, width, height, channels, h_byte_pixels, width * channels);
+
+    free(h_float_pixels);
+    free(h_byte_pixels);
+
+    printf("image save success: %s\n", filename);
+}
+#endif
 
 float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, float* d_framebuffer, cudaStream_t stream
 #if HIT_AND_NODE_COUNT_DEBUG
@@ -3189,7 +3190,9 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
     CUDA_CHECK(cudaEventSynchronize(stop_ev)); // GPU 작업 완료까지 대기
 #endif
 
-    //saveDeviceFramebufferToPNG(d_framebuffer, width, height);
+#if DUMP_RENDER_IMAGE
+    saveDeviceFramebufferToPNG(d_framebuffer, width, height);
+#endif
 
 #if WARP_OCCUPANCY
     std::cout << "\n========= GPU Device Properties =========" << std::endl;
