@@ -1610,14 +1610,22 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
 #if HIT_AND_NODE_COUNT_DEBUG
                     blend_ops++;
 #endif
+#if !NO_EARLY_TERMINATION
                     if (accumulated_opacity > OPACITY_THRESHOLD) {
                         break;
                     }
+#endif
                 } // for (i < local_hit_count)
             } // if (local_hit_count > 0)
 
+#if NO_EARLY_TERMINATION
+            if (t_far >= t_scene_far)
+                break;
+#else
             if (accumulated_opacity > OPACITY_THRESHOLD | t_far >= t_scene_far)
                 break;
+#endif
+            
             if (cache.empty()) {
                 node = tex1Dfetch<kdtreeNode>(inKdTreeNodeTex, 0); // 루트에서 재시작
                 t_near = t_far; t_far = t_scene_far; // 탐색 구간을 뒤로 미룸
