@@ -1418,6 +1418,31 @@ __device__ inline int singlePassIntersectCheck(const cuRay& ray, HitRecord local
     return __float_as_int(tri.internal2.w);
 }
 #endif
+#if DEBUG_LEAF_CUDA
+__device__ float3 turboColormap(float x)
+{
+    const float4 kRedVec4 = make_float4(0.13572138, 4.61539260, -42.66032258, 132.13108234);
+    const float4 kGreenVec4 = make_float4(0.09140261, 2.19418839, 4.84296658, -14.18503333);
+    const float4 kBlueVec4 = make_float4(0.10667330, 12.64194608, -60.58204836, 110.36276771);
+    const float2 kRedVec2 = make_float2(-152.94239396, 59.28637943);
+    const float2 kGreenVec2 = make_float2(4.27729857, 2.82956604);
+    const float2 kBlueVec2 = make_float2(-89.90310912, 27.34824973);
+
+    
+    x = __saturatef(x);
+    float4 v4 = make_float4(1.0, x, x * x, x * x * x);
+    float2 v2 = make_float2(v4.z * v4.z, v4.w * v4.z);
+    return make_float3(
+        dot(v4, kRedVec4) + dot(v2, kRedVec2),
+        dot(v4, kGreenVec4) + dot(v2, kGreenVec2),
+        dot(v4, kBlueVec4) + dot(v2, kBlueVec2));
+}
+
+__device__ float3 computeVisualizationColor(float value, float2 minMax) {
+    float normalized_val = (value - minMax.x) / (minMax.y - minMax.x);
+    return turboColormap(__saturatef((value - minMax.x) / (minMax.y - minMax.x)));
+}
+#endif
 
 #if PRIMITIVE_TYPE == ELLIPSOID || PRIMITIVE_TYPE == ELLIPSOID_BY_TRI
 __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
@@ -1609,48 +1634,8 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
     } // if (BoundsRayIntersect)
 #if DEBUG_LEAF_CUDA
     /* debug */
-    float k;
-    float3 blue = make_float3(0.f, 0.0f, 1.f);
-    float3 green = make_float3(0.f, 1.0f, 0.f);
-    float3 yellow = make_float3(1.f, 1.0f, 0.f);
-    float3 red = make_float3(1.f, 0.0f, 0.f);
-    float3 p = make_float3(1.f, 0.0f, 1.f);
-    float3 white = make_float3(1.0f, 1.0f, 1.0f);
-    float alpha;
-    if (maxLeaf < 8 && maxLeaf > 0) {
-        k = 8;
-        alpha = (maxLeaf - 0) / k;
-        accumulated_color = blue * (1 - alpha) + green * alpha;
-    }
-    else if (maxLeaf < 16 && maxLeaf > 0) {
-        k = 8;
-        alpha = (maxLeaf - 8) / k;
-        accumulated_color = green * (1 - alpha) + yellow * alpha;
-    }
-    else if (maxLeaf < 32 && maxLeaf > 0){
-        k = 16;
-        alpha = (maxLeaf - 16) / k;
-        accumulated_color = yellow * (1 - alpha) + red * alpha;
-    }
-    else if (maxLeaf < 48 && maxLeaf > 0) {
-        k = 16;
-        alpha = (maxLeaf - 32) / k;
-        accumulated_color = red * (1 - alpha) + p * alpha;
-    }
-    else if(maxLeaf > 0){
-        k = 16;
-        alpha = (maxLeaf - 48) / k;
-        accumulated_color = p * (1 - alpha) + white * alpha;
-    }
-    //if (maxLeaf < 32) {
-    //    accumulated_color = make_float3(0.f, 0.0f, maxLeaf / 32.f);
-    //}
-    //else if(maxLeaf < 64)
-    //    accumulated_color = make_float3((maxLeaf - 32) / 32.f, (maxLeaf - 32) / 32.f, 0.f);
-    //else if (maxLeaf < 96)
-    //    accumulated_color = make_float3(0.0f, (maxLeaf - 64) / 32.f, 0.f);
-    //else
-    //    accumulated_color = make_float3((maxLeaf - 96) / 32.0f, 0.f, 0.f);
+    float2 minMax = make_float2(0.0f, COLORMAP_MAX);
+    accumulated_color = computeVisualizationColor(maxLeaf, minMax);
 #endif
 }
 #elif PRIMITIVE_TYPE == TRI
@@ -2943,7 +2928,7 @@ void save_histograms_to_csv(const std::string& filename,
 void saveDeviceFramebufferToPNG(float* d_framebuffer, int width, int height, int channels = 3) {
     static int call = 0;
     char filename[256];
-    snprintf(filename, sizeof(filename), "../../output/eval/r_%d.png", call);
+    snprintf(filename, sizeof(filename), "../../output/r_%d.png", call);
     call++;
     size_t num_float_bytes = width * height * channels * sizeof(float);
 
@@ -3118,11 +3103,13 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
         }
     }
 
-    save_histograms_to_csv("render_stats.csv", hist_node_visits, hist_leaf_visits);
+
 
     // 데이터를 임시로 담을 float 배열 생성
     std::vector<float> temp_buffer(width * height);
     std::string dirPath = "../../output/";
+
+    save_histograms_to_csv(dirPath + "render_stats.csv", hist_node_visits, hist_leaf_visits);
 
     // 1. Node Visits 히트맵
     for (int i = 0; i < width * height; ++i) temp_buffer[i] = (float)h_debug_buffer1[i].x;
@@ -3154,6 +3141,38 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
     save_heatmap_stb((dirPath + "heatmap_max_sort_size.png").c_str(), temp_buffer.data(), width, height, (float)max_max_sort_size);
     save_matrix_csv((dirPath + "heatmap_max_sort_size.csv").c_str(), temp_buffer.data(), width, height, (float)max_max_sort_size);
 
+    std::string path = dirPath + "renderStats.txt";
+    FILE* fp = fopen(path.c_str(), "w");
+    if (fp != NULL) {
+        fprintf(fp, "\n===========================================\n");
+        fprintf(fp, "avg_node_visits\t\t: %f\n", avg_node_visits / node_visits);
+        fprintf(fp, "avg_leaf_visits\t\t: %f\n", avg_leaf_visits / leaf_visits);
+        fprintf(fp, "avg_intersection_tests\t: %f\n", avg_intersection_tests / intersection_tests);
+        fprintf(fp, "avg_hits_found\t\t: %f\n", avg_hits_found / hits_found);
+        fprintf(fp, "avg_blend_ops\t\t: %f\n", avg_blend_ops / blend_ops);
+        fprintf(fp, "avg_max_sort_size\t: %f\n", avg_max_sort_size / max_sort_size);
+        fprintf(fp, "===========================================\n");
+        fprintf(fp, "max_node_visits\t\t: %d\n", max_node_visits);
+        fprintf(fp, "max_leaf_visits\t\t: %d\n", max_leaf_visits);
+        fprintf(fp, "max_intersection_tests\t: %d\n", max_intersection_tests);
+        fprintf(fp, "max_hits_found\t\t: %d\n", max_hits_found);
+        fprintf(fp, "max_blend_ops\t\t: %d\n", max_blend_ops);
+        fprintf(fp, "max_max_sort_size\t: %d\n", max_max_sort_size);
+        fprintf(fp, "===========================================\n");
+        fprintf(fp, "tot_node_visits\t\t: %f\n", avg_node_visits);
+        fprintf(fp, "tot_leaf_visits\t\t: %f\n", avg_leaf_visits);
+        fprintf(fp, "tot_intersection_tests\t: %f\n", avg_intersection_tests);
+        fprintf(fp, "tot_hits_found\t\t: %f\n", avg_hits_found);
+        fprintf(fp, "tot_blend_ops\t\t: %f\n", avg_blend_ops);
+        fprintf(fp, "tot_max_sort_size\t: %f\n", avg_max_sort_size);
+        fprintf(fp, "===========================================\n");
+
+        // 작업이 끝나면 반드시 파일을 닫아주어야 안전하게 저장됩니다.
+        fclose(fp);
+    }
+    else {
+        printf("cannot open file: %s.\n", path);
+    }
     printf("\n===========================================\n");
     printf("avg_node_visits\t\t: %f\n", avg_node_visits / node_visits);
     printf("avg_leaf_visits\t\t: %f\n", avg_leaf_visits / leaf_visits);

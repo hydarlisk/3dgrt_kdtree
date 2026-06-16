@@ -64,6 +64,7 @@ extern float SORT_COST;
 
 /////////////**** Debug ****///////////////
 #define DUMP_RENDER_IMAGE 0
+#define COLORMAP_MAX 64
 /* Ellipsoid */
 #define ELLIPSOID_DEBUG 1
 #define DEBUG_LEAF_CUDA 0
