@@ -161,6 +161,8 @@ BoundingBox original_model_AABB;
 int largest_leaf_index = -1; // 가장 큰 리프 노드의 인덱스를 저장
 #endif
 
+bool is_auto_camera_mode = false; // 자동 카메라 모드 ON/OFF 플래그
+
 void setup_interop_resources() {
 	// PBO 생성 (기존 코드와 유사)
 	glGenBuffers(1, &pbo);
@@ -255,6 +257,86 @@ int camIdx = 0;
 bool cameraMoved = false;
 
 GLuint buf_obj;
+
+float eye_time = 0.0f;
+float eye_radius = 1.0f; // 눈동자를 굴리는 반경 (값이 클수록 크게 둘러봄)
+float eye_speed = 1.0f;   // 눈동자 굴리는 속도
+
+void updateEyeRollCamera(float deltaTime) {
+	// 1. 시간 누적
+	deltaTime = 0.01;
+	eye_time += deltaTime * eye_speed;
+
+	// 2. 가상의 마우스 이동량(Delta) 계산
+	// x = r*cos(t), y = r*sin(t)의 미분값을 적용해 원형 궤도를 만듭니다.
+	float sim_delx = -eye_radius * sinf(eye_time) * deltaTime * 10.0f;
+	float sim_dely = eye_radius * cosf(eye_time) * deltaTime * 10.0f;
+
+	// 기존 마우스 코드와 동일하게 Yaw/Pitch 각도 계산
+	float yaw_angle = sim_delx * camRotSpeed;
+	float pitch_angle = sim_dely * camRotSpeed;
+
+	float R[16], tmpx, tmpy, tmpz;
+
+	// --- 3. Yaw (좌우 눈동자 굴림) 적용 ---
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	glLoadIdentity();
+	glRotatef(yaw_angle, 0.0f, 1.0f, 0.0f);
+	glGetFloatv(GL_MODELVIEW_MATRIX, R);
+	glPopMatrix();
+
+	tmpx = camera.uaxis[0], tmpy = camera.uaxis[1], tmpz = camera.uaxis[2];
+	camera.uaxis[0] = R[0] * tmpx + R[4] * tmpy + R[8] * tmpz;
+	camera.uaxis[1] = R[1] * tmpx + R[5] * tmpy + R[9] * tmpz;
+	camera.uaxis[2] = R[2] * tmpx + R[6] * tmpy + R[10] * tmpz;
+
+	tmpx = camera.vaxis[0], tmpy = camera.vaxis[1], tmpz = camera.vaxis[2];
+	camera.vaxis[0] = R[0] * tmpx + R[4] * tmpy + R[8] * tmpz;
+	camera.vaxis[1] = R[1] * tmpx + R[5] * tmpy + R[9] * tmpz;
+	camera.vaxis[2] = R[2] * tmpx + R[6] * tmpy + R[10] * tmpz;
+
+	tmpx = camera.naxis[0], tmpy = camera.naxis[1], tmpz = camera.naxis[2];
+	camera.naxis[0] = R[0] * tmpx + R[4] * tmpy + R[8] * tmpz;
+	camera.naxis[1] = R[1] * tmpx + R[5] * tmpy + R[9] * tmpz;
+	camera.naxis[2] = R[2] * tmpx + R[6] * tmpy + R[10] * tmpz;
+
+	// --- 4. Pitch (상하 눈동자 굴림) 적용 ---
+	glPushMatrix();
+	glLoadIdentity();
+	glRotatef(pitch_angle, camera.uaxis[0], camera.uaxis[1], camera.uaxis[2]);
+	glGetFloatv(GL_MODELVIEW_MATRIX, R);
+	glPopMatrix();
+
+	tmpx = camera.vaxis[0], tmpy = camera.vaxis[1], tmpz = camera.vaxis[2];
+	camera.vaxis[0] = R[0] * tmpx + R[4] * tmpy + R[8] * tmpz;
+	camera.vaxis[1] = R[1] * tmpx + R[5] * tmpy + R[9] * tmpz;
+	camera.vaxis[2] = R[2] * tmpx + R[6] * tmpy + R[10] * tmpz;
+
+	tmpx = camera.naxis[0], tmpy = camera.naxis[1], tmpz = camera.naxis[2];
+	camera.naxis[0] = R[0] * tmpx + R[4] * tmpy + R[8] * tmpz;
+	camera.naxis[1] = R[1] * tmpx + R[5] * tmpy + R[9] * tmpz;
+	camera.naxis[2] = R[2] * tmpx + R[6] * tmpy + R[10] * tmpz;
+
+	// --- 5. 축 직교 및 정규화 ---
+	fMyVecNormalize(camera.naxis);
+	fMyVecCrossProduct(camera.naxis, camera.uaxis, camera.vaxis);
+	fMyVecNormalize(camera.vaxis);
+	fMyVecCrossProduct(camera.vaxis, camera.naxis, camera.uaxis);
+	fMyVecNormalize(camera.uaxis);
+
+	// --- 6. 뷰 매트릭스 업데이트 ---
+	set_rotate_mat(&camera);
+
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glMultMatrixf(camera.mat);
+
+	// 핵심: 위치(camera.pos)는 절대 건드리지 않고 그대로 유지합니다.
+	glTranslatef(-camera.pos[0], -camera.pos[1], -camera.pos[2]);
+
+	glutPostRedisplay();
+}
 
 void renderGaussianMesh(int gId) {
 	ExtendedVertex* v = &uip.allGaussianmesh[gId];
@@ -667,6 +749,9 @@ void keyboard(unsigned char key, int x, int y) {
 			break;
 		case '/':
 			camMoveSpeed += CAM_MOVE_SHIFT;
+			break;
+		case '0':
+			is_auto_camera_mode = !is_auto_camera_mode;
 			break;
 
 		case 'b':
@@ -3863,6 +3948,8 @@ void idle() {
 	int currentTime = glutGet(GLUT_ELAPSED_TIME);
 	float deltaTime = (currentTime - prevTime) / 1000.0f;
 	prevTime = currentTime;
+	if(is_auto_camera_mode)
+		updateEyeRollCamera(deltaTime);
 
 	float adjustedSpeed = camMoveSpeed * deltaTime;
 	bool camera_moved = false;
