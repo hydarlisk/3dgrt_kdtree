@@ -125,7 +125,7 @@ extern float SORT_COST;
 
 //================================================================================================
 
-#define RESOLUTION 5
+#define RESOLUTION 7
 #if RESOLUTION == 0		// FHD
 #define MAIN_WINDOW_WIDTH 1920
 #define MAIN_WINDOW_HEIGHT 1080
@@ -173,6 +173,10 @@ extern float SORT_COST;
 //#define MAIN_WINDOW_WIDTH 1297
 //#define MAIN_WINDOW_HEIGHT 840
 
+#define FOV_Y 96.0f
+#elif RESOLUTION == 7 //record
+#define MAIN_WINDOW_WIDTH 960
+#define MAIN_WINDOW_HEIGHT 1080
 #define FOV_Y 96.0f
 #endif
 
