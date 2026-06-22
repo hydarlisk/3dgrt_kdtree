@@ -2895,19 +2895,69 @@ void get_jet_color(float v, unsigned char& r, unsigned char& g, unsigned char& b
     else { r = 255 - (unsigned char)((v - 0.875f) * 1020); g = 0; b = 0; }
 }
 
+inline float saturate(float x) {
+    // C++17 미만 버전을 사용하신다면 std::max(0.0f, std::min(1.0f, x)) 로 대체하세요.
+    return std::max(0.0f, std::min(1.0f, x));
+}
+
+inline unsigned char floatToUchar(float val) {
+    return static_cast<unsigned char>(std::max(0.0f, std::min(255.0f, val * 255.0f + 0.5f)));
+}
+
+uchar3 turboColormapHost(float x)
+{
+    const float4 kRedVec4 = { 0.13572138f,  4.61539260f, -42.66032258f,  132.13108234f };
+    const float4 kGreenVec4 = { 0.09140261f,  2.19418839f,   4.84296658f,  -14.18503333f };
+    const float4 kBlueVec4 = { 0.10667330f, 12.64194608f, -60.58204836f,  110.36276771f };
+    const float2 kRedVec2 = { -152.94239396f,  59.28637943f };
+    const float2 kGreenVec2 = { 4.27729857f,   2.82956604f };
+    const float2 kBlueVec2 = { -89.90310912f,  27.34824973f };
+
+    x = saturate(x);
+
+    float4 v4 = { 1.0f, x, x * x, x * x * x };
+    float2 v2 = { v4.z * v4.z, v4.w * v4.z };
+
+    // 다항식 계산 결과를 float으로 먼저 구합니다.
+    float r = dot(v4, kRedVec4) + dot(v2, kRedVec2);
+    float g = dot(v4, kGreenVec4) + dot(v2, kGreenVec2);
+    float b = dot(v4, kBlueVec4) + dot(v2, kBlueVec2);
+
+    // 0~255 범위의 unsigned char로 변환하여 반환합니다.
+    return { floatToUchar(r), floatToUchar(g), floatToUchar(b) };
+}
+
+uchar3 computeVisualizationColorHost(float value, float2 minMax)
+{
+    float normalized_val = (value - minMax.x) / (minMax.y - minMax.x);
+    return turboColormapHost(saturate(normalized_val));
+}
+
 // 히트맵 저장 메인 함수
 void save_heatmap_stb(const char* filename, float* values, int width, int height, float max_val) {
     std::vector<unsigned char> image_data(width * height * 3); // RGB 3채널
-
+    max_val = 120;
     for (int i = 0; i < width * height; i++) {
-        float normalized = (max_val > 0) ? (values[i] / max_val) : 0.0f;
+        if (values[i] <= 0.0f) {
+            image_data[i * 3 + 0] = 0;
+            image_data[i * 3 + 1] = 0;
+            image_data[i * 3 + 2] = 0;
+            continue;
+        }
 
-        unsigned char r, g, b;
-        get_jet_color(normalized, r, g, b);
+        //float normalized = (max_val > 0) ? (values[i] / max_val) : 0.0f;
 
-        image_data[i * 3 + 0] = r;
-        image_data[i * 3 + 1] = g;
-        image_data[i * 3 + 2] = b;
+        //unsigned char r, g, b;
+        //get_jet_color(normalized, r, g, b);
+        //image_data[i * 3 + 0] = r;
+        //image_data[i * 3 + 1] = g;
+        //image_data[i * 3 + 2] = b;
+
+        float2 minMax = make_float2(0.0f, max_val);
+        uchar3 rgb = computeVisualizationColorHost(values[i], minMax);
+        image_data[i * 3 + 0] = rgb.x;
+        image_data[i * 3 + 1] = rgb.y;
+        image_data[i * 3 + 2] = rgb.z;
     }
 
     stbi_write_png(filename, width, height, 3, image_data.data(), width * 3);
