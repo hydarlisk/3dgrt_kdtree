@@ -71,9 +71,10 @@ extern float SORT_COST;
 
 #define HIT_AND_NODE_COUNT_DEBUG true			// Ray 마다 hitcount, node count, ... 확인
 												// kd-tree hitmap 확인 가능
+#define DEBUG_LEAF_CUDA 0
 /* Ellipsoid */
 #define ELLIPSOID_DEBUG 1
-#define DEBUG_LEAF_CUDA 0
+
 #define DEBUG_LEAF_GL 0
 #if PRIMITIVE_TYPE == ELLIPSOID && ELLIPSOID_DEBUG
 	#define DEBUG_ELLIPSOID_CLIP_AABB 1

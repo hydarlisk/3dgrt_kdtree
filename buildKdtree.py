@@ -10,19 +10,50 @@ EXE_PATH = r"./Kd-treeConverter_v0.9/x64/Release/Kd-treeConverter.exe"
 ASSET_BASE_DIR = r"./Kd-treeConverter_v0.9/Kd-treeConverter"
 
 # 실험 조건 세팅
-testMode = "-t"
-# testMode = "-tr"
-testCams = [0, 1, 2]
+# testMode = "-t"
+testMode = "-tr"
+# testCams = [0, 1, 2]
+# testCams = [0, 2, 3]
+# testCams = [0,2,4]
+
+
+asset_name = ["hotdog2", "mic", "ship", "lego", "drums", "chair"]
+testCams = [0]
+# asset_name = ["drums", "lego", "mic", "ship"]
+# asset_name = ["chair"]
+# asset_name = ["hotdog2"]
 
 offset_max = "5"
-asset_name = ["chair", "drums", "hotdog2", "lego", "mic", "ship"]
-# add_name = ["_0.8"]
 add_name = ["None"]
 iscet_cost_choices   = ["5.0"]
 max_level_choices     = ["128"]
 force_split_choices   = ["64"]
 sah_mode_choices      = ["7"]
+# sah_mode_choices      = ["1", "0", "4"]
 sort_cost_choices     = ["1.0", "0.5", "3.0", "0.1"]
+# sort_cost_choices     = ["1.0"]
+
+
+
+
+
+# asset_name = ["room", "counter", "bonsai", "bicycle", "garden", "kitchen"]
+# # asset_name = ["kitchen"]
+# # testCams = [0, 20, 110]
+# # asset_name = ["room", "counter", "bonsai", "bicycle", "garden"]
+# # testCams = [0, 10, 20]
+# testCams = [0]
+
+# offset_max = "5"
+
+# add_name = ["None"]
+# iscet_cost_choices   = ["5.0"]
+# max_level_choices     = ["128"]
+# force_split_choices   = ["256"]
+# sah_mode_choices      = ["7"]
+# # sah_mode_choices      = ["1", "0", "4"]
+# sort_cost_choices     = ["1.0", "0.5", "3.0", "0.1"]
+# # sort_cost_choices     = ["1.0"]
 
 all_combinations = itertools.product(
     asset_name,
