@@ -317,10 +317,28 @@ __device__ float* g_d_kScale = nullptr;
 struct SceneInfo { int resX, resY; };
 struct CameraInfo { float3 eye, u, v, startPoint; float stepX, stepY; };
 
+#if SECONDARY_RAY
+struct mirrorVert {
+    float3 pos;
+    //float3 normal;
+};
+struct MirrorInfo {
+    float3 aabbMin;
+    float3 aabbMax;
+    float3 normal;
+    mirrorVert verts[6];
+    float3 color;
+    float reflectivity;
+};
+__constant__ MirrorInfo g_mirrorInfo;
+#endif
+
 __constant__ SceneInfo g_SceneInfo;
 __constant__ CameraInfo g_CameraInfo;
 __constant__ float3 g_SceneBBoxMin;
 __constant__ float3 g_SceneBBoxMax;
+
+
 
 #if GLOBAL_DEVICE_VAR
 kdtreeNode* g_d_kdtree_nodes = nullptr;
@@ -1012,6 +1030,60 @@ __device__ inline float calculateKernelScale(float density, float kernelMinRespo
     // r = (ln(minResponse) / a)^(1/b)
     return pow(log(minResponse) / a, 1.0f / b);
 }
+
+#if SECONDARY_RAY
+__device__ bool rayTriIntersect(const cuRay& currRay, const float3& v0, float3& v1, float3& v2, float& out_t, float& out_u, float& out_v) {
+    float3 e1 = v1 - v0;
+    float3 e2 = v2 - v0;
+
+    float3 pvec = make_float3(
+        currRay.dir.y * e2.z - currRay.dir.z * e2.y,
+        currRay.dir.z * e2.x - currRay.dir.x * e2.z,
+        currRay.dir.x * e2.y - currRay.dir.y * e2.x
+    ); // cross(currRay.dir, e2)
+
+    float det = e1.x * pvec.x + e1.y * pvec.y + e1.z * pvec.z; // dot(e1, pvec)
+
+    if (det > -EPSILON && det < EPSILON) {
+        return false;
+    }
+
+    float inv_det = 1.0f / det;
+    float3 tvec = currRay.pos - v0;
+
+    float u = (tvec.x * pvec.x + tvec.y * pvec.y + tvec.z * pvec.z) * inv_det; // dot(tvec, pvec) * inv_det
+    if (u < 0.0f || u > 1.0f) {
+        return false;
+    }
+
+    // qvec 계산 (외적)
+    float3 qvec = make_float3(
+        tvec.y * e1.z - tvec.z * e1.y,
+        tvec.z * e1.x - tvec.x * e1.z,
+        tvec.x * e1.y - tvec.y * e1.x
+    ); // cross(tvec, e1)
+
+    // V 파라미터 계산 및 바운더리 체크
+    float v = (currRay.dir.x * qvec.x + currRay.dir.y * qvec.y + currRay.dir.z * qvec.z) * inv_det; // dot(currRay.dir, qvec) * inv_det
+    if (v < 0.0f || u + v > 1.0f) {
+        return false;
+    }
+
+    // 최종 거리 T (OpenCL 코드의 f) 계산
+    float t = (e2.x * qvec.x + e2.y * qvec.y + e2.z * qvec.z) * inv_det; // dot(e2, qvec) * inv_det
+
+    // 거리가 양수이고 EPSILON보다 커야 유효한 충돌 (광선 뒤쪽 충돌 방지)
+    if (t > EPSILON) {
+        out_t = t;
+        out_u = u;
+        out_v = v;
+        return true;
+    }
+
+    return false;
+}
+#endif
+
 #if VOLUME_ISECT
 __device__ inline void rayPrimIntersect(const cuRay& currRay, const unsigned id
     , const float t_near, const float t_far
@@ -1474,6 +1546,23 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
 #endif
 
     float t_scene_near = RAY_START_EPSILON, t_scene_far = FLT_MAX;
+#if SECONDARY_RAY
+    bool mirrorHit = false;
+    if (BoundsRayIntersect(g_mirrorInfo.aabbMin, g_mirrorInfo.aabbMax, &currRay, &t_scene_near, &t_scene_far)) {
+        for (int i = 0; i < 2; i++) {
+            float t;
+            float u, v;
+            if (rayTriIntersect(currRay, g_mirrorInfo.verts[i * 3].pos, g_mirrorInfo.verts[i * 3 + 1].pos, g_mirrorInfo.verts[i * 3 + 2].pos, t, u, v)) {
+                currRay.pos = currRay.pos + currRay.dir * t;
+                currRay.dir = reflect(currRay.dir, g_mirrorInfo.normal);
+                mirrorHit = true;
+                break;
+            }
+        }
+    }
+#endif
+
+    t_scene_near = RAY_START_EPSILON, t_scene_far = FLT_MAX;
     if (BoundsRayIntersect(g_SceneBBoxMin, g_SceneBBoxMax, &currRay, &t_scene_near, &t_scene_far)) {
         kdtreeNode node = tex1Dfetch<kdtreeNode>(inKdTreeNodeTex, 0);
         float t_near = t_scene_near, t_far = t_scene_far;
@@ -1640,6 +1729,41 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
         } // while(true) == while(accumulated_opacity < OPACITY_THRESHOLD)
         if (x == g_SceneInfo.resX / 2 && y == g_SceneInfo.resY) printf("\n");
     } // if (BoundsRayIntersect)
+
+#if SECONDARY_RAY
+    if (mirrorHit) {
+        accumulated_color += (1 - accumulated_opacity) * (1.0f - g_mirrorInfo.reflectivity) * g_mirrorInfo.color;
+    }
+    //if(accumulated_color < )
+    // reflect plane
+    //t_scene_near = RAY_START_EPSILON, t_scene_far = FLT_MAX;
+    //if (BoundsRayIntersect(g_mirrorInfo.aabbMin, g_mirrorInfo.aabbMax, &currRay, &t_scene_near, &t_scene_far)) {
+    //    for (int i = 0; i < 2; i++) {
+    //        float t;
+    //        float u, v;
+    //        if (rayTriIntersect(currRay, g_mirrorInfo.verts[i * 3].pos, g_mirrorInfo.verts[i * 3 + 1].pos, g_mirrorInfo.verts[i * 3 + 2].pos, t, u, v)) {
+    //            float w = 1 - u - v;
+    //            //accumulated_color = make_float3(u, v, w);
+    //            //float3 refdir = reflect(currRay.dir, g_mirrorInfo.normal);
+    //            ////accumulated_color = refdir;
+    //            //accumulated_color.x = (refdir.x + 1.0f) * 0.5f;
+    //            //accumulated_color.y = (refdir.y + 1.0f) * 0.5f;
+    //            //accumulated_color.z = (refdir.z + 1.0f) * 0.5f;
+    //            //return;
+
+    //            currRay.pos = currRay.pos + currRay.dir * t;
+    //            currRay.dir = reflect(currRay.dir, g_mirrorInfo.normal);
+    //            break;
+    //        }
+    //    }
+    //    //accumulated_color = make_float3(0.2f, 0.2f, 0.2f);
+    //    //accumulated_opacity = 0.9f;
+    //    //return;
+    //}
+
+#endif
+
+
 #if DEBUG_LEAF_CUDA
     /* debug */
     float2 minMax = make_float2(0.0f, COLORMAP_MAX);
@@ -3045,6 +3169,44 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
         + h_camera_info.v * (plane_height * 0.5f);
     //CUDA_CHECK(cudaMemcpyToSymbol(g_CameraInfo, &h_camera_info, sizeof(CameraInfo), 0, cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpyToSymbolAsync(g_CameraInfo, &h_camera_info, sizeof(CameraInfo), 0, cudaMemcpyHostToDevice, stream));
+
+    //// Z normal
+    //MirrorInfo mirror;
+    // mirror.normal = normal;
+    //mirror.aabbMin = make_float3(-1.0f, -1.0f, -0.01f);
+    //mirror.aabbMax = make_float3(1.0f, 1.0f, 0.01f);
+    //float3 normal = make_float3(0.0f, 0.0f, 1.0f);
+    //mirror.verts[0].pos = make_float3(-1.0f, -1.0f, 0.0f);
+    //mirror.verts[1].pos = make_float3(1.0f, -1.0f, 0.0f);
+    //mirror.verts[2].pos = make_float3(-1.0f, 1.0f, 0.0f);
+    //mirror.verts[3].pos = make_float3(1.0f, -1.0f, 0.0f);
+    //mirror.verts[4].pos = make_float3(1.0f, 1.0f, 0.0f);
+    //mirror.verts[5].pos = make_float3(-1.0f, 1.0f, 0.0f);
+
+    // Y normal
+    MirrorInfo mirror;
+    mirror.aabbMin = make_float3(-1.0f, -0.01f, -1.0f);
+    mirror.aabbMax = make_float3(1.0f, 0.01f, 1.0f);
+    float3 normal = make_float3(0.0f, 1.0f, 0.0f);
+    mirror.normal = normal;
+    mirror.verts[0].pos = make_float3(-1.0f, 0.0f, -1.0f);
+    mirror.verts[1].pos = make_float3(1.0f, 0.0f, -1.0f);
+    mirror.verts[2].pos = make_float3(-1.0f, 0.0f, 1.0f);
+    mirror.verts[3].pos = make_float3(1.0f, 0.0f, -1.0f);
+    mirror.verts[4].pos = make_float3(1.0f, 0.0f, 1.0f);
+    mirror.verts[5].pos = make_float3(-1.0f, 0.0f, 1.0f);
+
+    float3 mirrorOffset = make_float3(0.5f, 3.0f, 0.0f);
+    for (int i = 0; i < 6; i++) {
+        mirror.verts[i].pos += mirrorOffset;
+    }
+    mirror.aabbMin += mirrorOffset;
+    mirror.aabbMax += mirrorOffset;
+
+    mirror.color = make_float3(0.95f, 0.95f, 0.95f);
+    mirror.reflectivity = 0.95f;
+
+    CUDA_CHECK(cudaMemcpyToSymbolAsync(g_mirrorInfo, &mirror, sizeof(MirrorInfo), 0, cudaMemcpyHostToDevice, stream));
 
     // 커널 실행
     dim3 threads(DIM_X, DIM_Y);

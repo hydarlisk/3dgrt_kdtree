@@ -21,6 +21,8 @@
 
 #define PRIMITIVE_TYPE 2
 
+#define SECONDARY_RAY 1
+
 /*** ellipsoid_by_tri ***/
 #define COUNT_BY_GID 1
 //#define SAH_MODE 4
