@@ -33,8 +33,6 @@ typedef struct _UIParameters {
 	int main_window_ID;
 	int main_menu_ID;
 
-	char *SL_KDT_CONFIG_filename;
-
 	char mesh_geom_files_dir[256];
 	char kd_tree_dump_dir[256];
 	char kd_tree_filename[256];
@@ -53,7 +51,6 @@ typedef struct _UIParameters {
 	int composite_object_read;
 } UIParameters;
 
-void append_mesh_geom_to_composite_object(CompositeObject* c_object, MeshGeom* mesh_geom, int mat_type, float* AABB);
 void set_kd_tree_leaf_node();
 
 
