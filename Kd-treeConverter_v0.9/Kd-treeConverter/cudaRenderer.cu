@@ -3170,6 +3170,7 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
     //CUDA_CHECK(cudaMemcpyToSymbol(g_CameraInfo, &h_camera_info, sizeof(CameraInfo), 0, cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpyToSymbolAsync(g_CameraInfo, &h_camera_info, sizeof(CameraInfo), 0, cudaMemcpyHostToDevice, stream));
 
+#if SECONDARY_RAY
     //// Z normal
     //MirrorInfo mirror;
     // mirror.normal = normal;
@@ -3205,8 +3206,8 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
 
     mirror.color = make_float3(0.95f, 0.95f, 0.95f);
     mirror.reflectivity = 0.95f;
-
     CUDA_CHECK(cudaMemcpyToSymbolAsync(g_mirrorInfo, &mirror, sizeof(MirrorInfo), 0, cudaMemcpyHostToDevice, stream));
+#endif
 
     // 커널 실행
     dim3 threads(DIM_X, DIM_Y);
@@ -3350,6 +3351,18 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
     for (int i = 0; i < width * height; ++i) temp_buffer[i] = (float)h_debug_buffer2[i].x;
     save_heatmap_stb((dirPath + "heatmap_hits_found.png").c_str(), temp_buffer.data(), width, height, (float)max_hits_found);
     save_matrix_csv((dirPath + "heatmap_hits_found.csv").c_str(), temp_buffer.data(), width, height, (float)max_hits_found);
+
+    std::vector<uint32_t> tmp(width * height);
+    for (int i = 0; i < width * height; ++i) tmp[i] = (uint32_t)h_debug_buffer2[i].x;
+    std::string binFileName = dirPath + "isectCnt_kd.bin";
+    std::ofstream outFile(binFileName, std::ios::binary);
+    if (!outFile) {
+        std::cerr << "Error: Cannot open file " << binFileName << std::endl;
+    }
+    outFile.write(reinterpret_cast<const char*>(tmp.data()),
+        tmp.size() * sizeof(uint32_t));
+
+    outFile.close();
 
     // 5. Blend Ops 히트맵
     for (int i = 0; i < width * height; ++i) temp_buffer[i] = (float)h_debug_buffer2[i].y;

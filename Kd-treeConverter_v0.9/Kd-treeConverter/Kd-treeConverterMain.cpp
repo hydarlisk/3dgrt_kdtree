@@ -42,10 +42,12 @@
 #include <io.h>
 
 float ISCET_COST = 5.0f;
-int MAX_LEVEL = 128;
+//int MAX_LEVEL = 128;
+int MAX_LEVEL = 256;
 std::string ASSET_NAME = "hotdog2";
-int FORCE_SPLIT_THRESHOLD = 64;				// kd-tree 강제분할
-int SAH_MODE = 0;
+//int FORCE_SPLIT_THRESHOLD = 64;				// kd-tree 강제분할
+int FORCE_SPLIT_THRESHOLD = 256;
+int SAH_MODE = 1;
 int OFFSET_MAX = 2;
 //std::string ADD_NAME = "_0.5";
 std::string ADD_NAME = "";

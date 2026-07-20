@@ -21,7 +21,7 @@
 
 #define PRIMITIVE_TYPE 2
 
-#define SECONDARY_RAY 1
+#define SECONDARY_RAY 0
 
 /*** ellipsoid_by_tri ***/
 #define COUNT_BY_GID 1
@@ -67,9 +67,9 @@ extern float SORT_COST;
 /////////////**** Debug ****///////////////
 #define DUMP_RENDER_IMAGE 0
 #define COLORMAP_MAX 64
-#define NO_EARLY_TERMINATION 1
+#define NO_EARLY_TERMINATION 0
 
-#define HIT_AND_NODE_COUNT_DEBUG false			// Ray 마다 hitcount, node count, ... 확인
+#define HIT_AND_NODE_COUNT_DEBUG true			// Ray 마다 hitcount, node count, ... 확인
 												// kd-tree hitmap 확인 가능
 #define DEBUG_LEAF_CUDA 0
 /* Ellipsoid */
@@ -131,7 +131,7 @@ extern float SORT_COST;
 
 //================================================================================================
 
-#define RESOLUTION 5
+#define RESOLUTION 6
 #if RESOLUTION == 0		// FHD
 #define MAIN_WINDOW_WIDTH 1920
 #define MAIN_WINDOW_HEIGHT 1080
