@@ -25,6 +25,8 @@
 #include "MyMathUtility.h"
 #include "Gaussian.h"
 #include "LoadCamera.hpp"
+#define TINYOBJLOADER_IMPLEMENTATION
+#include "../external/tiny_obj_loader.h"
 
 //shyun added begin
 #include <map>
@@ -42,12 +44,12 @@
 #include <io.h>
 
 float ISCET_COST = 5.0f;
-//int MAX_LEVEL = 128;
-int MAX_LEVEL = 256;
+int MAX_LEVEL = 128;
+//int MAX_LEVEL = 256;
 std::string ASSET_NAME = "hotdog2";
-//int FORCE_SPLIT_THRESHOLD = 64;				// kd-tree 강제분할
-int FORCE_SPLIT_THRESHOLD = 256;
-int SAH_MODE = 1;
+int FORCE_SPLIT_THRESHOLD = 64;				// kd-tree 강제분할
+//int FORCE_SPLIT_THRESHOLD = 256;
+int SAH_MODE = 4;
 int OFFSET_MAX = 2;
 //std::string ADD_NAME = "_0.5";
 std::string ADD_NAME = "";
@@ -74,6 +76,10 @@ char* ply_to_obj_mtl;
 char* ply_kdtree_dump_path;
 char* ply_leafInfo_dump_path;
 char* ply_igeom_dump_path;
+
+#if SECONDARY_RAY
+string secondaryMeshPath;
+#endif
 
 //cudaEvent_t start_ev, stop_ev;
 char* kdtree_build_path;
@@ -165,6 +171,54 @@ int largest_leaf_index = -1; // 가장 큰 리프 노드의 인덱스를 저장
 
 bool is_auto_camera_mode = false; // 자동 카메라 모드 ON/OFF 플래그
 
+#if SECONDARY_RAY
+bool loadSecondaryMesh(const std::string& filepath, SecondaryMesh& mesh) {
+	tinyobj::attrib_t attrib;
+	std::vector<tinyobj::shape_t> shapes;
+	std::vector<tinyobj::material_t> materials;
+	std::string warn, err;
+
+	bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filepath.c_str());
+
+	if (!warn.empty()) std::cout << "OBJ 로드 경고: " << warn << std::endl;
+	if (!err.empty()) {
+		std::cerr << "OBJ 로드 에러: " << err << std::endl;
+		return false;
+	}
+	if (!ret) return false;
+
+	mesh.vert.clear();
+
+	for (size_t s = 0; s < shapes.size(); s++) {
+		size_t index_offset = 0;
+		for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
+			int fv = shapes[s].mesh.num_face_vertices[f];
+
+			for (size_t v = 0; v < fv; v++) {
+				tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
+
+				float3 pos;
+				pos.x = attrib.vertices[3 * idx.vertex_index + 0];
+				pos.y = attrib.vertices[3 * idx.vertex_index + 1];
+				pos.z = attrib.vertices[3 * idx.vertex_index + 2];
+
+				float tmp = pos.y;
+				pos.y = -pos.z;
+				pos.z = tmp;
+
+				mesh.vert.push_back(pos);
+			}
+			index_offset += fv;
+		}
+	}
+
+	// 최종 삼각형 개수 세팅
+	mesh.triangleCount = static_cast<int>(mesh.vert.size() / 3);
+
+	return true;
+}
+#endif
+
 void setup_interop_resources() {
 	// PBO 생성 (기존 코드와 유사)
 	glGenBuffers(1, &pbo);
@@ -252,6 +306,9 @@ void timer_callback(int value) {
 UIParameters uip;
 
 KdTree kd_tree;
+#if SECONDARY_RAY
+SecondaryMesh secondaryMesh;
+#endif
 
 Camera camera;
 std::vector<Camera> cameras;
@@ -2747,6 +2804,11 @@ void initAssetPaths(const std::string& assetName, const char* suffix) {
 	ply_kdtree_dump_path = final_kdtree_dump_path;
 	ply_leafInfo_dump_path = final_leafInfo_dump_path;
 	ply_igeom_dump_path = final_igeom_dump_path;
+
+#if SECONDARY_RAY
+	secondaryMeshPath = root + assetName + "_secondary.obj";
+#endif
+	cout << secondaryMeshPath << "\n1234\n";
 }
 
 void subMenuHandler(int value) {
@@ -2949,6 +3011,9 @@ void subMenuHandler(int value) {
 		fprintf(stderr, "Failed to load ply file\n");
 		return;
 	}
+#if SECONDARY_RAY
+	loadSecondaryMesh(secondaryMeshPath, secondaryMesh);
+#endif
 	loadCameraJson(cameras, string(ply_camera_path), camera);
 	camIdx = 0;
 	camera = cameras[camIdx];
@@ -3174,6 +3239,9 @@ void main_menu_action(int selection) {
 			renderGaussianWithCudaSetup(uip.poly_model, g_gaussians
 #if !QUATERNION
 				, g_kScales
+#endif
+#if SECONDARY_RAY
+				, secondaryMesh
 #endif
 			);
 #if USE_STACK > SHORT_STACK
@@ -3554,6 +3622,9 @@ void renderingTestInit() {
 	renderGaussianWithCudaSetup(uip.poly_model, g_gaussians
 #if !QUATERNION
 		, g_kScales
+#endif
+#if SECONDARY_RAY
+		, secondaryMesh
 #endif
 	);
 	g_camera_dirty = true; // 모드를 켜는 즉시 한 번 렌더링하도록 설정

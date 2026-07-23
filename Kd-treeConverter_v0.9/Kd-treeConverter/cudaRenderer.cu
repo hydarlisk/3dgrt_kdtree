@@ -1529,6 +1529,9 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
     , int& blend_ops
     , int& max_sort_size
 #endif
+#if SECONDARY_RAY
+    , float max_t = FLT_MAX
+#endif
 ) {
 #if HIT_AND_NODE_COUNT_DEBUG
     node_visits = 0;
@@ -1546,24 +1549,28 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
 #endif
 
     float t_scene_near = RAY_START_EPSILON, t_scene_far = FLT_MAX;
-#if SECONDARY_RAY
-    bool mirrorHit = false;
-    if (BoundsRayIntersect(g_mirrorInfo.aabbMin, g_mirrorInfo.aabbMax, &currRay, &t_scene_near, &t_scene_far)) {
-        for (int i = 0; i < 2; i++) {
-            float t;
-            float u, v;
-            if (rayTriIntersect(currRay, g_mirrorInfo.verts[i * 3].pos, g_mirrorInfo.verts[i * 3 + 1].pos, g_mirrorInfo.verts[i * 3 + 2].pos, t, u, v)) {
-                currRay.pos = currRay.pos + currRay.dir * t;
-                currRay.dir = reflect(currRay.dir, g_mirrorInfo.normal);
-                mirrorHit = true;
-                break;
-            }
-        }
-    }
-#endif
+//#if SECONDARY_RAY
+//    bool mirrorHit = false;
+//    if (BoundsRayIntersect(g_mirrorInfo.aabbMin, g_mirrorInfo.aabbMax, &currRay, &t_scene_near, &t_scene_far)) {
+//        for (int i = 0; i < 2; i++) {
+//            float t;
+//            float u, v;
+//            if (rayTriIntersect(currRay, g_mirrorInfo.verts[i * 3].pos, g_mirrorInfo.verts[i * 3 + 1].pos, g_mirrorInfo.verts[i * 3 + 2].pos, t, u, v)) {
+//                currRay.pos = currRay.pos + currRay.dir * t;
+//                currRay.dir = reflect(currRay.dir, g_mirrorInfo.normal);
+//                mirrorHit = true;
+//                break;
+//            }
+//        }
+//    }
+//#endif
 
     t_scene_near = RAY_START_EPSILON, t_scene_far = FLT_MAX;
     if (BoundsRayIntersect(g_SceneBBoxMin, g_SceneBBoxMax, &currRay, &t_scene_near, &t_scene_far)) {
+#if SECONDARY_RAY
+        t_scene_far = fminf(t_scene_far, max_t);
+        if (t_scene_near > t_scene_far) return;
+#endif
         kdtreeNode node = tex1Dfetch<kdtreeNode>(inKdTreeNodeTex, 0);
         float t_near = t_scene_near, t_far = t_scene_far;
         // Kd-tree 순회를 위한 스택 초기화
@@ -1630,6 +1637,11 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
                 sortHits(local_hits, local_hit_count);
 
                 for (int i = 0; i < local_hit_count; ++i) {
+#if SECONDARY_RAY
+                    if (local_hits[i].t > max_t) {
+                        break;
+                    }
+#endif
                     int gaussianID = 0;
                     gaussianID = local_hits[i].primIndex;
 #if GAUSSIAN_TEXTURE
@@ -1730,38 +1742,38 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
         if (x == g_SceneInfo.resX / 2 && y == g_SceneInfo.resY) printf("\n");
     } // if (BoundsRayIntersect)
 
-#if SECONDARY_RAY
-    if (mirrorHit) {
-        accumulated_color += (1 - accumulated_opacity) * (1.0f - g_mirrorInfo.reflectivity) * g_mirrorInfo.color;
-    }
-    //if(accumulated_color < )
-    // reflect plane
-    //t_scene_near = RAY_START_EPSILON, t_scene_far = FLT_MAX;
-    //if (BoundsRayIntersect(g_mirrorInfo.aabbMin, g_mirrorInfo.aabbMax, &currRay, &t_scene_near, &t_scene_far)) {
-    //    for (int i = 0; i < 2; i++) {
-    //        float t;
-    //        float u, v;
-    //        if (rayTriIntersect(currRay, g_mirrorInfo.verts[i * 3].pos, g_mirrorInfo.verts[i * 3 + 1].pos, g_mirrorInfo.verts[i * 3 + 2].pos, t, u, v)) {
-    //            float w = 1 - u - v;
-    //            //accumulated_color = make_float3(u, v, w);
-    //            //float3 refdir = reflect(currRay.dir, g_mirrorInfo.normal);
-    //            ////accumulated_color = refdir;
-    //            //accumulated_color.x = (refdir.x + 1.0f) * 0.5f;
-    //            //accumulated_color.y = (refdir.y + 1.0f) * 0.5f;
-    //            //accumulated_color.z = (refdir.z + 1.0f) * 0.5f;
-    //            //return;
-
-    //            currRay.pos = currRay.pos + currRay.dir * t;
-    //            currRay.dir = reflect(currRay.dir, g_mirrorInfo.normal);
-    //            break;
-    //        }
-    //    }
-    //    //accumulated_color = make_float3(0.2f, 0.2f, 0.2f);
-    //    //accumulated_opacity = 0.9f;
-    //    //return;
-    //}
-
-#endif
+//#if SECONDARY_RAY
+//    if (mirrorHit) {
+//        accumulated_color += (1 - accumulated_opacity) * (1.0f - g_mirrorInfo.reflectivity) * g_mirrorInfo.color;
+//    }
+//    //if(accumulated_color < )
+//    // reflect plane
+//    //t_scene_near = RAY_START_EPSILON, t_scene_far = FLT_MAX;
+//    //if (BoundsRayIntersect(g_mirrorInfo.aabbMin, g_mirrorInfo.aabbMax, &currRay, &t_scene_near, &t_scene_far)) {
+//    //    for (int i = 0; i < 2; i++) {
+//    //        float t;
+//    //        float u, v;
+//    //        if (rayTriIntersect(currRay, g_mirrorInfo.verts[i * 3].pos, g_mirrorInfo.verts[i * 3 + 1].pos, g_mirrorInfo.verts[i * 3 + 2].pos, t, u, v)) {
+//    //            float w = 1 - u - v;
+//    //            //accumulated_color = make_float3(u, v, w);
+//    //            //float3 refdir = reflect(currRay.dir, g_mirrorInfo.normal);
+//    //            ////accumulated_color = refdir;
+//    //            //accumulated_color.x = (refdir.x + 1.0f) * 0.5f;
+//    //            //accumulated_color.y = (refdir.y + 1.0f) * 0.5f;
+//    //            //accumulated_color.z = (refdir.z + 1.0f) * 0.5f;
+//    //            //return;
+//
+//    //            currRay.pos = currRay.pos + currRay.dir * t;
+//    //            currRay.dir = reflect(currRay.dir, g_mirrorInfo.normal);
+//    //            break;
+//    //        }
+//    //    }
+//    //    //accumulated_color = make_float3(0.2f, 0.2f, 0.2f);
+//    //    //accumulated_opacity = 0.9f;
+//    //    //return;
+//    //}
+//
+//#endif
 
 
 #if DEBUG_LEAF_CUDA
@@ -2337,6 +2349,195 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyGlobalStack(
 
 #endif
 #endif //PRIMITIVE_TYPE
+#if SECONDARY_RAY
+struct MeshHit {
+    bool hit;
+    float t;
+    float3 normal;
+    float3 hitPoint;
+    int materialType; // 0: 일반 메쉬, 1: 거울(반사), 2: 유리(굴절)
+    float reflectivity;
+    float ior;
+    float3 color;
+};
+
+__device__ SecondaryMeshDevice g_secondaryMesh;
+
+void initSecondaryMesh(const SecondaryMesh& secMesh) {
+    SecondaryMeshDevice d_mesh;
+
+    // 1. 스칼라 값들은 그대로 복사
+    d_mesh.triangleCount = secMesh.triangleCount;
+    d_mesh.materialType = secMesh.materialType;
+    d_mesh.reflectivity = secMesh.reflectivity;
+    d_mesh.ior = secMesh.ior;
+    d_mesh.color = secMesh.color;
+
+    // 2. vector 내부 데이터를 담을 VRAM 할당
+    size_t bytes = secMesh.vert.size() * sizeof(float3);
+    CUDA_CHECK(cudaMalloc(&d_mesh.vert, bytes));
+
+    // 3. vector 데이터를 VRAM으로 쏘기
+    CUDA_CHECK(cudaMemcpy(d_mesh.vert, secMesh.vert.data(), bytes, cudaMemcpyHostToDevice));
+
+    // 4. 완성된 포인터 구조체를 글로벌 심볼에 통째로 세팅
+    CUDA_CHECK(cudaMemcpyToSymbol(g_secondaryMesh, &d_mesh, sizeof(SecondaryMeshDevice)));
+}
+
+__device__ bool rayTriIntersect(
+    const cuRay& ray,
+    const float3& v0, const float3& v1, const float3& v2,
+    float& t, float& u, float& v
+) {
+    float3 edge1 = v1 - v0;
+    float3 edge2 = v2 - v0;
+    float3 h = cross(ray.dir, edge2);
+    float a = dot(edge1, h);
+
+    if (a > -EPSILON && a < EPSILON) return false; // 평행하면 탈출
+
+    float f = 1.0f / a;
+    float3 s = ray.pos - v0;
+    u = f * dot(s, h);
+    if (u < 0.0f || u > 1.0f) return false;
+
+    float3 q = cross(s, edge1);
+    v = f * dot(ray.dir, q);
+    if (v < 0.0f || u + v > 1.0f) return false;
+
+    t = f * dot(edge2, q);
+    return (t > EPSILON); // 광선 방향으로 양수 거리에 있을 때만 Hit
+}
+
+
+__device__ MeshHit intersectTriangleMesh(cuRay ray) {
+    MeshHit result;
+    result.hit = false;
+    result.t = 1e8f;
+    
+    for (int i = 0; i < g_secondaryMesh.triangleCount; ++i) {
+        float3 v0 = g_secondaryMesh.vert[i * 3 + 0];
+        float3 v1 = g_secondaryMesh.vert[i * 3 + 1];
+        float3 v2 = g_secondaryMesh.vert[i * 3 + 2];
+
+        float t, u, v;
+        if (rayTriIntersect(ray, v0, v1, v2, t, u, v)) {
+            // 더 가까운 삼각형을 찾았을 때만 갱신
+            if (t < result.t) {
+                result.hit = true;
+                result.t = t;
+                result.hitPoint = ray.pos + ray.dir * t;
+
+                // 법선은 간단하게 버텍스 normal을 쓰거나 외적(cross)으로 계산
+                // 여기서는 면 법선을 직접 계산하는 예시
+                result.normal = normalize(cross(v1 - v0, v2 - v0));
+
+                // 뒷면에서 맞았을 경우 법선 뒤집기 처리 (선택사항)
+                if (dot(ray.dir, result.normal) > 0.0f) {
+                    result.normal = result.normal * -1;
+                }
+
+                // 메쉬에 저장된 재질 정보 바인딩
+                result.materialType = g_secondaryMesh.materialType;
+                result.reflectivity = g_secondaryMesh.reflectivity;
+                result.ior = g_secondaryMesh.ior;
+                result.color = g_secondaryMesh.color;
+            }
+        }
+    }
+
+    return result;
+}
+
+__global__ void renderKernelGaussian_Mesh_Hybrid(float* pFrameBuffer) {
+    int x = blockIdx.x * blockDim.x + threadIdx.x;
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if (x >= g_SceneInfo.resX || y >= g_SceneInfo.resY) return;
+
+    float sx = (float)x + 0.5f, sy = (float)y + 0.5f;
+    float3 dir = g_CameraInfo.startPoint + g_CameraInfo.u * sx * g_CameraInfo.stepX - g_CameraInfo.v * sy * g_CameraInfo.stepY;
+
+    cuRay ray = { g_CameraInfo.eye, normalize(dir - g_CameraInfo.eye) };
+    float3 final_pixel_color = make_float3(0.0f, 0.0f, 0.0f);
+    float3 throughput = make_float3(1.0f, 1.0f, 1.0f);  // 빛이 남아있는 비율
+    float3 background_color = make_float3(0.0f, 0.0f, 0.0f);
+
+    int MAX_BOUNCES = 2; // 데모용: 1차 광선 + 1번의 반사/굴절
+
+    float3 accumulated_color = make_float3(0.0f, 0.0f, 0.0f);
+    float gauss_opacity = 0.0f;
+
+    for (int bounce = 0; bounce < MAX_BOUNCES; ++bounce) {
+        MeshHit meshHit = intersectTriangleMesh(ray);
+        float max_t = meshHit.hit ? meshHit.t : 1e8f;
+
+
+        singlePassIntersectGaussian_sortNode_onlyShortStack(
+            ray,
+            accumulated_color,
+            gauss_opacity,
+            max_t
+        );
+
+        final_pixel_color += throughput * accumulated_color;
+
+        throughput = throughput * (1.0f - gauss_opacity);
+        if (throughput.x < 0.01f && throughput.y < 0.01f && throughput.z < 0.01f) {
+            break;
+        }
+
+        // 4. 메쉬에 맞았을 경우 2차 광선 세팅
+        if (meshHit.hit) {
+            float3 N = meshHit.normal;
+            float3 I = ray.dir;
+
+            if (meshHit.materialType == 1) { //reflection
+                float3 reflect_dir = I - N * 2.0f * dot(I, N);
+
+                ray.pos = meshHit.hitPoint + N * 1e-4f;
+                ray.dir = normalize(reflect_dir);
+
+                float3 meshColor = meshHit.color;
+                if (bounce > 0) meshColor = { 0, 0, 0 };
+                final_pixel_color += throughput * (1 - meshHit.reflectivity)* meshColor;
+                throughput = throughput * meshHit.reflectivity;
+            }
+            else if (meshHit.materialType == 2) { //refraction
+                float eta = 1.0f / meshHit.ior;
+                float cosI = -dot(N, I);
+                float sinT2 = eta * eta * (1.0f - cosI * cosI);
+
+                if (sinT2 > 1.0f) { //TIR
+                    float3 reflect_dir = I - N * 2.0f * dot(I, N);
+                    ray.pos = meshHit.hitPoint + N * 1e-4f;
+                    ray.dir = normalize(reflect_dir);
+                }
+                else {
+                    float cosT = sqrtf(1.0f - sinT2);
+                    float3 refract_dir = I * eta + N * (eta * cosI - cosT);
+
+                    ray.pos = meshHit.hitPoint - N * 1e-4f;
+                    ray.dir = normalize(refract_dir);
+                }
+                throughput = throughput * meshHit.color;
+            }
+            else {
+                final_pixel_color += throughput * meshHit.color;
+                break;
+            }
+        }
+        else {
+            break;
+        }
+    }
+
+    int idx = 3 * ((g_SceneInfo.resY - y - 1) * g_SceneInfo.resX + x);
+    pFrameBuffer[idx + 0] = fminf(final_pixel_color.x, 1.0f);
+    pFrameBuffer[idx + 1] = fminf(final_pixel_color.y, 1.0f);
+    pFrameBuffer[idx + 2] = fminf(final_pixel_color.z, 1.0f);
+}
+#endif
 __global__ void renderKernelGaussian_sortNode(float* pFrameBuffer
 #if HIT_AND_NODE_COUNT_DEBUG
     , float3* d_debug_buffer1, float3* d_debug_buffer2
@@ -2601,6 +2802,9 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
 #if !QUATERNION
     , std::vector<float>& kScales
 #endif
+#if SECONDARY_RAY
+    , SecondaryMesh& secMesh
+#endif
 ) {
     printf("Setting up static data for CUDA rendering...\n");
 
@@ -2714,6 +2918,10 @@ void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vecto
     if (err != cudaSuccess) {
         std::cerr << "[CUDA Error] const memory set failed: " << cudaGetErrorString(err) << std::endl;
     }
+
+#if SECONDARY_RAY
+    initSecondaryMesh(secMesh);
+#endif
 
 #if SHORT_STACK_DEPTH > 24
     cudaFuncSetAttribute(
@@ -3433,11 +3641,15 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
     //delete[] h_debug_buffer2;
 #else
     CUDA_CHECK(cudaEventRecord(start_ev, stream)); // 시작 기록
+#if SECONDARY_RAY
+    renderKernelGaussian_Mesh_Hybrid << < blocks, threads, shared_mem_size, stream >> > (d_framebuffer);
+#else
     renderKernelGaussian_sortNode << < blocks, threads, shared_mem_size, stream >> > (d_framebuffer
     #if USE_STACK > SHORT_STACK
         , d_global_stack
     #endif
         );
+#endif
     CUDA_CHECK(cudaEventRecord(stop_ev, stream)); // 종료 기록
     CUDA_CHECK(cudaEventSynchronize(stop_ev)); // GPU 작업 완료까지 대기
 #endif

@@ -83,6 +83,9 @@
     <ClInclude Include="..\external\json.hpp">
       <Filter>external</Filter>
     </ClInclude>
+    <ClInclude Include="..\external\tiny_obj_loader.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cudaRenderer.cu">

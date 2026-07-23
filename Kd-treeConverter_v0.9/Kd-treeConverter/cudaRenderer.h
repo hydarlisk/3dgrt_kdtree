@@ -8,6 +8,26 @@
 
 typedef struct { unsigned nodeID; float tMax; } cu_traceState;
 
+#if SECONDARY_RAY
+typedef struct SecondaryMesh {
+	std::vector<float3> vert;
+	int triangleCount = 0;
+	int materialType = 1;       //1: reflect, 2: refract
+	float reflectivity = 0.95;
+	float ior = 1.1f;
+	float3 color = { 0.95f, 0.95f, 0.95f };
+};
+
+struct SecondaryMeshDevice {
+	float3* vert;
+	int triangleCount;
+	int materialType;
+	float reflectivity;
+	float ior;
+	float3 color;
+};
+#endif
+
 #define M_PI 3.14159265358979323846f
 
 #define SH_C0 0.28209479177387814f	// sqrt(1 / (4 * pi))
@@ -71,6 +91,9 @@ void warmUp(float* d_framebuffer, cudaStream_t stream);
 void renderGaussianWithCudaSetup(const CompositeObject& object, const std::vector<Gaussian>& gaussians
 #if !QUATERNION
 	, std::vector<float>& kScales
+#endif
+#if SECONDARY_RAY
+	, SecondaryMesh& secondaryMesh
 #endif
 );
 
