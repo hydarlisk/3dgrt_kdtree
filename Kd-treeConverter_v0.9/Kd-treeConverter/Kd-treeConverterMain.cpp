@@ -2808,7 +2808,6 @@ void initAssetPaths(const std::string& assetName, const char* suffix) {
 #if SECONDARY_RAY
 	secondaryMeshPath = root + assetName + "_secondary.obj";
 #endif
-	cout << secondaryMeshPath << "\n1234\n";
 }
 
 void subMenuHandler(int value) {
@@ -3013,6 +3012,7 @@ void subMenuHandler(int value) {
 	}
 #if SECONDARY_RAY
 	loadSecondaryMesh(secondaryMeshPath, secondaryMesh);
+	secondaryMesh.materialType = 2;
 #endif
 	loadCameraJson(cameras, string(ply_camera_path), camera);
 	camIdx = 0;

@@ -2359,6 +2359,7 @@ struct MeshHit {
     float reflectivity;
     float ior;
     float3 color;
+    bool front_face;
 };
 
 __device__ SecondaryMeshDevice g_secondaryMesh;
@@ -2435,6 +2436,10 @@ __device__ MeshHit intersectTriangleMesh(cuRay ray) {
                 // 뒷면에서 맞았을 경우 법선 뒤집기 처리 (선택사항)
                 if (dot(ray.dir, result.normal) > 0.0f) {
                     result.normal = result.normal * -1;
+                    result.front_face = false;
+                }
+                else {
+                    result.front_face = true;
                 }
 
                 // 메쉬에 저장된 재질 정보 바인딩
@@ -2460,10 +2465,10 @@ __global__ void renderKernelGaussian_Mesh_Hybrid(float* pFrameBuffer) {
 
     cuRay ray = { g_CameraInfo.eye, normalize(dir - g_CameraInfo.eye) };
     float3 final_pixel_color = make_float3(0.0f, 0.0f, 0.0f);
-    float3 throughput = make_float3(1.0f, 1.0f, 1.0f);  // 빛이 남아있는 비율
+    float3 throughput = make_float3(1.0f, 1.0f, 1.0f);
     float3 background_color = make_float3(0.0f, 0.0f, 0.0f);
 
-    int MAX_BOUNCES = 2; // 데모용: 1차 광선 + 1번의 반사/굴절
+    int MAX_BOUNCES = 5;
 
     float3 accumulated_color = make_float3(0.0f, 0.0f, 0.0f);
     float gauss_opacity = 0.0f;
@@ -2504,7 +2509,7 @@ __global__ void renderKernelGaussian_Mesh_Hybrid(float* pFrameBuffer) {
                 throughput = throughput * meshHit.reflectivity;
             }
             else if (meshHit.materialType == 2) { //refraction
-                float eta = 1.0f / meshHit.ior;
+                float eta = meshHit.front_face ? 1.0f / meshHit.ior : meshHit.ior;
                 float cosI = -dot(N, I);
                 float sinT2 = eta * eta * (1.0f - cosI * cosI);
 
