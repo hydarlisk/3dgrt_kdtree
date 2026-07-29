@@ -1578,7 +1578,11 @@ __device__ void singlePassIntersectGaussian_sortNode_onlyShortStack(
         //ShortStackCache cache;
         cache.init(threadIdx.y * blockDim.x + threadIdx.x);
 
+#if NO_EARLY_TERMINATION
+        while(true){
+#else
         while (accumulated_opacity < OPACITY_THRESHOLD) { //while (true) {
+#endif
             //traverse internal nodes
             while (!IS_LEAF(node)) {
                 const unsigned childOffset = FIRST_CHILD_OFFSET(node);
