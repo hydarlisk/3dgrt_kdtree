@@ -3586,6 +3586,17 @@ float renderGaussianWithCudaFrame(const Camera& camera, int width, int height, f
     save_heatmap_stb((dirPath + "heatmap_blend_ops.png").c_str(), temp_buffer.data(), width, height, (float)max_blend_ops);
     save_matrix_csv((dirPath + "heatmap_blend_ops.csv").c_str(), temp_buffer.data(), width, height, (float)max_blend_ops);
 
+    for (int i = 0; i < width * height; ++i) tmp[i] = (uint32_t)h_debug_buffer2[i].x;
+    binFileName = dirPath + "blendCnt_kd.bin";
+    std::ofstream outFile2(binFileName, std::ios::binary);
+    if (!outFile2) {
+        std::cerr << "Error: Cannot open file " << binFileName << std::endl;
+    }
+    outFile2.write(reinterpret_cast<const char*>(tmp.data()),
+        tmp.size() * sizeof(uint32_t));
+
+    outFile2.close();
+
     // 6. Max Sort Size 히트맵
     for (int i = 0; i < width * height; ++i) temp_buffer[i] = (float)h_debug_buffer2[i].z;
     save_heatmap_stb((dirPath + "heatmap_max_sort_size.png").c_str(), temp_buffer.data(), width, height, (float)max_max_sort_size);
