@@ -11,30 +11,38 @@
 
 #include <vector>
 
+#define DEMO_CAMERA 1
 
 /* ply read */
-#define ASSET HOTDOG
 #define ADD_PLY_FILE_NAME ""
 #define CAMERA_FILE_NAME "transforms_val"
 
 #define PROBLEMATIC_THRESHOLD 1	//remove dominant prim from gaussian data
 
-#define PRIMITIVE_TYPE 2
+#define PRIMITIVE_TYPE 0	//0: TRI, 1: ELLIPSOID, 2: ELLIPSOID_TRI
 
+
+/*** demo ***/
 #define SECONDARY_RAY 1
 
+#define TRI 0
+#define SPHERE 1
+#define SECONDARY_PRIM SPHERE
+////////
+
+#if PRIMITIVE_TYPE == TRI
+	#undef SECONDARY_RAY
+	#define SECONDARY_RAY 0
+#endif
+
 /*** ellipsoid_by_tri ***/
-#define COUNT_BY_GID 1
-//#define SAH_MODE 4
+#define COUNT_BY_GID 1		// 가우시안 단위 병합 고려
 //////////////////////////
 
 /* kd tree build */
 #define TRAVL_COST 1.0
 #define EMTPY_BONUS 0.9
 
-//#define MAX_LEVEL 128
-//#define ISCET_COST 5.0
-//#define FORCE_SPLIT_THRESHOLD 64				// kd-tree 강제분할
 
 extern int MAX_LEVEL;
 extern float ISCET_COST;
@@ -43,8 +51,6 @@ extern int SAH_MODE;
 extern int OFFSET_MAX;
 extern float SORT_COST;
 
-/* js add */
-#define FORCE_BINARY_SPLIT 0	//fs
 #define USE_KERNEL_SCALE false					// 기존의 OptiX 방식 kernelScale 사용
 
 #define IGNORE_THRESHOLD 0
@@ -95,14 +101,10 @@ extern float SORT_COST;
 #define UPLOAD_INVSR_MAT 0
 #endif
 
-#define USE_STACK SHORT_STACK					// SHORT_STACK	(0): ShortStack만 사용
+#define USE_STACK GLOBAL_STACK					// SHORT_STACK	(0): ShortStack만 사용
 												// HYBRID_STACK	(1): GlobalStack 같이 사용
 												// GLOBAL_STACK	(2): GlobalStack만 사용
-#if USE_STACK > HYBRID_STACK
-#define SHORT_STACK_DEPTH 0
-#else
 #define SHORT_STACK_DEPTH 12 					// for kernel sh.mem
-#endif
 
 #define WALD_METHOD true
 #define MAIL_BOX false
@@ -152,7 +154,7 @@ extern float SORT_COST;
 #define MAIN_WINDOW_WIDTH 1440
 #define MAIN_WINDOW_HEIGHT 1540
 #define FOV_Y 96.0f
-#elif RESOLUTION ==	5	// sgmrt
+#elif RESOLUTION ==	5	// FHD+
 #define MAIN_WINDOW_WIDTH 2340
 #define MAIN_WINDOW_HEIGHT 1080
 #define FOV_Y 96.0f

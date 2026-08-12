@@ -44,12 +44,14 @@
 #include <io.h>
 
 float ISCET_COST = 5.0f;
-int MAX_LEVEL = 128;
-//int MAX_LEVEL = 256;
+
+
 std::string ASSET_NAME = "hotdog2";
-int FORCE_SPLIT_THRESHOLD = 64;				// kd-tree 강제분할
-//int FORCE_SPLIT_THRESHOLD = 256;
-int SAH_MODE = 4;
+//int MAX_LEVEL = 128;
+//int FORCE_SPLIT_THRESHOLD = 64;
+int MAX_LEVEL = 256;
+int FORCE_SPLIT_THRESHOLD = 256;
+int SAH_MODE = 1;
 int OFFSET_MAX = 2;
 //std::string ADD_NAME = "_0.5";
 std::string ADD_NAME = "";
@@ -60,6 +62,8 @@ float SORT_COST = 0.5f;
 
 int testMode = 0;
 int renderTestMode = 0;
+
+float g_deltaTime = 0.0f;
 
 using namespace std;
 
@@ -263,7 +267,24 @@ void draw_fps() {
 	glRasterPos2f(-0.98f, 0.95f);
 
 	char fps_string[32];
-	sprintf(fps_string, "FPS: %.2f", g_fps);
+	static float lv_fps = 0;
+	static float deltaAccum = 0;
+	static float fpsAccum = 0.0f;
+	static int frameAccum = 0;
+	static float displayFPS = 0;
+	deltaAccum += g_deltaTime;
+	fpsAccum += g_fps;
+	frameAccum++;
+	
+	if (deltaAccum >= 0.4f) {
+		displayFPS = fpsAccum / frameAccum;
+
+		deltaAccum = 0;
+		frameAccum = 0;
+		fpsAccum = 0;
+	}
+	sprintf(fps_string, "FPS: %.2f", displayFPS);
+	//sprintf(fps_string, "FPS: %.2f", g_fps);
 
 	for (char* c = fps_string; *c != '\0'; c++) {
 		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, *c);
@@ -392,6 +413,69 @@ void updateEyeRollCamera(float deltaTime) {
 	glMultMatrixf(camera.mat);
 
 	// 핵심: 위치(camera.pos)는 절대 건드리지 않고 그대로 유지합니다.
+	glTranslatef(-camera.pos[0], -camera.pos[1], -camera.pos[2]);
+
+	glutPostRedisplay();
+}
+
+float orbit_time = 0.0f;
+void rotateVectorAroundArbitraryAxis(float* vec, const float* axis, float angle) {
+	float cosA = cosf(angle);
+	float sinA = sinf(angle);
+
+	float cross[3];
+	cross[0] = axis[1] * vec[2] - axis[2] * vec[1];
+	cross[1] = axis[2] * vec[0] - axis[0] * vec[2];
+	cross[2] = axis[0] * vec[1] - axis[1] * vec[0];
+
+	float dot = axis[0] * vec[0] + axis[1] * vec[1] + axis[2] * vec[2];
+
+	vec[0] = vec[0] * cosA + cross[0] * sinA + axis[0] * dot * (1.0f - cosA);
+	vec[1] = vec[1] * cosA + cross[1] * sinA + axis[1] * dot * (1.0f - cosA);
+	vec[2] = vec[2] * cosA + cross[2] * sinA + axis[2] * dot * (1.0f - cosA);
+}
+
+void updateOrbitCamera(float deltaTime) {
+	//deltaTime = 0.01f;
+	float orbit_speed = 0.8f;
+	float angle = orbit_speed * deltaTime;
+
+	// 좌표계 변환(y = -z, z = y)이 적용된 원기둥 중심점과 회전축
+	float cyl_center[3] = { 0.393f, 1.093f, 0.698f };
+	float cyl_axis[3] = { 0.0138f, 0.9038f, 0.4278f };
+
+	// 1. 카메라 위치(pos)를 원기둥 축 기준으로 회전
+	float pos_vec[3];
+	pos_vec[0] = camera.pos[0] - cyl_center[0];
+	pos_vec[1] = camera.pos[1] - cyl_center[1];
+	pos_vec[2] = camera.pos[2] - cyl_center[2];
+
+	rotateVectorAroundArbitraryAxis(pos_vec, cyl_axis, angle);
+
+	camera.pos[0] = pos_vec[0] + cyl_center[0];
+	camera.pos[1] = pos_vec[1] + cyl_center[1];
+	camera.pos[2] = pos_vec[2] + cyl_center[2];
+
+	// 2. 💡 Look-At 억지 계산 제거: 카메라의 현재 방향 축(u,v,n)을 그대로 회전!
+	// 이렇게 하면 JSON에서 불러온 초기 카메라 자세를 완벽히 유지하면서 원기둥을 돕니다.
+	rotateVectorAroundArbitraryAxis(camera.uaxis, cyl_axis, angle);
+	rotateVectorAroundArbitraryAxis(camera.vaxis, cyl_axis, angle);
+	rotateVectorAroundArbitraryAxis(camera.naxis, cyl_axis, angle);
+
+	// 3. 직교성 유지 (오차 누적 방지용)
+	fMyVecNormalize(camera.naxis);
+	fMyVecCrossProduct(camera.naxis, camera.uaxis, camera.vaxis);
+	fMyVecNormalize(camera.vaxis);
+	fMyVecCrossProduct(camera.vaxis, camera.naxis, camera.uaxis);
+	fMyVecNormalize(camera.uaxis);
+
+	// 4. 뷰 매트릭스 업데이트 및 적용
+	set_rotate_mat(&camera);
+
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glMultMatrixf(camera.mat);
+
 	glTranslatef(-camera.pos[0], -camera.pos[1], -camera.pos[2]);
 
 	glutPostRedisplay();
@@ -1773,37 +1857,6 @@ bool load_obj_mesh(const std::string& filename,
 	return true;
 }
 
-// --- main 함수 내부 또는 별도 init 함수 ---
-void init_mesh_data() {
-#if USE_KERNEL_SCALE
-	const float PRE_SCALE = 1.5115226281523f;//1.0f / (0.5f * icosaEdge);
-#else
-	const float PRE_SCALE = 1.9021130325903f;
-#endif
-
-	load_obj_mesh("../../Data/ico/80.obj", g_LOD_80_Vertices, g_LOD_80_Faces, PRE_SCALE);
-	load_obj_mesh("../../Data/ico/162.obj", g_LOD_162_Vertices, g_LOD_162_Faces, PRE_SCALE);
-	load_obj_mesh("../../Data/ico/264.obj", g_LOD_264_Vertices, g_LOD_264_Faces, PRE_SCALE);
-	load_obj_mesh("../../Data/ico/320.obj", g_LOD_320_Vertices, g_LOD_320_Faces, PRE_SCALE);
-	load_obj_mesh("../../Data/ico/420.obj", g_LOD_420_Vertices, g_LOD_420_Faces, PRE_SCALE);
-	//load_obj_mesh("../../Data/ico/544.obj", g_LOD_544_Vertices, g_LOD_544_Faces, PRE_SCALE);
-	//load_obj_mesh("../../Data/ico/684.obj", g_LOD_684_Vertices, g_LOD_684_Faces, PRE_SCALE);
-	//load_obj_mesh("../../Data/ico/760.obj", g_LOD_760_Vertices, g_LOD_760_Faces, PRE_SCALE);
-	//load_obj_mesh("../../Data/ico/840.obj", g_LOD_840_Vertices, g_LOD_840_Faces, PRE_SCALE);
-	//load_obj_mesh("../../Data/ico/924.obj", g_LOD_924_Vertices, g_LOD_924_Faces, PRE_SCALE);
-	//load_obj_mesh("../../Data/ico/1012.obj", g_LOD_1012_Vertices, g_LOD_1012_Faces, PRE_SCALE);
-	//load_obj_mesh("../../Data/ico/1104.obj", g_LOD_1104_Vertices, g_LOD_1104_Faces, PRE_SCALE);
-	//load_obj_mesh("../../Data/ico/1280.obj", g_LOD_1280_Vertices, g_LOD_1280_Faces, PRE_SCALE);
-
-	// (이전에 추가했던 검증 코드)
-	if (g_LOD_80_Faces.empty() || g_LOD_320_Faces.empty() || g_LOD_162_Faces.empty() || g_LOD_264_Faces.empty() || g_LOD_420_Faces.empty()/* ||
-		g_LOD_544_Faces.empty() || g_LOD_684_Faces.empty() || g_LOD_760_Faces.empty() ||
-		g_LOD_840_Faces.empty() || g_LOD_924_Faces.empty() || g_LOD_1012_Faces.empty() ||
-		g_LOD_1104_Faces.empty() || g_LOD_1280_Faces.empty()*/) {
-		std::cerr << "FATAL ERROR: One or more LOD meshes failed to load or parse." << std::endl;
-	}
-}
-
 inline void generate_gaussian_mesh(
 	int gaussianID,
 	ExtendedVertex*& current_vertex_ptr, // 포인터 자체를 수정하기 위해 참조(&)로 받음
@@ -2483,19 +2536,6 @@ void dumpKdtreeInfo(char* filename) {
 		break;
 	}
 	outFile << "  * SAH_MODE: [" << SAH_MODE << sahPrint;
-//#if SAH_MODE == 0
-//	outFile << "  * SAH_MODE: [" << SAH_MODE << "] P_s * N_s\n";
-//#elif SAH_MODE == 1
-//	outFile << "  * SAH_MODE: [" << SAH_MODE << "] ballance\n";
-//#elif SAH_MODE == 2
-//	outFile << "  * SAH_MODE: [" << SAH_MODE << "] prefer leaf count\n";
-//#elif SAH_MODE == 3
-//	outFile << "  * SAH_MODE: [" << SAH_MODE << "] sqrt(N_s)\n";
-//#elif SAH_MODE == 4
-//	outFile << "  * SAH_MODE: [" << SAH_MODE << "] x * ((x/T)^k)\n";
-//#elif SAH_MODE == 5
-//	outFile << "  * SAH_MODE: [" << SAH_MODE << "] x + a * x * (x - T)\n";
-//#endif
 	
 	outFile << "  * Adaptive Mesh Mode: " << (ADAPTIVE_MESH ? "Adaptive" : "Icosa") << "\n";
 	outFile << "  * Kernel Scale Mode: " << (USE_KERNEL_SCALE ? "KernelScale" : "Paper") << "\n";
@@ -2563,7 +2603,6 @@ void dumpKdtreeInfo(char* filename) {
 		bins[bin_index]++;
 	}
 
-	// 히스토그램 출력
 	const unsigned int max_bin_count = *std::max_element(bins.begin(), bins.end());
 	const int max_bar_width = 50;
 
@@ -2644,19 +2683,20 @@ std::string generateSuffix() {
 
 	// 5. 기타 플래그 및 SAH Mode 처리
 	const char* countG = ((PRIMITIVE_TYPE == ELLIPSOID_BY_TRI) && COUNT_BY_GID) ? "_CountG" : "";
-	const char* forceBinarySplit = ((PRIMITIVE_TYPE == ELLIPSOID_BY_TRI) && FORCE_BINARY_SPLIT) ? "_fs" : "";
 	const char* versionExt = KDT_VERSION ? "__v1" : "";
 
 	// 🌟 메모리 버그 수정: std::string으로 값 복사가 안전하게 일어나도록 유지
 	std::string sahMode = "";
+#if PRIMITIVE_TYPE == ELLIPSOID_BY_TRI
 	if (SAH_MODE != 0) {
 		sahMode = "_sahMode" + std::to_string(SAH_MODE);
 	}
+#endif
 
 	// 6. 버퍼 조립
 	char suffix[256];
 	if (SAH_MODE == 6 || SAH_MODE == 7) {
-		snprintf(suffix, sizeof(suffix), "%s_%g_%s_%d_%d%s%s_%s%s%s%s_%g%s",
+		snprintf(suffix, sizeof(suffix), "%s_%g_%s_%d_%d%s%s_%s%s%s_%g%s",
 			scale_mode_str,
 			ISCET_COST,
 			opacity_part,	
@@ -2666,14 +2706,13 @@ std::string generateSuffix() {
 			clip_mode_str,
 			primitiveType,
 			countG,
-			forceBinarySplit,
 			sahMode.c_str(), // .c_str()은 snprintf 안에서 즉시 쓰이므로 안전합니다.
 			SORT_COST,
 			versionExt
 		);
 	}
 	else {
-		snprintf(suffix, sizeof(suffix), "%s_%g_%s_%d_%d%s%s_%s%s%s%s%s",
+		snprintf(suffix, sizeof(suffix), "%s_%g_%s_%d_%d%s%s_%s%s%s%s",
 			scale_mode_str,
 			ISCET_COST,
 			opacity_part,
@@ -2683,7 +2722,6 @@ std::string generateSuffix() {
 			clip_mode_str,
 			primitiveType,
 			countG,
-			forceBinarySplit,
 			sahMode.c_str(), // .c_str()은 snprintf 안에서 즉시 쓰이므로 안전합니다.
 			versionExt
 		);
@@ -2722,23 +2760,24 @@ void initAssetPaths(const std::string& assetName, const char* suffix) {
 	else {
 		folder = ADD_PLY_FILE_NAME + string("/");
 	}
+#if PRIMITIVE_TYPE != TRI
 	if (USE_KERNEL_SCALE) {
-		if (FORCE_BINARY_SPLIT) folder += "ks_fs/";
-		else folder += "ks/";
+		folder += "ks/";
 	}
 	else {
-		if (FORCE_BINARY_SPLIT) folder += "fs/";
-		else folder += "none/";
+		folder += "none/";
 	}
+#else
+	folder = "tri/";
+#endif
 	std::string final_folder_path = root + folder;
 	make_directories_c14(final_folder_path);
-	// ⚠️ 주의: 이 문자열들은 함수가 끝날 때 소멸하므로, c_str()을 전역 포인터에 바로 대입하면 안 됩니다.
-	// 따라서 접미사가 안 붙는 고정 파일명들은 아래에서 static 버퍼에 안전하게 복사합니다.
+	
 	std::string s_ply_file_path = root + fullName + "_3dgrt" + ADD_PLY_FILE_NAME + ".ply";
 	std::string s_ply_camera_path = root + CAMERA_FILE_NAME + ".json";
 	std::string s_base_kdtree_str = root + folder + fullName + ADD_PLY_FILE_NAME + "_tree.kdt";
 	std::string s_base_leafInfo_str = root + fullName + ADD_PLY_FILE_NAME + "_leafInfo.bin";
-	std::string s_base_igeom_str = root + fullName + ADD_PLY_FILE_NAME + "_igeom.bin";
+	std::string s_base_igeom_str = root + folder + fullName + ADD_PLY_FILE_NAME + "_igeom.bin";
 	std::string s_base_kdtInfo_str = root + folder + fullName + ADD_PLY_FILE_NAME + "_kdtInfo.txt";
 	std::string s_base_obj_str = root + fullName + "_new.obj";
 	std::string s_base_build_str = root + fullName + "_kdt.txt";
@@ -3012,15 +3051,16 @@ void subMenuHandler(int value) {
 	}
 #if SECONDARY_RAY
 	loadSecondaryMesh(secondaryMeshPath, secondaryMesh);
-	secondaryMesh.materialType = 2;
+	secondaryMesh.materialType = 1;
 #endif
 	loadCameraJson(cameras, string(ply_camera_path), camera);
 	camIdx = 0;
 	camera = cameras[camIdx];
+
 	cameraMoved = true;
 	g_isValidG.assign(g_gaussians.size(), 1);
-	create_composite_object_from_gaussians(g_gaussians);
-	create_composite_object_from_gaussians_all(g_gaussians);
+	//create_composite_object_from_gaussians(g_gaussians);
+	//create_composite_object_from_gaussians_all(g_gaussians);
 #if PROBLEMATIC_THRESHOLD != 1
 	removeProblematicGaussian(g_gaussians);
 #endif
@@ -3219,11 +3259,9 @@ void main_menu_action(int selection) {
 			cudaEventCreate(&stop_real);
 
 			for (Gaussian& g : g_gaussians) {
-#if UPLOAD_INV_SCALE
 				g.scale[0] = 1 / g.scale[0];
 				g.scale[1] = 1 / g.scale[1];
 				g.scale[2] = 1 / g.scale[2];
-#endif
 #if PRE_CALC_KSCALE && UPLOAD_INV_KSCALE
 				g.k_scale = 1 / g.k_scale;
 #endif
@@ -3244,18 +3282,10 @@ void main_menu_action(int selection) {
 				, secondaryMesh
 #endif
 			);
-#if USE_STACK > SHORT_STACK
-			if (g_d_global_stack) cudaFree(g_d_global_stack);
-			cudaMalloc((void**)&g_d_global_stack, (size_t)g_render_width * g_render_height * MAX_GLOBAL_STACK_DEPTH * sizeof(cu_traceState));
-#endif
 			g_camera_dirty = true; // 모드를 켜는 즉시 한 번 렌더링하도록 설정
 			printf("CUDA Interactive Mode: ON\n");
 		}
 		else {
-#if USE_STACK > SHORT_STACK
-			if (g_d_global_stack) cudaFree(g_d_global_stack);
-			g_d_global_stack = nullptr;
-#endif
 			g_cuda_rendering_done = false;
 			printf("CUDA Interactive Mode: OFF\n");
 			// 인터랙티브 모드를 끄면 다시 OpenGL 뷰로 돌아가도록 화면 갱신
@@ -3424,12 +3454,13 @@ void show_greetings(void) {
 void idle() {
 	static int prevTime = 0;
 	int currentTime = glutGet(GLUT_ELAPSED_TIME);
-	float deltaTime = (currentTime - prevTime) / 1000.0f;
+	g_deltaTime = (currentTime - prevTime) / 1000.0f;
 	prevTime = currentTime;
-	if(is_auto_camera_mode)
-		updateEyeRollCamera(deltaTime);
+	if (is_auto_camera_mode)
+		//updateEyeRollCamera(g_deltaTime);
+		updateOrbitCamera(g_deltaTime);
 
-	float adjustedSpeed = camMoveSpeed * deltaTime;
+	float adjustedSpeed = camMoveSpeed * g_deltaTime;
 	bool camera_moved = false;
 	if (is_w_pressed) { // 전진 (카메라 앞 방향)
 		camera.pos[0] -= camera.naxis[0] * adjustedSpeed;
@@ -3603,11 +3634,9 @@ void renderingTestInit() {
 	cudaEventCreate(&start_real);
 	cudaEventCreate(&stop_real);
 	for (Gaussian& g : g_gaussians) {
-#if UPLOAD_INV_SCALE
 		g.scale[0] = 1 / g.scale[0];
 		g.scale[1] = 1 / g.scale[1];
 		g.scale[2] = 1 / g.scale[2];
-#endif
 #if PRE_CALC_KSCALE && UPLOAD_INV_KSCALE
 		g.k_scale = 1 / g.k_scale;
 #endif
@@ -3706,7 +3735,6 @@ void handleArguments(int argc, char* argv[]) {
 int main(int argc, char **argv) {
 	handleArguments(argc, argv);
 	init_KDT_system();
-	init_mesh_data();//shyun
 	if (testMode) {
 		//1. load ply
 		char suffix[256];
@@ -3803,5 +3831,3 @@ int main(int argc, char **argv) {
 	glutMainLoop ();
 	return 0;
 }
-
-

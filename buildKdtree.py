@@ -17,43 +17,46 @@ testMode = "-tr"
 # testCams = [0,2,4]
 
 
-asset_name = ["hotdog2", "mic", "ship", "lego", "drums", "chair"]
+# asset_name = ["hotdog2", "mic", "ship", "lego", "drums", "chair"]
 testCams = [0]
-# asset_name = ["drums", "lego", "mic", "ship"]
-# asset_name = ["chair"]
-# asset_name = ["hotdog2"]
+# # asset_name = ["drums", "lego", "mic", "ship"]
+# # asset_name = ["chair"]
+asset_name = ["lego"]
 
 offset_max = "5"
 add_name = ["None"]
 iscet_cost_choices   = ["5.0"]
 max_level_choices     = ["128"]
 force_split_choices   = ["64"]
-sah_mode_choices      = ["7"]
-# sah_mode_choices      = ["1", "0", "4"]
-sort_cost_choices     = ["1.0", "0.5", "3.0", "0.1"]
-# sort_cost_choices     = ["1.0"]
+# sah_mode_choices      = ["1"]
+sah_mode_choices      = ["1", "0", "4"]
+# sort_cost_choices     = ["1.0", "0.5", "3.0", "0.1"]
+sort_cost_choices     = ["1.0"]
 
 
 
 
-
-# asset_name = ["room", "counter", "bonsai", "bicycle", "garden", "kitchen"]
-# # asset_name = ["kitchen"]
-# # testCams = [0, 20, 110]
-# # asset_name = ["room", "counter", "bonsai", "bicycle", "garden"]
-# # testCams = [0, 10, 20]
+# asset_name = ["bicycle"]
 # testCams = [0]
+# asset_name = ["room", "counter", "bonsai", "bicycle", "garden", "kitchen"]
+# asset_name = ["kitchen"]
+# testCams = [0, 20, 110]
+# asset_name = ["room", "counter", "bonsai", "bicycle", "garden"]
+# testCams = [0, 10, 20]
+
 
 # offset_max = "5"
 
 # add_name = ["None"]
 # iscet_cost_choices   = ["5.0"]
-# max_level_choices     = ["128"]
+# max_level_choices     = ["256"]
+# # max_level_choices     = ["128"]
 # force_split_choices   = ["256"]
-# sah_mode_choices      = ["7"]
+# # sah_mode_choices      = ["7"]
 # # sah_mode_choices      = ["1", "0", "4"]
-# sort_cost_choices     = ["1.0", "0.5", "3.0", "0.1"]
-# # sort_cost_choices     = ["1.0"]
+# sah_mode_choices      = ["1"]
+# # sort_cost_choices     = ["1.0", "0.5", "3.0", "0.1"]
+# sort_cost_choices     = ["1.0"]
 
 all_combinations = itertools.product(
     asset_name,

@@ -33,7 +33,6 @@
 #define OCCLUDE_MIN_OPACITY_TRI 1
 
 /* rendering */
-#define UPLOAD_INV_SCALE 1
 #define UPLOAD_INV_KSCALE 1
 #define VOLUME_ISECT 1
 ////////////////////////////////////
@@ -41,10 +40,6 @@
 
 /* stack type */
 #define SHORT_STACK 0
-#define HYBRID_STACK 1
-#define GLOBAL_STACK 2
-
-#define MAX_GLOBAL_STACK_DEPTH 64
 
 /* primitive type */
 #define TRI 0
