@@ -1,5 +1,7 @@
 # Kd-tree based 3D Gaussian Ray Tracing
 
+https://github.com/user-attachments/assets/bd751504-18ee-49ac-b190-c9261a7c3992
+
 <p align="center">
   <img src="img/rep.jpg" width="800" alt="Rendering Result">
 </p>
